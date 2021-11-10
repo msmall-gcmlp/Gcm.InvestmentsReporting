@@ -1,0 +1,7 @@
+blessings~=1.7
+gcm-dao
+
+[dev]
+pytest>=3.7
+tox>=3.23
+wheel

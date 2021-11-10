@@ -1,0 +1,36 @@
+{
+	"Build":{
+		"Variables": [
+				{
+
+					"name": "InstallVPNBeforeTest",
+
+					"allowOverride": false,
+
+					"isSecret": false,
+
+					"value": "true"
+
+				},
+				{
+
+					"name": "AzureWebJobsDataLake",
+
+					"allowOverride": true,
+
+					"value": "nonprd"
+
+				},
+				{
+
+					"name": "Subscription",
+
+					"allowOverride": true,
+
+					"value": "nonprd"
+
+				}
+
+			]
+		}
+}

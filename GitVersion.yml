@@ -1,0 +1,11 @@
+# Support GitHubFlow by default
+mode: Mainline
+branches:
+  master:
+    increment: Minor
+  hotfix:
+    increment: Patch
+  feature:
+    increment: Minor
+  support:
+    increment: Minor

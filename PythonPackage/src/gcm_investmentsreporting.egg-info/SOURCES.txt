@@ -1,0 +1,11 @@
+LICENSE.txt
+MANIFEST.in
+README.md
+setup.py
+test_gcm_investmentsreporting.py
+src/gcm/investmentsreporting.py
+src/gcm_investmentsreporting.egg-info/PKG-INFO
+src/gcm_investmentsreporting.egg-info/SOURCES.txt
+src/gcm_investmentsreporting.egg-info/dependency_links.txt
+src/gcm_investmentsreporting.egg-info/requires.txt
+src/gcm_investmentsreporting.egg-info/top_level.txt

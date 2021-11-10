@@ -1,0 +1,6 @@
+<Project>
+	<Import Project="$(MSBuildThisFileDirectory)/build/build$(MSBuildThisFileExtension)" Condition="Exists('$(MSBuildThisFileDirectory)/build/build$(MSBuildThisFileExtension)')" />
+	<!-- Load in targets from a parent Directory.Build.targets, if one exists (msbuild will stop scanning once it finds a Directory.build.targets file) -->
+	<Import Project="$([MSBuild]::GetPathOfFileAbove('$(MSBuildThisFile)', '$(MSBuildThisFileDirectory)/../'))" Condition="$([MSBuild]::GetPathOfFileAbove('$(MSBuildThisFile)', '$(MSBuildThisFileDirectory)/../')) != ''" />
+	<Import Project="Sdk$(MSBuildThisFileExtension)" Sdk="Gcm.MSBuild.Sdk" />	
+</Project>

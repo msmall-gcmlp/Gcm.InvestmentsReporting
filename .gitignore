@@ -1,0 +1,9 @@
+/.venv
+/artifacts
+/PythonPackage/bin
+/PythonPackage/build
+/PythonPackage/dist
+/PythonPackage/obj
+.idea
+__pycache__
+/venv

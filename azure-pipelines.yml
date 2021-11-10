@@ -1,0 +1,21 @@
+# Gcm.Grosvenor default build template: save this as ./azure-pipelines.yml in your repository.
+# do not build PRs
+pr: none
+# do not build tags
+trigger:
+  batch: true
+  branches:
+    include:
+    - refs/*
+    exclude:
+    - refs/tags/*
+
+resources:
+  repositories:
+  - repository: 'templates'
+    type: 'github'
+    name: 'GCMGrosvenor/Gcm.AzureDevOps.Templates'
+    ref: 'refs/heads/master'
+    endpoint: 'GCMGrosvenor'
+jobs:
+- template: build/build.steps.yml@templates

@@ -1,0 +1,6 @@
+<Project>
+	<Import Project="Sdk$(MSBuildThisFileExtension)" Sdk="Gcm.MSBuild.Sdk" />
+	<!-- Load in properties from a parent Directory.Build.props, if one exists (msbuild will stop scanning once it finds a Directory.build.props file); properties in the current file can then override ones from the parent -->
+	<Import Project="$([MSBuild]::GetPathOfFileAbove('$(MSBuildThisFile)', '$(MSBuildThisFileDirectory)/../'))" Condition="$([MSBuild]::GetPathOfFileAbove('$(MSBuildThisFile)', '$(MSBuildThisFileDirectory)/../')) != ''" />
+	<Import Project="$(MSBuildThisFileDirectory)/build/build$(MSBuildThisFileExtension)" Condition="Exists('$(MSBuildThisFileDirectory)/build/build$(MSBuildThisFileExtension)')" />
+</Project>
