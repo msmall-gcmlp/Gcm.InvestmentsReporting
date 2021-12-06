@@ -45,6 +45,7 @@ setup(
         "gcm-programrunner",
         "pandas",
         "datetime",
+        "openpyxl"
     ],
     extras_require={
         "dev": ["pytest>=3.7", "tox>=3.23", "wheel"],
