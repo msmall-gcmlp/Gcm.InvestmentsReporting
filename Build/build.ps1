@@ -1,5 +1,5 @@
 [CmdletBinding(PositionalBinding = $false)]
-param($Sdk = "Gcm.MSBuild.Sdk", $SdkVersion = "1.14.*", $SdkInstallArgs, $DotNetSdkVersion, [Alias('u')]$UpdateSdk = $true, [Alias('c')]$Configuration = 'Release', [Alias('o')]$Output = "$PSScriptRoot/../artifacts", [Alias('v')]$Verbosity = 'n', [Parameter(ValueFromRemainingArguments)][array]$CommandArgs)
+param($Sdk = "Gcm.MSBuild.Sdk", $SdkVersion = "1.*", $SdkInstallArgs, $DotNetSdkVersion, [Alias('u')]$UpdateSdk = $true, [Alias('c')]$Configuration = 'Release', [Alias('o')]$Output = "$PSScriptRoot/../artifacts", [Alias('v')]$Verbosity = 'n', [Parameter(ValueFromRemainingArguments)][array]$CommandArgs)
 $ErrorActionPreference = 'Stop'
 function exec { & $args[0] ($args | Select -Skip 1 |% { $_ }); if ($LASTEXITCODE -ne 0) { throw "Error executing $($args |% { $_ })`nExited with code $LASTEXITCODE" } } # Wrapper for execute command that flattens args and checks return code
 Push-Location $PSScriptRoot/..
