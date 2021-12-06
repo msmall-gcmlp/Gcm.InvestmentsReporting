@@ -6,14 +6,33 @@ with open("README.md", "r") as fh:
 with open("VERSION", "r") as version_file:
     version = version_file.read().strip()
 
+import os
+
+base_src = "src"
+project = "gcm"
+
+
+def package_files(directory):
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        if "pycache" not in path and "egg-info" not in path:
+            paths.append(
+                path.replace(f"{base_src}/", "").replace("\\", ".")
+            )
+    return paths
+
+
+extra_paths = package_files(f"{base_src}/{project}")
+
 setup(
-    name='gcm-investmentsreporting',
+    name="gcm-investmentsreporting",
     version=version,
-    description='Investments Team report generation',
+    description="Investments Team report generation",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    py_modules=["gcm.investmentsreporting"],
-    package_dir={'': 'src'},
+    package_dir={"": "src"},
+    packages=extra_paths,
+    include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
@@ -21,16 +40,9 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Operating System :: OS Independent",
     ],
-    install_requires=[
-        "blessings ~= 1.7",
-        "gcm-dao"
-    ],
+    install_requires=["blessings ~= 1.7", "gcm-programrunner"],
     extras_require={
-        "dev": [
-            "pytest>=3.7",
-            "tox>=3.23",
-            "wheel"
-        ],
+        "dev": ["pytest>=3.7", "tox>=3.23", "wheel"],
     },
     url="https://github.com/GCMGrosvenor/Gcm.InvestmentsReporting",
     author="Anna Galstyan",

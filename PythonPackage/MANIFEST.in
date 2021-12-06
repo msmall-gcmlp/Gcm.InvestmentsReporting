@@ -1,2 +1,2 @@
-include *.py
-include *.txt
+include *
+recursive-include src/gcm/InvestmentsReporting *

@@ -1,9 +1,8 @@
-from src.gcm.investmentsreporting import say_hello
+from src.gcm.InvestmentsReporting.Runners.investmentsreporting import (
+    InvestemtnsReportingRunner,
+)
 
 
 def test_helloworld_no_params():
-    assert say_hello() == "Hello, World!"
-
-
-def test_helloworld_with_param():
-    assert say_hello("Everyone") == "Hello, Everyone!"
+    v = InvestemtnsReportingRunner().execute()
+    assert v is not None
