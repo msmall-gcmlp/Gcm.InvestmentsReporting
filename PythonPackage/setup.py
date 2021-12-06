@@ -40,7 +40,12 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Operating System :: OS Independent",
     ],
-    install_requires=["blessings ~= 1.7", "gcm-programrunner"],
+    install_requires=[
+        "blessings ~= 1.7",
+        "gcm-programrunner",
+        "pandas",
+        "datetime",
+    ],
     extras_require={
         "dev": ["pytest>=3.7", "tox>=3.23", "wheel"],
     },
