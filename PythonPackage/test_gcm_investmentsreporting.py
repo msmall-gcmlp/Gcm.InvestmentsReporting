@@ -19,5 +19,6 @@ def test_simple_print():
         print_type="simple",
         location="C:/Temp/",
         file_name=file_name,
+        save=False,
     )
     assert v is not None
