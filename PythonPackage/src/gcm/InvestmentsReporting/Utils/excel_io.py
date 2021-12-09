@@ -17,7 +17,7 @@ class ExcelIO(object):
         font=Font(),
     ):
         ws = wb[template_sheet_name]
-        first_cell = re.split("(\d+)", first_cell)
+        first_cell = re.split(r"(\d+)", first_cell)
         start_row = first_cell[1]
         start_col = first_cell[0]
 
@@ -49,7 +49,7 @@ class ExcelIO(object):
     ):
         # TODO refactor name to xl_long
         ws = wb[template_sheet_name]
-        first_cell = re.split("(\d+)", first_cell)
+        first_cell = re.split(r"(\d+)", first_cell)
         start_row = first_cell[1]
         column_letter = first_cell[0]
         column_index = column_index_from_string(column_letter)
@@ -69,7 +69,7 @@ class ExcelIO(object):
         self, wb, series, template_sheet_name, first_cell
     ):
         ws = wb[template_sheet_name]
-        first_cell = re.split("(\d+)", first_cell)
+        first_cell = re.split(r"(\d+)", first_cell)
         row_index = first_cell[1]
         column_letter = first_cell[0]
         start_col = column_index_from_string(column_letter)
