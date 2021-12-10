@@ -1,5 +1,5 @@
 from src.gcm.InvestmentsReporting.Runners.investmentsreporting import (
-    InvestemtnsReportingRunner,
+    InvestmentsReportRunner,
 )
 import pandas as pd
 import datetime as dt
@@ -14,7 +14,7 @@ class TestExcelio:
         df = pd.DataFrame(data)
         asofdate = dt.datetime(2021, 11, 30)
         file_name = "Test_Data"
-        v = InvestemtnsReportingRunner().execute(
+        v = InvestmentsReportRunner().execute(
             asofdate=asofdate,
             input_data=df,
             print_type="simple",
@@ -41,7 +41,7 @@ class TestExcelio:
 
         asofdate = dt.datetime(2021, 11, 30)
         file_name = "Test_Data"
-        v = InvestemtnsReportingRunner().execute(
+        v = InvestmentsReportRunner().execute(
             asofdate=asofdate,
             input_data=input_data,
             print_type="templated",
