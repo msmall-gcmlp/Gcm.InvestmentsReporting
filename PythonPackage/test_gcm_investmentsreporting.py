@@ -6,7 +6,7 @@ import datetime as dt
 
 
 class TestExcelio:
-    def test_simple_print():
+    def test_simple_print(self):
         data = {
             "Name": ["1", "2", "3", "4"],
             "Age": [20, 21, 19, 18],
