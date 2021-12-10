@@ -6,7 +6,7 @@ from openpyxl import load_workbook
 from ..Utils.excel_io import ExcelIO
 
 
-class InvestemtnsReportingRunner(ProgramRunner):
+class InvestmentsReportRunner(ProgramRunner):
     @property
     def base_container(self):
         pass
