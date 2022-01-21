@@ -1,6 +1,5 @@
 from gcm.ProgramRunner.programrunner import ProgramRunner, Scenario
 import pandas as pd
-import datetime as dt
 from .TemplatedRuns.templated_report import (
     print_multiple_data_frame_to_template,
 )
