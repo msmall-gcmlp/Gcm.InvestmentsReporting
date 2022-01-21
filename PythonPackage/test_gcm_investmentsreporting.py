@@ -12,10 +12,10 @@ class TestExcelio:
             "Age": [20, 21, 19, 18],
         }
         df = pd.DataFrame(data)
-        asofdate = dt.datetime(2021, 11, 30)
+        rd = dt.datetime(2021, 11, 30)
         file_name = "Test_Data"
         v = InvestmentsReportRunner().execute(
-            asofdate=asofdate,
+            rundate=rd,
             input_data=df,
             print_type="simple",
             location="C:/Temp/",
@@ -39,15 +39,14 @@ class TestExcelio:
 
         input_data = {"Sheet1": {"C1": data_1, "Z1": data_2}}
 
-        asofdate = dt.datetime(2021, 11, 30)
+        rd = dt.datetime(2021, 11, 30)
         file_name = "Test_Data"
         v = InvestmentsReportRunner().execute(
-            asofdate=asofdate,
+            rundate=rd,
             input_data=input_data,
             print_type="templated",
             template_name="PvmTopPositionsReport.xlsx",
-            location="C:/Temp/",
             file_name=file_name,
-            save=False,
+            save=True,
         )
         assert v is not None
