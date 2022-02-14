@@ -13,6 +13,7 @@ import openpyxl
 from ..Utils.excel_io import ExcelIO
 from openpyxl.writer.excel import save_virtual_workbook
 import datetime as dt
+import json
 
 template_location = (
     "/".join(
@@ -171,7 +172,8 @@ class ReportStructure(ABC):
         return f'{self.report_name}_{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
 
     def serialize_metadata(self):
-        # convert tags from above to json-serializable dictionary
+        # convert tags from above
+        # to json-serializable dictionary
         d = {}
         all_data = self.__dict__
         for k in all_data:
@@ -185,9 +187,10 @@ class ReportStructure(ABC):
                 elif type(val) == list:
                     if len(val) > 0:
                         if all(issubclass(type(f), Enum) for f in val):
-                            metadata = "|".join(
+                            metadata = json.dumps(
                                 list(map(lambda x: x.name, val))
                             )
+
                 elif issubclass(type(val), Enum):
                     metadata = val.name
                 elif type(val) == str:
