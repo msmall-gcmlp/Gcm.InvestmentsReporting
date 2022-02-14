@@ -6,9 +6,11 @@ from .TemplatedRuns.templated_report import (
 
 
 class InvestmentsReportRunner(ProgramRunner):
-    @property
+    def __init__(self, config_params=None, container_lambda=None):
+        super().__init__(config_params, container_lambda)
+
     def base_container(self):
-        pass
+        return super().base_container()
 
     def print_single_data_frame_simple(
         self,
@@ -41,16 +43,17 @@ class InvestmentsReportRunner(ProgramRunner):
             template_name = kwargs["template_name"]
             file_name: str = kwargs["file_name"]
             loc = print_multiple_data_frame_to_template(
-                input_data=input_data,
+                data=input_data,
                 template_name=template_name,
                 file_name=file_name,
-                save=save,
+                date=Scenario.current_scenario().asofdate,
+                runner=kwargs["runner"],
             )
             return loc
         return "done"
 
-    def global_post_conditions(self):
-        return super().global_post_conditions()
+    def global_post_conditions(self, **kwargs):
+        return super().global_post_conditions(**kwargs)
 
-    def global_preconditions(self):
-        return super().global_preconditions()
+    def global_preconditions(self, **kwargs):
+        return super().global_preconditions(**kwargs)
