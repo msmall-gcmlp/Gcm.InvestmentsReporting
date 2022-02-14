@@ -12,6 +12,7 @@ from gcm.Dao.DaoSources import DaoSource
 import openpyxl
 from ..Utils.excel_io import ExcelIO
 from openpyxl.writer.excel import save_virtual_workbook
+import datetime as dt
 
 template_location = (
     "/".join(
@@ -26,7 +27,7 @@ template_location = (
     + "/"
 )
 
-output_location = (
+base_output_location = (
     "/".join(
         [
             "raw",
@@ -77,6 +78,8 @@ class RiskReportConsumer(Enum):
     External = (3,)
 
 
+# seperate class in case we want to load once
+# and pass to multiple report structures
 class ReportTemplate(object):
     def __init__(self, filename, runner):
         self.filename = filename
@@ -121,13 +124,13 @@ class ReportStructure(ABC):
     ):
         self.report_name = report_name
         self.data = data
-        self.asofdate = asofdate
-        self.aggregate_intervals = aggregate_intervals
-        self.report_types = report_types
-        self.stage = stage
-        self.report_vertical = report_vertical
-        self.report_substrategy = report_substrategy
-        self.report_consumers = report_consumers
+        self.gcm_as_of_date = asofdate
+        self.gcm_report_period = aggregate_intervals
+        self.gcm_report_type = report_types
+        self.gcm_report_target_stage = stage
+        self.gcm_business_group = report_vertical
+        self.gcm_strategy = report_substrategy
+        self.gcm_target_audience = report_consumers
         self.template: ReportTemplate = None
         self._runner = runner
 
@@ -151,8 +154,9 @@ class ReportStructure(ABC):
                         wb, self.data[k], sheetname, cell_address
                     )
             params = AzureDataLakeDao.create_get_data_params(
-                output_location,
+                base_output_location,
                 self.output_name(),
+                metadata=self.serialize_metadata(),
             )
             b = save_virtual_workbook(wb)
             self._runner.execute(
@@ -164,6 +168,30 @@ class ReportStructure(ABC):
             print("printing on df per page")
 
     def output_name(self):
-        return (
-            f'{self.report_name}_{self.asofdate.strftime("%Y-%m-%d")}.xlsx'
-        )
+        return f'{self.report_name}_{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
+
+    def serialize_metadata(self):
+        # convert tags from above to json-serializable dictionary
+        d = {}
+        all_data = self.__dict__
+        for k in all_data:
+            k: str = k
+            if k.startswith("gcm_"):
+                # we want to serialize this:
+                val = all_data[k]
+                metadata = None
+                if type(val) == dt.datetime:
+                    metadata = val.strftime("%Y-%m-%d")
+                elif type(val) == list:
+                    if len(val) > 0:
+                        if all(issubclass(type(f), Enum) for f in val):
+                            metadata = "|".join(
+                                list(map(lambda x: x.name, val))
+                            )
+                elif issubclass(type(val), Enum):
+                    metadata = val.name
+                elif type(val) == str:
+                    metadata = val
+                if metadata is not None:
+                    d[k] = metadata
+        return d
