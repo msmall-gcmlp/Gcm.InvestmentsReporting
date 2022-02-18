@@ -108,7 +108,9 @@ class ReportTemplate(object):
         return self._excel
 
 
-# https://gcmlp1.atlassian.net/wiki/spaces/IN/pages/2719186981/Metadata+Fields
+# https://gcmlp1.atlassian.net/
+# wiki/spaces/IN/pages/2719186981/
+# Metadata+Fields
 class ReportStructure(ABC):
     def __init__(
         self,
@@ -125,6 +127,8 @@ class ReportStructure(ABC):
     ):
         self.report_name = report_name
         self.data = data
+
+        # gcm tags
         self.gcm_as_of_date = asofdate
         self.gcm_report_period = aggregate_intervals
         self.gcm_report_type = report_types
@@ -132,6 +136,7 @@ class ReportStructure(ABC):
         self.gcm_business_group = report_vertical
         self.gcm_strategy = report_substrategy
         self.gcm_target_audience = report_consumers
+
         self.template: ReportTemplate = None
         self._runner = runner
 
@@ -163,13 +168,15 @@ class ReportStructure(ABC):
             self._runner.execute(
                 params=params,
                 source=DaoSource.DataLake,
-                operation=lambda dao, params: dao.post_data(params, b),
+                operation=lambda d, v: d.post_data(v, b),
             )
         else:
             print("printing on df per page")
 
     def output_name(self):
-        return f'{self.report_name}_{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
+        s = f"{self.report_name}_"
+        s += f'{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
+        return s
 
     def serialize_metadata(self):
         # convert tags from above

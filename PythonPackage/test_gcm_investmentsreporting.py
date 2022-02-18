@@ -24,7 +24,7 @@ class TestExcelio:
         input_data = {"my_named_range": data_1, "my_second_range": data_2}
         with Scenario(asofdate=dt.datetime(2021, 11, 30)).context():
             file_name = "Test_Data"
-            v = InvestmentsReportRunner().execute(
+            InvestmentsReportRunner().execute(
                 input_data=input_data,
                 print_type="templated",
                 template_name="named_range_print_test.xlsx",
