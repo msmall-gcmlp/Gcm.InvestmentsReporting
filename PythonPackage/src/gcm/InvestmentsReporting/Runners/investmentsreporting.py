@@ -54,6 +54,9 @@ class InvestmentsReportRunner(ProgramRunner):
             if "save" in kwargs:
                 output_dir = kwargs.get("output_dir", base_output_location)
                 report.print_report(output_dir=output_dir)
+            return True
+        else:
+            raise RuntimeError("You must specify a report name")
 
     def global_post_conditions(self, **kwargs):
         return super().global_post_conditions(**kwargs)

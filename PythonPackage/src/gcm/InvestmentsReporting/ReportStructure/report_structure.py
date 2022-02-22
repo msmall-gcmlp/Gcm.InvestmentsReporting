@@ -96,6 +96,8 @@ class ReportTemplate(object):
                 source=DaoSource.DataLake,
                 operation=lambda dao, params: dao.get_data(params),
             )
+            for k in excel_params:
+                params[k] = excel_params[k]
             self._excel = file.to_tabular_data(
                 output_type=TabularDataOutputTypes.ExcelWorkBook,
                 params=params,
@@ -219,6 +221,7 @@ class ReportStructure(ABC):
                 elif issubclass(type(val), Enum):
                     metadata = val.name
                 elif type(val) == str:
+
                     metadata = val
                 if metadata is not None:
                     d[k] = metadata
