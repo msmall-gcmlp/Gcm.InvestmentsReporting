@@ -60,8 +60,8 @@ class InvestmentsReportRunner(ProgramRunner):
                     )
                 )
             elif "raw_pdf_name" in kwargs:
-                pdf_name = kwargs['raw_pdf_name']
-                pdf_location = kwargs['raw_pdf_location']
+                pdf_name = kwargs["raw_pdf_name"]
+                pdf_location = kwargs["raw_pdf_location"]
                 report.load_pdf(pdf_location, pdf_name)
             elif "_wb" in kwargs:
                 _workbook: openpyxl.Workbook = kwargs["_wb"]

@@ -255,7 +255,6 @@ class ReportStructure(ABC):
             )
         else:
             logging.log("pdf has already been set")
-            
 
     def print_report(self, **kwargs):
         output_dir = kwargs.get("output_dir", base_output_location)

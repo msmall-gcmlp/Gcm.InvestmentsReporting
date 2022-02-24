@@ -1,6 +1,5 @@
 from src.gcm.InvestmentsReporting.Runners.investmentsreporting import (
     InvestmentsReportRunner,
-    
 )
 import pandas as pd
 import datetime as dt
@@ -63,21 +62,21 @@ class TestExcelio:
             )
 
     def test_PDF(self):
-        pdf_name = '202109_PFUND_ARS_TearSheet_Aspex.pdf'
+        pdf_name = "202109_PFUND_ARS_TearSheet_Aspex.pdf"
         test_loc = "raw/test/rqstest"
         location = f"{test_loc}/rqstest/Reports To Upload/"
         with Scenario(asofdate=dt.datetime(2021, 11, 30)).context():
             report_name = "TearSheet"
             config_params = {
-            DaoRunnerConfigArgs.dao_global_envs.name: {
-                DaoSource.InvestmentsDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
-                },
-                DaoSource.PubDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
-                },
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.InvestmentsDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.PubDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
                 }
             }
             runner = DaoRunner(
@@ -97,4 +96,3 @@ class TestExcelio:
                 entity_source=DaoSource.PubDwh,
             )
             print("Done")
-
