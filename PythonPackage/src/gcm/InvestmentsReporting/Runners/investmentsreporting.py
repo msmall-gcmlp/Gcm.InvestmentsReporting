@@ -65,10 +65,13 @@ class InvestmentsReportRunner(ProgramRunner):
                 entity_type: ReportingEntityTypes = kwargs["entity_type"]
                 entity_id = kwargs.get("entity_id", None)
                 entity_source = kwargs["entity_source"]
-
+                entity_display_name = kwargs.get(
+                    "entity_display_name", entity_name
+                )
                 reporting_entity = ReportingEntityTag(
                     entity_type,
                     entity_name,
+                    entity_display_name,
                     entity_id,
                     entity_source,
                     runner,

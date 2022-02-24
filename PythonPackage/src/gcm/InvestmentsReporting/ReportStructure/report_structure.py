@@ -83,12 +83,14 @@ class ReportingEntityTag(object):
         self,
         entity_type: ReportingEntityTypes,
         entity_name: str,
+        display_name: str,
         entity_id: int,
         source: DaoSource,
         runner: DaoRunner,
     ):
         self.entity_type = entity_type
         self.entity_name = entity_name
+        self.display_name = display_name
         self._entity_id_holder = entity_id
         self._entity_id = None
         self.entity_source = source
@@ -137,8 +139,7 @@ class ReportingEntityTag(object):
                     # eventually paramterize this further...
                     "operation": lambda query, item: query.filter(
                         item.InvestmentName == self.entity_name,
-                        item.PeriodDate
-                        == s.get_attribute("asofdate"),
+                        item.PeriodDate == s.get_attribute("asofdate"),
                     ),
                 }
                 get_id_by = "InvestmentMasterId"
@@ -237,7 +238,7 @@ class ReportStructure(ABC):
         if self._report_entity is None:
             self._report_entity = entity_tag
         else:
-            logging.log("Tag has already been set")
+            logging.log("Entity has already been set")
 
     def print_report(self, **kwargs):
         output_dir = kwargs.get("output_dir", base_output_location)
@@ -284,7 +285,10 @@ class ReportStructure(ABC):
             )
 
     def output_name(self):
-        s = f"{self.report_name}_"
+        s = ""
+        if self._report_entity is not None:
+            s += f"{self._report_entity.display_name}_"
+        s += f"{self.report_name}_"
         s += f'{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
         return s
 

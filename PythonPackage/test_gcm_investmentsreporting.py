@@ -56,6 +56,7 @@ class TestExcelio:
                 report_name=report_name,
                 runner=runner,
                 entity_name="EOFMF",
+                entity_display_name="EOF",
                 entity_type=ReportingEntityTypes.portfolio,
                 entity_source=DaoSource.PubDwh,
             )
