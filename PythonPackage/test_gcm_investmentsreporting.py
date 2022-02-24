@@ -60,3 +60,21 @@ class TestExcelio:
                 entity_type=ReportingEntityTypes.portfolio,
                 entity_source=DaoSource.PubDwh,
             )
+
+    def test_write_dataframe_to_xl(self):
+        pdf_name = 
+        with Scenario(asofdate=dt.datetime(2021, 11, 30)).context():
+            report_name = "Test_Data"
+
+            InvestmentsReportRunner().execute(
+                data=input_data,
+                template="named_range_print_test.xlsx",
+                save=True,
+                report_name=report_name,
+                runner=runner,
+                entity_name="EOFMF",
+                entity_display_name="EOF",
+                entity_type=ReportingEntityTypes.portfolio,
+                entity_source=DaoSource.PubDwh,
+            )
+
