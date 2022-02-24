@@ -29,14 +29,16 @@ class InvestmentsReportRunner(ProgramRunner):
         # (2) enable a single dao instance
         # (3) load items sequentially
         data = kwargs["data"]
-        final_data = {}
-        for i in data:
-            df = data[i]
-            if type(df) == str:
-                df = pd.read_json(df)
-            elif type(df) == pd.DataFrame:
-                df: pd.DataFrame = df
-            final_data[i] = df
+        final_data = None
+        if data is not None:
+            final_data = {}
+            for i in data:
+                df = data[i]
+                if type(df) == str:
+                    df = pd.read_json(df)
+                elif type(df) == pd.DataFrame:
+                    df: pd.DataFrame = df
+                final_data[i] = df
         runner: DaoRunner = kwargs["runner"]
         current_date: dt.datetime = (
             Scenario.current_scenario().get_attribute("asofdate")
@@ -57,7 +59,11 @@ class InvestmentsReportRunner(ProgramRunner):
                         template_location=template_dir,
                     )
                 )
-            if "_wb" in kwargs:
+            elif "raw_pdf_name" in kwargs:
+                pdf_name = kwargs['raw_pdf_name']
+                pdf_location = kwargs['raw_pdf_location']
+                report.load_pdf(pdf_location, pdf_name)
+            elif "_wb" in kwargs:
                 _workbook: openpyxl.Workbook = kwargs["_wb"]
                 report.load_workbook(_workbook)
             if "entity_name" in kwargs:
