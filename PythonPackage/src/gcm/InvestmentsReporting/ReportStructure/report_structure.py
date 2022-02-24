@@ -321,5 +321,5 @@ class ReportStructure(ABC):
         if self._report_entity is not None:
             # merge
             d2 = self._report_entity.to_metadata_tags()
-            d = d | d2
+            d.update(d2)
         return d
