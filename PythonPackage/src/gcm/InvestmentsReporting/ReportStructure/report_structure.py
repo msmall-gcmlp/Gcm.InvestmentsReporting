@@ -138,7 +138,7 @@ class ReportingEntityTag(object):
                     "operation": lambda query, item: query.filter(
                         item.InvestmentName == self.entity_name,
                         item.PeriodDate
-                        == Scenario.get_attribute("asofdate"),
+                        == s.get_attribute("asofdate"),
                     ),
                 }
                 get_id_by = "InvestmentMasterId"
