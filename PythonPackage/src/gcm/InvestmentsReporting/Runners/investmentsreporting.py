@@ -9,6 +9,10 @@ import pandas as pd
 from gcm.Dao.DaoRunner import DaoRunner
 import datetime as dt
 import openpyxl
+from ..ReportStructure.report_structure import (
+    ReportingEntityTag,
+    ReportingEntityTypes,
+)
 
 
 class InvestmentsReportRunner(ProgramRunner):
@@ -19,6 +23,11 @@ class InvestmentsReportRunner(ProgramRunner):
         return super().base_container()
 
     def run(self, **kwargs):
+        # we want to call via programrunner
+        # so that we can
+        # (1) ensure run in scenario (date)
+        # (2) enable a single dao instance
+        # (3) load items sequentially
         data = kwargs["data"]
         final_data = {}
         for i in data:
@@ -51,9 +60,25 @@ class InvestmentsReportRunner(ProgramRunner):
             if "_wb" in kwargs:
                 _workbook: openpyxl.Workbook = kwargs["_wb"]
                 report.load_workbook(_workbook)
+            if "entity_name" in kwargs:
+                entity_name: str = kwargs["entity_name"]
+                entity_type: ReportingEntityTypes = kwargs["entity_type"]
+                entity_id = kwargs.get("entity_id", None)
+                entity_source = kwargs["entity_source"]
+
+                reporting_entity = ReportingEntityTag(
+                    entity_type,
+                    entity_name,
+                    entity_id,
+                    entity_source,
+                    runner,
+                )
+                report.load_reporting_entity(reporting_entity)
             if "save" in kwargs:
                 output_dir = kwargs.get("output_dir", base_output_location)
-                report.print_report(output_dir=output_dir)
+                report.print_report(
+                    output_dir=output_dir, save=kwargs["save"]
+                )
             return True
         else:
             raise RuntimeError("You must specify a report name")
