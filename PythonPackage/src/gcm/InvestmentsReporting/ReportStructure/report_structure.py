@@ -2,6 +2,7 @@ from abc import ABC
 from enum import Enum
 import logging
 from gcm.Scenario.scenario_enums import AggregateInterval
+from gcm.Scenario.scenario import Scenario
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
     AzureDataLakeFile,
@@ -71,6 +72,88 @@ class RiskReportConsumer(Enum):
     External = (3,)
 
 
+class ReportingEntityTypes(Enum):
+    portfolio = (0,)
+    manager_fund = (1,)
+    cross_entity = (2,)
+
+
+class ReportingEntityTag(object):
+    def __init__(
+        self,
+        entity_type: ReportingEntityTypes,
+        entity_name: str,
+        display_name: str,
+        entity_id: int,
+        source: DaoSource,
+        runner: DaoRunner,
+    ):
+        self.entity_type = entity_type
+        self.entity_name = entity_name
+        self.display_name = display_name
+        self._entity_id_holder = entity_id
+        self._entity_id = None
+        self.entity_source = source
+        self.runner = runner
+
+    def to_metadata_tags(self):
+        if self.get_entity_id() is not None:
+            return {
+                f"gcm_{self.entity_type.name}_id": str(
+                    self.get_entity_id()
+                )
+            }
+        return None
+
+    def get_entity_id(self):
+        if self._entity_id is None:
+            if self._entity_id_holder is not None:
+                # simply set and forget.
+                self._entity_id = self._entity_id_holder
+            elif self.entity_source is not None:
+                # utilize the DAO to attempt to get an ID
+                self._entity_id = self._generate_entity_id()
+        return self._entity_id
+
+    def _generate_entity_id(self):
+        # TODO: This is TEMPORARY
+        # replace logic with EntityHierarchy
+        params = {}
+        get_id_by = ""
+        if self.entity_source == DaoSource.PubDwh:
+            if self.entity_type == ReportingEntityTypes.portfolio:
+                params = {
+                    "table_name": "Portfolios",
+                    "schema": "Analytics",
+                    # eventually paramterize this further...
+                    "operation": lambda query, item: query.filter(
+                        item.Acronym == self.entity_name
+                    ),
+                }
+                get_id_by = "PortfolioMasterId"
+            if self.entity_type == ReportingEntityTypes.manager_fund:
+                s: Scenario = Scenario.current_scenario()
+                params = {
+                    "table_name": "PortfolioInvestmentBalances",
+                    "schema": "Analytics",
+                    # eventually paramterize this further...
+                    "operation": lambda query, item: query.filter(
+                        item.InvestmentName == self.entity_name,
+                        item.PeriodDate == s.get_attribute("asofdate"),
+                    ),
+                }
+                get_id_by = "InvestmentMasterId"
+
+        data = self.runner.execute(
+            params=params,
+            source=self.entity_source,
+            operation=lambda dao, params: dao.get_data(params),
+        )
+        selected = data[get_id_by]
+        value = list(selected)[0]
+        return value
+
+
 # seperate class in case we want to load once
 # and pass to multiple report structures
 class ReportTemplate(object):
@@ -136,6 +219,7 @@ class ReportStructure(ABC):
 
         self.template: ReportTemplate = None
         self._workbook: openpyxl.Workbook = None
+        self._report_entity: ReportingEntityTag = None
         self._runner = runner
 
     def load_template(self, template: ReportTemplate):
@@ -148,7 +232,13 @@ class ReportStructure(ABC):
         if self._workbook is None:
             self._workbook = workbook
         else:
-            logging.log(" has already been set")
+            logging.log("Wb has already been set")
+
+    def load_reporting_entity(self, entity_tag: ReportingEntityTag):
+        if self._report_entity is None:
+            self._report_entity = entity_tag
+        else:
+            logging.log("Entity has already been set")
 
     def print_report(self, **kwargs):
         output_dir = kwargs.get("output_dir", base_output_location)
@@ -187,14 +277,18 @@ class ReportStructure(ABC):
             metadata=self.serialize_metadata(),
         )
         b = save_virtual_workbook(wb)
-        self._runner.execute(
-            params=params,
-            source=DaoSource.DataLake,
-            operation=lambda d, v: d.post_data(v, b),
-        )
+        if kwargs.get("save", False):
+            self._runner.execute(
+                params=params,
+                source=DaoSource.DataLake,
+                operation=lambda d, v: d.post_data(v, b),
+            )
 
     def output_name(self):
-        s = f"{self.report_name}_"
+        s = ""
+        if self._report_entity is not None:
+            s += f"{self._report_entity.display_name}_"
+        s += f"{self.report_name}_"
         s += f'{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
         return s
 
@@ -221,8 +315,11 @@ class ReportStructure(ABC):
                 elif issubclass(type(val), Enum):
                     metadata = val.name
                 elif type(val) == str:
-
                     metadata = val
                 if metadata is not None:
                     d[k] = metadata
+        if self._report_entity is not None:
+            # merge
+            d2 = self._report_entity.to_metadata_tags()
+            d.update(d2)
         return d
