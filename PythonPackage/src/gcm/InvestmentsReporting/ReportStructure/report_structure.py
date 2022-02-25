@@ -220,6 +220,7 @@ class ReportStructure(ABC):
         self.template: ReportTemplate = None
         self._workbook: openpyxl.Workbook = None
         self._report_entity: ReportingEntityTag = None
+        self._raw_pdf = None
         self._runner = runner
 
     def load_template(self, template: ReportTemplate):
@@ -240,43 +241,62 @@ class ReportStructure(ABC):
         else:
             logging.log("Entity has already been set")
 
+    def load_pdf(self, location, file_name):
+        if self._raw_pdf is None:
+            params = AzureDataLakeDao.create_get_data_params(
+                location,
+                file_name,
+                retry=False,
+            )
+            self._raw_pdf = self._runner.execute(
+                params=params,
+                source=DaoSource.DataLake,
+                operation=lambda dao, params: dao.get_data(params),
+            )
+        else:
+            logging.log("pdf has already been set")
+
     def print_report(self, **kwargs):
         output_dir = kwargs.get("output_dir", base_output_location)
-        excel_io = ExcelIO()
-        wb: openpyxl.Workbook = None
-        if self.template is not None:
-            wb: openpyxl.Workbook = self.template.excel()
-            print("going to attempt to print to template")
-            for k in self.data:
-                address = list(wb.defined_names[k].destinations)
-                for sheetname, cell_address in address:
-                    cell_address = cell_address.replace("$", "")
-                    # override wb:
-                    wb = excel_io.write_dataframe_to_xl(
-                        wb, self.data[k], sheetname, cell_address
-                    )
-        elif self._workbook is not None:
-            # we are in the case where
-            #   data is present already
-            #   all formatting is already done
-            # and simply want to render report
-            # using report structure.
-
-            wb = self._workbook
+        if self._raw_pdf is not None:
+            b = self._raw_pdf.content
         else:
-            wb: openpyxl.Workbook = Workbook()
             excel_io = ExcelIO()
-            for k in self.data:
-                wb.create_sheet(title=k)
-                wb = excel_io.write_dataframe_to_xl(
-                    wb, self.data[k], k, cell_address
-                )
+            wb: openpyxl.Workbook = None
+            if self.template is not None:
+                wb: openpyxl.Workbook = self.template.excel()
+                print("going to attempt to print to template")
+                for k in self.data:
+                    address = list(wb.defined_names[k].destinations)
+                    for sheetname, cell_address in address:
+                        cell_address = cell_address.replace("$", "")
+                        # override wb:
+                        wb = excel_io.write_dataframe_to_xl(
+                            wb, self.data[k], sheetname, cell_address
+                        )
+            elif self._workbook is not None:
+                # we are in the case where
+                #   data is present already
+                #   all formatting is already done
+                # and simply want to render report
+                # using report structure.
+
+                wb = self._workbook
+            else:
+                wb: openpyxl.Workbook = Workbook()
+                excel_io = ExcelIO()
+                for k in self.data:
+                    wb.create_sheet(title=k)
+                    wb = excel_io.write_dataframe_to_xl(
+                        wb, self.data[k], k, cell_address
+                    )
+            b = save_virtual_workbook(wb)
         params = AzureDataLakeDao.create_get_data_params(
             output_dir,
             self.output_name(),
             metadata=self.serialize_metadata(),
         )
-        b = save_virtual_workbook(wb)
+
         if kwargs.get("save", False):
             self._runner.execute(
                 params=params,

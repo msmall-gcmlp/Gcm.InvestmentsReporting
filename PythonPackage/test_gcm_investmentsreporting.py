@@ -60,3 +60,39 @@ class TestExcelio:
                 entity_type=ReportingEntityTypes.portfolio,
                 entity_source=DaoSource.PubDwh,
             )
+
+    def test_PDF(self):
+        pdf_name = "202109_PFUND_ARS_TearSheet_Aspex.pdf"
+        test_loc = "raw/test/rqstest"
+        location = f"{test_loc}/rqstest/Reports To Upload/"
+        with Scenario(asofdate=dt.datetime(2021, 11, 30)).context():
+            report_name = "TearSheet"
+            config_params = {
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.InvestmentsDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.PubDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                }
+            }
+            runner = DaoRunner(
+                container_lambda=lambda b, i: b.config.from_dict(i),
+                config_params=config_params,
+            )
+            InvestmentsReportRunner().execute(
+                data=None,
+                raw_pdf_name=pdf_name,
+                raw_pdf_location=location,
+                save=True,
+                report_name=report_name,
+                runner=runner,
+                entity_name="Aspex Global",
+                entity_display_name="Aspex",
+                entity_type=ReportingEntityTypes.manager_fund,
+                entity_source=DaoSource.PubDwh,
+            )
+            print("Done")
