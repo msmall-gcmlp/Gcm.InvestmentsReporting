@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("FAE04EC0-301F-11D3-BF4B-00C04F79EFBC") = "Gcm.PythonPackage", "PythonPackage\Gcm.PythonPackage.pytproj", "{A4DC20E1-C028-4512-8311-3ADBA6DCC161}"
 EndProject
+Project("FAE04EC0-301F-11D3-BF4B-00C04F79EFBC") = "AzureFunctions", "AzureFunctions\AzureFunctions.pytproj", "{36C3783F-0F80-4615-9911-8E34B6990588}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -1,0 +1,21 @@
+{
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "Application": "gcm.investmentsreporting",
+    "ApplicationPrefix": "ent",
+    "Lifecycle": "${Lifecycle}",
+    "LifecycleSuffix": "${LifecycleSuffix}",
+    "Environment": "${Environment}",
+    "AssetDeploymentUnitDisplayName": "Gcm.InvestmentsReporting",
+    "AssetModule": "Gcm.InvestmentsReporting",
+    "ENABLE_ORYX_BUILD": true,
+    "SCM_DO_BUILD_DURING_DEPLOYMENT": true,
+    "DISABLE_HUGO_BUILD": true,
+    "PIP_EXTRA_INDEX_URL": {
+      "$ref": "https://password.gcmlp.com:8443/v1/buildserviceuser-nonprd/Azure-DevOps/AzureDevOpsAdmin-NugetReadOnly-PipCredentials"
+    }
+  },
+  "TemplateParameters": {
+    "linuxFxVersion": "Python|3.9"
+  }
+}
