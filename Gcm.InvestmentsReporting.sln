@@ -1,36 +1,39 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26124.0
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32328.378
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("FAE04EC0-301F-11D3-BF4B-00C04F79EFBC") = "Gcm.PythonPackage", "PythonPackage\Gcm.PythonPackage.pytproj", "{A4DC20E1-C028-4512-8311-3ADBA6DCC161}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AzureFunctions", "AzureFunctions", "{9261FE45-58AC-4992-9501-9183D6598DDF}"
 EndProject
-Project("FAE04EC0-301F-11D3-BF4B-00C04F79EFBC") = "AzureFunctions", "AzureFunctions\AzureFunctions.pytproj", "{36C3783F-0F80-4615-9911-8E34B6990588}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PythonPackage", "PythonPackage", "{EDB663E9-EFF5-4305-90DE-06206D03875E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Gcm.PythonPackage", "PythonPackage\PythonPackage.pytproj", "{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureFunctions", "AzureFunctions\AzureFunctions.pytproj", "{9660BB80-617A-4560-A01C-905EFCD84E86}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9660BB80-617A-4560-A01C-905EFCD84E86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9660BB80-617A-4560-A01C-905EFCD84E86}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9660BB80-617A-4560-A01C-905EFCD84E86}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9660BB80-617A-4560-A01C-905EFCD84E86}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Debug|x64.Build.0 = Debug|Any CPU
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Debug|x86.Build.0 = Debug|Any CPU
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Release|x64.ActiveCfg = Release|Any CPU
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Release|x64.Build.0 = Release|Any CPU
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Release|x86.ActiveCfg = Release|Any CPU
-		{A4DC20E1-C028-4512-8311-3ADBA6DCC161}.Release|x86.Build.0 = Release|Any CPU
+	GlobalSection(NestedProjects) = preSolution
+		{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8} = {EDB663E9-EFF5-4305-90DE-06206D03875E}
+		{9660BB80-617A-4560-A01C-905EFCD84E86} = {9261FE45-58AC-4992-9501-9183D6598DDF}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AF065C79-0E5E-420C-A80F-CFFA129B2F7C}
 	EndGlobalSection
 EndGlobal

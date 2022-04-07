@@ -1,5 +1,5 @@
 [CmdletBinding(PositionalBinding = $false)]
-param($Sdk = "Gcm.MSBuild.Sdk", $SdkVersion = "1.*", $SdkInstallArgs, $DotNetSdkVersion, [Alias('u')]$UpdateSdk = $true, [Alias('c')]$Configuration = 'Release', [Alias('o')]$Output = "$PSScriptRoot/../artifacts", [Alias('v')]$Verbosity = 'n', [Parameter(ValueFromRemainingArguments)][array]$CommandArgs)
+param($Sdk = "Gcm.MSBuild.Sdk", $SdkVersion = "6.0.0", $SdkInstallArgs, $DotNetSdkVersion, [Alias('u')]$UpdateSdk = $true, [Alias('c')]$Configuration = 'Release', [Alias('o')]$Output = "$PSScriptRoot/../artifacts", [Alias('v')]$Verbosity = 'n', [Parameter(ValueFromRemainingArguments)][array]$CommandArgs)
 $ErrorActionPreference = 'Stop'
 function exec { & $args[0] ($args | Select -Skip 1 |% { $_ }); if ($LASTEXITCODE -ne 0) { throw "Error executing $($args |% { $_ })`nExited with code $LASTEXITCODE" } } # Wrapper for execute command that flattens args and checks return code
 Push-Location $PSScriptRoot/..
@@ -19,6 +19,20 @@ try {
   }
 
   if ($UpdateSdk -and $Sdk -ne '' -and $SdkVersion -ne '') { # update sdk template - at sdk template install time, $SdkVersion will be replaced with a real one (which may be floating, and floating versions aren't supported for sdks in global.json
+    # Starting on version 6.0.101 of .NET if a template is already installed and the process try to install it again, it will fail with message saying it is already installed
+    $templateInstalledVersion = dotnet new --list # list all the templates
+    
+    Write-Host "`nAll Templates:"
+    $templateInstalledVersion 
+
+    Write-Host "`nCustom Templates:"
+    exec dotnet new -u # list all the custom templates
+
+    if($templateInstalledVersion -like "*$Sdk*") { 
+      Write-Host "Uninstalling template: $Sdk"
+      exec dotnet new -u "$Sdk"
+    }
+    
     exec dotnet new -i "$Sdk::$SdkVersion" $SdkInstallArgs # force no caching using debug flag
     exec dotnet new $Sdk --sdkVersionRange $SdkVersion --force # reinstall and re-run sdk template
     & $PSCommandPath @PSBoundParameters -UpdateSdk $false # re-run this script but don't update sdk template next time

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <DefaultProjectTypeGuid>FAE04EC0-301F-11D3-BF4B-00C04F79EFBC</DefaultProjectTypeGuid>
     <PythonRequirementsFileName>requirements.txt</PythonRequirementsFileName>
     <PublishOutputPathContent>true</PublishOutputPathContent>
@@ -8,6 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Gcm.AzureFunctions.Sdk" Version="6.*" />
+    <PackageReference Include="Gcm.AzureFunctions.Sdk" Version="7.*" />
   </ItemGroup>
 </Project>
