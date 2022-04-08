@@ -5,8 +5,8 @@
     <PythonRequirementsFileName>requirements.txt</PythonRequirementsFileName>
     <PublishOutputPathContent>true</PublishOutputPathContent>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Gcm.AzureFunctions.Sdk" Version="7.*" />
   </ItemGroup>
