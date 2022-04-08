@@ -123,7 +123,7 @@ class ReportingEntityTag(object):
         if self.entity_source == DaoSource.PubDwh:
             if self.entity_type == ReportingEntityTypes.portfolio:
                 params = {
-                    "table_name": "Portfolios",
+                    "table": "Portfolios",
                     "schema": "Analytics",
                     # eventually paramterize this further...
                     "operation": lambda query, item: query.filter(
@@ -134,7 +134,7 @@ class ReportingEntityTag(object):
             if self.entity_type == ReportingEntityTypes.manager_fund:
                 s: Scenario = Scenario.current_scenario()
                 params = {
-                    "table_name": "PortfolioInvestmentBalances",
+                    "table": "PortfolioInvestmentBalances",
                     "schema": "Analytics",
                     # eventually paramterize this further...
                     "operation": lambda query, item: query.filter(
