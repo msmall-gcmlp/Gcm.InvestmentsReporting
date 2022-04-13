@@ -1,6 +1,5 @@
 import re
 import numpy as np
-from openpyxl.styles import Alignment, Font
 
 from openpyxl.utils.cell import column_index_from_string
 from openpyxl.utils.dataframe import dataframe_to_rows
