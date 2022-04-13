@@ -15,7 +15,7 @@ from .reporting_runner_base import ReportingRunnerBase
 
 class PerformanceQualityReport(ReportingRunnerBase):
 
-    def __init__(self, dao_runner, start_date, end_date, as_of_date):
+    def __init__(self, dao_runner, start_date, end_date, as_of_date, params):
         super().__init__(runner=dao_runner)
         self._dao_runner = dao_runner
         self._start_date = start_date
@@ -28,6 +28,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         self._analytics = Analytics()
         self._entity_type = 'ARS PFUND'
         self._funds = None
+        self._fund_name = params['fund_name']
 
     def get_funds(self):
         filters = dict(vertical=['ARS', 'EOF'], status='EMM', strategy='Equities')
@@ -65,20 +66,18 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def generate_performance_quality_report(self):
-        fund = 'Aspex Global'
-
         self.get_funds()['Fund']
         fund_monthly_returns, _ = self.get_fund_returns()
 
-        header_info = self.get_header_info(holding_name=fund)
-        return_summary = self.build_benchmark_summary(holding=fund, fund_returns=fund_monthly_returns)
+        header_info = self.get_header_info(holding_name=self._fund_name)
+        return_summary = self.build_benchmark_summary(holding=self._fund_name, fund_returns=fund_monthly_returns)
         input_data = {
             "header_info": header_info,
             "benchmark_summary": return_summary,
         }
 
         with Scenario(asofdate=dt.date(2021, 12, 31)).context():
-            report_name = "PFUND_PerformanceQuality_" + fund
+            report_name = "PFUND_PerformanceQuality_" + self._fund_name
 
             InvestmentsReportRunner().execute(
                 data=input_data,
