@@ -6,8 +6,8 @@
     "Lifecycle": "${Lifecycle}",
     "LifecycleSuffix": "${LifecycleSuffix}",
     "Environment": "${Environment}",
-    "AssetDeploymentUnitDisplayName": "Gcm.InvestmentsReporting",
-    "AssetModule": "Gcm.InvestmentsReporting",
+    "AssetDeploymentUnitDisplayName": "InvestmentsReporting",
+    "AssetModule": "InvestmentsReporting",
     "ENABLE_ORYX_BUILD": true,
     "SCM_DO_BUILD_DURING_DEPLOYMENT": true,
     "DISABLE_HUGO_BUILD": true,
@@ -17,6 +17,7 @@
     }
   },
   "TemplateParameters": {
-    "linuxFxVersion": "Python|3.9"
+    "linuxFxVersion": "Python|3.9",
+    "useSharedAppServicePlan": true
   }
 }
