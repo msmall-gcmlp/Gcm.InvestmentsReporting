@@ -2,7 +2,7 @@
   "scriptFile": "__init__.py",
   "bindings": [
     {
-      "name": "coolParameter",
+      "name": "requestBody",
       "type": "activityTrigger",
       "direction": "in"
     }
