@@ -10,8 +10,8 @@ def main(requestBody) -> str:
     config_params = {
         DaoRunnerConfigArgs.dao_global_envs.name: {
             DaoSource.PubDwh.name: {
-                "Environment": "prd",
-                "Subscription": "prd",
+                "Environment": "uat",
+                "Subscription": "nonprd",
             },
         }
     }
