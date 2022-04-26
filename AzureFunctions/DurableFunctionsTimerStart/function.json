@@ -12,5 +12,6 @@
       "type": "orchestrationClient",
       "direction": "in"
     }
-  ]
+  ],
+  "disabled": true
 }

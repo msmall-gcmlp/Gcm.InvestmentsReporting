@@ -1,5 +1,6 @@
 import datetime as dt
 from ..Reports.performance_quality_report import PerformanceQualityReport
+from ..Reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 
 
@@ -23,7 +24,14 @@ def main(requestBody) -> str:
 
     if run == "PerformanceQualityReport":
         return PerformanceQualityReport(
-            dao_runner=runner,
+            runner=runner,
+            as_of_date=dt.date(2021, 12, 31),
+            params=params
+        ).execute()
+
+    elif run == "PerformanceQualityReportData":
+        return PerformanceQualityReportData(
+            runner=runner,
             start_date=dt.date(2020, 10, 1),
             end_date=dt.date(2021, 12, 31),
             as_of_date=dt.date(2021, 12, 31),
