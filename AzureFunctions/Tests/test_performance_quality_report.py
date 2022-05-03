@@ -3,8 +3,8 @@ import datetime as dt
 import pandas as pd
 import json
 
-from AzureFunctions.Reports.performance_quality_report import PerformanceQualityReport
-from AzureFunctions.Reports.performance_quality_report_data import PerformanceQualityReportData
+from ..Reports.performance_quality_report import PerformanceQualityReport
+from ..Reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 
 
@@ -27,7 +27,7 @@ class TestPerformanceQualityReport:
         return runner
 
     def test_performance_quality_data(self, runner):
-        params = {'group': 'EMM'}
+        params = {'group': 'EMM', 'vertical': 'ARS', 'entity': 'PFUND', 'filter': 'EMM'}
         perf_quality = PerformanceQualityReportData(
             runner=runner,
             start_date=dt.date(2020, 10, 1),

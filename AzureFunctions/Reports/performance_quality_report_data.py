@@ -85,6 +85,28 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         gcm_peer_returns = self._benchmarking.get_altsoft_peer_benchmark_returns(start_date=self._start_date,
                                                                                  end_date=self._end_date)
 
+        peer_constituent_rors =  self._benchmarking.get_altsoft_peer_constituent_returns(start_date=self._start_date,
+                                                                                         end_date=self._end_date)
+
+        peer_constituent_rors = peer_constituent_rors.pivot_table(index='Date',
+                                                                  columns=['PeerGroupName', 'SourceInvestmentId'],
+                                                                  values='Ror')
+        from gcm.inv.quantlib.timeseries.analytics import Analytics
+        analytics = Analytics()
+        from gcm.inv.quantlib.enum_source import PeriodicROR
+
+        mtd_tmp = analytics.compute_periodic_return(peer_constituent_rors, period=PeriodicROR.MTD,
+                                                    as_of_date=self._end_date, method='geometric')
+        qtd_tmp = analytics.compute_periodic_return(peer_constituent_rors, period=PeriodicROR.QTD,
+                                                    as_of_date=self._end_date, method='geometric')
+        ytd_tmp = analytics.compute_periodic_return(peer_constituent_rors, period=PeriodicROR.YTD,
+                                                    as_of_date=self._end_date, method='geometric')
+        import pandas as pd
+        ytd_ptile = pd.concat([pd.Series([0.4]), ytd_tmp.loc['GCM TMT']], axis=0).rank(pct=True)[0:1].squeeze()
+
+        import numpy as np
+        np.percentile(ytd_tmp.loc['GCM TMT'], 0.05)
+
         report_inputs = {}
         report_inputs['fund_dimn'] = filtered_dimn.to_json(orient='index')
         report_inputs['fund_returns'] = fund_monthly_returns.to_json(orient='index')
