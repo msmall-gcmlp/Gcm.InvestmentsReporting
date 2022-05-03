@@ -39,19 +39,24 @@ class TestPerformanceQualityReport:
 
         report_inputs = perf_quality.execute()
 
-        with open('test_data/performance_quality_data.json', 'w') as fp:
-            json.dump(report_inputs, fp)
+        # with open('test_data/performance_quality_data.json', 'w') as fp:
+        #     json.dump(report_inputs, fp)
 
         fund_dimn = pd.read_json(report_inputs['fund_dimn'], orient='index')
         fund_returns = pd.read_json(report_inputs['fund_returns'], orient='index')
         eurekahedge_returns = pd.read_json(report_inputs['eurekahedge_returns'], orient='index')
         abs_bmrk_returns = pd.read_json(report_inputs['abs_bmrk_returns'], orient='index')
         gcm_peer_returns = pd.read_json(report_inputs['gcm_peer_returns'], orient='index')
-        gcm_peer_constituent_returns = pd.read_json(report_inputs['gcm_peer_constituent_returns'], orient='index')
 
+        gcm_peer_constituent_returns = pd.read_json(report_inputs['gcm_peer_constituent_returns'], orient='index')
         gcm_peer_columns = [ast.literal_eval(x) for x in gcm_peer_constituent_returns.columns]
         gcm_peer_columns = pd.MultiIndex.from_tuples(gcm_peer_columns, names=['PeerGroupName', 'SourceInvestmentId'])
         gcm_peer_constituent_returns.columns = gcm_peer_columns
+
+        eurekahedge_constituent_returns = pd.read_json(report_inputs['eurekahedge_constituent_returns'], orient='index')
+        eh_columns = [ast.literal_eval(x) for x in eurekahedge_constituent_returns.columns]
+        eh_columns = pd.MultiIndex.from_tuples(eh_columns, names=['EurekahedgeBenchmark', 'SourceInvestmentId'])
+        eurekahedge_constituent_returns.columns = eh_columns
 
         assert fund_dimn.shape[0] > 0
         assert fund_returns.shape[0] > 0
@@ -59,6 +64,7 @@ class TestPerformanceQualityReport:
         assert abs_bmrk_returns.shape[0] > 0
         assert gcm_peer_returns.shape[0] > 0
         assert gcm_peer_constituent_returns.shape[0] > 0
+        assert eurekahedge_constituent_returns.shape[0] > 0
 
     def test_performance_quality_report_skye(self, runner):
         f = open('test_data/performance_quality_data.json')
@@ -75,7 +81,8 @@ class TestPerformanceQualityReport:
                             'GcmPeer', 'GcmPeerExcess',
                             'EHI50', 'EHI50Excess',
                             'EHI200', 'EHI200Excess',
-                            'Peer1Ptile']
+                            'Peer1Ptile', 'Peer2Ptile',
+                            'EH50Ptile', 'EHI200Ptile']
         assert all(benchmark_summary.columns == expected_columns)
 
     def test_performance_quality_report_citadel(self, runner):
@@ -93,7 +100,8 @@ class TestPerformanceQualityReport:
                             'GcmPeer', 'GcmPeerExcess',
                             'EHI50', 'EHI50Excess',
                             'EHI200', 'EHI200Excess',
-                            'Peer1Ptile']
+                            'Peer1Ptile', 'Peer2Ptile',
+                            'EH50Ptile', 'EHI200Ptile']
         assert all(benchmark_summary.columns == expected_columns)
 
     def test_performance_quality_report_future_ahead(self, runner):
@@ -110,5 +118,7 @@ class TestPerformanceQualityReport:
                             'AbsoluteReturnBenchmark', 'AbsoluteReturnBenchmarkExcess',
                             'GcmPeer', 'GcmPeerExcess',
                             'EHI50', 'EHI50Excess',
-                            'EHI200', 'EHI200Excess']
+                            'EHI200', 'EHI200Excess',
+                            'Peer1Ptile', 'Peer2Ptile',
+                            'EH50Ptile', 'EHI200Ptile']
         assert all(benchmark_summary.columns == expected_columns)

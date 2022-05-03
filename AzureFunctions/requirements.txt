@@ -4,6 +4,6 @@
 
 azure-functions
 azure-functions-durable
-gcm-investmentsdataprovider==0.4.0.dev2205030121
+gcm-investmentsdataprovider==0.4.0.dev2205030330
 gcm-investmentsquantlib==0.7.0.dev2204111953
 gcm-investmentsreporting==0.15.0.dev2204131916

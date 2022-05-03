@@ -23,6 +23,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         self.__all_gcm_peer_returns = None
         self.__all_eurekahedge_returns = None
         self.__all_gcm_peer_constituent_returns = None
+        self.__all_eurekahedge_constituent_returns = None
 
     @property
     def _all_fund_dimn(self):
@@ -64,6 +65,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns.columns = returns_columns
             self.__all_gcm_peer_constituent_returns = returns
         return self.__all_gcm_peer_constituent_returns
+
+    @property
+    def _all_eurekahedge_constituent_returns(self):
+        if self.__all_eurekahedge_constituent_returns is None:
+            returns = pd.read_json(self._params['eurekahedge_constituent_returns'], orient='index')
+            returns_columns = [ast.literal_eval(x) for x in returns.columns]
+            returns_columns = pd.MultiIndex.from_tuples(returns_columns,
+                                                        names=['EurekahedgeBenchmark', 'SourceInvestmentId'])
+            returns.columns = returns_columns
+            self.__all_eurekahedge_constituent_returns = returns
+        return self.__all_eurekahedge_constituent_returns
 
     @property
     def _entity_type(self):
@@ -122,6 +134,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _gcm_peer_constituent_returns(self):
         peer_group_index = self._all_gcm_peer_constituent_returns.columns.get_level_values(0) == self._peer_group
         returns = self._all_gcm_peer_constituent_returns.loc[:, peer_group_index]
+        returns = returns.droplevel(0, axis=1)
+        return returns
+
+    @property
+    def _eurekahedge_constituent_returns(self):
+        eh_index = self._all_eurekahedge_constituent_returns.columns.get_level_values(0) == self._eurekahedge_benchmark
+        returns = self._all_eurekahedge_constituent_returns.loc[:, eh_index]
+        returns = returns.droplevel(0, axis=1)
+        return returns
+
+    @property
+    def _ehi200_constituent_returns(self):
+        ehi200 = 'Eurekahedge Institutional 200'
+        ehi200_index = self._all_eurekahedge_constituent_returns.columns.get_level_values(0) == ehi200
+        returns = self._all_eurekahedge_constituent_returns.loc[:, ehi200_index]
         returns = returns.droplevel(0, axis=1)
         return returns
 
@@ -214,11 +241,28 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                             constituent_returns=self._gcm_peer_constituent_returns,
                                                             group_name='Peer1Ptile')
 
+        #TODO swap out with 2nd peer group (or ehi 50 prop)
+        gcm_peer_percentiles2 = self._get_percentile_summary(fund_returns=fund_returns,
+                                                            constituent_returns=self._gcm_peer_constituent_returns,
+                                                            group_name='Peer2Ptile')
+        eurekahedge_percentiles = \
+            self._get_percentile_summary(fund_returns=fund_returns,
+                                         constituent_returns=self._eurekahedge_constituent_returns,
+                                         group_name='EH50Ptile')
+
+        ehi200_percentiles = \
+            self._get_percentile_summary(fund_returns=fund_returns,
+                                         constituent_returns=self._ehi200_constituent_returns,
+                                         group_name='EHI200Ptile')
+
         summary = absolute_return_summary.copy()
         summary = summary.merge(gcm_peer_summary.drop(columns={'Fund'}), left_index=True, right_index=True)
         summary = summary.merge(ehi_50_summary.drop(columns={'Fund'}), left_index=True, right_index=True)
         summary = summary.merge(ehi_200_summary.drop(columns={'Fund'}), left_index=True, right_index=True)
         summary = summary.merge(gcm_peer_percentiles, left_index=True, right_index=True)
+        summary = summary.merge(gcm_peer_percentiles2, left_index=True, right_index=True)
+        summary = summary.merge(eurekahedge_percentiles, left_index=True, right_index=True)
+        summary = summary.merge(ehi200_percentiles, left_index=True, right_index=True)
         return summary
 
     def generate_performance_quality_report(self):

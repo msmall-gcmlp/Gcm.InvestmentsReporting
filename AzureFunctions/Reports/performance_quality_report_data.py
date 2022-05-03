@@ -14,7 +14,6 @@ from gcm.inv.dataprovider.investments import Investments
 from gcm.inv.dataprovider.investment_returns import InvestmentReturns
 from .reporting_runner_base import ReportingRunnerBase
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from gcm.inv.quantlib.enum_source import PeriodicROR
 
 
 class PerformanceQualityReportData(ReportingRunnerBase):
@@ -46,25 +45,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                                        as_of_date=dt.date(2020, 10, 1)))
         self._entity_type = params['vertical'] + ' ' + params['entity']
         self._filter = params['filter']
-
-    # def calculate_peer_constituent_periodic_returns(self):
-    #     rors = self._benchmarking.get_altsoft_peer_constituent_returns(start_date=self._start_date,
-    #                                                                    end_date=self._end_date)
-    #
-    #     rors = rors.pivot_table(index='Date', columns=['PeerGroupName', 'SourceInvestmentId'], values='Ror')
-    #
-        # mtd = self._analytics.compute_periodic_return(rors, period=PeriodicROR.MTD,
-        #                                               as_of_date=self._end_date, method='geometric')
-        # qtd = self._analytics.compute_periodic_return(rors, period=PeriodicROR.QTD,
-        #                                               as_of_date=self._end_date, method='geometric')
-        # ytd = self._analytics.compute_periodic_return(rors, period=PeriodicROR.YTD,
-        #                                               as_of_date=self._end_date, method='geometric')
-    #
-    #     peer_returns = {}
-    #     peer_returns['mtd'] = mtd.to_json(orient='index')
-    #     peer_returns['qtd'] = qtd.to_json(orient='index')
-    #     peer_returns['ytd'] = ytd.to_json(orient='index')
-    #     return peer_returns
 
     def get_performance_quality_report_inputs(self):
         investment_ids = [34411, 41096, 139998]
@@ -107,23 +87,22 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         gcm_peer_returns = self._benchmarking.get_altsoft_peer_benchmark_returns(start_date=self._start_date,
                                                                                  end_date=self._end_date)
 
-        #gcm_peer_periodic_returns = self.calculate_peer_constituent_periodic_returns()
-
         gcm_peer_constituent_returns = \
             self._benchmarking.get_altsoft_peer_constituent_returns(start_date=self._start_date,
                                                                     end_date=self._end_date)
 
-        gcm_peer_constituent_returns = \
-            gcm_peer_constituent_returns.pivot_table(index='Date', columns=['PeerGroupName', 'SourceInvestmentId'],
-                                                     values='Ror')
+        eurekahedge_constituent_returns = \
+            self._benchmarking.get_eurekahedge_benchmark_constituent_returns(start_date=self._start_date,
+                                                                             end_date=self._end_date)
 
-        report_inputs = {}
+        report_inputs = dict()
         report_inputs['fund_dimn'] = filtered_dimn.to_json(orient='index')
         report_inputs['fund_returns'] = fund_monthly_returns.to_json(orient='index')
         report_inputs['eurekahedge_returns'] = eurekahedge_returns.to_json(orient='index')
         report_inputs['abs_bmrk_returns'] = abs_bmrk_returns.to_json(orient='index')
         report_inputs['gcm_peer_returns'] = gcm_peer_returns.to_json(orient='index')
         report_inputs['gcm_peer_constituent_returns'] = gcm_peer_constituent_returns.to_json(orient='index')
+        report_inputs['eurekahedge_constituent_returns'] = eurekahedge_constituent_returns.to_json(orient='index')
 
         return report_inputs
 
