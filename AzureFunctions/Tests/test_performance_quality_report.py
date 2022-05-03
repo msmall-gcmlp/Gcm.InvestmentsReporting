@@ -2,9 +2,10 @@ import pytest
 import datetime as dt
 import pandas as pd
 import json
+import ast
 
-from ..Reports.performance_quality_report import PerformanceQualityReport
-from ..Reports.performance_quality_report_data import PerformanceQualityReportData
+from AzureFunctions.Reports.performance_quality_report import PerformanceQualityReport
+from AzureFunctions.Reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 
 
@@ -26,7 +27,7 @@ class TestPerformanceQualityReport:
         )
         return runner
 
-    def test_performance_quality_data(self, runner):
+    def test_performance_quality_report_data(self, runner):
         params = {'group': 'EMM', 'vertical': 'ARS', 'entity': 'PFUND', 'filter': 'EMM'}
         perf_quality = PerformanceQualityReportData(
             runner=runner,
@@ -38,20 +39,26 @@ class TestPerformanceQualityReport:
 
         report_inputs = perf_quality.execute()
 
-        # with open('test_data/performance_quality_data.json', 'w') as fp:
-        #     json.dump(report_inputs, fp)
+        with open('test_data/performance_quality_data.json', 'w') as fp:
+            json.dump(report_inputs, fp)
 
         fund_dimn = pd.read_json(report_inputs['fund_dimn'], orient='index')
         fund_returns = pd.read_json(report_inputs['fund_returns'], orient='index')
         eurekahedge_returns = pd.read_json(report_inputs['eurekahedge_returns'], orient='index')
         abs_bmrk_returns = pd.read_json(report_inputs['abs_bmrk_returns'], orient='index')
         gcm_peer_returns = pd.read_json(report_inputs['gcm_peer_returns'], orient='index')
+        gcm_peer_constituent_returns = pd.read_json(report_inputs['gcm_peer_constituent_returns'], orient='index')
+
+        gcm_peer_columns = [ast.literal_eval(x) for x in gcm_peer_constituent_returns.columns]
+        gcm_peer_columns = pd.MultiIndex.from_tuples(gcm_peer_columns, names=['PeerGroupName', 'SourceInvestmentId'])
+        gcm_peer_constituent_returns.columns = gcm_peer_columns
 
         assert fund_dimn.shape[0] > 0
         assert fund_returns.shape[0] > 0
         assert eurekahedge_returns.shape[0] > 0
         assert abs_bmrk_returns.shape[0] > 0
         assert gcm_peer_returns.shape[0] > 0
+        assert gcm_peer_constituent_returns.shape[0] > 0
 
     def test_performance_quality_report_skye(self, runner):
         f = open('test_data/performance_quality_data.json')
@@ -67,7 +74,8 @@ class TestPerformanceQualityReport:
                             'AbsoluteReturnBenchmark', 'AbsoluteReturnBenchmarkExcess',
                             'GcmPeer', 'GcmPeerExcess',
                             'EHI50', 'EHI50Excess',
-                            'EHI200', 'EHI200Excess']
+                            'EHI200', 'EHI200Excess',
+                            'Peer1Ptile']
         assert all(benchmark_summary.columns == expected_columns)
 
     def test_performance_quality_report_citadel(self, runner):
@@ -84,7 +92,8 @@ class TestPerformanceQualityReport:
                             'AbsoluteReturnBenchmark', 'AbsoluteReturnBenchmarkExcess',
                             'GcmPeer', 'GcmPeerExcess',
                             'EHI50', 'EHI50Excess',
-                            'EHI200', 'EHI200Excess']
+                            'EHI200', 'EHI200Excess',
+                            'Peer1Ptile']
         assert all(benchmark_summary.columns == expected_columns)
 
     def test_performance_quality_report_future_ahead(self, runner):

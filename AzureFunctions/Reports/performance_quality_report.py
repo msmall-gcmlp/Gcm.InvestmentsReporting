@@ -1,5 +1,6 @@
 import datetime as dt
 import pandas as pd
+import ast
 from gcm.Dao.DaoSources import DaoSource
 from gcm.InvestmentsReporting.ReportStructure.report_structure import ReportingEntityTypes
 from gcm.InvestmentsReporting.Runners.investmentsreporting import InvestmentsReportRunner
@@ -21,6 +22,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         self.__all_abs_bmrk_returns = None
         self.__all_gcm_peer_returns = None
         self.__all_eurekahedge_returns = None
+        self.__all_gcm_peer_constituent_returns = None
 
     @property
     def _all_fund_dimn(self):
@@ -51,6 +53,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self.__all_eurekahedge_returns is None:
             self.__all_eurekahedge_returns = pd.read_json(self._params['eurekahedge_returns'], orient='index')
         return self.__all_eurekahedge_returns
+
+    @property
+    def _all_gcm_peer_constituent_returns(self):
+        if self.__all_gcm_peer_constituent_returns is None:
+            returns = pd.read_json(self._params['gcm_peer_constituent_returns'], orient='index')
+            returns_columns = [ast.literal_eval(x) for x in returns.columns]
+            returns_columns = pd.MultiIndex.from_tuples(returns_columns,
+                                                        names=['PeerGroupName', 'SourceInvestmentId'])
+            returns.columns = returns_columns
+            self.__all_gcm_peer_constituent_returns = returns
+        return self.__all_gcm_peer_constituent_returns
 
     @property
     def _entity_type(self):
@@ -105,12 +118,19 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _ehi200_returns(self):
         return self._all_eurekahedge_returns['Eurekahedge Institutional 200'].squeeze()
 
+    @property
+    def _gcm_peer_constituent_returns(self):
+        peer_group_index = self._all_gcm_peer_constituent_returns.columns.get_level_values(0) == self._peer_group
+        returns = self._all_gcm_peer_constituent_returns.loc[:, peer_group_index]
+        returns = returns.droplevel(0, axis=1)
+        return returns
+
     def get_header_info(self):
         header = pd.DataFrame({'header_info': [self._fund_name, self._entity_type, self._as_of_date]})
         return header
 
     def get_peer_group_heading(self):
-        return pd.DataFrame({'peer_group_heading': ['v. GCM Peer ' + self._peer_group]})
+        return pd.DataFrame({'peer_group_heading': ['v. ' + self._peer_group + ' Peer']})
 
     def get_absolute_return_benchmark(self):
         return pd.DataFrame({'absolute_return_benchmark': [self._abs_return_benchmark]})
@@ -134,7 +154,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                index=['MTD', 'QTD', 'YTD'])
         return summary
 
-    def _build_benchmark_summary(self, fund_returns, benchmark_returns, benchmark_name):
+    def _get_excess_return_summary(self, fund_returns, benchmark_returns, benchmark_name):
         fund_returns = fund_returns.copy()
         benchmark_returns = benchmark_returns.copy()
         if benchmark_returns.shape[0] > 0:
@@ -148,24 +168,57 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         return summary
 
+    def _calculate_percentile(self, constituent_returns, fund_periodic_return, period):
+        periodic = self._analytics.compute_periodic_return(constituent_returns, period=period,
+                                                           as_of_date=self._as_of_date, method='geometric')
+        periodics = pd.concat([pd.Series([fund_periodic_return.squeeze()]), periodic], axis=0)
+        ptile = periodics.rank(pct=True)[0:1].squeeze().round(2) * 100
+        return ptile
+
+    def _get_percentile_summary(self, fund_returns, constituent_returns, group_name):
+        fund_returns = fund_returns.copy()
+        constituent_returns = constituent_returns.copy()
+        mtd_ptile = self._calculate_percentile(constituent_returns=constituent_returns,
+                                               fund_periodic_return=fund_returns.loc['MTD'],
+                                               period=PeriodicROR.MTD)
+        qtd_ptile = self._calculate_percentile(constituent_returns=constituent_returns,
+                                               fund_periodic_return=fund_returns.loc['QTD'],
+                                               period=PeriodicROR.QTD)
+        ytd_ptile = self._calculate_percentile(constituent_returns=constituent_returns,
+                                               fund_periodic_return=fund_returns.loc['YTD'],
+                                               period=PeriodicROR.YTD)
+
+        summary = pd.DataFrame({group_name: [mtd_ptile,
+                                             qtd_ptile,
+                                             ytd_ptile]},
+                               index=['MTD', 'QTD', 'YTD'])
+
+        return summary
+
     def build_benchmark_summary(self):
         fund_returns = self._get_return_summary(returns=self._fund_returns, return_type='Fund')
-        absolute_return_summary = self._build_benchmark_summary(fund_returns=fund_returns,
-                                                                benchmark_returns=self._abs_bmrk_returns,
-                                                                benchmark_name='AbsoluteReturnBenchmark')
-        gcm_peer_summary = self._build_benchmark_summary(fund_returns=fund_returns,
-                                                         benchmark_returns=self._gcm_peer_returns,
-                                                         benchmark_name='GcmPeer')
-        ehi_50_summary = self._build_benchmark_summary(fund_returns=fund_returns,
-                                                       benchmark_returns=self._ehi50_returns,
-                                                       benchmark_name='EHI50')
-        ehi_200_summary = self._build_benchmark_summary(fund_returns=fund_returns,
-                                                        benchmark_returns=self._ehi200_returns,
-                                                        benchmark_name='EHI200')
+        absolute_return_summary = self._get_excess_return_summary(fund_returns=fund_returns,
+                                                                  benchmark_returns=self._abs_bmrk_returns,
+                                                                  benchmark_name='AbsoluteReturnBenchmark')
+        gcm_peer_summary = self._get_excess_return_summary(fund_returns=fund_returns,
+                                                           benchmark_returns=self._gcm_peer_returns,
+                                                           benchmark_name='GcmPeer')
+        ehi_50_summary = self._get_excess_return_summary(fund_returns=fund_returns,
+                                                         benchmark_returns=self._ehi50_returns,
+                                                         benchmark_name='EHI50')
+        ehi_200_summary = self._get_excess_return_summary(fund_returns=fund_returns,
+                                                          benchmark_returns=self._ehi200_returns,
+                                                          benchmark_name='EHI200')
+
+        gcm_peer_percentiles = self._get_percentile_summary(fund_returns=fund_returns,
+                                                            constituent_returns=self._gcm_peer_constituent_returns,
+                                                            group_name='Peer1Ptile')
+
         summary = absolute_return_summary.copy()
         summary = summary.merge(gcm_peer_summary.drop(columns={'Fund'}), left_index=True, right_index=True)
         summary = summary.merge(ehi_50_summary.drop(columns={'Fund'}), left_index=True, right_index=True)
         summary = summary.merge(ehi_200_summary.drop(columns={'Fund'}), left_index=True, right_index=True)
+        summary = summary.merge(gcm_peer_percentiles, left_index=True, right_index=True)
         return summary
 
     def generate_performance_quality_report(self):
