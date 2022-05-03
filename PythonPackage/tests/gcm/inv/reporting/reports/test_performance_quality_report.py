@@ -1,7 +1,6 @@
 import pytest
 import datetime as dt
 import pandas as pd
-import json
 import ast
 
 from gcm.inv.reporting.reports.performance_quality_report import PerformanceQualityReport
