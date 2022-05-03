@@ -9,5 +9,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Gcm.AzureFunctions.Sdk" Version="7.*" />
+    <None Update="host.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

@@ -5,23 +5,24 @@ import pandas as pd
 def orchestrator_function(context: df.DurableOrchestrationContext):
     requestBody: str = context.get_input()
     requestBody['params']['run'] = "PerformanceQualityReportData"
-    fund_dimn, fund_monthly_returns, emms = yield context.call_activity(
+    report_inputs = yield context.call_activity(
         "ReportingActivity", requestBody
     )
-
-    requestBody['params']['run'] = "PerformanceQualityReport"
-    requestBody['params']['fund_dimn'] = fund_dimn
-    requestBody['params']['fund_monthly_returns'] = fund_monthly_returns
-
-    emm_dimns = pd.read_json(emms, orient='index')
-    emm_names = emm_dimns['InvestmentGroupName'].values
     
-    for fund in emm_names:
+    report_inputs['vertical'] = requestBody['params']['vertical']
+    report_inputs['entity'] = requestBody['params']['entity']
+    requestBody['params'] = report_inputs
+    requestBody['params']['run'] = "PerformanceQualityReport"
+
+    funds = pd.read_json(report_inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
+    
+    parallel_tasks = []
+    for fund in funds:
         requestBody['params']['fund_name'] = fund
-        
-        yield context.call_activity(
+        parallel_tasks.append(context.call_activity(
             "ReportingActivity", requestBody
-        )
+        )) 
+    yield context.task_all(parallel_tasks)
     return True
     
 
