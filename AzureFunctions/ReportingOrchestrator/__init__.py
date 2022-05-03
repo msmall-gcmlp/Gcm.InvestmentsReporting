@@ -1,5 +1,4 @@
 import azure.durable_functions as df
-import pandas as pd
 
 
 def orchestrator_function(context: df.DurableOrchestrationContext):
