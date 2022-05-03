@@ -1,6 +1,4 @@
-import logging
 import azure.functions as func
-import azure.durable_functions as df
 
 
 async def main(mytimer: func.TimerRequest, starter: str) -> None:

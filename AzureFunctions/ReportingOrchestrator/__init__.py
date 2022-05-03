@@ -14,7 +14,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     requestBody['params'] = report_inputs
     requestBody['params']['run'] = "PerformanceQualityReport"
 
-    funds = pd.read_json(report_inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
+    #funds = pd.read_json(report_inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
 
     parallel_tasks = []
     for fund in ['D1 Capital', 'Citadel', 'Skye']:
