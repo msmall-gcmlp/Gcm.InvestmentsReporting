@@ -1,4 +1,5 @@
 import datetime as dt
+import ast
 from gcm.inv.dataprovider.attribution import Attribution
 from gcm.inv.dataprovider.inv_dwh.attribution_query import AttributionQuery
 from gcm.inv.dataprovider.inv_dwh.benchmarking_query import BenchmarkingQuery
@@ -43,16 +44,24 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                               entity_master=EntityMaster(runner=runner, as_of_date=dt.date(2020, 10, 1)),
                               pub_inv_returns_query=PubInvReturnsQuery(runner=runner,
                                                                        as_of_date=dt.date(2020, 10, 1)))
-        self._entity_type = params['vertical'] + ' ' + params['entity']
-        self._filter = params['filter']
+        self._entity_type = params.get('vertical') + ' ' + params.get('entity')
+        self._status = params.get('status')
+        self._params = params
+        self._investment_ids = ast.literal_eval(self._params.get('investment_ids'))
+
+    # @property
+    # def _investment_ids(self):
+    #     if self._params.get('investment_ids') is None:
+    #         return None
+    #     else:
+    #         return ast.literal_eval(self._params.get('investment_ids'))
 
     def get_performance_quality_report_inputs(self):
-        investment_ids = [34411, 41096, 139998]
-        #investment_ids = None
+        investment_ids = self._investment_ids.copy()
         fund_dimn = self._investments.get_condensed_investment_group_dimensions(as_dataframe=True,
                                                                                 investment_ids=investment_ids)
 
-        include_filters = dict(status=[self._filter])
+        include_filters = dict(status=[self._status])
         exclude_filters = dict(strategy=['Other', 'Aggregated Prior Period Adjustment'])
         filtered_dimn = self._investments.get_filtered_investment_group_dimensions(include_filters=include_filters,
                                                                                    exclude_filters=exclude_filters,
@@ -60,15 +69,15 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                                                    investment_ids=investment_ids)
 
         filtered_dimn = filtered_dimn[['InvestmentGroupId',
-                                      'InvestmentGroupName',
-                                      'AbsoluteBenchmarkId',
-                                      'AbsoluteBenchmarkName',
-                                      'EurekahedgeBenchmark',
-                                      'InceptionDate',
-                                      'InvestmentStatus',
-                                      'ReportingPeerGroup',
-                                      'Strategy',
-                                      'SubStrategy']]
+                                       'InvestmentGroupName',
+                                       'AbsoluteBenchmarkId',
+                                       'AbsoluteBenchmarkName',
+                                       'EurekahedgeBenchmark',
+                                       'InceptionDate',
+                                       'InvestmentStatus',
+                                       'ReportingPeerGroup',
+                                       'Strategy',
+                                       'SubStrategy']]
 
         fund_monthly_returns = \
             self._inv_returns.get_investment_group_monthly_returns(start_date=self._start_date,

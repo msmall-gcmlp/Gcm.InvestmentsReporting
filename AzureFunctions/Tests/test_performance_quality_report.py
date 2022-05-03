@@ -28,7 +28,49 @@ class TestPerformanceQualityReport:
         return runner
 
     def test_performance_quality_report_data(self, runner):
-        params = {'group': 'EMM', 'vertical': 'ARS', 'entity': 'PFUND', 'filter': 'EMM'}
+        params = {'vertical': 'ARS', 'entity': 'PFUND',
+                  'status': 'EMM', 'investment_ids': '[34411, 41096, 139998]'}
+
+        perf_quality = PerformanceQualityReportData(
+            runner=runner,
+            start_date=dt.date(2020, 10, 1),
+            end_date=dt.date(2021, 12, 31),
+            as_of_date=dt.date(2021, 12, 31),
+            params=params
+        )
+
+        report_inputs = perf_quality.execute()
+
+        # with open('test_data/performance_quality_data.json', 'w') as fp:
+        #     json.dump(report_inputs, fp)
+
+        fund_dimn = pd.read_json(report_inputs['fund_dimn'], orient='index')
+        fund_returns = pd.read_json(report_inputs['fund_returns'], orient='index')
+        eurekahedge_returns = pd.read_json(report_inputs['eurekahedge_returns'], orient='index')
+        abs_bmrk_returns = pd.read_json(report_inputs['abs_bmrk_returns'], orient='index')
+        gcm_peer_returns = pd.read_json(report_inputs['gcm_peer_returns'], orient='index')
+
+        gcm_peer_constituent_returns = pd.read_json(report_inputs['gcm_peer_constituent_returns'], orient='index')
+        gcm_peer_columns = [ast.literal_eval(x) for x in gcm_peer_constituent_returns.columns]
+        gcm_peer_columns = pd.MultiIndex.from_tuples(gcm_peer_columns, names=['PeerGroupName', 'SourceInvestmentId'])
+        gcm_peer_constituent_returns.columns = gcm_peer_columns
+
+        eurekahedge_constituent_returns = pd.read_json(report_inputs['eurekahedge_constituent_returns'], orient='index')
+        eh_columns = [ast.literal_eval(x) for x in eurekahedge_constituent_returns.columns]
+        eh_columns = pd.MultiIndex.from_tuples(eh_columns, names=['EurekahedgeBenchmark', 'SourceInvestmentId'])
+        eurekahedge_constituent_returns.columns = eh_columns
+
+        assert fund_dimn.shape[0] > 0
+        assert fund_returns.shape[0] > 0
+        assert eurekahedge_returns.shape[0] > 0
+        assert abs_bmrk_returns.shape[0] > 0
+        assert gcm_peer_returns.shape[0] > 0
+        assert gcm_peer_constituent_returns.shape[0] > 0
+        assert eurekahedge_constituent_returns.shape[0] > 0
+
+    def test_performance_quality_report_data_no_inv_filter(self, runner):
+        params = {'vertical': 'ARS', 'entity': 'PFUND', 'status': 'EMM'}
+
         perf_quality = PerformanceQualityReportData(
             runner=runner,
             start_date=dt.date(2020, 10, 1),
