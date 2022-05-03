@@ -2,8 +2,8 @@ import datetime as dt
 import pandas as pd
 import ast
 from gcm.Dao.DaoSources import DaoSource
-from gcm.InvestmentsReporting.ReportStructure.report_structure import ReportingEntityTypes
-from gcm.InvestmentsReporting.Runners.investmentsreporting import InvestmentsReportRunner
+from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes
+from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
 from gcm.Scenario.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR
 from gcm.inv.quantlib.timeseries.analytics import Analytics

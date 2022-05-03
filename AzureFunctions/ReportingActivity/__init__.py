@@ -1,6 +1,6 @@
 import datetime as dt
-from ..Reports.performance_quality_report import PerformanceQualityReport
-from ..Reports.performance_quality_report_data import PerformanceQualityReportData
+from gcm.inv.reporting.reports.performance_quality_report import PerformanceQualityReport
+from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 
 

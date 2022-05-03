@@ -47,7 +47,9 @@ setup(
         "pandas",
         "datetime",
         "openpyxl",
-        "pillow"
+        "pillow",
+        "gcm-investmentsdataprovider==0.4.0.dev2205032239",
+        "gcm-investmentsquantlib==0.7.0.dev2204111953"
     ],
     extras_require={
         "dev": ["pytest>=3.7", "tox>=3.23", "wheel"],

@@ -4,8 +4,8 @@ import pandas as pd
 import json
 import ast
 
-from Reports.performance_quality_report import PerformanceQualityReport
-from Reports.performance_quality_report_data import PerformanceQualityReportData
+from gcm.inv.reporting.reports.performance_quality_report import PerformanceQualityReport
+from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 
 
@@ -41,7 +41,7 @@ class TestPerformanceQualityReport:
 
         report_inputs = perf_quality.execute()
 
-        # with open('test_data/performance_quality_data.json', 'w') as fp:
+        # with open('test_data/performance_quality_report_inputs.json', 'w') as fp:
         #     json.dump(report_inputs, fp)
 
         fund_dimn = pd.read_json(report_inputs['fund_dimn'], orient='index')
@@ -82,7 +82,7 @@ class TestPerformanceQualityReport:
 
         report_inputs = perf_quality.execute()
 
-        # with open('test_data/performance_quality_data.json', 'w') as fp:
+        # with open('test_data/performance_quality_report_inputs.json', 'w') as fp:
         #     json.dump(report_inputs, fp)
 
         fund_dimn = pd.read_json(report_inputs['fund_dimn'], orient='index')
@@ -109,14 +109,12 @@ class TestPerformanceQualityReport:
         assert gcm_peer_constituent_returns.shape[0] > 0
         assert eurekahedge_constituent_returns.shape[0] > 0
 
-    def test_performance_quality_report_skye(self, runner):
-        f = open('test_data/performance_quality_data.json')
-        report_inputs = json.load(f)
-        report_inputs['fund_name'] = 'Skye'
-        report_inputs['vertical'] = 'ARS'
-        report_inputs['entity'] = 'PFUND'
+    def test_performance_quality_report_skye(self, runner, performance_quality_report_inputs):
+        performance_quality_report_inputs['fund_name'] = 'Skye'
+        performance_quality_report_inputs['vertical'] = 'ARS'
+        performance_quality_report_inputs['entity'] = 'PFUND'
         perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
-                                                       params=report_inputs)
+                                                       params=performance_quality_report_inputs)
         benchmark_summary = perf_quality_report.build_benchmark_summary()
         assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD'])
         expected_columns = ['Fund',
@@ -128,14 +126,12 @@ class TestPerformanceQualityReport:
                             'EH50Ptile', 'EHI200Ptile']
         assert all(benchmark_summary.columns == expected_columns)
 
-    def test_performance_quality_report_citadel(self, runner):
-        f = open('test_data/performance_quality_data.json')
-        report_inputs = json.load(f)
-        report_inputs['fund_name'] = 'Citadel'
-        report_inputs['vertical'] = 'ARS'
-        report_inputs['entity'] = 'PFUND'
+    def test_performance_quality_report_citadel(self, runner, performance_quality_report_inputs):
+        performance_quality_report_inputs['fund_name'] = 'Citadel'
+        performance_quality_report_inputs['vertical'] = 'ARS'
+        performance_quality_report_inputs['entity'] = 'PFUND'
         perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
-                                                       params=report_inputs)
+                                                       params=performance_quality_report_inputs)
         benchmark_summary = perf_quality_report.build_benchmark_summary()
         assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD'])
         expected_columns = ['Fund',
@@ -147,14 +143,12 @@ class TestPerformanceQualityReport:
                             'EH50Ptile', 'EHI200Ptile']
         assert all(benchmark_summary.columns == expected_columns)
 
-    def test_performance_quality_report_future_ahead(self, runner):
-        f = open('test_data/performance_quality_data.json')
-        report_inputs = json.load(f)
-        report_inputs['fund_name'] = 'Skye'
-        report_inputs['vertical'] = 'ARS'
-        report_inputs['entity'] = 'PFUND'
+    def test_performance_quality_report_future_ahead(self, runner, performance_quality_report_inputs):
+        performance_quality_report_inputs['fund_name'] = 'Skye'
+        performance_quality_report_inputs['vertical'] = 'ARS'
+        performance_quality_report_inputs['entity'] = 'PFUND'
         perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2099, 12, 31),
-                                                       params=report_inputs)
+                                                       params=performance_quality_report_inputs)
         benchmark_summary = perf_quality_report.build_benchmark_summary()
         assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD'])
         expected_columns = ['Fund',
