@@ -25,39 +25,52 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         self._end_date = end_date
         self._as_of_date = as_of_date
         self._analytics = Analytics()
-        external_inv_returns_query = ExternalInvReturnsQuery(runner=runner, as_of_date=dt.date(2020, 10, 1))
-        benchmarking = Benchmarking(benchmarking_query=BenchmarkingQuery(runner=runner,
-                                                                         as_of_date=dt.date(2020, 10, 1)),
-                                    external_inv_returns_query=external_inv_returns_query)
-        self._investments = Investments(
-            pub_inv_dimensions_query=PubInvDimensionsQuery(runner=runner, as_of_date=dt.date(2020, 10, 1)),
-            external_inv_dimensions_query=ExternalInvDimensionsQuery(runner=runner, as_of_date=dt.date(2020, 10, 1)),
-            entity_master=EntityMaster(runner=runner, as_of_date=dt.date(2020, 10, 1)),
-            benchmarking=benchmarking)
-        self._attribution = Attribution(attribution_query=AttributionQuery(runner=runner, as_of_date=as_of_date),
-                                        investments=self._investments)
 
+        external_inv_returns_query = ExternalInvReturnsQuery(runner=runner, as_of_date=dt.date(2020, 10, 1))
+        benchmarking_query = BenchmarkingQuery(runner=runner, as_of_date=dt.date(2020, 10, 1))
+        pub_inv_dimensions_query = PubInvDimensionsQuery(runner=runner, as_of_date=dt.date(2020, 10, 1))
+        external_inv_dimensions_query = ExternalInvDimensionsQuery(runner=runner, as_of_date=dt.date(2020, 10, 1))
+        entity_master = EntityMaster(runner=runner, as_of_date=dt.date(2020, 10, 1))
+        attribution_query = AttributionQuery(runner=runner, as_of_date=as_of_date)
+        factors_query = FactorsQuery(runner=runner, as_of_date=as_of_date)
+
+        pub_inv_returns_query = PubInvReturnsQuery(runner=runner,
+                                                   as_of_date=dt.date(2020, 10, 1))
+
+        benchmarking = Benchmarking(benchmarking_query=benchmarking_query,
+                                    external_inv_returns_query=external_inv_returns_query)
+
+        investments = Investments(pub_inv_dimensions_query=pub_inv_dimensions_query,
+                                  external_inv_dimensions_query=external_inv_dimensions_query,
+                                  entity_master=entity_master,
+                                  benchmarking=benchmarking)
+
+        attribution = Attribution(attribution_query=attribution_query, investments=investments)
+
+        factors = Factors(factors_query=factors_query)
+
+        investment_returns = InvestmentReturns(investment_returns_query=external_inv_returns_query,
+                                               entity_master=entity_master,
+                                               pub_inv_returns_query=pub_inv_returns_query)
+        self._investments = investments
+        self._attribution = attribution
         self._benchmarking = benchmarking
-        self._factors = Factors(FactorsQuery(runner=runner, as_of_date=as_of_date))
-        self._inv_returns = \
-            InvestmentReturns(investment_returns_query=external_inv_returns_query,
-                              entity_master=EntityMaster(runner=runner, as_of_date=dt.date(2020, 10, 1)),
-                              pub_inv_returns_query=PubInvReturnsQuery(runner=runner,
-                                                                       as_of_date=dt.date(2020, 10, 1)))
+        self._factors = factors
+        self._inv_returns = investment_returns
+
         self._entity_type = params.get('vertical') + ' ' + params.get('entity')
         self._status = params.get('status')
         self._params = params
-        self._investment_ids = ast.literal_eval(self._params.get('investment_ids'))
 
-    # @property
-    # def _investment_ids(self):
-    #     if self._params.get('investment_ids') is None:
-    #         return None
-    #     else:
-    #         return ast.literal_eval(self._params.get('investment_ids'))
+    @property
+    def _investment_ids(self):
+        if self._params.get('investment_ids') is None:
+            return None
+        else:
+            return ast.literal_eval(self._params.get('investment_ids'))
 
     def get_performance_quality_report_inputs(self):
-        investment_ids = self._investment_ids.copy()
+        investment_ids = self._investment_ids.copy() if self._investment_ids is not None else None
         fund_dimn = self._investments.get_condensed_investment_group_dimensions(as_dataframe=True,
                                                                                 investment_ids=investment_ids)
 

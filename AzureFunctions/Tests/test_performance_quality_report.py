@@ -68,6 +68,7 @@ class TestPerformanceQualityReport:
         assert gcm_peer_constituent_returns.shape[0] > 0
         assert eurekahedge_constituent_returns.shape[0] > 0
 
+    @pytest.mark.skip('very slow')
     def test_performance_quality_report_data_no_inv_filter(self, runner):
         params = {'vertical': 'ARS', 'entity': 'PFUND', 'status': 'EMM'}
 
