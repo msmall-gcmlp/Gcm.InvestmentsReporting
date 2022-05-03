@@ -4,8 +4,8 @@ import pandas as pd
 import json
 import ast
 
-from AzureFunctions.Reports.performance_quality_report import PerformanceQualityReport
-from AzureFunctions.Reports.performance_quality_report_data import PerformanceQualityReportData
+from Reports.performance_quality_report import PerformanceQualityReport
+from Reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 
 
