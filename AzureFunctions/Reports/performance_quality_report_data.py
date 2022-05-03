@@ -1,5 +1,4 @@
 import datetime as dt
-import pandas as pd
 from gcm.inv.dataprovider.attribution import Attribution
 from gcm.inv.dataprovider.inv_dwh.attribution_query import AttributionQuery
 from gcm.inv.dataprovider.inv_dwh.benchmarking_query import BenchmarkingQuery

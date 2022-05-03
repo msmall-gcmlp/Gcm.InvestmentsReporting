@@ -29,12 +29,12 @@ class TestPerformanceQualityReport:
     def test_performance_quality_data(self, runner):
         params = {'group': 'EMM'}
         perf_quality = PerformanceQualityReportData(
-                runner=runner,
-                start_date=dt.date(2020, 10, 1),
-                end_date=dt.date(2021, 12, 31),
-                as_of_date=dt.date(2021, 12, 31),
-                params=params
-            )
+            runner=runner,
+            start_date=dt.date(2020, 10, 1),
+            end_date=dt.date(2021, 12, 31),
+            as_of_date=dt.date(2021, 12, 31),
+            params=params
+        )
 
         report_inputs = perf_quality.execute()
 

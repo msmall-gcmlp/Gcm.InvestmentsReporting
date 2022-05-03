@@ -1,5 +1,4 @@
 import datetime as dt
-from msilib.schema import Error
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
 from gcm.InvestmentsReporting.ReportStructure.report_structure import ReportingEntityTypes
@@ -112,7 +111,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def get_peer_group_heading(self):
         return pd.DataFrame({'peer_group_heading': ['v. GCM Peer ' + self._peer_group]})
-    
+
     def get_absolute_return_benchmark(self):
         return pd.DataFrame({'absolute_return_benchmark': [self._abs_return_benchmark]})
 
