@@ -69,8 +69,8 @@ class TestPerformanceQualityReport:
 
     @pytest.mark.skip('very slow')
     def test_performance_quality_report_data_no_inv_filter(self, runner):
-        params = {'vertical': 'ARS', 'entity': 'PFUND', 'status': 'EMM'}
-
+        params = {'status': 'EMM', 'vertical': 'ARS', 'entity': 'PFUND',
+                  'run': 'PerformanceQualityReportData'}
         perf_quality = PerformanceQualityReportData(
             runner=runner,
             start_date=dt.date(2020, 10, 1),
@@ -78,7 +78,6 @@ class TestPerformanceQualityReport:
             as_of_date=dt.date(2021, 12, 31),
             params=params
         )
-
         report_inputs = perf_quality.execute()
 
         # with open('test_data/performance_quality_report_inputs.json', 'w') as fp:

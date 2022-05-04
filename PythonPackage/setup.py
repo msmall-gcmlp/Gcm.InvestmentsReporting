@@ -48,7 +48,7 @@ setup(
         "datetime",
         "openpyxl",
         "pillow",
-        "gcm-investmentsdataprovider==0.4.0.dev2205032239",
+        "gcm-investmentsdataprovider==0.4.0.dev2205041330",
         "gcm-investmentsquantlib==0.7.0.dev2204111953"
     ],
     extras_require={
