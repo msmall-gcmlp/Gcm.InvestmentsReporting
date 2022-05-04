@@ -95,7 +95,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _fund_returns(self):
-        return self._all_fund_returns[self._fund_name]
+        if any(self._all_fund_returns.columns == self._fund_name):
+            return self._all_fund_returns[self._fund_name]
+        else:
+            return pd.DataFrame()
 
     @property
     def _abs_bmrk_returns(self):
@@ -116,11 +119,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _primary_peer_returns(self):
-        return self._all_gcm_peer_returns[self._primary_peer_group].squeeze()
+        if any(self._all_gcm_peer_returns.columns == self._primary_peer_group):
+            return self._all_gcm_peer_returns[self._primary_peer_group].squeeze()
+        else:
+            return pd.Series()
 
     @property
     def _secondary_peer_returns(self):
-        return self._all_gcm_peer_returns[self._secondary_peer_group].squeeze()
+        if any(self._all_gcm_peer_returns.columns == self._secondary_peer_returns):
+            return self._all_gcm_peer_returns[self._secondary_peer_returns].squeeze()
+        else:
+            return pd.Series()
 
     @property
     def _eurekahedge_benchmark(self):
@@ -132,7 +141,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _ehi50_returns(self):
-        return self._all_eurekahedge_returns[self._eurekahedge_benchmark].squeeze()
+        if any(self._all_eurekahedge_returns.columns == self._eurekahedge_benchmark):
+            return self._all_eurekahedge_returns[self._eurekahedge_benchmark].squeeze()
+        else:
+            return pd.Series()
 
     @property
     def _ehi200_returns(self):
@@ -142,8 +154,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _primary_peer_constituent_returns(self):
         peer_group_index = \
             self._all_gcm_peer_constituent_returns.columns.get_level_values(0) == self._primary_peer_group
-        returns = self._all_gcm_peer_constituent_returns.loc[:, peer_group_index]
-        returns = returns.droplevel(0, axis=1)
+        if any(peer_group_index):
+            returns = self._all_gcm_peer_constituent_returns.loc[:, peer_group_index]
+            returns = returns.droplevel(0, axis=1)
+        else:
+            returns = pd.DataFrame()
         return returns
 
     @property
@@ -159,9 +174,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _eurekahedge_constituent_returns(self):
-        eh_index = self._all_eurekahedge_constituent_returns.columns.get_level_values(0) == self._eurekahedge_benchmark
-        returns = self._all_eurekahedge_constituent_returns.loc[:, eh_index]
-        returns = returns.droplevel(0, axis=1)
+        if any(self._all_eurekahedge_constituent_returns.columns.get_level_values(0) == self._eurekahedge_benchmark):
+            eh_index = \
+                self._all_eurekahedge_constituent_returns.columns.get_level_values(0) == self._eurekahedge_benchmark
+            returns = self._all_eurekahedge_constituent_returns.loc[:, eh_index]
+            returns = returns.droplevel(0, axis=1)
+        else:
+            returns = pd.Series()
+
         return returns
 
     @property
@@ -177,19 +197,34 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return header
 
     def get_peer_group_heading(self):
-        return pd.DataFrame({'peer_group_heading': ['v. ' + self._primary_peer_group + ' Peer']})
+        if self._primary_peer_group is not None:
+            return pd.DataFrame({'peer_group_heading': ['v. ' + self._primary_peer_group + ' Peer']})
+        else:
+            return pd.DataFrame({'peer_group_heading': ['v. GCM Peer']})
 
     def get_absolute_return_benchmark(self):
-        return pd.DataFrame({'absolute_return_benchmark': [self._abs_return_benchmark]})
+        if self._abs_return_benchmark is not None:
+            return pd.DataFrame({'absolute_return_benchmark': [self._abs_return_benchmark]})
+        else:
+            return pd.DataFrame({'absolute_return_benchmark': ['N/A']})
 
     def get_eurekahedge_benchmark_heading(self):
-        return pd.DataFrame({'eurekahedge_benchmark_heading': ['v. ' + self._eurekahedge_benchmark]})
+        if self._eurekahedge_benchmark is not None:
+            return pd.DataFrame({'eurekahedge_benchmark_heading': ['v. ' + self._eurekahedge_benchmark]})
+        else:
+            return pd.DataFrame({'eurekahedge_benchmark_heading': ['v. EHI Index']})
 
     def get_peer_ptile_1_heading(self):
-        return pd.DataFrame({'peer_ptile_1_heading': [self._primary_peer_group]})
+        if self._primary_peer_group is not None:
+            return pd.DataFrame({'peer_ptile_1_heading': [self._primary_peer_group]})
+        else:
+            return pd.DataFrame({'peer_ptile_1_heading': ['']})
 
     def get_peer_ptile_2_heading(self):
-        return pd.DataFrame({'peer_ptile_2_heading': [self._secondary_peer_group]})
+        if self._secondary_peer_group is not None:
+            return pd.DataFrame({'peer_ptile_2_heading': [self._secondary_peer_group]})
+        else:
+            return pd.DataFrame({'peer_ptile_2_heading': ['']})
 
     def _get_return_summary(self, returns, return_type):
         returns = returns.copy()
@@ -216,8 +251,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             summary[benchmark_name + 'Excess'] = summary['Fund'] - summary[benchmark_name]
         else:
             summary = fund_returns.copy()
-            summary[benchmark_name] = 'N/A'
-            summary[benchmark_name + 'Excess'] = 'N/A'
+            summary[benchmark_name] = ''
+            summary[benchmark_name + 'Excess'] = ''
 
         return summary
 
@@ -299,7 +334,16 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = summary.merge(ehi200_percentiles, left_index=True, right_index=True)
         return summary
 
+    def _validate_inputs(self):
+        if self._fund_returns.shape[0] == 0:
+            return False
+        else:
+            return True
+
     def generate_performance_quality_report(self):
+        if not self._validate_inputs():
+            return 'Invalid inputs'
+
         header_info = self.get_header_info()
         return_summary = self.build_benchmark_summary()
         absolute_return_benchmark = self.get_absolute_return_benchmark()
@@ -319,7 +363,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         }
 
         with Scenario(asofdate=dt.date(2021, 12, 31)).context():
-            report_name = "PFUND_PerformanceQuality_" + self._fund_name
+            report_name = "PFUND_PerformanceQuality_" + self._fund_name.replace('/', '')
 
             #TODO GIP is placeholder
             InvestmentsReportRunner().execute(

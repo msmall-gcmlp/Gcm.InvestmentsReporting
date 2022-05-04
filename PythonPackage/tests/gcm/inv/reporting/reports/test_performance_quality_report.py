@@ -2,6 +2,7 @@ import pytest
 import datetime as dt
 import pandas as pd
 import ast
+import json
 
 from gcm.inv.reporting.reports.performance_quality_report import PerformanceQualityReport
 from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
@@ -157,3 +158,43 @@ class TestPerformanceQualityReport:
                             'Peer1Ptile', 'Peer2Ptile',
                             'EH50Ptile', 'EHI200Ptile']
         assert all(benchmark_summary.columns == expected_columns)
+
+    def test_performance_quality_report_missing_returns(self, runner, performance_quality_report_inputs):
+        returns = pd.read_json(performance_quality_report_inputs['fund_returns'], orient='index').drop(columns={'Skye'})
+        performance_quality_report_inputs['fund_returns'] = returns.to_json(orient='index')
+        performance_quality_report_inputs['fund_name'] = 'Skye'
+        performance_quality_report_inputs['vertical'] = 'ARS'
+        performance_quality_report_inputs['entity'] = 'PFUND'
+        perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
+                                                       params=performance_quality_report_inputs)
+        report = perf_quality_report.generate_performance_quality_report()
+        assert report == 'Invalid inputs'
+
+    @pytest.mark.skip(reason='for debugging only')
+    def test_performance_quality_report_data_all(self, runner):
+        params = {'status': 'EMM', 'vertical': 'ARS', 'entity': 'PFUND',
+                  'run': 'PerformanceQualityReportData'}
+        perf_quality = PerformanceQualityReportData(
+            runner=runner,
+            start_date=dt.date(2020, 10, 1),
+            end_date=dt.date(2021, 12, 31),
+            as_of_date=dt.date(2021, 12, 31),
+            params=params
+        )
+        report_inputs = perf_quality.execute()
+
+        with open('gcm/inv/reporting/test_data/performance_quality_report_inputs_all.json', 'w') as fp:
+            json.dump(report_inputs, fp)
+
+    @pytest.mark.skip(reason='for debugging only')
+    def test_performance_quality_report_all(self, runner, performance_quality_report_inputs_all):
+        report_inputs = performance_quality_report_inputs_all
+        report_inputs['vertical'] = 'ARS'
+        report_inputs['entity'] = 'PFUND'
+        funds = pd.read_json(report_inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
+        for fund in funds:
+            print(fund)
+            report_inputs['fund_name'] = fund
+            perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
+                                                           params=report_inputs)
+            perf_quality_report.generate_performance_quality_report()
