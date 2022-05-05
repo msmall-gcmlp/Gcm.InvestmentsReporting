@@ -17,7 +17,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
 
     funds = pd.read_json(report_inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
     funds_chunked = np.array_split(funds, 25)
-    
+
     for fund_chunk in funds_chunked:
         parallel_tasks = []
         for fund in fund_chunk:
