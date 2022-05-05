@@ -252,7 +252,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         # rounding to 2 so that Excess Return matches optically
         stats = [mtd_return, qtd_return, ytd_return,
                  trailing_1y_return, trailing_3y_return, trailing_5y_return, trailing_10y_return]
-        summary = pd.DataFrame({return_type: [x.squeeze().round(2) if len(x) > 0 else ' ' for x in stats]},
+        stats = [x.squeeze() for x in stats]
+        summary = pd.DataFrame({return_type: [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
                                index=['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
         return summary
 
