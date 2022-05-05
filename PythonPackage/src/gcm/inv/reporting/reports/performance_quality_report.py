@@ -1,6 +1,7 @@
 import datetime as dt
 import pandas as pd
 import ast
+import numpy as np
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes
 from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
@@ -249,15 +250,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                                       annualize_return=True)
 
         # rounding to 2 so that Excess Return matches optically
-        summary = pd.DataFrame({return_type: [mtd_return.squeeze(),
-                                              qtd_return.squeeze(),
-                                              ytd_return.squeeze(),
-                                              trailing_1y_return.squeeze(),
-                                              trailing_3y_return.squeeze(),
-                                              trailing_5y_return.squeeze(),
-                                              trailing_10y_return.squeeze()]},
+        stats = [mtd_return, qtd_return, ytd_return,
+                 trailing_1y_return, trailing_3y_return, trailing_5y_return, trailing_10y_return]
+        summary = pd.DataFrame({return_type: [x.squeeze().round(2) if len(x) > 0 else ' ' for x in stats]},
                                index=['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
-        summary = summary.round(2)
         return summary
 
     def _get_excess_return_summary(self, fund_returns, benchmark_returns, benchmark_name):
@@ -266,7 +262,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if benchmark_returns.shape[0] > 0:
             benchmark_returns = self._get_return_summary(returns=benchmark_returns, return_type=benchmark_name)
             summary = fund_returns.merge(benchmark_returns, left_index=True, right_index=True)
-            summary[benchmark_name + 'Excess'] = summary['Fund'] - summary[benchmark_name]
+            summary['IsNumeric'] = summary.applymap(np.isreal).all(1)
+            excess = summary[summary['IsNumeric']]['Fund'] - summary[summary['IsNumeric']][benchmark_name]
+            summary[benchmark_name + 'Excess'] = excess
+            summary.drop(columns={'IsNumeric'}, inplace=True)
+            summary = summary.fillna('')
         else:
             summary = fund_returns.copy()
             summary[benchmark_name] = ''
@@ -285,8 +285,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
         returns = self._analytics.compute_trailing_return(constituent_returns, trailing_months=trailing_months,
                                                           as_of_date=self._as_of_date, method='geometric',
                                                           annualize_return=True)
-        returns = pd.concat([pd.Series([fund_periodic_return.squeeze()]), returns], axis=0)
-        ptile = returns.rank(pct=True)[0:1].squeeze().round(2) * 100
+        if isinstance(fund_periodic_return.squeeze(), float):
+            returns = pd.concat([pd.Series([fund_periodic_return.squeeze()]), returns], axis=0)
+            ptile = returns.rank(pct=True)[0:1].squeeze().round(2) * 100
+        else:
+            ptile = ''
         return ptile
 
     def _get_percentile_summary(self, fund_returns, constituent_returns, group_name):

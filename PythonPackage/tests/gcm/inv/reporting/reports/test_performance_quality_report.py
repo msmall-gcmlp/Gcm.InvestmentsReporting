@@ -186,7 +186,7 @@ class TestPerformanceQualityReport:
         with open('gcm/inv/reporting/test_data/performance_quality_report_inputs_all.json', 'w') as fp:
             json.dump(report_inputs, fp)
 
-    @pytest.mark.skip(reason='for debugging only')
+    #@pytest.mark.skip(reason='for debugging only')
     def test_performance_quality_report_all(self, runner, performance_quality_report_inputs_all):
         report_inputs = performance_quality_report_inputs_all
         report_inputs['vertical'] = 'ARS'
