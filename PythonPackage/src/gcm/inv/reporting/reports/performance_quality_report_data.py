@@ -18,6 +18,10 @@ from gcm.inv.dataprovider.benchmarking import Benchmarking
 from gcm.inv.dataprovider.factors import Factors
 from gcm.inv.dataprovider.investments import Investments
 from gcm.inv.dataprovider.investment_returns import InvestmentReturns
+from gcm.inv.dataprovider.investment_exposure import InvestmentExposure
+from gcm.inv.dataprovider.pub_dwh.pub_inv_exposure_query import PubInvExposureQuery
+from pandas._libs.tslibs.offsets import relativedelta
+
 from .reporting_runner_base import ReportingRunnerBase
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 
@@ -31,16 +35,16 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         self._as_of_date = as_of_date
         self._analytics = Analytics()
 
-        external_inv_returns_query = ExternalInvReturnsQuery(runner=runner, as_of_date=dt.date(2020, 10, 1))
-        benchmarking_query = BenchmarkingQuery(runner=runner, as_of_date=dt.date(2020, 10, 1))
-        pub_inv_dimensions_query = PubInvDimensionsQuery(runner=runner, as_of_date=dt.date(2020, 10, 1))
-        external_inv_dimensions_query = ExternalInvDimensionsQuery(runner=runner, as_of_date=dt.date(2020, 10, 1))
-        entity_master = EntityMaster(runner=runner, as_of_date=dt.date(2020, 10, 1))
+        external_inv_returns_query = ExternalInvReturnsQuery(runner=runner, as_of_date=as_of_date)
+        benchmarking_query = BenchmarkingQuery(runner=runner, as_of_date=as_of_date)
+        pub_inv_dimensions_query = PubInvDimensionsQuery(runner=runner, as_of_date=as_of_date)
+        external_inv_dimensions_query = ExternalInvDimensionsQuery(runner=runner, as_of_date=as_of_date)
+        entity_master = EntityMaster(runner=runner, as_of_date=as_of_date)
         attribution_query = AttributionQuery(runner=runner, as_of_date=as_of_date)
         factors_query = FactorsQuery(runner=runner, as_of_date=as_of_date)
+        pub_inv_exposure_query = PubInvExposureQuery(runner=runner, as_of_date=as_of_date)
 
-        pub_inv_returns_query = PubInvReturnsQuery(runner=runner,
-                                                   as_of_date=dt.date(2020, 10, 1))
+        pub_inv_returns_query = PubInvReturnsQuery(runner=runner, as_of_date=as_of_date)
 
         benchmarking = Benchmarking(benchmarking_query=benchmarking_query,
                                     external_inv_returns_query=external_inv_returns_query)
@@ -57,11 +61,16 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         investment_returns = InvestmentReturns(investment_returns_query=external_inv_returns_query,
                                                entity_master=entity_master,
                                                pub_inv_returns_query=pub_inv_returns_query)
+
+        investment_exposure = InvestmentExposure(entity_master=entity_master,
+                                                 pub_inv_exposure_query=pub_inv_exposure_query)
+
         self._investments = investments
         self._attribution = attribution
         self._benchmarking = benchmarking
         self._factors = factors
         self._inv_returns = investment_returns
+        self._inv_exposure = investment_exposure
 
         self._entity_type = params.get('vertical') + ' ' + params.get('entity')
         self._status = params.get('status')
@@ -122,6 +131,24 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             self._benchmarking.get_eurekahedge_benchmark_constituent_returns(start_date=self._start_date,
                                                                              end_date=self._end_date)
 
+        exposure_latest = self._inv_exposure.get_latest_investment_group_exposure(investment_ids=investment_ids,
+                                                                                  as_of_date=self._end_date)
+
+        start_3y = self._end_date - relativedelta(years=3)
+        exposure_3y = self._inv_exposure.get_average_investment_group_exposure(investment_ids=investment_ids,
+                                                                               start_date=start_3y,
+                                                                               end_date=self._end_date)
+
+        start_5y = self._end_date - relativedelta(years=5)
+        exposure_5y = self._inv_exposure.get_average_investment_group_exposure(investment_ids=investment_ids,
+                                                                               start_date=start_5y,
+                                                                               end_date=self._end_date)
+
+        start_10y = self._end_date - relativedelta(years=10)
+        exposure_10y = self._inv_exposure.get_average_investment_group_exposure(investment_ids=investment_ids,
+                                                                                start_date=start_10y,
+                                                                                end_date=self._end_date)
+
         report_inputs = dict()
         report_inputs['fund_dimn'] = filtered_dimn.to_json(orient='index')
         report_inputs['fund_returns'] = fund_monthly_returns.to_json(orient='index')
@@ -130,6 +157,10 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         report_inputs['gcm_peer_returns'] = gcm_peer_returns.to_json(orient='index')
         report_inputs['gcm_peer_constituent_returns'] = gcm_peer_constituent_returns.to_json(orient='index')
         report_inputs['eurekahedge_constituent_returns'] = eurekahedge_constituent_returns.to_json(orient='index')
+        report_inputs['exposure_latest'] = exposure_latest.to_json(orient='index')
+        report_inputs['exposure_3y'] = exposure_3y.to_json(orient='index')
+        report_inputs['exposure_5y'] = exposure_5y.to_json(orient='index')
+        report_inputs['exposure_10y'] = exposure_10y.to_json(orient='index')
 
         return report_inputs
 

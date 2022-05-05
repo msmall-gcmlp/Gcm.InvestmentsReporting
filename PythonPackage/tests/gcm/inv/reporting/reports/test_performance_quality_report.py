@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 import datetime as dt
 import pandas as pd
@@ -27,13 +29,22 @@ class TestPerformanceQualityReport:
         )
         return runner
 
+    @pytest.fixture
+    def perf_quality_report(self, runner):
+        # TODO consider refactoring as_of_date to Scenario
+        params = dict()
+        params['fund_name'] = 'Skye'
+        params['vertical'] = 'ARS'
+        params['entity'] = 'PFUND'
+        return PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31), params=params)
+
     def test_performance_quality_report_data(self, runner):
         params = {'vertical': 'ARS', 'entity': 'PFUND',
                   'status': 'EMM', 'investment_ids': '[34411, 41096, 139998]'}
 
         perf_quality = PerformanceQualityReportData(
             runner=runner,
-            start_date=dt.date(1970, 1, 1),
+            start_date=dt.date(2020, 1, 1),
             end_date=dt.date(2022, 3, 31),
             as_of_date=dt.date(2022, 3, 31),
             params=params
@@ -41,6 +52,21 @@ class TestPerformanceQualityReport:
 
         report_inputs = perf_quality.get_performance_quality_report_inputs()
 
+        # gcm_peer_constituent_returns = pd.read_json(report_inputs['gcm_peer_constituent_returns'], orient='index')
+        # gcm_peer_columns = [ast.literal_eval(x) for x in gcm_peer_constituent_returns.columns]
+        # gcm_peer_columns = pd.MultiIndex.from_tuples(gcm_peer_columns, names=['PeerGroupName', 'SourceInvestmentId'])
+        # gcm_peer_constituent_returns.columns = gcm_peer_columns
+        # gcm_peer_constituent_returns = gcm_peer_constituent_returns[['GCM TMT', 'GCM Multi-PM']]
+        # report_inputs['gcm_peer_constituent_returns'] = gcm_peer_constituent_returns.to_json(orient='index')
+        #
+        # eurekahedge_constituent_returns = pd.read_json(report_inputs['eurekahedge_constituent_returns'], orient='index')
+        # eh_columns = [ast.literal_eval(x) for x in eurekahedge_constituent_returns.columns]
+        # eh_columns = pd.MultiIndex.from_tuples(eh_columns, names=['EurekahedgeBenchmark', 'SourceInvestmentId'])
+        # eurekahedge_constituent_returns.columns = eh_columns
+        # eurekahedge_constituent_returns = eurekahedge_constituent_returns[['EHI50 Multi-Strategy',
+        #                                                                    'EHI50 Long/Short Equity']]
+        # report_inputs['eurekahedge_constituent_returns'] = eurekahedge_constituent_returns.to_json(orient='index')
+        #
         # with open('gcm/inv/reporting/test_data/performance_quality_report_inputs.json', 'w') as fp:
         #     json.dump(report_inputs, fp)
 
@@ -60,6 +86,11 @@ class TestPerformanceQualityReport:
         eh_columns = pd.MultiIndex.from_tuples(eh_columns, names=['EurekahedgeBenchmark', 'SourceInvestmentId'])
         eurekahedge_constituent_returns.columns = eh_columns
 
+        exposure_latest = pd.read_json(report_inputs['exposure_latest'], orient='index')
+        exposure_3y = pd.read_json(report_inputs['exposure_3y'], orient='index')
+        exposure_5y = pd.read_json(report_inputs['exposure_5y'], orient='index')
+        exposure_10y = pd.read_json(report_inputs['exposure_10y'], orient='index')
+
         assert fund_dimn.shape[0] > 0
         assert fund_returns.shape[0] > 0
         assert eurekahedge_returns.shape[0] > 0
@@ -67,6 +98,10 @@ class TestPerformanceQualityReport:
         assert gcm_peer_returns.shape[0] > 0
         assert gcm_peer_constituent_returns.shape[0] > 0
         assert eurekahedge_constituent_returns.shape[0] > 0
+        assert exposure_latest.shape[0] == 3
+        assert exposure_3y.shape[0] == 3
+        assert exposure_5y.shape[0] == 3
+        assert exposure_10y.shape[0] == 3
 
     @pytest.mark.skip('very slow')
     def test_performance_quality_report_data_no_inv_filter(self, runner):
@@ -108,13 +143,10 @@ class TestPerformanceQualityReport:
         assert gcm_peer_constituent_returns.shape[0] > 0
         assert eurekahedge_constituent_returns.shape[0] > 0
 
-    def test_performance_quality_report_skye(self, runner):
-        params = {}
-        params['fund_name'] = 'Skye'
-        params['vertical'] = 'ARS'
-        params['entity'] = 'PFUND'
-        perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
-                                                       params=params)
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
+    def test_performance_quality_report_skye(self, mock_download, performance_quality_report_inputs,
+                                             perf_quality_report):
+        mock_download.return_value = performance_quality_report_inputs
         benchmark_summary = perf_quality_report.build_benchmark_summary()
         assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
         expected_columns = ['Fund',
@@ -126,31 +158,9 @@ class TestPerformanceQualityReport:
                             'EH50Ptile', 'EHI200Ptile']
         assert all(benchmark_summary.columns == expected_columns)
 
-    def test_performance_quality_report_citadel(self, runner):
-        params = {}
-        params['fund_name'] = 'Citadel'
-        params['vertical'] = 'ARS'
-        params['entity'] = 'PFUND'
-        perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
-                                                       params=params)
-        benchmark_summary = perf_quality_report.build_benchmark_summary()
-        assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
-        expected_columns = ['Fund',
-                            'AbsoluteReturnBenchmark', 'AbsoluteReturnBenchmarkExcess',
-                            'GcmPeer', 'GcmPeerExcess',
-                            'EHI50', 'EHI50Excess',
-                            'EHI200', 'EHI200Excess',
-                            'Peer1Ptile', 'Peer2Ptile',
-                            'EH50Ptile', 'EHI200Ptile']
-        assert all(benchmark_summary.columns == expected_columns)
-
-    def test_performance_quality_report_future_ahead(self, runner, performance_quality_report_inputs):
-        params = {}
-        params['fund_name'] = 'Skye'
-        params['vertical'] = 'ARS'
-        params['entity'] = 'PFUND'
-        perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2099, 12, 31),
-                                                       params=params)
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
+    def test_performance_quality_report_future_ahead(self, mock_download, performance_quality_report_inputs, perf_quality_report):
+        mock_download.return_value = performance_quality_report_inputs
         benchmark_summary = perf_quality_report.build_benchmark_summary()
         assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
         expected_columns = ['Fund',
