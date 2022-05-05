@@ -49,7 +49,7 @@ setup(
         "openpyxl",
         "pillow",
         "gcm-investmentsdataprovider==0.4.0.dev2205051434",
-        "gcm-investmentsquantlib==0.32.0.dev2205051634"
+        "gcm-investmentsquantlib==0.32.0.dev2205051743"
     ],
     extras_require={
         "dev": ["pytest>=3.7", "tox>=3.23", "wheel"],
