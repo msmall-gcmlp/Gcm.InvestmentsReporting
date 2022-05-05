@@ -1,6 +1,5 @@
 import azure.durable_functions as df
 import pandas as pd
-import numpy as np
 
 
 def orchestrator_function(context: df.DurableOrchestrationContext):
@@ -17,19 +16,13 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
 
     funds = pd.read_json(report_inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
 
-    if len(funds) > 30:
-        funds_chunked = np.array_split(funds, round(len(funds) / 30, 0))
-    else:
-        funds_chunked = [funds]
-
-    for fund_chunk in funds_chunked:
-        parallel_tasks = []
-        for fund in fund_chunk:
-            requestBody['params']['fund_name'] = fund
-            parallel_tasks.append(context.call_activity(
-                "ReportingActivity", requestBody
-            ))
-        yield context.task_all(parallel_tasks)
+    parallel_tasks = []
+    for fund in funds:
+        requestBody['params']['fund_name'] = fund
+        parallel_tasks.append(context.call_activity(
+            "ReportingActivity", requestBody
+        ))
+    yield context.task_all(parallel_tasks)
 
 
 main = df.Orchestrator.create(orchestrator_function)
