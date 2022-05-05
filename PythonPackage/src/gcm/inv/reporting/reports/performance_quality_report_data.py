@@ -132,7 +132,21 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
         return report_inputs
 
-    def generate_inputs_and_write_to_datalake(self):
+    def download_performance_quality_report_inputs(self) -> dict:
+        location = "lab/rqs/azurefunctiondata"
+        read_params = AzureDataLakeDao.create_get_data_params(
+            location,
+            "performance_quality_report_inputs.json",
+            retry=False,
+        )
+        file = self._runner.execute(
+            params=read_params,
+            source=DaoSource.DataLake,
+            operation=lambda dao, params: dao.get_data(read_params)
+        )
+        return json.loads(file.content)
+
+    def generate_inputs_and_write_to_datalake(self) -> dict:
         inputs = self.get_performance_quality_report_inputs()
         data_to_write = json.dumps(inputs)
         write_location = "lab/rqs/azurefunctiondata"
