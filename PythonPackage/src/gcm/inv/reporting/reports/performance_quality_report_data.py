@@ -1,5 +1,9 @@
 import datetime as dt
 import ast
+import json
+
+from gcm.Dao.DaoSources import DaoSource
+from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.dataprovider.attribution import Attribution
 from gcm.inv.dataprovider.inv_dwh.attribution_query import AttributionQuery
 from gcm.inv.dataprovider.inv_dwh.benchmarking_query import BenchmarkingQuery
@@ -128,5 +132,21 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
         return report_inputs
 
+    def generate_inputs_and_write_to_datalake(self):
+        inputs = self.get_performance_quality_report_inputs()
+        data_to_write = json.dumps(inputs)
+        write_location = "lab/rqs/azurefunctiondata"
+        write_params = AzureDataLakeDao.create_get_data_params(
+            write_location,
+            "performance_quality_report_inputs.json",
+            retry=False,
+        )
+        self._runner.execute(
+            params=write_params,
+            source=DaoSource.DataLake,
+            operation=lambda dao, params: dao.post_data(params, data_to_write)
+        )
+        return inputs
+
     def run(self, **kwargs):
-        return self.get_performance_quality_report_inputs()
+        return self.generate_inputs_and_write_to_datalake()
