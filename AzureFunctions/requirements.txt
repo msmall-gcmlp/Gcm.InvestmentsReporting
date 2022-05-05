@@ -4,4 +4,4 @@
 
 azure-functions
 azure-functions-durable
-gcm-investmentsreporting==0.17.0.dev2205042052
+gcm-investmentsreporting==0.17.0.dev2205051711
