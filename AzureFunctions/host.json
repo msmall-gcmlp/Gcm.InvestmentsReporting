@@ -15,6 +15,9 @@
       "messageHandlerOptions": {
         "maxAutoRenewDuration": "00:55:00"
       }
+    },
+    "durableTask": {
+      "maxConcurrentActivityFunctions": 1
     }
   },
   "extensionBundle": {
