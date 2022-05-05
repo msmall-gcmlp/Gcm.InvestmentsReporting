@@ -16,7 +16,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     requestBody['params']['run'] = "PerformanceQualityReport"
 
     funds = pd.read_json(report_inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
-    funds_chunked = np.array_split(funds, 25)
+    funds_chunked = np.array_split(funds, round(len(funds)/30, 0))
 
     for fund_chunk in funds_chunked:
         parallel_tasks = []
