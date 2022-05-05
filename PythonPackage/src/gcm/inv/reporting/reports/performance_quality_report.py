@@ -40,7 +40,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @property
     def _all_abs_bmrk_returns(self):
         if self.__all_abs_bmrk_returns is None:
-            self.__all_abs_bmrk_returns = pd.read_json(self._params['abs_bmrk_returns'], orient='index')
+            returns = pd.read_json(self._params['abs_bmrk_returns'], orient='index')
+            self.__all_abs_bmrk_returns = self._analytics.convert_daily_returns_to_monthly(returns, method='geometric')
         return self.__all_abs_bmrk_returns
 
     @property
@@ -234,12 +235,29 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                              as_of_date=self._as_of_date, method='geometric')
         ytd_return = self._analytics.compute_periodic_return(ror=returns, period=PeriodicROR.YTD,
                                                              as_of_date=self._as_of_date, method='geometric')
+        trailing_1y_return = self._analytics.compute_trailing_return(ror=returns, trailing_months=12,
+                                                                     as_of_date=self._as_of_date, method='geometric',
+                                                                     annualize_return=True)
+        trailing_3y_return = self._analytics.compute_trailing_return(ror=returns, trailing_months=36,
+                                                                     as_of_date=self._as_of_date, method='geometric',
+                                                                     annualize_return=True)
+        trailing_5y_return = self._analytics.compute_trailing_return(ror=returns, trailing_months=60,
+                                                                     as_of_date=self._as_of_date, method='geometric',
+                                                                     annualize_return=True)
+        trailing_10y_return = self._analytics.compute_trailing_return(ror=returns, trailing_months=120,
+                                                                      as_of_date=self._as_of_date, method='geometric',
+                                                                      annualize_return=True)
 
         # rounding to 2 so that Excess Return matches optically
-        summary = pd.DataFrame({return_type: [round(mtd_return, 2),
-                                              round(qtd_return, 2),
-                                              round(ytd_return, 2)]},
-                               index=['MTD', 'QTD', 'YTD'])
+        summary = pd.DataFrame({return_type: [mtd_return.squeeze(),
+                                              qtd_return.squeeze(),
+                                              ytd_return.squeeze(),
+                                              trailing_1y_return.squeeze(),
+                                              trailing_3y_return.squeeze(),
+                                              trailing_5y_return.squeeze(),
+                                              trailing_10y_return.squeeze()]},
+                               index=['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
+        summary = summary.round(2)
         return summary
 
     def _get_excess_return_summary(self, fund_returns, benchmark_returns, benchmark_name):
@@ -256,37 +274,59 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         return summary
 
-    def _calculate_percentile(self, constituent_returns, fund_periodic_return, period):
+    def _calculate_periodic_percentile(self, constituent_returns, fund_periodic_return, period):
         periodic = self._analytics.compute_periodic_return(constituent_returns, period=period,
                                                            as_of_date=self._as_of_date, method='geometric')
         periodics = pd.concat([pd.Series([fund_periodic_return.squeeze()]), periodic], axis=0)
         ptile = periodics.rank(pct=True)[0:1].squeeze().round(2) * 100
         return ptile
 
+    def _calculate_trailing_percentile(self, constituent_returns, fund_periodic_return, trailing_months):
+        returns = self._analytics.compute_trailing_return(constituent_returns, trailing_months=trailing_months,
+                                                          as_of_date=self._as_of_date, method='geometric',
+                                                          annualize_return=True)
+        returns = pd.concat([pd.Series([fund_periodic_return.squeeze()]), returns], axis=0)
+        ptile = returns.rank(pct=True)[0:1].squeeze().round(2) * 100
+        return ptile
+
     def _get_percentile_summary(self, fund_returns, constituent_returns, group_name):
         fund_returns = fund_returns.copy()
         constituent_returns = constituent_returns.copy()
+        index = ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y']
 
         if len(constituent_returns) > 0:
-            mtd_ptile = self._calculate_percentile(constituent_returns=constituent_returns,
-                                                   fund_periodic_return=fund_returns.loc['MTD'],
-                                                   period=PeriodicROR.MTD)
-            qtd_ptile = self._calculate_percentile(constituent_returns=constituent_returns,
-                                                   fund_periodic_return=fund_returns.loc['QTD'],
-                                                   period=PeriodicROR.QTD)
-            ytd_ptile = self._calculate_percentile(constituent_returns=constituent_returns,
-                                                   fund_periodic_return=fund_returns.loc['YTD'],
-                                                   period=PeriodicROR.YTD)
+            mtd_ptile = self._calculate_periodic_percentile(constituent_returns=constituent_returns,
+                                                            fund_periodic_return=fund_returns.loc['MTD'],
+                                                            period=PeriodicROR.MTD)
+            qtd_ptile = self._calculate_periodic_percentile(constituent_returns=constituent_returns,
+                                                            fund_periodic_return=fund_returns.loc['QTD'],
+                                                            period=PeriodicROR.QTD)
+            ytd_ptile = self._calculate_periodic_percentile(constituent_returns=constituent_returns,
+                                                            fund_periodic_return=fund_returns.loc['YTD'],
+                                                            period=PeriodicROR.YTD)
+            trailing_1y_ptile = self._calculate_trailing_percentile(constituent_returns=constituent_returns,
+                                                                    fund_periodic_return=fund_returns.loc['TTM'],
+                                                                    trailing_months=12)
+            trailing_3y_ptile = self._calculate_trailing_percentile(constituent_returns=constituent_returns,
+                                                                    fund_periodic_return=fund_returns.loc['3Y'],
+                                                                    trailing_months=36)
+            trailing_5y_ptile = self._calculate_trailing_percentile(constituent_returns=constituent_returns,
+                                                                    fund_periodic_return=fund_returns.loc['5Y'],
+                                                                    trailing_months=60)
+            trailing_10y_ptile = self._calculate_trailing_percentile(constituent_returns=constituent_returns,
+                                                                     fund_periodic_return=fund_returns.loc['10Y'],
+                                                                     trailing_months=120)
 
             summary = pd.DataFrame({group_name: [mtd_ptile,
                                                  qtd_ptile,
-                                                 ytd_ptile]},
-                                   index=['MTD', 'QTD', 'YTD'])
+                                                 ytd_ptile,
+                                                 trailing_1y_ptile,
+                                                 trailing_3y_ptile,
+                                                 trailing_5y_ptile,
+                                                 trailing_10y_ptile]},
+                                   index=index)
         else:
-            summary = pd.DataFrame({group_name: [' ',
-                                                 ' ',
-                                                 ' ']},
-                                   index=['MTD', 'QTD', 'YTD'])
+            summary = pd.DataFrame({group_name: [''] * len(index)}, index=index)
 
         return summary
 
@@ -305,9 +345,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                           benchmark_returns=self._ehi200_returns,
                                                           benchmark_name='EHI200')
 
-        primary_peer_percentiles = self._get_percentile_summary(fund_returns=fund_returns,
-                                                            constituent_returns=self._primary_peer_constituent_returns,
-                                                            group_name='Peer1Ptile')
+        primary_peer_percentiles = \
+            self._get_percentile_summary(fund_returns=fund_returns,
+                                         constituent_returns=self._primary_peer_constituent_returns,
+                                         group_name='Peer1Ptile')
 
         #TODO swap out with 2nd peer group (or ehi 50 prop)
         secondary_peer_percentiles = \

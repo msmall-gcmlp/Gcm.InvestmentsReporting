@@ -1,5 +1,10 @@
 import datetime as dt
 import ast
+import json
+import pandas as pd
+
+from gcm.Dao.DaoSources import DaoSource
+from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.dataprovider.attribution import Attribution
 from gcm.inv.dataprovider.inv_dwh.attribution_query import AttributionQuery
 from gcm.inv.dataprovider.inv_dwh.benchmarking_query import BenchmarkingQuery
@@ -128,5 +133,36 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
         return report_inputs
 
+    def download_performance_quality_report_inputs(self) -> dict:
+        location = "lab/rqs/azurefunctiondata"
+        read_params = AzureDataLakeDao.create_get_data_params(
+            location,
+            "performance_quality_report_inputs.json",
+            retry=False,
+        )
+        file = self._runner.execute(
+            params=read_params,
+            source=DaoSource.DataLake,
+            operation=lambda dao, params: dao.get_data(read_params)
+        )
+        return json.loads(file.content)
+
+    def generate_inputs_and_write_to_datalake(self) -> dict:
+        inputs = self.get_performance_quality_report_inputs()
+        data_to_write = json.dumps(inputs)
+        write_location = "lab/rqs/azurefunctiondata"
+        write_params = AzureDataLakeDao.create_get_data_params(
+            write_location,
+            "performance_quality_report_inputs.json",
+            retry=False,
+        )
+        self._runner.execute(
+            params=write_params,
+            source=DaoSource.DataLake,
+            operation=lambda dao, params: dao.post_data(params, data_to_write)
+        )
+        fund_names = pd.read_json(inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
+        return fund_names
+
     def run(self, **kwargs):
-        return self.get_performance_quality_report_inputs()
+        return self.generate_inputs_and_write_to_datalake()

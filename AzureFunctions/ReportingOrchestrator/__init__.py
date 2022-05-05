@@ -1,23 +1,15 @@
 import azure.durable_functions as df
-import pandas as pd
 
 
 def orchestrator_function(context: df.DurableOrchestrationContext):
     requestBody: str = context.get_input()
     requestBody['params']['run'] = "PerformanceQualityReportData"
-    report_inputs = yield context.call_activity(
-        "ReportingActivity", requestBody
-    )
+    fund_names = yield context.call_activity("ReportingActivity", requestBody)
 
-    report_inputs['vertical'] = requestBody['params']['vertical']
-    report_inputs['entity'] = requestBody['params']['entity']
-    requestBody['params'] = report_inputs
     requestBody['params']['run'] = "PerformanceQualityReport"
 
-    funds = pd.read_json(report_inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
-
     parallel_tasks = []
-    for fund in funds:
+    for fund in fund_names:
         requestBody['params']['fund_name'] = fund
         parallel_tasks.append(context.call_activity(
             "ReportingActivity", requestBody

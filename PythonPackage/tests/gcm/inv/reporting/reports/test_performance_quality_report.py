@@ -33,15 +33,15 @@ class TestPerformanceQualityReport:
 
         perf_quality = PerformanceQualityReportData(
             runner=runner,
-            start_date=dt.date(2020, 10, 1),
-            end_date=dt.date(2021, 12, 31),
-            as_of_date=dt.date(2021, 12, 31),
+            start_date=dt.date(1970, 1, 1),
+            end_date=dt.date(2022, 3, 31),
+            as_of_date=dt.date(2022, 3, 31),
             params=params
         )
 
-        report_inputs = perf_quality.execute()
+        report_inputs = perf_quality.get_performance_quality_report_inputs()
 
-        # with open('test_data/performance_quality_report_inputs.json', 'w') as fp:
+        # with open('gcm/inv/reporting/test_data/performance_quality_report_inputs.json', 'w') as fp:
         #     json.dump(report_inputs, fp)
 
         fund_dimn = pd.read_json(report_inputs['fund_dimn'], orient='index')
@@ -79,7 +79,7 @@ class TestPerformanceQualityReport:
             as_of_date=dt.date(2021, 12, 31),
             params=params
         )
-        report_inputs = perf_quality.execute()
+        report_inputs = perf_quality.get_performance_quality_report_inputs()
 
         # with open('test_data/performance_quality_report_inputs.json', 'w') as fp:
         #     json.dump(report_inputs, fp)
@@ -115,7 +115,7 @@ class TestPerformanceQualityReport:
         perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
                                                        params=performance_quality_report_inputs)
         benchmark_summary = perf_quality_report.build_benchmark_summary()
-        assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD'])
+        assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
         expected_columns = ['Fund',
                             'AbsoluteReturnBenchmark', 'AbsoluteReturnBenchmarkExcess',
                             'GcmPeer', 'GcmPeerExcess',
@@ -132,7 +132,7 @@ class TestPerformanceQualityReport:
         perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
                                                        params=performance_quality_report_inputs)
         benchmark_summary = perf_quality_report.build_benchmark_summary()
-        assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD'])
+        assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
         expected_columns = ['Fund',
                             'AbsoluteReturnBenchmark', 'AbsoluteReturnBenchmarkExcess',
                             'GcmPeer', 'GcmPeerExcess',
@@ -149,7 +149,7 @@ class TestPerformanceQualityReport:
         perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2099, 12, 31),
                                                        params=performance_quality_report_inputs)
         benchmark_summary = perf_quality_report.build_benchmark_summary()
-        assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD'])
+        assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
         expected_columns = ['Fund',
                             'AbsoluteReturnBenchmark', 'AbsoluteReturnBenchmarkExcess',
                             'GcmPeer', 'GcmPeerExcess',

@@ -49,12 +49,12 @@ setup(
         "openpyxl",
         "pillow",
         "gcm-investmentsdataprovider==0.4.0.dev2205051434",
-        "gcm-investmentsquantlib==0.32.0.dev2205051634"
+        "gcm-investmentsquantlib==0.32.0.dev2205051942"
     ],
     extras_require={
         "dev": ["pytest>=3.7", "tox>=3.23", "wheel"],
     },
     url="https://github.com/GCMGrosvenor/Gcm.InvestmentsReporting",
-    author="Anna Galstyan",
-    author_email="agalstyan@gcmlp.com",
+    author="Nobody",
+    author_email="nobody@gcmlp.com",
 )
