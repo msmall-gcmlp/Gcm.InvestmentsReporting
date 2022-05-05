@@ -4,8 +4,8 @@ import pandas as pd
 import json
 
 from gcm.Dao.DaoSources import DaoSource
-from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.dataprovider.attribution import Attribution
+from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.dataprovider.inv_dwh.attribution_query import AttributionQuery
 from gcm.inv.dataprovider.inv_dwh.benchmarking_query import BenchmarkingQuery
 from gcm.inv.dataprovider.inv_dwh.factors_query import FactorsQuery
@@ -132,20 +132,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         report_inputs['eurekahedge_constituent_returns'] = eurekahedge_constituent_returns.to_json(orient='index')
 
         return report_inputs
-
-    def download_performance_quality_report_inputs(self) -> dict:
-        location = "lab/rqs/azurefunctiondata"
-        read_params = AzureDataLakeDao.create_get_data_params(
-            location,
-            "performance_quality_report_inputs.json",
-            retry=False,
-        )
-        file = self._runner.execute(
-            params=read_params,
-            source=DaoSource.DataLake,
-            operation=lambda dao, params: dao.get_data(read_params)
-        )
-        return json.loads(file.content)
 
     def generate_inputs_and_write_to_datalake(self) -> dict:
         inputs = self.get_performance_quality_report_inputs()

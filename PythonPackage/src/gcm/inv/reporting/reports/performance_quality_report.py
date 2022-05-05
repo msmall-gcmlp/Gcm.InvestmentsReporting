@@ -1,8 +1,10 @@
 import datetime as dt
+import json
 import pandas as pd
 import ast
 import numpy as np
 from gcm.Dao.DaoSources import DaoSource
+from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes
 from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
 from gcm.Scenario.scenario import Scenario
@@ -25,42 +27,63 @@ class PerformanceQualityReport(ReportingRunnerBase):
         self.__all_eurekahedge_returns = None
         self.__all_gcm_peer_constituent_returns = None
         self.__all_eurekahedge_constituent_returns = None
+        self.__inputs = None
+
+    def download_performance_quality_report_inputs(self) -> dict:
+        location = "lab/rqs/azurefunctiondata"
+        read_params = AzureDataLakeDao.create_get_data_params(
+            location,
+            "performance_quality_report_inputs.json",
+            retry=False,
+        )
+        file = self._runner.execute(
+            params=read_params,
+            source=DaoSource.DataLake,
+            operation=lambda dao, params: dao.get_data(read_params)
+        )
+        return json.loads(file.content)
+
+    @property
+    def _inputs(self):
+        if self.__inputs is None:
+            self.__inputs = self.download_performance_quality_report_inputs()
+        return self.__inputs
 
     @property
     def _all_fund_dimn(self):
         if self.__all_fund_dimn is None:
-            self.__all_fund_dimn = pd.read_json(self._params['fund_dimn'], orient='index')
+            self.__all_fund_dimn = pd.read_json(self._inputs['fund_dimn'], orient='index')
         return self.__all_fund_dimn
 
     @property
     def _all_fund_returns(self):
         if self.__all_fund_returns is None:
-            self.__all_fund_returns = pd.read_json(self._params['fund_returns'], orient='index')
+            self.__all_fund_returns = pd.read_json(self._inputs['fund_returns'], orient='index')
         return self.__all_fund_returns
 
     @property
     def _all_abs_bmrk_returns(self):
         if self.__all_abs_bmrk_returns is None:
-            returns = pd.read_json(self._params['abs_bmrk_returns'], orient='index')
+            returns = pd.read_json(self._inputs['abs_bmrk_returns'], orient='index')
             self.__all_abs_bmrk_returns = self._analytics.convert_daily_returns_to_monthly(returns, method='geometric')
         return self.__all_abs_bmrk_returns
 
     @property
     def _all_gcm_peer_returns(self):
         if self.__all_gcm_peer_returns is None:
-            self.__all_gcm_peer_returns = pd.read_json(self._params['gcm_peer_returns'], orient='index')
+            self.__all_gcm_peer_returns = pd.read_json(self._inputs['gcm_peer_returns'], orient='index')
         return self.__all_gcm_peer_returns
 
     @property
     def _all_eurekahedge_returns(self):
         if self.__all_eurekahedge_returns is None:
-            self.__all_eurekahedge_returns = pd.read_json(self._params['eurekahedge_returns'], orient='index')
+            self.__all_eurekahedge_returns = pd.read_json(self._inputs['eurekahedge_returns'], orient='index')
         return self.__all_eurekahedge_returns
 
     @property
     def _all_gcm_peer_constituent_returns(self):
         if self.__all_gcm_peer_constituent_returns is None:
-            returns = pd.read_json(self._params['gcm_peer_constituent_returns'], orient='index')
+            returns = pd.read_json(self._inputs['gcm_peer_constituent_returns'], orient='index')
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
             returns_columns = pd.MultiIndex.from_tuples(returns_columns,
                                                         names=['PeerGroupName', 'SourceInvestmentId'])
@@ -71,7 +94,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @property
     def _all_eurekahedge_constituent_returns(self):
         if self.__all_eurekahedge_constituent_returns is None:
-            returns = pd.read_json(self._params['eurekahedge_constituent_returns'], orient='index')
+            returns = pd.read_json(self._inputs['eurekahedge_constituent_returns'], orient='index')
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
             returns_columns = pd.MultiIndex.from_tuples(returns_columns,
                                                         names=['EurekahedgeBenchmark', 'SourceInvestmentId'])

@@ -108,12 +108,13 @@ class TestPerformanceQualityReport:
         assert gcm_peer_constituent_returns.shape[0] > 0
         assert eurekahedge_constituent_returns.shape[0] > 0
 
-    def test_performance_quality_report_skye(self, runner, performance_quality_report_inputs):
-        performance_quality_report_inputs['fund_name'] = 'Skye'
-        performance_quality_report_inputs['vertical'] = 'ARS'
-        performance_quality_report_inputs['entity'] = 'PFUND'
+    def test_performance_quality_report_skye(self, runner):
+        params = {}
+        params['fund_name'] = 'Skye'
+        params['vertical'] = 'ARS'
+        params['entity'] = 'PFUND'
         perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
-                                                       params=performance_quality_report_inputs)
+                                                       params=params)
         benchmark_summary = perf_quality_report.build_benchmark_summary()
         assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
         expected_columns = ['Fund',
@@ -125,12 +126,13 @@ class TestPerformanceQualityReport:
                             'EH50Ptile', 'EHI200Ptile']
         assert all(benchmark_summary.columns == expected_columns)
 
-    def test_performance_quality_report_citadel(self, runner, performance_quality_report_inputs):
-        performance_quality_report_inputs['fund_name'] = 'Citadel'
-        performance_quality_report_inputs['vertical'] = 'ARS'
-        performance_quality_report_inputs['entity'] = 'PFUND'
+    def test_performance_quality_report_citadel(self, runner):
+        params = {}
+        params['fund_name'] = 'Citadel'
+        params['vertical'] = 'ARS'
+        params['entity'] = 'PFUND'
         perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
-                                                       params=performance_quality_report_inputs)
+                                                       params=params)
         benchmark_summary = perf_quality_report.build_benchmark_summary()
         assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
         expected_columns = ['Fund',
@@ -143,11 +145,12 @@ class TestPerformanceQualityReport:
         assert all(benchmark_summary.columns == expected_columns)
 
     def test_performance_quality_report_future_ahead(self, runner, performance_quality_report_inputs):
-        performance_quality_report_inputs['fund_name'] = 'Skye'
-        performance_quality_report_inputs['vertical'] = 'ARS'
-        performance_quality_report_inputs['entity'] = 'PFUND'
+        params = {}
+        params['fund_name'] = 'Skye'
+        params['vertical'] = 'ARS'
+        params['entity'] = 'PFUND'
         perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2099, 12, 31),
-                                                       params=performance_quality_report_inputs)
+                                                       params=params)
         benchmark_summary = perf_quality_report.build_benchmark_summary()
         assert all(benchmark_summary.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
         expected_columns = ['Fund',
@@ -159,6 +162,7 @@ class TestPerformanceQualityReport:
                             'EH50Ptile', 'EHI200Ptile']
         assert all(benchmark_summary.columns == expected_columns)
 
+    @pytest.mark.skip(reason='inputs no longer passed in through params')
     def test_performance_quality_report_missing_returns(self, runner, performance_quality_report_inputs):
         returns = pd.read_json(performance_quality_report_inputs['fund_returns'], orient='index').drop(columns={'Skye'})
         performance_quality_report_inputs['fund_returns'] = returns.to_json(orient='index')

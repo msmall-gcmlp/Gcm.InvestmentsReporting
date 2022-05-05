@@ -25,15 +25,15 @@ def main(requestBody) -> str:
     if run == "PerformanceQualityReportData":
         return PerformanceQualityReportData(
             runner=runner,
-            start_date=dt.date(2020, 10, 1),
-            end_date=dt.date(2021, 12, 31),
-            as_of_date=dt.date(2021, 12, 31),
+            start_date=dt.date(2000, 1, 1),
+            end_date=dt.date(2022, 3, 31),
+            as_of_date=dt.date(2022, 3, 31),
             params=params
         ).execute()
 
     elif run == "PerformanceQualityReport":
         return PerformanceQualityReport(
             runner=runner,
-            as_of_date=dt.date(2021, 12, 31),
+            as_of_date=dt.date(2022, 3, 31),
             params=params
         ).execute()
