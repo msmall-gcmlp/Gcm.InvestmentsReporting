@@ -6,13 +6,14 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     requestBody['params']['run'] = "PerformanceQualityReportData"
     fund_names = yield context.call_activity("ReportingActivity", requestBody)
 
-    requestBody['params']['run'] = "PerformanceQualityReport"
+    requestBody2 = requestBody.copy()
+    requestBody2['params']['run'] = "PerformanceQualityReport"
 
     parallel_tasks = []
     for fund in fund_names:
-        requestBody['params']['fund_name'] = fund
+        requestBody2['params']['fund_name'] = fund
         parallel_tasks.append(context.call_activity(
-            "ReportingActivity", requestBody
+            "ReportingActivity", requestBody2
         ))
     yield context.task_all(parallel_tasks)
 
