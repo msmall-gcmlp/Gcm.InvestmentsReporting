@@ -226,7 +226,7 @@ class TestPerformanceQualityReport:
             params=params
         )
 
-        funds = perf_quality.execute()
+        perf_quality.execute()
 
     @pytest.mark.skip(reason='for debugging only')
     def test_debug2(self, runner, performance_quality_report_inputs_all):
