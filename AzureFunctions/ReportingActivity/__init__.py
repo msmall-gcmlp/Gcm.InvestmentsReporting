@@ -25,7 +25,7 @@ def main(requestBody) -> str:
     if run == "PerformanceQualityReportData":
         return PerformanceQualityReportData(
             runner=runner,
-            start_date=dt.date(2000, 1, 1),
+            start_date=dt.date(2012, 1, 1),
             end_date=dt.date(2022, 3, 31),
             as_of_date=dt.date(2022, 3, 31),
             params=params

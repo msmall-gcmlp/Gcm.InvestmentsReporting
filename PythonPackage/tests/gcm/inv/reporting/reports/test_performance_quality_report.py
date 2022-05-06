@@ -212,3 +212,31 @@ class TestPerformanceQualityReport:
             perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
                                                            params=report_inputs)
             perf_quality_report.generate_performance_quality_report()
+
+    @pytest.mark.skip(reason='debugging')
+    def test_debug(self, runner):
+        params = {'vertical': 'ARS', 'entity': 'PFUND',
+                  'status': 'EMM', 'investment_ids': '[62737, 71394]'}
+
+        perf_quality = PerformanceQualityReportData(
+            runner=runner,
+            start_date=dt.date(2012, 1, 1),
+            end_date=dt.date(2022, 3, 31),
+            as_of_date=dt.date(2022, 3, 31),
+            params=params
+        )
+
+        funds = perf_quality.execute()
+
+    @pytest.mark.skip(reason='for debugging only')
+    def test_debug2(self, runner, performance_quality_report_inputs_all):
+        params = dict()
+        params['vertical'] = 'ARS'
+        params['entity'] = 'PFUND'
+        funds = ['GCM Macro SubFund', 'Hawksbridge']
+
+        for fund in funds:
+            print(fund)
+            params['fund_name'] = fund
+            perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2022, 3, 31), params=params)
+            perf_quality_report.execute()

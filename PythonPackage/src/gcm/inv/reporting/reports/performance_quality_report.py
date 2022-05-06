@@ -65,7 +65,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _all_abs_bmrk_returns(self):
         if self.__all_abs_bmrk_returns is None:
             returns = pd.read_json(self._inputs['abs_bmrk_returns'], orient='index')
-            self.__all_abs_bmrk_returns = self._analytics.convert_daily_returns_to_monthly(returns, method='geometric')
+            if len(returns) > 0:
+                self.__all_abs_bmrk_returns = self._analytics.convert_daily_returns_to_monthly(returns,
+                                                                                               method='geometric')
+            else:
+                self.__all_abs_bmrk_returns = pd.DataFrame()
         return self.__all_abs_bmrk_returns
 
     @property
