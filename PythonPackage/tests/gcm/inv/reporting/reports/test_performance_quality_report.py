@@ -195,7 +195,7 @@ class TestPerformanceQualityReport:
             params=params
         )
         start = dt.datetime.now()
-        report_inputs = perf_quality.get_performance_quality_report_inputs()
+        perf_quality.get_performance_quality_report_inputs()
         end = dt.datetime.now()
         print(end - start)
 
