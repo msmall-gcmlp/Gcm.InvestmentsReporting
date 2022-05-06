@@ -4,7 +4,6 @@ import pytest
 import datetime as dt
 import pandas as pd
 import ast
-import json
 
 from gcm.inv.reporting.reports.performance_quality_report import PerformanceQualityReport
 from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
@@ -190,15 +189,15 @@ class TestPerformanceQualityReport:
                   'run': 'PerformanceQualityReportData'}
         perf_quality = PerformanceQualityReportData(
             runner=runner,
-            start_date=dt.date(2020, 10, 1),
-            end_date=dt.date(2021, 12, 31),
-            as_of_date=dt.date(2021, 12, 31),
+            start_date=dt.date(2012, 1, 1),
+            end_date=dt.date(2022, 3, 31),
+            as_of_date=dt.date(2022, 3, 31),
             params=params
         )
-        report_inputs = perf_quality.execute()
-
-        with open('gcm/inv/reporting/test_data/performance_quality_report_inputs_all.json', 'w') as fp:
-            json.dump(report_inputs, fp)
+        start = dt.datetime.now()
+        report_inputs = perf_quality.get_performance_quality_report_inputs()
+        end = dt.datetime.now()
+        print(end - start)
 
     @pytest.mark.skip(reason='for debugging only')
     def test_performance_quality_report_all(self, runner, performance_quality_report_inputs_all):
@@ -242,3 +241,11 @@ class TestPerformanceQualityReport:
         assert all(benchmark_summary.index == ['Latest', '3Y', '5Y', '10Y'])
         assert all(benchmark_summary.columns == ['LongNotional', 'ShortNotional', 'GrossNotional', 'NetNotional'])
         assert len(latest_exposure_heading) == 1
+
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
+    def test_perf_stability_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):
+        mock_download.return_value = performance_quality_report_inputs
+        stability_summary = perf_quality_report.build_performance_stability_fund_summary()
+        assert stability_summary.shape[0] > 0
+        assert all(stability_summary.index == ['TTM', '3Y', '5Y'])
+        assert all(stability_summary.columns == ['Vol'])

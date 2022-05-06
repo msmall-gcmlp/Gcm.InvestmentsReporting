@@ -7,8 +7,9 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes
 from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
 from gcm.Scenario.scenario import Scenario
-from gcm.inv.quantlib.enum_source import PeriodicROR
+from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
+from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
 from .reporting_runner_base import ReportingRunnerBase
 
 
@@ -66,8 +67,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self.__all_abs_bmrk_returns is None:
             returns = pd.read_json(self._inputs['abs_bmrk_returns'], orient='index')
             if len(returns) > 0:
-                self.__all_abs_bmrk_returns = self._analytics.convert_daily_returns_to_monthly(returns,
-                                                                                               method='geometric')
+                self.__all_abs_bmrk_returns = AggregateFromDaily().transform(data=returns, method='geometric',
+                                                                             period=Periodicity.Monthly)
             else:
                 self.__all_abs_bmrk_returns = pd.DataFrame()
         return self.__all_abs_bmrk_returns
@@ -292,24 +293,35 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def _get_return_summary(self, returns, return_type):
         returns = returns.copy()
+
         mtd_return = self._analytics.compute_periodic_return(ror=returns, period=PeriodicROR.MTD,
                                                              as_of_date=self._as_of_date, method='geometric')
+
         qtd_return = self._analytics.compute_periodic_return(ror=returns, period=PeriodicROR.QTD,
                                                              as_of_date=self._as_of_date, method='geometric')
+
         ytd_return = self._analytics.compute_periodic_return(ror=returns, period=PeriodicROR.YTD,
                                                              as_of_date=self._as_of_date, method='geometric')
-        trailing_1y_return = self._analytics.compute_trailing_return(ror=returns, trailing_months=12,
+
+        trailing_1y_return = self._analytics.compute_trailing_return(ror=returns, window=12,
                                                                      as_of_date=self._as_of_date, method='geometric',
-                                                                     annualize_return=True)
-        trailing_3y_return = self._analytics.compute_trailing_return(ror=returns, trailing_months=36,
+                                                                     periodicity=Periodicity.Monthly,
+                                                                     annualize=True)
+
+        trailing_3y_return = self._analytics.compute_trailing_return(ror=returns, window=36,
                                                                      as_of_date=self._as_of_date, method='geometric',
-                                                                     annualize_return=True)
-        trailing_5y_return = self._analytics.compute_trailing_return(ror=returns, trailing_months=60,
+                                                                     periodicity=Periodicity.Monthly,
+                                                                     annualize=True)
+
+        trailing_5y_return = self._analytics.compute_trailing_return(ror=returns, window=60,
                                                                      as_of_date=self._as_of_date, method='geometric',
-                                                                     annualize_return=True)
-        trailing_10y_return = self._analytics.compute_trailing_return(ror=returns, trailing_months=120,
+                                                                     periodicity=Periodicity.Monthly,
+                                                                     annualize=True)
+
+        trailing_10y_return = self._analytics.compute_trailing_return(ror=returns, window=120,
                                                                       as_of_date=self._as_of_date, method='geometric',
-                                                                      annualize_return=True)
+                                                                      periodicity=Periodicity.Monthly,
+                                                                      annualize=True)
 
         # rounding to 2 so that Excess Return matches optically
         stats = [mtd_return, qtd_return, ytd_return,
@@ -327,7 +339,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             summary = fund_returns.merge(benchmark_returns, left_index=True, right_index=True)
             summary['IsNumeric'] = summary.applymap(np.isreal).all(1)
             excess = summary[summary['IsNumeric']]['Fund'] - summary[summary['IsNumeric']][benchmark_name]
-            summary[benchmark_name + 'Excess'] = excess
+            summary[benchmark_name + 'Excess'] = excess.round(2)
             summary.drop(columns={'IsNumeric'}, inplace=True)
             summary = summary.fillna('')
         else:
@@ -338,16 +350,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def _calculate_periodic_percentile(self, constituent_returns, fund_periodic_return, period):
-        periodic = self._analytics.compute_periodic_return(constituent_returns, period=period,
-                                                           as_of_date=self._as_of_date, method='geometric')
+        periodic = self._analytics.compute_periodic_return(ror=constituent_returns,
+                                                           period=period,
+                                                           as_of_date=self._as_of_date,
+                                                           method='geometric')
         periodics = pd.concat([pd.Series([fund_periodic_return.squeeze()]), periodic], axis=0)
         ptile = periodics.rank(pct=True)[0:1].squeeze().round(2) * 100
         return ptile
 
     def _calculate_trailing_percentile(self, constituent_returns, fund_periodic_return, trailing_months):
-        returns = self._analytics.compute_trailing_return(constituent_returns, trailing_months=trailing_months,
-                                                          as_of_date=self._as_of_date, method='geometric',
-                                                          annualize_return=True)
+        returns = self._analytics.compute_trailing_return(ror=constituent_returns,
+                                                          window=trailing_months,
+                                                          as_of_date=self._as_of_date,
+                                                          method='geometric',
+                                                          annualize=True,
+                                                          periodicity=Periodicity.Monthly)
         if isinstance(fund_periodic_return.squeeze(), float):
             returns = pd.concat([pd.Series([fund_periodic_return.squeeze()]), returns], axis=0)
             ptile = returns.rank(pct=True)[0:1].squeeze().round(2) * 100
@@ -452,6 +469,39 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = self._get_exposure_summary(self._exposure)
         return summary
 
+    def _get_trailing_vols(self, returns, periodicity=Periodicity.Monthly):
+        returns = returns.copy()
+
+        trailing_1y_vol = self._analytics.compute_trailing_vol(ror=returns,
+                                                               window=12,
+                                                               as_of_date=self._as_of_date,
+                                                               periodicity=periodicity,
+                                                               annualize=True)
+
+        trailing_3y_vol = self._analytics.compute_trailing_vol(ror=returns,
+                                                               window=36,
+                                                               as_of_date=self._as_of_date,
+                                                               periodicity=periodicity,
+                                                               annualize=True)
+
+        trailing_5y_vol = self._analytics.compute_trailing_vol(ror=returns,
+                                                               window=60,
+                                                               as_of_date=self._as_of_date,
+                                                               periodicity=periodicity,
+                                                               annualize=True)
+
+        stats = [trailing_1y_vol, trailing_3y_vol, trailing_5y_vol]
+        stats = [x.squeeze() for x in stats]
+        summary = pd.DataFrame({'Vol': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
+                               index=['TTM', '3Y', '5Y'])
+
+        return summary
+
+    def build_performance_stability_fund_summary(self):
+        ttm = self._get_trailing_vols(returns=self._fund_returns)
+        summary = ttm
+        return summary
+
     def _validate_inputs(self):
         if self._fund_returns.shape[0] == 0:
             return False
@@ -469,6 +519,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         eurekahedge_benchmark_heading = self.get_eurekahedge_benchmark_heading()
         peer_ptile_1_heading = self.get_peer_ptile_1_heading()
         peer_ptile_2_heading = self.get_peer_ptile_2_heading()
+
+        performance_stability_fund_summary = self.build_performance_stability_fund_summary()
+
         exposure_summary = self.build_exposure_summary()
         latest_exposure_heading = self.get_latest_exposure_heading()
 
@@ -480,6 +533,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading,
             "peer_ptile_1_heading": peer_ptile_1_heading,
             "peer_ptile_2_heading": peer_ptile_2_heading,
+            "performance_stability_fund_summary": performance_stability_fund_summary,
             "exposure_summary": exposure_summary,
             "latest_exposure_heading": latest_exposure_heading,
         }
