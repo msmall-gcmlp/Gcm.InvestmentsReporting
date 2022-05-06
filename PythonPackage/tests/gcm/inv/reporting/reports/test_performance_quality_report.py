@@ -240,3 +240,13 @@ class TestPerformanceQualityReport:
             params['fund_name'] = fund
             perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2022, 3, 31), params=params)
             perf_quality_report.execute()
+
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
+    def test_exposure_skye(self, mock_download, performance_quality_report_inputs,
+                                             perf_quality_report):
+        mock_download.return_value = performance_quality_report_inputs
+        benchmark_summary = perf_quality_report.build_exposure_summary()
+        latest_exposure_heading = perf_quality_report.get_latest_exposure_heading()
+        assert all(benchmark_summary.index == ['Latest', '3Y', '5Y', '10Y'])
+        assert all(benchmark_summary.columns == ['LongNotional', 'ShortNotional', 'GrossNotional', 'NetNotional'])
+        assert len(latest_exposure_heading) == 1

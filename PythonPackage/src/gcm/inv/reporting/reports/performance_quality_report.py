@@ -27,6 +27,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         self.__all_eurekahedge_returns = None
         self.__all_gcm_peer_constituent_returns = None
         self.__all_eurekahedge_constituent_returns = None
+        self.__all_exposure = None
         self.__inputs = None
 
     def download_performance_quality_report_inputs(self) -> dict:
@@ -105,6 +106,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns.columns = returns_columns
             self.__all_eurekahedge_constituent_returns = returns
         return self.__all_eurekahedge_constituent_returns
+
+    @property
+    def _all_exposure(self):
+        if self.__all_exposure is None:
+            latest = pd.read_json(self._inputs['exposure_latest'], orient='index')
+            latest['Period'] = 'Latest'
+            three = pd.read_json(self._inputs['exposure_3y'], orient='index')
+            three['Period'] = '3Y'
+            five = pd.read_json(self._inputs['exposure_5y'], orient='index')
+            five['Period'] = '5Y'
+            ten = pd.read_json(self._inputs['exposure_10y'], orient='index')
+            ten['Period'] = '10Y'
+            all_exposure = pd.concat([latest, three, five, ten])
+            self.__all_exposure = all_exposure
+        return self.__all_exposure
 
     @property
     def _entity_type(self):
@@ -221,6 +237,19 @@ class PerformanceQualityReport(ReportingRunnerBase):
         returns = returns.droplevel(0, axis=1)
         return returns
 
+    @property
+    def _exposure(self):
+        if any(self._all_exposure['InvestmentGroupName'] == self._fund_name):
+            exposure = self._all_exposure[self._all_exposure['InvestmentGroupName'] == self._fund_name]
+            exposure = exposure.set_index('Period')
+            return exposure
+        else:
+            return pd.DataFrame()
+
+    @property
+    def _latest_exposure_date(self):
+        return self._exposure.loc['Latest']['Date']
+
     def get_header_info(self):
         header = pd.DataFrame({'header_info': [self._fund_name, self._entity_type, self._as_of_date]})
         return header
@@ -252,6 +281,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def get_peer_ptile_2_heading(self):
         if self._secondary_peer_group is not None:
             return pd.DataFrame({'peer_ptile_2_heading': [self._secondary_peer_group]})
+        else:
+            return pd.DataFrame({'peer_ptile_2_heading': ['']})
+
+    def get_latest_exposure_heading(self):
+        if self._latest_exposure_date is not None:
+            return pd.DataFrame({'latest_exposure_heading': ['Latest ' + self._latest_exposure_date.strftime('%b %Y')]})
         else:
             return pd.DataFrame({'peer_ptile_2_heading': ['']})
 
@@ -406,6 +441,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = summary.merge(ehi200_percentiles, left_index=True, right_index=True)
         return summary
 
+    @staticmethod
+    def _get_exposure_summary(exposure):
+        summary = exposure[['LongNotional', 'ShortNotional', 'GrossNotional', 'NetNotional']]
+        summary = summary.loc[['Latest', '3Y', '5Y', '10Y']]
+        summary = summary.round(2)
+        return summary
+
+    def build_exposure_summary(self):
+        summary = self._get_exposure_summary(self._exposure)
+        return summary
+
     def _validate_inputs(self):
         if self._fund_returns.shape[0] == 0:
             return False
@@ -423,6 +469,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         eurekahedge_benchmark_heading = self.get_eurekahedge_benchmark_heading()
         peer_ptile_1_heading = self.get_peer_ptile_1_heading()
         peer_ptile_2_heading = self.get_peer_ptile_2_heading()
+        exposure_summary = self.build_exposure_summary()
+        latest_exposure_heading = self.get_latest_exposure_heading()
 
         input_data = {
             "header_info": header_info,
@@ -432,6 +480,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading,
             "peer_ptile_1_heading": peer_ptile_1_heading,
             "peer_ptile_2_heading": peer_ptile_2_heading,
+            "exposure_summary": exposure_summary,
+            "latest_exposure_heading": latest_exposure_heading,
         }
 
         with Scenario(asofdate=dt.date(2021, 12, 31)).context():
