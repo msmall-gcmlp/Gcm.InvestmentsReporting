@@ -1,4 +1,3 @@
-import datetime as dt
 import json
 import pandas as pd
 import ast
@@ -286,7 +285,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def get_latest_exposure_heading(self):
         if self._latest_exposure_date is not None:
-            return pd.DataFrame({'latest_exposure_heading': ['Latest ' + self._latest_exposure_date.strftime('%b %Y')]})
+            heading = 'Latest (' + self._latest_exposure_date.strftime('%b %Y') + ')'
+            return pd.DataFrame({'latest_exposure_heading': [heading]})
         else:
             return pd.DataFrame({'peer_ptile_2_heading': ['']})
 
@@ -484,7 +484,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "latest_exposure_heading": latest_exposure_heading,
         }
 
-        with Scenario(asofdate=dt.date(2021, 12, 31)).context():
+        with Scenario(asofdate=self._as_of_date).context():
             report_name = "PFUND_PerformanceQuality_" + self._fund_name.replace('/', '')
 
             #TODO GIP is placeholder

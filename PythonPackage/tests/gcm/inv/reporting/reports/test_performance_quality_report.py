@@ -229,21 +229,13 @@ class TestPerformanceQualityReport:
         perf_quality.execute()
 
     @pytest.mark.skip(reason='for debugging only')
-    def test_debug2(self, runner, performance_quality_report_inputs_all):
-        params = dict()
-        params['vertical'] = 'ARS'
-        params['entity'] = 'PFUND'
-        funds = ['GCM Macro SubFund', 'Hawksbridge']
-
-        for fund in funds:
-            print(fund)
-            params['fund_name'] = fund
-            perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2022, 3, 31), params=params)
-            perf_quality_report.execute()
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
+    def test_performance_quality_report_skye_debug(self, mock_download, performance_quality_report_inputs, perf_quality_report):
+        mock_download.return_value = performance_quality_report_inputs
+        perf_quality_report.execute()
 
     @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
-    def test_exposure_skye(self, mock_download, performance_quality_report_inputs,
-                                             perf_quality_report):
+    def test_exposure_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):
         mock_download.return_value = performance_quality_report_inputs
         benchmark_summary = perf_quality_report.build_exposure_summary()
         latest_exposure_heading = perf_quality_report.get_latest_exposure_heading()
