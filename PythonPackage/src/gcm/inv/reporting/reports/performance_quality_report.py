@@ -469,26 +469,18 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = self._get_exposure_summary(self._exposure)
         return summary
 
-    def _get_trailing_vols(self, returns, periodicity=Periodicity.Monthly):
+    def _get_trailing_vol(self, returns, trailing_months):
+        return self._analytics.compute_trailing_vol(ror=returns,
+                                                    window=trailing_months,
+                                                    as_of_date=self._as_of_date,
+                                                    periodicity=Periodicity.Monthly,
+                                                    annualize=True)
+
+    def _get_fund_trailing_vol_summary(self, returns):
         returns = returns.copy()
-
-        trailing_1y_vol = self._analytics.compute_trailing_vol(ror=returns,
-                                                               window=12,
-                                                               as_of_date=self._as_of_date,
-                                                               periodicity=periodicity,
-                                                               annualize=True)
-
-        trailing_3y_vol = self._analytics.compute_trailing_vol(ror=returns,
-                                                               window=36,
-                                                               as_of_date=self._as_of_date,
-                                                               periodicity=periodicity,
-                                                               annualize=True)
-
-        trailing_5y_vol = self._analytics.compute_trailing_vol(ror=returns,
-                                                               window=60,
-                                                               as_of_date=self._as_of_date,
-                                                               periodicity=periodicity,
-                                                               annualize=True)
+        trailing_1y_vol = self._get_trailing_vol(returns=returns, trailing_months=12)
+        trailing_3y_vol = self._get_trailing_vol(returns=returns, trailing_months=36)
+        trailing_5y_vol = self._get_trailing_vol(returns=returns, trailing_months=60)
 
         stats = [trailing_1y_vol, trailing_3y_vol, trailing_5y_vol]
         stats = [x.squeeze() for x in stats]
@@ -497,8 +489,25 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         return summary
 
+    def _get_peer_trailing_vol_summary(self, returns):
+        returns = returns.copy()
+        trailing_1y_vol = self._get_trailing_vol(returns=returns, trailing_months=12)
+        trailing_3y_vol = self._get_trailing_vol(returns=returns, trailing_months=36)
+        trailing_5y_vol = self._get_trailing_vol(returns=returns, trailing_months=60)
+
+        stats = [trailing_1y_vol.mean(), trailing_3y_vol.mean(), trailing_5y_vol.mean()]
+        summary = pd.DataFrame({'AvgVol': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
+                               index=['TTM', '3Y', '5Y'])
+
+        return summary
+
     def build_performance_stability_fund_summary(self):
-        ttm = self._get_trailing_vols(returns=self._fund_returns)
+        ttm = self._get_fund_trailing_vol_summary(returns=self._fund_returns)
+        summary = ttm
+        return summary
+
+    def build_performance_stability_peer_summary(self):
+        ttm = self._get_peer_trailing_vol_summary(returns=self._primary_peer_constituent_returns)
         summary = ttm
         return summary
 
@@ -521,6 +530,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         peer_ptile_2_heading = self.get_peer_ptile_2_heading()
 
         performance_stability_fund_summary = self.build_performance_stability_fund_summary()
+        performance_stability_peer_summary = self.build_performance_stability_peer_summary()
 
         exposure_summary = self.build_exposure_summary()
         latest_exposure_heading = self.get_latest_exposure_heading()
@@ -534,6 +544,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "peer_ptile_1_heading": peer_ptile_1_heading,
             "peer_ptile_2_heading": peer_ptile_2_heading,
             "performance_stability_fund_summary": performance_stability_fund_summary,
+            "performance_stability_peer_summary": performance_stability_peer_summary,
             "exposure_summary": exposure_summary,
             "latest_exposure_heading": latest_exposure_heading,
         }

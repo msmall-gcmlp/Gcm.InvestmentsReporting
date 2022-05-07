@@ -249,3 +249,11 @@ class TestPerformanceQualityReport:
         assert stability_summary.shape[0] > 0
         assert all(stability_summary.index == ['TTM', '3Y', '5Y'])
         assert all(stability_summary.columns == ['Vol'])
+
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
+    def test_perf_stability_peer_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):
+        mock_download.return_value = performance_quality_report_inputs
+        stability_summary = perf_quality_report.build_performance_stability_peer_summary()
+        assert stability_summary.shape[0] > 0
+        assert all(stability_summary.index == ['TTM', '3Y', '5Y'])
+        assert all(stability_summary.columns == ['AvgVol'])
