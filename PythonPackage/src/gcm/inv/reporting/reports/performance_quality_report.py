@@ -491,9 +491,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         index = ['min', '25%', '75%', 'max']
         if len(rolling_returns) == trailing_months:
             summary = rolling_returns.describe().loc[index]
-            summary.columns = [trailing_months]
         else:
-            summary = pd.DataFrame({trailing_months: [''] * len(index)}, index=index)
+            summary = pd.DataFrame({rolling_returns.columns: [''] * len(index)}, index=index)
 
         return summary
 
@@ -523,6 +522,25 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         return summary
 
+    def _get_peer_rolling_return_summary(self):
+        returns = self._primary_peer_constituent_returns.copy()
+        rolling_12m_returns = self._get_rolling_return(returns=returns, trailing_months=12)
+
+        rolling_1y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=12)
+        rolling_1y_summary = rolling_1y_summary.mean(axis=1)
+
+        rolling_3y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=36)
+        rolling_3y_summary = rolling_3y_summary.mean(axis=1)
+
+        rolling_5y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=60)
+        rolling_5y_summary = rolling_5y_summary.mean(axis=1)
+
+        summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
+        summary = summary.round(2)
+        summary.index = ['TTM', '3Y', '5Y']
+
+        return summary
+
     def _get_peer_trailing_vol_summary(self, returns):
         returns = returns.copy()
         trailing_1y_vol = self._get_trailing_vol(returns=returns, trailing_months=12)
@@ -542,8 +560,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def build_performance_stability_peer_summary(self):
-        ttm = self._get_peer_trailing_vol_summary(returns=self._primary_peer_constituent_returns)
-        summary = ttm
+        vol = self._get_peer_trailing_vol_summary(returns=self._primary_peer_constituent_returns)
+        rolling_returns = self._get_peer_rolling_return_summary()
+        summary = vol.merge(rolling_returns, left_index=True, right_index=True)
         return summary
 
     def _validate_inputs(self):

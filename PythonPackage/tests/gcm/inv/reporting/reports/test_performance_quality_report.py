@@ -256,4 +256,4 @@ class TestPerformanceQualityReport:
         stability_summary = perf_quality_report.build_performance_stability_peer_summary()
         assert stability_summary.shape[0] > 0
         assert all(stability_summary.index == ['TTM', '3Y', '5Y'])
-        assert all(stability_summary.columns == ['AvgVol'])
+        assert all(stability_summary.columns == ['AvgVol', 'min', '25%', '75%', 'max'])
