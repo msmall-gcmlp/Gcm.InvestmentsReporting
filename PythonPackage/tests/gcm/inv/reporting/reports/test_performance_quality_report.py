@@ -43,7 +43,7 @@ class TestPerformanceQualityReport:
 
         perf_quality = PerformanceQualityReportData(
             runner=runner,
-            start_date=dt.date(2020, 1, 1),
+            start_date=dt.date(2020, 3, 1),
             end_date=dt.date(2022, 3, 31),
             as_of_date=dt.date(2022, 3, 31),
             params=params
@@ -65,8 +65,8 @@ class TestPerformanceQualityReport:
         # eurekahedge_constituent_returns = eurekahedge_constituent_returns[['EHI50 Multi-Strategy',
         #                                                                    'EHI50 Long/Short Equity']]
         # report_inputs['eurekahedge_constituent_returns'] = eurekahedge_constituent_returns.to_json(orient='index')
-        #
-        # with open('gcm/inv/reporting/test_data/performance_quality_report_inputs.json', 'w') as fp:
+        # import json
+        # with open('gcm/inv/reporting/test_data/performance_quality_report_inputs2.json', 'w') as fp:
         #     json.dump(report_inputs, fp)
 
         fund_dimn = pd.read_json(report_inputs['fund_dimn'], orient='index')
@@ -227,7 +227,7 @@ class TestPerformanceQualityReport:
 
         perf_quality.execute()
 
-    @pytest.mark.skip(reason='for debugging only')
+    #@pytest.mark.skip(reason='for debugging only')
     @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
     def test_performance_quality_report_skye_debug(self, mock_download, performance_quality_report_inputs, perf_quality_report):
         mock_download.return_value = performance_quality_report_inputs
@@ -248,7 +248,7 @@ class TestPerformanceQualityReport:
         stability_summary = perf_quality_report.build_performance_stability_fund_summary()
         assert stability_summary.shape[0] > 0
         assert all(stability_summary.index == ['TTM', '3Y', '5Y'])
-        assert all(stability_summary.columns == ['Vol'])
+        assert all(stability_summary.columns == ['Vol', 'min', '25%', '75%', 'max'])
 
     @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
     def test_perf_stability_peer_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):

@@ -476,8 +476,29 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                     periodicity=Periodicity.Monthly,
                                                     annualize=True)
 
-    def _get_fund_trailing_vol_summary(self, returns):
-        returns = returns.copy()
+    def _get_rolling_return(self, returns, trailing_months):
+        return self._analytics.compute_trailing_return(ror=returns,
+                                                       window=trailing_months,
+                                                       as_of_date=self._as_of_date,
+                                                       method='geometric',
+                                                       periodicity=Periodicity.Monthly,
+                                                       annualize=True,
+                                                       include_history=True)
+
+    @staticmethod
+    def _summarize_rolling_returns(rolling_returns, trailing_months):
+        rolling_returns = rolling_returns.iloc[-trailing_months:]
+        index = ['min', '25%', '75%', 'max']
+        if len(rolling_returns) == trailing_months:
+            summary = rolling_returns.describe().loc[index]
+            summary.columns = [trailing_months]
+        else:
+            summary = pd.DataFrame({trailing_months: [''] * len(index)}, index=index)
+
+        return summary
+
+    def _get_fund_trailing_vol_summary(self):
+        returns = self._fund_returns.copy()
         trailing_1y_vol = self._get_trailing_vol(returns=returns, trailing_months=12)
         trailing_3y_vol = self._get_trailing_vol(returns=returns, trailing_months=36)
         trailing_5y_vol = self._get_trailing_vol(returns=returns, trailing_months=60)
@@ -486,6 +507,19 @@ class PerformanceQualityReport(ReportingRunnerBase):
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame({'Vol': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
                                index=['TTM', '3Y', '5Y'])
+
+        return summary
+
+    def _get_fund_rolling_return_summary(self):
+        returns = self._fund_returns.copy()
+        rolling_12m_returns = self._get_rolling_return(returns=returns, trailing_months=12)
+        rolling_1y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=12)
+        rolling_3y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=36)
+        rolling_5y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=60)
+
+        summary = pd.concat([rolling_1y_summary.T, rolling_3y_summary.T, rolling_5y_summary.T])
+        summary = summary.round(2)
+        summary.index = ['TTM', '3Y', '5Y']
 
         return summary
 
@@ -502,8 +536,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def build_performance_stability_fund_summary(self):
-        ttm = self._get_fund_trailing_vol_summary(returns=self._fund_returns)
-        summary = ttm
+        vol = self._get_fund_trailing_vol_summary()
+        rolling_returns = self._get_fund_rolling_return_summary()
+        summary = vol.merge(rolling_returns, left_index=True, right_index=True)
         return summary
 
     def build_performance_stability_peer_summary(self):
