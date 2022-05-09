@@ -29,6 +29,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         self.__all_eurekahedge_constituent_returns = None
         self.__all_exposure = None
         self.__inputs = None
+        self.__market_factor_returns = None
 
     def download_performance_quality_report_inputs(self) -> dict:
         location = "lab/rqs/azurefunctiondata"
@@ -123,6 +124,19 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return self.__all_exposure
 
     @property
+    def _market_factor_returns(self):
+        if self.__market_factor_returns is None:
+            returns = pd.read_json(self._inputs['market_factor_returns'], orient='index')
+            if len(returns) > 0:
+                returns = AggregateFromDaily().transform(data=returns, method='geometric',
+                                                                              period=Periodicity.Monthly)
+                returns.index = [pd.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
+                self.__market_factor_returns = returns
+            else:
+                self.__market_factor_returns = pd.DataFrame()
+        return self.__market_factor_returns
+
+    @property
     def _entity_type(self):
         return self._params['vertical'] + ' ' + self._params['entity']
 
@@ -194,6 +208,18 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @property
     def _ehi200_returns(self):
         return self._all_eurekahedge_returns['Eurekahedge Institutional 200'].squeeze()
+
+    @property
+    def _sp500_return(self):
+        returns = self._market_factor_returns['SPXT Index']
+        returns.name = 'SP500'
+        return returns.to_frame()
+
+    @property
+    def _rf_return(self):
+        returns = self._market_factor_returns['SBMMTB1 Index']
+        returns.name = '1M_RiskFree'
+        return returns.to_frame()
 
     @property
     def _primary_peer_constituent_returns(self):
@@ -485,14 +511,22 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                        annualize=True,
                                                        include_history=True)
 
+    def _get_rolling_sharpe_ratio(self, returns, trailing_months):
+        return self._analytics.compute_trailing_sharpe_ratio(ror=returns,
+                                                             rf_ror=self._rf_return,
+                                                             window=trailing_months,
+                                                             as_of_date=self._as_of_date,
+                                                             periodicity=Periodicity.Monthly,
+                                                             include_history=True)
+
     @staticmethod
-    def _summarize_rolling_returns(rolling_returns, trailing_months):
-        rolling_returns = rolling_returns.iloc[-trailing_months:]
+    def _summarize_rolling_data(rolling_data, trailing_months):
+        rolling_data = rolling_data.iloc[-trailing_months:]
         index = ['min', '25%', '75%', 'max']
-        if len(rolling_returns) == trailing_months:
-            summary = rolling_returns.describe().loc[index]
+        if len(rolling_data) == trailing_months:
+            summary = rolling_data.describe().loc[index]
         else:
-            summary = pd.DataFrame({rolling_returns.columns: [''] * len(index)}, index=index)
+            summary = pd.DataFrame({'Fund': [''] * len(index)}, index=index)
 
         return summary
 
@@ -512,9 +546,22 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _get_fund_rolling_return_summary(self):
         returns = self._fund_returns.copy()
         rolling_12m_returns = self._get_rolling_return(returns=returns, trailing_months=12)
-        rolling_1y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=12)
-        rolling_3y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=36)
-        rolling_5y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=60)
+        rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=12)
+        rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=36)
+        rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
+
+        summary = pd.concat([rolling_1y_summary.T, rolling_3y_summary.T, rolling_5y_summary.T])
+        summary = summary.round(2)
+        summary.index = ['TTM', '3Y', '5Y']
+
+        return summary
+
+    def _get_fund_rolling_sharpe_summary(self):
+        returns = self._fund_returns.copy()
+        rolling_12m_sharpes = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
+        rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=12)
+        rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=36)
+        rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=60)
 
         summary = pd.concat([rolling_1y_summary.T, rolling_3y_summary.T, rolling_5y_summary.T])
         summary = summary.round(2)
@@ -526,13 +573,32 @@ class PerformanceQualityReport(ReportingRunnerBase):
         returns = self._primary_peer_constituent_returns.copy()
         rolling_12m_returns = self._get_rolling_return(returns=returns, trailing_months=12)
 
-        rolling_1y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=12)
+        rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=12)
         rolling_1y_summary = rolling_1y_summary.mean(axis=1)
 
-        rolling_3y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=36)
+        rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=36)
         rolling_3y_summary = rolling_3y_summary.mean(axis=1)
 
-        rolling_5y_summary = self._summarize_rolling_returns(rolling_returns=rolling_12m_returns, trailing_months=60)
+        rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
+        rolling_5y_summary = rolling_5y_summary.mean(axis=1)
+
+        summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
+        summary = summary.round(2)
+        summary.index = ['TTM', '3Y', '5Y']
+
+        return summary
+
+    def _get_peer_rolling_sharpe_summary(self):
+        sharpes = self._primary_peer_constituent_returns.copy()
+        rolling_12m_sharpes = self._get_rolling_return(returns=sharpes, trailing_months=12)
+
+        rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=12)
+        rolling_1y_summary = rolling_1y_summary.mean(axis=1)
+
+        rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=36)
+        rolling_3y_summary = rolling_3y_summary.mean(axis=1)
+
+        rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=60)
         rolling_5y_summary = rolling_5y_summary.mean(axis=1)
 
         summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
@@ -556,13 +622,25 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def build_performance_stability_fund_summary(self):
         vol = self._get_fund_trailing_vol_summary()
         rolling_returns = self._get_fund_rolling_return_summary()
+        rolling_returns.columns = ['Return_'] + rolling_returns.columns
+
+        rolling_sharpes = self._get_fund_rolling_sharpe_summary()
+        rolling_sharpes.columns = ['Sharpe_'] + rolling_sharpes.columns
+
         summary = vol.merge(rolling_returns, left_index=True, right_index=True)
+        summary = summary.merge(rolling_sharpes, left_index=True, right_index=True)
         return summary
 
     def build_performance_stability_peer_summary(self):
         vol = self._get_peer_trailing_vol_summary(returns=self._primary_peer_constituent_returns)
         rolling_returns = self._get_peer_rolling_return_summary()
+        rolling_returns.columns = ['AvgReturn_'] + rolling_returns.columns
+
+        rolling_sharpes = self._get_peer_rolling_sharpe_summary()
+        rolling_sharpes.columns = ['AvgSharpe_'] + rolling_sharpes.columns
+
         summary = vol.merge(rolling_returns, left_index=True, right_index=True)
+        summary = summary.merge(rolling_sharpes, left_index=True, right_index=True)
         return summary
 
     def _validate_inputs(self):

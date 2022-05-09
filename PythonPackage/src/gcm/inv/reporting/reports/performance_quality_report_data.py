@@ -148,6 +148,10 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                                                 start_date=start_10y,
                                                                                 end_date=self._end_date)
 
+        market_factor_returns = self._factors.get_factor_returns(tickers=['SBMMTB1 Index', 'SPXT Index'],
+                                                                 start_date=self._start_date,
+                                                                 end_date=self._end_date)
+
         report_inputs = dict()
         report_inputs['fund_dimn'] = filtered_dimn.to_json(orient='index')
         report_inputs['fund_returns'] = fund_monthly_returns.to_json(orient='index')
@@ -160,6 +164,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         report_inputs['exposure_3y'] = exposure_3y.to_json(orient='index')
         report_inputs['exposure_5y'] = exposure_5y.to_json(orient='index')
         report_inputs['exposure_10y'] = exposure_10y.to_json(orient='index')
+        report_inputs['market_factor_returns'] = market_factor_returns.to_json(orient='index')
 
         return report_inputs
 
