@@ -53,7 +53,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                   entity_master=entity_master,
                                   benchmarking=benchmarking)
 
-        attribution = Attribution(attribution_query=attribution_query, investments=investments)
+        attribution = Attribution(attribution_query=attribution_query, entity_master=entity_master)
 
         factors = Factors(factors_query=factors_query)
 
