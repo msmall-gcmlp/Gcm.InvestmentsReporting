@@ -155,7 +155,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @property
     def _fund_returns(self):
         if any(self._all_fund_returns.columns == self._fund_name):
-            return self._all_fund_returns[self._fund_name]
+            return self._all_fund_returns[self._fund_name].to_frame()
         else:
             return pd.DataFrame()
 
@@ -502,6 +502,32 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                     periodicity=Periodicity.Monthly,
                                                     annualize=True)
 
+    def _get_trailing_beta(self, returns, trailing_months):
+        return self._analytics.compute_trailing_beta(ror=returns,
+                                                     benchmark_ror=self._sp500_return,
+                                                     window=trailing_months,
+                                                     as_of_date=self._as_of_date,
+                                                     periodicity=Periodicity.Monthly)
+
+    def _get_trailing_sharpe(self, returns, trailing_months):
+        return self._analytics.compute_trailing_sharpe_ratio(ror=returns,
+                                                             rf_ror=self._rf_return,
+                                                             window=trailing_months,
+                                                             as_of_date=self._as_of_date,
+                                                             periodicity=Periodicity.Monthly)
+
+    def _get_trailing_win_loss_ratio(self, returns, trailing_months):
+        return self._analytics.compute_trailing_win_loss_ratio(ror=returns,
+                                                               window=trailing_months,
+                                                               as_of_date=self._as_of_date,
+                                                               periodicity=Periodicity.Monthly)
+
+    def _get_trailing_batting_avg(self, returns, trailing_months):
+        return self._analytics.compute_trailing_batting_average(ror=returns,
+                                                                window=trailing_months,
+                                                                as_of_date=self._as_of_date,
+                                                                periodicity=Periodicity.Monthly)
+
     def _get_rolling_return(self, returns, trailing_months):
         return self._analytics.compute_trailing_return(ror=returns,
                                                        window=trailing_months,
@@ -524,7 +550,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_data = rolling_data.iloc[-trailing_months:]
         index = ['min', '25%', '75%', 'max']
         if len(rolling_data) == trailing_months:
-            summary = rolling_data.describe().loc[index]
+            summary = rolling_data.describe().loc[index].round(2)
         else:
             summary = pd.DataFrame({'Fund': [''] * len(index)}, index=index)
 
@@ -543,6 +569,58 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         return summary
 
+    def _get_fund_trailing_beta_summary(self):
+        returns = self._fund_returns.copy()
+        trailing_1y_beta = self._get_trailing_vol(returns=returns, trailing_months=12)
+        trailing_3y_beta = self._get_trailing_vol(returns=returns, trailing_months=36)
+        trailing_5y_beta = self._get_trailing_vol(returns=returns, trailing_months=60)
+
+        stats = [trailing_1y_beta, trailing_3y_beta, trailing_5y_beta]
+        stats = [x.squeeze() for x in stats]
+        summary = pd.DataFrame({'Beta': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
+                               index=['TTM', '3Y', '5Y'])
+
+        return summary
+
+    def _get_fund_trailing_sharpe_summary(self):
+        returns = self._fund_returns.copy()
+        trailing_1y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=12)
+        trailing_3y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=36)
+        trailing_5y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=60)
+
+        stats = [trailing_1y_sharpe, trailing_3y_sharpe, trailing_5y_sharpe]
+        stats = [x.squeeze() for x in stats]
+        summary = pd.DataFrame({'Sharpe': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
+                               index=['TTM', '3Y', '5Y'])
+
+        return summary
+
+    def _get_fund_trailing_batting_average_summary(self):
+        returns = self._fund_returns.copy()
+        trailing_1y_batting_avg = self._get_trailing_batting_avg(returns=returns, trailing_months=12)
+        trailing_3y_batting_avg = self._get_trailing_batting_avg(returns=returns, trailing_months=36)
+        trailing_5y_batting_avg = self._get_trailing_batting_avg(returns=returns, trailing_months=60)
+
+        stats = [trailing_1y_batting_avg, trailing_3y_batting_avg, trailing_5y_batting_avg]
+        stats = [x.squeeze() for x in stats]
+        summary = pd.DataFrame({'BattingAvg': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
+                               index=['TTM', '3Y', '5Y'])
+
+        return summary
+
+    def _get_fund_trailing_win_loss_ratio_summary(self):
+        returns = self._fund_returns.copy()
+        trailing_1y_win_loss = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=12)
+        trailing_3y_win_loss = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=36)
+        trailing_5y_win_loss = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=60)
+
+        stats = [trailing_1y_win_loss, trailing_3y_win_loss, trailing_5y_win_loss]
+        stats = [x.squeeze() for x in stats]
+        summary = pd.DataFrame({'WinLoss': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
+                               index=['TTM', '3Y', '5Y'])
+
+        return summary
+
     def _get_fund_rolling_return_summary(self):
         returns = self._fund_returns.copy()
         rolling_12m_returns = self._get_rolling_return(returns=returns, trailing_months=12)
@@ -551,7 +629,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
 
         summary = pd.concat([rolling_1y_summary.T, rolling_3y_summary.T, rolling_5y_summary.T])
-        summary = summary.round(2)
         summary.index = ['TTM', '3Y', '5Y']
 
         return summary
@@ -564,7 +641,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=60)
 
         summary = pd.concat([rolling_1y_summary.T, rolling_3y_summary.T, rolling_5y_summary.T])
-        summary = summary.round(2)
         summary.index = ['TTM', '3Y', '5Y']
 
         return summary
@@ -583,7 +659,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_5y_summary = rolling_5y_summary.mean(axis=1)
 
         summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
-        summary = summary.round(2)
         summary.index = ['TTM', '3Y', '5Y']
 
         return summary
@@ -602,7 +677,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_5y_summary = rolling_5y_summary.mean(axis=1)
 
         summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
-        summary = summary.round(2)
         summary.index = ['TTM', '3Y', '5Y']
 
         return summary
@@ -619,28 +693,102 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         return summary
 
+    def _get_peer_trailing_beta_summary(self, returns):
+        returns = returns.copy()
+        trailing_1y_beta = self._get_trailing_beta(returns=returns, trailing_months=12)
+        trailing_3y_beta = self._get_trailing_beta(returns=returns, trailing_months=36)
+        trailing_5y_beta = self._get_trailing_beta(returns=returns, trailing_months=60)
+
+        stats = [trailing_1y_beta.mean(), trailing_3y_beta.mean(), trailing_5y_beta.mean()]
+        summary = pd.DataFrame({'AvgBeta': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
+                               index=['TTM', '3Y', '5Y'])
+
+        return summary
+
+    def _get_peer_trailing_sharpe_summary(self, returns):
+        returns = returns.copy()
+        trailing_1y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=12)
+        trailing_3y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=36)
+        trailing_5y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=60)
+
+        stats = [trailing_1y_sharpe.mean(), trailing_3y_sharpe.mean(), trailing_5y_sharpe.mean()]
+        summary = pd.DataFrame({'AvgSharpe': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
+                               index=['TTM', '3Y', '5Y'])
+
+        return summary
+
+    def _get_peer_trailing_batting_average_summary(self, returns):
+        returns = returns.copy()
+        trailing_1y = self._get_trailing_batting_avg(returns=returns, trailing_months=12)
+        trailing_3y = self._get_trailing_batting_avg(returns=returns, trailing_months=36)
+        trailing_5y = self._get_trailing_batting_avg(returns=returns, trailing_months=60)
+
+        stats = [trailing_1y.mean(), trailing_3y.mean(), trailing_5y.mean()]
+        summary = pd.DataFrame({'AvgBattingAvg': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
+                               index=['TTM', '3Y', '5Y'])
+
+        return summary
+
+    def _get_peer_trailing_win_loss_ratio_summary(self, returns):
+        returns = returns.copy()
+        trailing_1y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=12)
+        trailing_3y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=36)
+        trailing_5y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=60)
+
+        stats = [trailing_1y.mean(), trailing_3y.mean(), trailing_5y.mean()]
+        summary = pd.DataFrame({'AvgWinLoss': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
+                               index=['TTM', '3Y', '5Y'])
+
+        return summary
+
     def build_performance_stability_fund_summary(self):
         vol = self._get_fund_trailing_vol_summary()
+        beta = self._get_fund_trailing_beta_summary()
+        sharpe = self._get_fund_trailing_sharpe_summary()
+        batting_avg = self._get_fund_trailing_batting_average_summary()
+        win_loss = self._get_fund_trailing_win_loss_ratio_summary()
+
         rolling_returns = self._get_fund_rolling_return_summary()
         rolling_returns.columns = ['Return_'] + rolling_returns.columns
 
         rolling_sharpes = self._get_fund_rolling_sharpe_summary()
         rolling_sharpes.columns = ['Sharpe_'] + rolling_sharpes.columns
 
-        summary = vol.merge(rolling_returns, left_index=True, right_index=True)
+        summary = vol.merge(beta, left_index=True, right_index=True)
+        summary = summary.merge(sharpe, left_index=True, right_index=True)
+        summary = summary.merge(batting_avg, left_index=True, right_index=True)
+        summary = summary.merge(win_loss, left_index=True, right_index=True)
+        summary = summary.merge(rolling_returns, left_index=True, right_index=True)
         summary = summary.merge(rolling_sharpes, left_index=True, right_index=True)
+
+        summary = summary[['Vol', 'Beta', 'Sharpe', 'BattingAvg', 'WinLoss',
+                           'Return_min', 'Return_25%', 'Return_75%', 'Return_max',
+                           'Sharpe_min', 'Sharpe_25%', 'Sharpe_75%', 'Sharpe_max']]
         return summary
 
     def build_performance_stability_peer_summary(self):
         vol = self._get_peer_trailing_vol_summary(returns=self._primary_peer_constituent_returns)
+        beta = self._get_peer_trailing_beta_summary(returns=self._primary_peer_constituent_returns)
+        sharpe = self._get_peer_trailing_sharpe_summary(returns=self._primary_peer_constituent_returns)
+        batting_avg = self._get_peer_trailing_batting_average_summary(returns=self._primary_peer_constituent_returns)
+        win_loss = self._get_peer_trailing_win_loss_ratio_summary(returns=self._primary_peer_constituent_returns)
+
         rolling_returns = self._get_peer_rolling_return_summary()
         rolling_returns.columns = ['AvgReturn_'] + rolling_returns.columns
 
         rolling_sharpes = self._get_peer_rolling_sharpe_summary()
         rolling_sharpes.columns = ['AvgSharpe_'] + rolling_sharpes.columns
 
-        summary = vol.merge(rolling_returns, left_index=True, right_index=True)
+        summary = vol.merge(beta, left_index=True, right_index=True)
+        summary = summary.merge(sharpe, left_index=True, right_index=True)
+        summary = summary.merge(batting_avg, left_index=True, right_index=True)
+        summary = summary.merge(win_loss, left_index=True, right_index=True)
+        summary = summary.merge(rolling_returns, left_index=True, right_index=True)
         summary = summary.merge(rolling_sharpes, left_index=True, right_index=True)
+
+        summary = summary[['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
+                           'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
+                           'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max']]
         return summary
 
     def _validate_inputs(self):

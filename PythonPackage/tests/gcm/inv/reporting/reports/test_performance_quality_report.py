@@ -227,7 +227,7 @@ class TestPerformanceQualityReport:
 
         perf_quality.execute()
 
-    #@pytest.mark.skip(reason='for debugging only')
+    @pytest.mark.skip(reason='for debugging only')
     @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
     def test_performance_quality_report_skye_debug(self, mock_download, performance_quality_report_inputs, perf_quality_report):
         mock_download.return_value = performance_quality_report_inputs
@@ -248,7 +248,7 @@ class TestPerformanceQualityReport:
         stability_summary = perf_quality_report.build_performance_stability_fund_summary()
         assert stability_summary.shape[0] > 0
         assert all(stability_summary.index == ['TTM', '3Y', '5Y'])
-        assert all(stability_summary.columns == ['Vol',
+        assert all(stability_summary.columns == ['Vol', 'Beta', 'Sharpe', 'BattingAvg', 'WinLoss',
                                                  'Return_min', 'Return_25%', 'Return_75%', 'Return_max',
                                                  'Sharpe_min', 'Sharpe_25%', 'Sharpe_75%', 'Sharpe_max'])
 
@@ -258,6 +258,6 @@ class TestPerformanceQualityReport:
         stability_summary = perf_quality_report.build_performance_stability_peer_summary()
         assert stability_summary.shape[0] > 0
         assert all(stability_summary.index == ['TTM', '3Y', '5Y'])
-        assert all(stability_summary.columns == ['AvgVol',
+        assert all(stability_summary.columns == ['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
                                                  'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
                                                  'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max'])
