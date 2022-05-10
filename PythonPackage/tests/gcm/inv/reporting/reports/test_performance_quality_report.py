@@ -43,7 +43,7 @@ class TestPerformanceQualityReport:
 
         perf_quality = PerformanceQualityReportData(
             runner=runner,
-            start_date=dt.date(2020, 3, 1),
+            start_date=dt.date(2012, 3, 1),
             end_date=dt.date(2022, 3, 31),
             as_of_date=dt.date(2022, 3, 31),
             params=params
@@ -65,8 +65,9 @@ class TestPerformanceQualityReport:
         # eurekahedge_constituent_returns = eurekahedge_constituent_returns[['EHI50 Multi-Strategy',
         #                                                                    'EHI50 Long/Short Equity']]
         # report_inputs['eurekahedge_constituent_returns'] = eurekahedge_constituent_returns.to_json(orient='index')
+        #
         # import json
-        # with open('gcm/inv/reporting/test_data/performance_quality_report_inputs2.json', 'w') as fp:
+        # with open('gcm/inv/reporting/test_data/performance_quality_report_inputs.json', 'w') as fp:
         #     json.dump(report_inputs, fp)
 
         fund_dimn = pd.read_json(report_inputs['fund_dimn'], orient='index')
@@ -89,6 +90,7 @@ class TestPerformanceQualityReport:
         exposure_3y = pd.read_json(report_inputs['exposure_3y'], orient='index')
         exposure_5y = pd.read_json(report_inputs['exposure_5y'], orient='index')
         exposure_10y = pd.read_json(report_inputs['exposure_10y'], orient='index')
+        rba = pd.read_json(report_inputs['rba'], orient='index')
 
         assert fund_dimn.shape[0] > 0
         assert fund_returns.shape[0] > 0
@@ -101,6 +103,7 @@ class TestPerformanceQualityReport:
         assert exposure_3y.shape[0] == 3
         assert exposure_5y.shape[0] == 3
         assert exposure_10y.shape[0] == 3
+        assert rba.shape[0] > 0
 
     @pytest.mark.skip('very slow')
     def test_performance_quality_report_data_no_inv_filter(self, runner):
@@ -227,7 +230,7 @@ class TestPerformanceQualityReport:
 
         perf_quality.execute()
 
-    @pytest.mark.skip(reason='for debugging only')
+    #@pytest.mark.skip(reason='for debugging only')
     @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
     def test_performance_quality_report_skye_debug(self, mock_download, performance_quality_report_inputs, perf_quality_report):
         mock_download.return_value = performance_quality_report_inputs
@@ -261,3 +264,12 @@ class TestPerformanceQualityReport:
         assert all(stability_summary.columns == ['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
                                                  'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
                                                  'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max'])
+
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs",autospec=True)
+    def test_rba_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):
+        mock_download.return_value = performance_quality_report_inputs
+        rba = perf_quality_report.build_rba_summary()
+        assert rba.shape[0] > 0
+        assert all(rba.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y'])
+        assert all(rba.columns == ['Market Beta', 'Region', 'Industries', 'Styles',
+                                   'Hedge Fund Technicals', 'Selection Risk', 'Unexplained'])

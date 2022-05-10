@@ -152,6 +152,12 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                                  start_date=self._start_date,
                                                                  end_date=self._end_date)
 
+        rba = self._attribution.get_rba_ts_by_group(investment_ids=investment_ids,
+                                                    start_date=self._start_date,
+                                                    end_date=self._end_date,
+                                                    group_type='FactorGroup1',
+                                                    frequency='M')
+
         report_inputs = dict()
         report_inputs['fund_dimn'] = filtered_dimn.to_json(orient='index')
         report_inputs['fund_returns'] = fund_monthly_returns.to_json(orient='index')
@@ -165,6 +171,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         report_inputs['exposure_5y'] = exposure_5y.to_json(orient='index')
         report_inputs['exposure_10y'] = exposure_10y.to_json(orient='index')
         report_inputs['market_factor_returns'] = market_factor_returns.to_json(orient='index')
+        report_inputs['rba'] = rba.to_json(orient='index')
 
         return report_inputs
 

@@ -28,6 +28,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         self.__all_gcm_peer_constituent_returns = None
         self.__all_eurekahedge_constituent_returns = None
         self.__all_exposure = None
+        self.__all_rba = None
         self.__inputs = None
         self.__market_factor_returns = None
 
@@ -124,6 +125,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return self.__all_exposure
 
     @property
+    def _all_rba(self):
+        if self.__all_rba is None:
+            rba = pd.read_json(self._inputs['rba'], orient='index')
+            rba_columns = [ast.literal_eval(x) for x in rba.columns]
+            rba_columns = pd.MultiIndex.from_tuples(rba_columns,
+                                                    names=['FactorGroup1', 'InvestmentGroupId'])
+            rba.columns = rba_columns
+            self.__all_rba = rba
+        return self.__all_rba
+
+    @property
     def _market_factor_returns(self):
         if self.__market_factor_returns is None:
             returns = pd.read_json(self._inputs['market_factor_returns'], orient='index')
@@ -156,6 +168,16 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _fund_returns(self):
         if any(self._all_fund_returns.columns == self._fund_name):
             return self._all_fund_returns[self._fund_name].to_frame()
+        else:
+            return pd.DataFrame()
+
+    @property
+    def _fund_rba(self):
+        fund_index = self._all_rba.columns.get_level_values(1) == self._fund_id.squeeze()
+        if any(fund_index):
+            fund_rba = self._all_rba.iloc[:, fund_index]
+            fund_rba.columns = fund_rba.columns.droplevel(1)
+            return fund_rba
         else:
             return pd.DataFrame()
 
@@ -491,8 +513,65 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = summary.round(2)
         return summary
 
+    def _get_rba_summary(self):
+        factor_group_index = pd.DataFrame(index=['Market Beta', 'Region', 'Industries', 'Styles',
+                                                 'Hedge Fund Technicals', 'Selection Risk', 'Unexplained'])
+        mtd = self._analytics.compute_periodic_return(ror=self._fund_rba,
+                                                      period=PeriodicROR.MTD,
+                                                      as_of_date=self._as_of_date,
+                                                      method='arithmetic')
+
+        qtd = self._analytics.compute_periodic_return(ror=self._fund_rba,
+                                                      period=PeriodicROR.QTD,
+                                                      as_of_date=self._as_of_date,
+                                                      method='arithmetic')
+
+        ytd = self._analytics.compute_periodic_return(ror=self._fund_rba,
+                                                      period=PeriodicROR.YTD,
+                                                      as_of_date=self._as_of_date,
+                                                      method='arithmetic')
+
+        ttm = self._analytics.compute_trailing_return(ror=self._fund_rba,
+                                                      window=12,
+                                                      as_of_date=self._as_of_date,
+                                                      method='arithmetic',
+                                                      periodicity=Periodicity.Monthly,
+                                                      annualize=True,
+                                                      include_history=False)
+
+        t3y = self._analytics.compute_trailing_return(ror=self._fund_rba,
+                                                      window=36,
+                                                      as_of_date=self._as_of_date,
+                                                      method='arithmetic',
+                                                      periodicity=Periodicity.Monthly,
+                                                      annualize=True,
+                                                      include_history=False)
+
+        t5y = self._analytics.compute_trailing_return(ror=self._fund_rba,
+                                                      window=60,
+                                                      as_of_date=self._as_of_date,
+                                                      method='arithmetic',
+                                                      periodicity=Periodicity.Monthly,
+                                                      annualize=True,
+                                                      include_history=False)
+
+        summary = factor_group_index.merge(mtd, left_index=True, right_index=True, how='left').fillna(0)
+        summary = summary.merge(qtd, left_index=True, right_index=True, how='left').fillna(0)
+        summary = summary.merge(ytd, left_index=True, right_index=True, how='left').fillna(0)
+        summary = summary.merge(ttm, left_index=True, right_index=True, how='left').fillna(0)
+        summary = summary.merge(t3y, left_index=True, right_index=True, how='left').fillna(0)
+        summary = summary.merge(t5y, left_index=True, right_index=True, how='left').fillna(0)
+        summary.columns = ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y']
+        summary = summary.T
+        summary = summary.round(2)
+        return summary
+
     def build_exposure_summary(self):
         summary = self._get_exposure_summary(self._exposure)
+        return summary
+
+    def build_rba_summary(self):
+        summary = self._get_rba_summary()
         return summary
 
     def _get_trailing_vol(self, returns, trailing_months):
@@ -809,6 +888,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         peer_ptile_1_heading = self.get_peer_ptile_1_heading()
         peer_ptile_2_heading = self.get_peer_ptile_2_heading()
 
+        rba_summary = self.build_rba_summary()
+
         performance_stability_fund_summary = self.build_performance_stability_fund_summary()
         performance_stability_peer_summary = self.build_performance_stability_peer_summary()
 
@@ -825,6 +906,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "peer_ptile_2_heading": peer_ptile_2_heading,
             "performance_stability_fund_summary": performance_stability_fund_summary,
             "performance_stability_peer_summary": performance_stability_peer_summary,
+            "rba_summary": rba_summary,
             "exposure_summary": exposure_summary,
             "latest_exposure_heading": latest_exposure_heading,
         }
