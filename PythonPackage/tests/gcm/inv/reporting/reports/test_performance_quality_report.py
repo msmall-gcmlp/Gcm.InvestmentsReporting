@@ -9,6 +9,8 @@ from gcm.inv.reporting.reports.performance_quality_report import PerformanceQual
 from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 
+from gcm.inv.reporting.reports.report_binder import ReportBinder
+
 
 class TestPerformanceQualityReport:
     @pytest.fixture
@@ -273,3 +275,7 @@ class TestPerformanceQualityReport:
         assert all(rba.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y'])
         assert all(rba.columns == ['Market Beta', 'Region', 'Industries', 'Styles',
                                    'Hedge Fund Technicals', 'Selection Risk', 'Unexplained'])
+
+    @pytest.mark.skip(reason='slow')
+    def test_report_binder(self, runner):
+        ReportBinder(runner=runner, as_of_date=dt.date(2022, 2, 28)).aggregate_reports()
