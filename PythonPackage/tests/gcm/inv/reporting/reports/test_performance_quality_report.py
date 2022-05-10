@@ -230,7 +230,7 @@ class TestPerformanceQualityReport:
 
         perf_quality.execute()
 
-    #@pytest.mark.skip(reason='for debugging only')
+    @pytest.mark.skip(reason='for debugging only')
     @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
     def test_performance_quality_report_skye_debug(self, mock_download, performance_quality_report_inputs, perf_quality_report):
         mock_download.return_value = performance_quality_report_inputs
