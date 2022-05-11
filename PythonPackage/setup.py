@@ -49,7 +49,8 @@ setup(
         "openpyxl",
         "pillow",
         "gcm-investmentsdataprovider==0.4.0.dev2205102248",
-        "gcm-investmentsquantlib==0.36.0.dev2205101903"
+        "gcm-investmentsquantlib==0.36.0.dev2205101903",
+        "PyPDF2"
     ],
     extras_require={
         "dev": ["pytest>=3.7", "tox>=3.23", "wheel"],
