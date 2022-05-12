@@ -7,7 +7,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     activity1 = requestBody.copy()
     activity1['params']['run'] = "PerformanceQualityReportData"
     activity1 = json.dumps(activity1)
-    
+
     fund_names = yield context.call_activity("ReportingActivity", activity1)
 
     parallel_tasks = []
