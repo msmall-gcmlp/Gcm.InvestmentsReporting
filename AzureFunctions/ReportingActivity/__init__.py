@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 from gcm.inv.reporting.reports.performance_quality_report import PerformanceQualityReport
 from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
@@ -6,6 +7,7 @@ from dateutil.relativedelta import relativedelta
 
 
 def main(requestBody) -> str:
+    requestBody = json.loads(requestBody)
     params = requestBody["params"]
     # data = requestBody["data"]
     run = params["run"]

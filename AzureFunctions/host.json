@@ -15,6 +15,9 @@
       "messageHandlerOptions": {
         "maxAutoRenewDuration": "00:55:00"
       }
+    },
+    "durableTask": {
+      "hubName": "ReportingOrchestratorTaskHub001"
     }
   },
   "extensionBundle": {
