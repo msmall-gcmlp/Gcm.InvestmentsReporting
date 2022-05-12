@@ -20,6 +20,7 @@ from gcm.inv.dataprovider.investment_returns import InvestmentReturns
 from gcm.inv.dataprovider.investment_exposure import InvestmentExposure
 from gcm.inv.dataprovider.pub_dwh.pub_inv_exposure_query import PubInvExposureQuery
 from pandas._libs.tslibs.offsets import relativedelta
+from gcm.inv.dataprovider.entity_master_enum import SourceDimension
 
 from .reporting_runner_base import ReportingRunnerBase
 from gcm.inv.quantlib.timeseries.analytics import Analytics
@@ -70,6 +71,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         self._factors = factors
         self._inv_returns = investment_returns
         self._inv_exposure = investment_exposure
+        self._entity_master = entity_master
 
         self._entity_type = params.get('vertical') + ' ' + params.get('entity')
         self._status = params.get('status')
@@ -83,7 +85,17 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             return ast.literal_eval(self._params.get('investment_ids'))
 
     def get_performance_quality_report_inputs(self):
-        investment_ids = self._investment_ids.copy() if self._investment_ids is not None else None
+        # pre-filtering to EMMs to avoid performance issues. refactor later to occur behind the scenes in data provider
+        if self._investment_ids is None:
+            pub_ids = self._investments.get_filtered_pub_investment_ids(statuses='EMM')
+            pub_ids = [str(id) for id in pub_ids]
+            pub_id = SourceDimension.Pub_InvestmentDimn.value
+            investment_ids = self._entity_master.get_investment_ids_by_source_id(source_inv_ids=pub_ids,
+                                                                                 source_id=pub_id)
+            investment_ids = investment_ids['InvestmentId'].tolist()
+        else:
+            investment_ids = self._investment_ids.copy()
+
         fund_dimn = self._investments.get_condensed_investment_group_dimensions(as_dataframe=True,
                                                                                 investment_ids=investment_ids)
 
@@ -105,11 +117,13 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                        'Strategy',
                                        'SubStrategy']]
 
+        returns_source = [SourceDimension.Pub_InvestmentDimn]
         fund_monthly_returns = \
             self._inv_returns.get_investment_group_monthly_returns(start_date=self._start_date,
                                                                    end_date=self._end_date,
                                                                    as_dataframe=True,
-                                                                   investment_ids=investment_ids)
+                                                                   investment_ids=investment_ids,
+                                                                   priority_waterfall=returns_source)
 
         abs_bmrk_returns = \
             self._benchmarking.get_absolute_benchmark_returns(investment_group_ids=fund_dimn['InvestmentGroupId'],

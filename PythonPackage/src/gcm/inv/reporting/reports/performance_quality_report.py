@@ -292,7 +292,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             exposure = exposure.set_index('Period')
             return exposure
         else:
-            return pd.DataFrame()
+            return pd.DataFrame(columns=['LongNotional', 'ShortNotional', 'GrossNotional', 'NetNotional'],
+                                index=['Latest', '3Y', '5Y', '10Y'])
 
     @property
     def _latest_exposure_date(self):
@@ -341,7 +342,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def _get_return_summary(self, returns, return_type):
         returns = returns.copy()
-
         mtd_return = self._analytics.compute_periodic_return(ror=returns, period=PeriodicROR.MTD,
                                                              as_of_date=self._as_of_date, method='geometric')
 
@@ -508,7 +508,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @staticmethod
     def _get_exposure_summary(exposure):
+        index = pd.DataFrame(index=['Latest', '3Y', '5Y', '10Y'])
         summary = exposure[['LongNotional', 'ShortNotional', 'GrossNotional', 'NetNotional']]
+        summary = index.merge(summary, left_index=True, right_index=True, how='left')
         summary = summary.loc[['Latest', '3Y', '5Y', '10Y']]
         summary = summary.round(2)
         return summary
@@ -555,15 +557,28 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                       annualize=True,
                                                       include_history=False)
 
-        summary = factor_group_index.merge(mtd, left_index=True, right_index=True, how='left').fillna(0)
-        summary = summary.merge(qtd, left_index=True, right_index=True, how='left').fillna(0)
-        summary = summary.merge(ytd, left_index=True, right_index=True, how='left').fillna(0)
-        summary = summary.merge(ttm, left_index=True, right_index=True, how='left').fillna(0)
-        summary = summary.merge(t3y, left_index=True, right_index=True, how='left').fillna(0)
-        summary = summary.merge(t5y, left_index=True, right_index=True, how='left').fillna(0)
-        summary.columns = ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y']
+        t10y = self._analytics.compute_trailing_return(ror=self._fund_rba,
+                                                       window=120,
+                                                       as_of_date=self._as_of_date,
+                                                       method='arithmetic',
+                                                       periodicity=Periodicity.Monthly,
+                                                       annualize=True,
+                                                       include_history=False)
+
+        #TODO only fill na if some non na's
+        summary = factor_group_index.merge(mtd, left_index=True, right_index=True, how='left')
+        summary = summary.merge(qtd, left_index=True, right_index=True, how='left')
+        summary = summary.merge(ytd, left_index=True, right_index=True, how='left')
+        summary = summary.merge(ttm, left_index=True, right_index=True, how='left')
+        summary = summary.merge(t3y, left_index=True, right_index=True, how='left')
+        summary = summary.merge(t5y, left_index=True, right_index=True, how='left')
+        summary = summary.merge(t10y, left_index=True, right_index=True, how='left')
+        summary.columns = ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y']
         summary = summary.T
         summary = summary.round(2)
+
+        #fill na unless everything is NA
+        summary[~summary.isna().all(axis=1)] = summary[~summary.isna().all(axis=1)].fillna(0)
         return summary
 
     def build_exposure_summary(self):
@@ -571,7 +586,15 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def build_rba_summary(self):
-        summary = self._get_rba_summary()
+        if self._fund_rba.shape[0] > 0:
+            fund_returns = self._get_return_summary(returns=self._fund_returns, return_type='Fund')
+            fund_returns.rename(columns={'Fund': 'Total'}, inplace=True)
+            rba = self._get_rba_summary()
+            summary = fund_returns.merge(rba, left_index=True, right_index=True)
+        else:
+            summary = pd.DataFrame(index=['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'],
+                                   columns=['Total', 'Market Beta', 'Region', 'Industries', 'Styles',
+                                            'Hedge Fund Technicals', 'Selection Risk', 'Unexplained'])
         return summary
 
     def _get_trailing_vol(self, returns, trailing_months):
@@ -739,12 +762,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
         summary.index = ['TTM', '3Y', '5Y']
+        summary = summary.round(2)
 
         return summary
 
     def _get_peer_rolling_sharpe_summary(self):
-        sharpes = self._primary_peer_constituent_returns.copy()
-        rolling_12m_sharpes = self._get_rolling_return(returns=sharpes, trailing_months=12)
+        returns = self._primary_peer_constituent_returns.copy()
+        rolling_12m_sharpes = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
 
         rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=12)
         rolling_1y_summary = rolling_1y_summary.mean(axis=1)
@@ -757,6 +781,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
         summary.index = ['TTM', '3Y', '5Y']
+        summary = summary.round(2)
 
         return summary
 
@@ -846,28 +871,37 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def build_performance_stability_peer_summary(self):
-        vol = self._get_peer_trailing_vol_summary(returns=self._primary_peer_constituent_returns)
-        beta = self._get_peer_trailing_beta_summary(returns=self._primary_peer_constituent_returns)
-        sharpe = self._get_peer_trailing_sharpe_summary(returns=self._primary_peer_constituent_returns)
-        batting_avg = self._get_peer_trailing_batting_average_summary(returns=self._primary_peer_constituent_returns)
-        win_loss = self._get_peer_trailing_win_loss_ratio_summary(returns=self._primary_peer_constituent_returns)
+        peer_returns = self._primary_peer_constituent_returns.copy()
 
-        rolling_returns = self._get_peer_rolling_return_summary()
-        rolling_returns.columns = ['AvgReturn_'] + rolling_returns.columns
+        if peer_returns.shape[0] > 0:
+            vol = self._get_peer_trailing_vol_summary(returns=peer_returns)
+            beta = self._get_peer_trailing_beta_summary(returns=peer_returns)
+            sharpe = self._get_peer_trailing_sharpe_summary(returns=peer_returns)
+            batting_avg = self._get_peer_trailing_batting_average_summary(returns=peer_returns)
+            win_loss = self._get_peer_trailing_win_loss_ratio_summary(returns=peer_returns)
 
-        rolling_sharpes = self._get_peer_rolling_sharpe_summary()
-        rolling_sharpes.columns = ['AvgSharpe_'] + rolling_sharpes.columns
+            rolling_returns = self._get_peer_rolling_return_summary()
+            rolling_returns.columns = ['AvgReturn_'] + rolling_returns.columns
 
-        summary = vol.merge(beta, left_index=True, right_index=True)
-        summary = summary.merge(sharpe, left_index=True, right_index=True)
-        summary = summary.merge(batting_avg, left_index=True, right_index=True)
-        summary = summary.merge(win_loss, left_index=True, right_index=True)
-        summary = summary.merge(rolling_returns, left_index=True, right_index=True)
-        summary = summary.merge(rolling_sharpes, left_index=True, right_index=True)
+            rolling_sharpes = self._get_peer_rolling_sharpe_summary()
+            rolling_sharpes.columns = ['AvgSharpe_'] + rolling_sharpes.columns
 
-        summary = summary[['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
-                           'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
-                           'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max']]
+            summary = vol.merge(beta, left_index=True, right_index=True)
+            summary = summary.merge(sharpe, left_index=True, right_index=True)
+            summary = summary.merge(batting_avg, left_index=True, right_index=True)
+            summary = summary.merge(win_loss, left_index=True, right_index=True)
+            summary = summary.merge(rolling_returns, left_index=True, right_index=True)
+            summary = summary.merge(rolling_sharpes, left_index=True, right_index=True)
+
+            summary = summary[['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
+                               'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
+                               'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max']]
+
+        else:
+            summary = pd.DataFrame(columns=['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
+                                            'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
+                                            'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max'],
+                                   index=['TTM', '3Y', '5Y'])
         return summary
 
     def _validate_inputs(self):
