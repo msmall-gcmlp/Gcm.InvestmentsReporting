@@ -164,7 +164,8 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
         market_factor_returns = self._factors.get_factor_returns(tickers=['SBMMTB1 Index', 'SPXT Index'],
                                                                  start_date=self._start_date,
-                                                                 end_date=self._end_date)
+                                                                 end_date=self._end_date,
+                                                                 fill_na=True)
 
         rba = self._attribution.get_rba_ts_by_group(investment_ids=investment_ids,
                                                     start_date=self._start_date,

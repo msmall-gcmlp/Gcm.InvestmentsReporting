@@ -141,7 +141,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.read_json(self._inputs['market_factor_returns'], orient='index')
             if len(returns) > 0:
                 returns = AggregateFromDaily().transform(data=returns, method='geometric',
-                                                                              period=Periodicity.Monthly)
+                                                         period=Periodicity.Monthly)
                 returns.index = [pd.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
                 self.__market_factor_returns = returns
             else:
@@ -305,7 +305,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def get_peer_group_heading(self):
         if self._primary_peer_group is not None:
-            return pd.DataFrame({'peer_group_heading': ['v. ' + self._primary_peer_group + ' Peer']})
+            group = self._primary_peer_group + ' Peer'
+            group = group.replace('GCM ', '')
+            return pd.DataFrame({'peer_group_heading': ['v. ' + group]})
         else:
             return pd.DataFrame({'peer_group_heading': ['v. GCM Peer']})
 
