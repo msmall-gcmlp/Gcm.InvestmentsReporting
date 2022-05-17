@@ -7,7 +7,6 @@ from .reporting_runner_base import ReportingRunnerBase
 from gcm.inv.dataprovider.portfolio_holdings import PortfolioHoldings
 from gcm.inv.dataprovider.pub_dwh.pub_portfolio_holdings import PubPortfolioHoldingsQuery
 from gcm.inv.dataprovider.entity_master import EntityMaster
-from .reporting_runner_base import ReportingRunnerBase
 from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes
 from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
 from gcm.Scenario.scenario import Scenario
@@ -49,7 +48,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
                 operation=lambda dao, params: dao.get_data(read_params)
             )
             return json.loads(file.content)
-        except:
+        except Exception:
             return None
 
     def _aggregate_portfolio_summary(self, item):

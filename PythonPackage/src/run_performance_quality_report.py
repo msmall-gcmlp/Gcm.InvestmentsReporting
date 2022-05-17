@@ -78,6 +78,3 @@ if __name__ == "__main__":
     # TODO check Aspex RBA/compounding
     # TODO Add asofdate to params
     # TODO Document report and data provider (document default waterfall logic)
-
-
-
