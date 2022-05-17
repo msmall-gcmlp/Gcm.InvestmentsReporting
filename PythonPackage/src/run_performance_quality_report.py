@@ -59,19 +59,22 @@ class RunPerformanceQualityReports:
 
 if __name__ == "__main__":
     report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 3, 31))
-    fund_names = report_runner.generate_report_data()
-    report_runner.generate_fund_reports(fund_names=fund_names)
-    aggregate_return_summary = report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
+    #fund_names = report_runner.generate_report_data()
+    report_runner.generate_fund_reports(fund_names=['Tairen Alpha'])
+    #aggregate_return_summary = report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
     #report_runner.combine_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
 
     # High Priority
-    # TODO review excess aggregation assumption w/ amy (i.e. Fund returns without Abs Bmrk returns)
     # TODO fix double counting in holdings
-    # TODO add 5Y medians
     # TODO add risk decomps
-    # TODO populate HYG
+    # TODO organize imports of RBA, PBA, and Abs Benchmark Returns
+    # TODO add folder structure to data lake dumps/pass in file paths
+    # TODO Add SCL portion
 
     # Next up
+    # TODO populate HYG
+    # TODO icelandic method
+    # TODO review excess aggregation assumption w/ amy (i.e. Fund returns without Abs Bmrk returns)
     # TODO incorporate macro model
     # TODO run peer group stats only once
     # TODO update report tagging/write to reporting hub

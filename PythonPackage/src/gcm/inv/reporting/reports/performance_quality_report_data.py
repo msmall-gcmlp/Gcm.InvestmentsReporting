@@ -173,6 +173,20 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                     group_type='FactorGroup1',
                                                     frequency='M')
 
+        pba_publics = self._attribution.get_pba_ts_by_group(investment_ids=investment_ids,
+                                                            start_date=self._start_date,
+                                                            end_date=self._end_date,
+                                                            group_type='FactorGroup',
+                                                            frequency='M',
+                                                            public_or_private='Public')
+
+        pba_privates = self._attribution.get_pba_ts_by_group(investment_ids=investment_ids,
+                                                             start_date=self._start_date,
+                                                             end_date=self._end_date,
+                                                             group_type='FactorGroup',
+                                                             frequency='M',
+                                                             public_or_private='Private')
+
         report_inputs = dict()
         report_inputs['fund_dimn'] = filtered_dimn.to_json(orient='index')
         report_inputs['fund_returns'] = fund_monthly_returns.to_json(orient='index')
@@ -187,6 +201,8 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         report_inputs['exposure_10y'] = exposure_10y.to_json(orient='index')
         report_inputs['market_factor_returns'] = market_factor_returns.to_json(orient='index')
         report_inputs['rba'] = rba.to_json(orient='index')
+        report_inputs['pba_publics'] = pba_publics.to_json(orient='index')
+        report_inputs['pba_privates'] = pba_privates.to_json(orient='index')
 
         return report_inputs
 
@@ -205,6 +221,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             operation=lambda dao, params: dao.post_data(params, data_to_write)
         )
         fund_names = pd.read_json(inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
+        fund_names = sorted(fund_names)
         return fund_names
 
     def run(self, **kwargs):

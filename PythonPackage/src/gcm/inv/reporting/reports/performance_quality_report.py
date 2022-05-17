@@ -29,6 +29,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         self.__all_eurekahedge_constituent_returns = None
         self.__all_exposure = None
         self.__all_rba = None
+        self.__all_pba_publics = None
+        self.__all_pba_privates = None
         self.__inputs = None
         self.__market_factor_returns = None
 
@@ -136,6 +138,28 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return self.__all_rba
 
     @property
+    def _all_pba_publics(self):
+        if self.__all_pba_publics is None:
+            pba = pd.read_json(self._inputs['pba_publics'], orient='index')
+            pba_columns = [ast.literal_eval(x) for x in pba.columns]
+            pba_columns = pd.MultiIndex.from_tuples(pba_columns,
+                                                    names=['FactorGroup1', 'InvestmentGroupId'])
+            pba.columns = pba_columns
+            self.__all_pba_publics = pba
+        return self.__all_pba_publics
+
+    @property
+    def _all_pba_privates(self):
+        if self.__all_pba_privates is None:
+            pba = pd.read_json(self._inputs['pba_privates'], orient='index')
+            pba_columns = [ast.literal_eval(x) for x in pba.columns]
+            pba_columns = pd.MultiIndex.from_tuples(pba_columns,
+                                                    names=['FactorGroup1', 'InvestmentGroupId'])
+            pba.columns = pba_columns
+            self.__all_pba_privates = pba
+        return self.__all_pba_privates
+
+    @property
     def _market_factor_returns(self):
         if self.__market_factor_returns is None:
             returns = pd.read_json(self._inputs['market_factor_returns'], orient='index')
@@ -178,6 +202,26 @@ class PerformanceQualityReport(ReportingRunnerBase):
             fund_rba = self._all_rba.iloc[:, fund_index]
             fund_rba.columns = fund_rba.columns.droplevel(1)
             return fund_rba
+        else:
+            return pd.DataFrame()
+
+    @property
+    def _fund_pba_publics(self):
+        fund_index = self._all_pba_publics.columns.get_level_values(1) == self._fund_id.squeeze()
+        if any(fund_index):
+            fund_pba = self._all_pba_publics.iloc[:, fund_index]
+            fund_pba.columns = fund_pba.columns.droplevel(1)
+            return fund_pba
+        else:
+            return pd.DataFrame()
+
+    @property
+    def _fund_pba_privates(self):
+        fund_index = self._all_pba_privates.columns.get_level_values(1) == self._fund_id.squeeze()
+        if any(fund_index):
+            fund_pba = self._all_pba_privates.iloc[:, fund_index]
+            fund_pba.columns = fund_pba.columns.droplevel(1)
+            return fund_pba
         else:
             return pd.DataFrame()
 
@@ -520,22 +564,23 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _get_rba_summary(self):
         factor_group_index = pd.DataFrame(index=['Market Beta', 'Region', 'Industries', 'Styles',
                                                  'Hedge Fund Technicals', 'Selection Risk', 'Unexplained'])
-        mtd = self._analytics.compute_periodic_return(ror=self._fund_rba,
+        fund_rba = self._fund_rba.copy()
+        mtd = self._analytics.compute_periodic_return(ror=fund_rba,
                                                       period=PeriodicROR.MTD,
                                                       as_of_date=self._as_of_date,
                                                       method='arithmetic')
 
-        qtd = self._analytics.compute_periodic_return(ror=self._fund_rba,
+        qtd = self._analytics.compute_periodic_return(ror=fund_rba,
                                                       period=PeriodicROR.QTD,
                                                       as_of_date=self._as_of_date,
                                                       method='arithmetic')
 
-        ytd = self._analytics.compute_periodic_return(ror=self._fund_rba,
+        ytd = self._analytics.compute_periodic_return(ror=fund_rba,
                                                       period=PeriodicROR.YTD,
                                                       as_of_date=self._as_of_date,
                                                       method='arithmetic')
 
-        ttm = self._analytics.compute_trailing_return(ror=self._fund_rba,
+        ttm = self._analytics.compute_trailing_return(ror=fund_rba,
                                                       window=12,
                                                       as_of_date=self._as_of_date,
                                                       method='arithmetic',
@@ -543,7 +588,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                       annualize=True,
                                                       include_history=False)
 
-        t3y = self._analytics.compute_trailing_return(ror=self._fund_rba,
+        t3y = self._analytics.compute_trailing_return(ror=fund_rba,
                                                       window=36,
                                                       as_of_date=self._as_of_date,
                                                       method='arithmetic',
@@ -551,7 +596,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                       annualize=True,
                                                       include_history=False)
 
-        t5y = self._analytics.compute_trailing_return(ror=self._fund_rba,
+        t5y = self._analytics.compute_trailing_return(ror=fund_rba,
                                                       window=60,
                                                       as_of_date=self._as_of_date,
                                                       method='arithmetic',
@@ -559,7 +604,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                       annualize=True,
                                                       include_history=False)
 
-        t10y = self._analytics.compute_trailing_return(ror=self._fund_rba,
+        t10y = self._analytics.compute_trailing_return(ror=fund_rba,
                                                        window=120,
                                                        as_of_date=self._as_of_date,
                                                        method='arithmetic',
@@ -583,6 +628,75 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary[~summary.isna().all(axis=1)] = summary[~summary.isna().all(axis=1)].fillna(0)
         return summary
 
+    def _get_pba_summary(self):
+        factor_group_index = pd.DataFrame(index=['Beta', 'Regional', 'Industry', 'MacroRV', 'LS_Equity',
+                                                 'LS_Credit', 'Residual', 'Fees', 'Unallocated'])
+        fund_pba_publics = self._fund_pba_publics.copy()
+        fund_pba_privates = self._fund_pba_privates.copy()
+
+        if fund_pba_publics.shape[0] > 1:
+            mtd_publics = self._analytics.compute_periodic_return(ror=fund_pba_publics,
+                                                                  period=PeriodicROR.MTD,
+                                                                  as_of_date=self._as_of_date,
+                                                                  method='arithmetic')
+            mtd_publics.name = 'MTD - Publics'
+
+            qtd_publics = self._analytics.compute_periodic_return(ror=fund_pba_publics,
+                                                                  period=PeriodicROR.QTD,
+                                                                  as_of_date=self._as_of_date,
+                                                                  method='arithmetic')
+            qtd_publics.name = 'QTD - Publics'
+
+            ytd_publics = self._analytics.compute_periodic_return(ror=fund_pba_publics,
+                                                                  period=PeriodicROR.YTD,
+                                                                  as_of_date=self._as_of_date,
+                                                                  method='arithmetic')
+            ytd_publics.name = 'YTD - Publics'
+        else:
+            mtd_publics = pd.Series(index=factor_group_index.index, name='MTD - Publics')
+            qtd_publics = pd.Series(index=factor_group_index.index, name='QTD - Publics')
+            ytd_publics = pd.Series(index=factor_group_index.index, name='YTD - Publics')
+
+        if fund_pba_privates.shape[0] > 1:
+            mtd_privates = self._analytics.compute_periodic_return(ror=fund_pba_privates,
+                                                                   period=PeriodicROR.MTD,
+                                                                   as_of_date=self._as_of_date,
+                                                                   method='arithmetic')
+            mtd_privates.name = 'MTD - Privates'
+
+            qtd_privates = self._analytics.compute_periodic_return(ror=fund_pba_privates,
+                                                                   period=PeriodicROR.QTD,
+                                                                   as_of_date=self._as_of_date,
+                                                                   method='arithmetic')
+            qtd_privates.name = 'QTD - Privates'
+
+            ytd_privates = self._analytics.compute_periodic_return(ror=fund_pba_privates,
+                                                                   period=PeriodicROR.YTD,
+                                                                   as_of_date=self._as_of_date,
+                                                                   method='arithmetic')
+            ytd_privates.name = 'YTD - Privates'
+        else:
+            mtd_privates = pd.Series(index=factor_group_index.index, name='MTD - Privates')
+            qtd_privates = pd.Series(index=factor_group_index.index, name='QTD - Privates')
+            ytd_privates = pd.Series(index=factor_group_index.index, name='YTD - Privates')
+
+        #TODO only fill na if some non na's
+        summary = factor_group_index.merge(mtd_publics, left_index=True, right_index=True, how='left')
+        summary = summary.merge(mtd_privates, left_index=True, right_index=True, how='left')
+        summary = summary.merge(qtd_publics, left_index=True, right_index=True, how='left')
+        summary = summary.merge(qtd_privates, left_index=True, right_index=True, how='left')
+        summary = summary.merge(ytd_publics, left_index=True, right_index=True, how='left')
+        summary = summary.merge(ytd_privates, left_index=True, right_index=True, how='left')
+        summary.columns = ['MTD - Publics', 'MTD - Privates',
+                           'QTD - Publics', 'QTD - Privates',
+                           'YTD - Publics', 'YTD - Privates']
+        summary = summary.T
+        summary = summary.round(2)
+
+        #fill na unless everything is NA
+        summary[~summary.isna().all(axis=1)] = summary[~summary.isna().all(axis=1)].fillna(0)
+        return summary
+
     def build_exposure_summary(self):
         summary = self._get_exposure_summary(self._exposure)
         return summary
@@ -593,10 +707,23 @@ class PerformanceQualityReport(ReportingRunnerBase):
             fund_returns.rename(columns={'Fund': 'Total'}, inplace=True)
             rba = self._get_rba_summary()
             summary = fund_returns.merge(rba, left_index=True, right_index=True)
+            summary.drop('10Y', inplace=True)
         else:
-            summary = pd.DataFrame(index=['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'],
+            summary = pd.DataFrame(index=['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y'],
                                    columns=['Total', 'Market Beta', 'Region', 'Industries', 'Styles',
                                             'Hedge Fund Technicals', 'Selection Risk', 'Unexplained'])
+        return summary
+
+    def build_pba_summary(self):
+        if self._fund_pba_publics.shape[0] > 0:
+            pba = self._get_pba_summary()
+            fund_returns = pd.DataFrame({'Total': pba.sum(axis=1, skipna=False)})
+            summary = fund_returns.merge(pba, left_index=True, right_index=True)
+        else:
+            summary = pd.DataFrame(index=['MTD - Publics', 'MTD - Privates', 'QTD - Publics', 'QTD - Privates',
+                                          'YTD - Publics', 'YTD - Privates'],
+                                   columns=['Total', 'Beta', 'Regional', 'Industry', 'MacroRV',
+                                            'LS_Equity', 'LS_Credit', 'Residual', 'Fees', 'Unallocated'])
         return summary
 
     def _get_trailing_vol(self, returns, trailing_months):
@@ -641,6 +768,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                        annualize=True,
                                                        include_history=True)
 
+    def _get_rolling_vol(self, returns, trailing_months):
+        return self._analytics.compute_trailing_vol(ror=returns,
+                                                    window=trailing_months,
+                                                    as_of_date=self._as_of_date,
+                                                    periodicity=Periodicity.Monthly,
+                                                    annualize=True,
+                                                    include_history=True)
+
     def _get_rolling_sharpe_ratio(self, returns, trailing_months):
         return self._analytics.compute_trailing_sharpe_ratio(ror=returns,
                                                              rf_ror=self._rf_return,
@@ -648,6 +783,28 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                              as_of_date=self._as_of_date,
                                                              periodicity=Periodicity.Monthly,
                                                              include_history=True)
+
+    def _get_rolling_beta(self, returns, trailing_months):
+        return self._analytics.compute_trailing_beta(ror=returns,
+                                                     benchmark_ror=self._sp500_return,
+                                                     window=trailing_months,
+                                                     as_of_date=self._as_of_date,
+                                                     periodicity=Periodicity.Monthly,
+                                                     include_history=True)
+
+    def _get_rolling_batting_avg(self, returns, trailing_months):
+        return self._analytics.compute_trailing_batting_average(ror=returns,
+                                                                window=trailing_months,
+                                                                as_of_date=self._as_of_date,
+                                                                periodicity=Periodicity.Monthly,
+                                                                include_history=True)
+
+    def _get_rolling_win_loss_ratio(self, returns, trailing_months):
+        return self._analytics.compute_trailing_win_loss_ratio(ror=returns,
+                                                               window=trailing_months,
+                                                               as_of_date=self._as_of_date,
+                                                               periodicity=Periodicity.Monthly,
+                                                               include_history=True)
 
     def _summarize_rolling_data(self, rolling_data, trailing_months):
         if rolling_data.index.max().date() < self._as_of_date.replace(day=1):
@@ -663,16 +820,33 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         return summary
 
+    def _summarize_rolling_median(self, rolling_data, trailing_months):
+        if rolling_data.index.max().date() < self._as_of_date.replace(day=1):
+            rolling_data = pd.DataFrame()
+
+        rolling_data = rolling_data.iloc[-trailing_months:]
+
+        if len(rolling_data) > 1:
+            # rolling_median = rolling_data.median().round(2)
+            # summary = pd.DataFrame({'Fund': rolling_median.squeeze()}, index=['Median'])
+            summary = rolling_data.median().round(2).to_frame()
+        else:
+            summary = pd.DataFrame({'Fund': ['']}, index=['Median'])
+
+        return summary
+
     def _get_fund_trailing_vol_summary(self):
         returns = self._fund_returns.copy()
         trailing_1y_vol = self._get_trailing_vol(returns=returns, trailing_months=12)
         trailing_3y_vol = self._get_trailing_vol(returns=returns, trailing_months=36)
         trailing_5y_vol = self._get_trailing_vol(returns=returns, trailing_months=60)
+        rolling_1_vol = self._get_rolling_vol(returns=returns, trailing_months=12)
+        trailing_5y_median_vol = self._summarize_rolling_median(rolling_1_vol, trailing_months=60)
 
-        stats = [trailing_1y_vol, trailing_3y_vol, trailing_5y_vol]
+        stats = [trailing_1y_vol, trailing_3y_vol, trailing_5y_vol, trailing_5y_median_vol]
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame({'Vol': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y'])
+                               index=['TTM', '3Y', '5Y', '5YMedian'])
 
         return summary
 
@@ -681,11 +855,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y_beta = self._get_trailing_vol(returns=returns, trailing_months=12)
         trailing_3y_beta = self._get_trailing_vol(returns=returns, trailing_months=36)
         trailing_5y_beta = self._get_trailing_vol(returns=returns, trailing_months=60)
+        rolling_1y_beta = self._get_rolling_beta(returns=returns, trailing_months=12)
+        trailing_5y_median_beta = self._summarize_rolling_median(rolling_1y_beta, trailing_months=60)
 
-        stats = [trailing_1y_beta, trailing_3y_beta, trailing_5y_beta]
+        stats = [trailing_1y_beta, trailing_3y_beta, trailing_5y_beta, trailing_5y_median_beta]
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame({'Beta': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y'])
+                               index=['TTM', '3Y', '5Y', '5YMedian'])
 
         return summary
 
@@ -694,11 +870,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=12)
         trailing_3y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=36)
         trailing_5y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=60)
+        rolling_1y_sharpe = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
+        trailing_5y_median_sharpe = self._summarize_rolling_median(rolling_1y_sharpe, trailing_months=60)
 
-        stats = [trailing_1y_sharpe, trailing_3y_sharpe, trailing_5y_sharpe]
+        stats = [trailing_1y_sharpe, trailing_3y_sharpe, trailing_5y_sharpe, trailing_5y_median_sharpe]
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame({'Sharpe': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y'])
+                               index=['TTM', '3Y', '5Y', '5YMedian'])
 
         return summary
 
@@ -707,11 +885,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y_batting_avg = self._get_trailing_batting_avg(returns=returns, trailing_months=12)
         trailing_3y_batting_avg = self._get_trailing_batting_avg(returns=returns, trailing_months=36)
         trailing_5y_batting_avg = self._get_trailing_batting_avg(returns=returns, trailing_months=60)
+        rolling_1y_batting_avg = self._get_rolling_batting_avg(returns=returns, trailing_months=12)
+        trailing_5y_median_batting_avg = self._summarize_rolling_median(rolling_1y_batting_avg, trailing_months=60)
 
-        stats = [trailing_1y_batting_avg, trailing_3y_batting_avg, trailing_5y_batting_avg]
+        stats = [trailing_1y_batting_avg, trailing_3y_batting_avg, trailing_5y_batting_avg,
+                 trailing_5y_median_batting_avg]
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame({'BattingAvg': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y'])
+                               index=['TTM', '3Y', '5Y', '5YMedian'])
 
         return summary
 
@@ -720,11 +901,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y_win_loss = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=12)
         trailing_3y_win_loss = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=36)
         trailing_5y_win_loss = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=60)
+        rolling_1y_win_loss = self._get_rolling_win_loss_ratio(returns=returns, trailing_months=12)
+        trailing_5y_median_win_loss = self._summarize_rolling_median(rolling_1y_win_loss, trailing_months=60)
 
-        stats = [trailing_1y_win_loss, trailing_3y_win_loss, trailing_5y_win_loss]
+        stats = [trailing_1y_win_loss, trailing_3y_win_loss, trailing_5y_win_loss, trailing_5y_median_win_loss]
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame({'WinLoss': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y'])
+                               index=['TTM', '3Y', '5Y', '5YMedian'])
 
         return summary
 
@@ -802,10 +985,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y_vol = self._get_trailing_vol(returns=returns, trailing_months=12)
         trailing_3y_vol = self._get_trailing_vol(returns=returns, trailing_months=36)
         trailing_5y_vol = self._get_trailing_vol(returns=returns, trailing_months=60)
+        rolling_1_vol = self._get_rolling_vol(returns=returns, trailing_months=12)
+        trailing_5y_median_vol = self._summarize_rolling_median(rolling_1_vol, trailing_months=60)
 
-        stats = [trailing_1y_vol.mean(), trailing_3y_vol.mean(), trailing_5y_vol.mean()]
+        stats = [trailing_1y_vol.mean(), trailing_3y_vol.mean(), trailing_5y_vol.mean(),
+                 trailing_5y_median_vol.mean().squeeze()]
         summary = pd.DataFrame({'AvgVol': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y'])
+                               index=['TTM', '3Y', '5Y', '5YMedian'])
 
         return summary
 
@@ -814,10 +1000,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y_beta = self._get_trailing_beta(returns=returns, trailing_months=12)
         trailing_3y_beta = self._get_trailing_beta(returns=returns, trailing_months=36)
         trailing_5y_beta = self._get_trailing_beta(returns=returns, trailing_months=60)
+        rolling_1_beta = self._get_rolling_beta(returns=returns, trailing_months=12)
+        trailing_5y_median_beta = self._summarize_rolling_median(rolling_1_beta, trailing_months=60)
 
-        stats = [trailing_1y_beta.mean(), trailing_3y_beta.mean(), trailing_5y_beta.mean()]
+        stats = [trailing_1y_beta.mean(), trailing_3y_beta.mean(), trailing_5y_beta.mean(),
+                 trailing_5y_median_beta.mean().squeeze()]
         summary = pd.DataFrame({'AvgBeta': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y'])
+                               index=['TTM', '3Y', '5Y', '5YMedian'])
 
         return summary
 
@@ -826,10 +1015,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=12)
         trailing_3y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=36)
         trailing_5y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=60)
+        rolling_1_sharpe = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
+        trailing_5y_median_sharpe = self._summarize_rolling_median(rolling_1_sharpe, trailing_months=60)
 
-        stats = [trailing_1y_sharpe.mean(), trailing_3y_sharpe.mean(), trailing_5y_sharpe.mean()]
+        stats = [trailing_1y_sharpe.mean(), trailing_3y_sharpe.mean(), trailing_5y_sharpe.mean(),
+                 trailing_5y_median_sharpe.mean().squeeze()]
         summary = pd.DataFrame({'AvgSharpe': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y'])
+                               index=['TTM', '3Y', '5Y', '5YMedian'])
 
         return summary
 
@@ -838,10 +1030,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y = self._get_trailing_batting_avg(returns=returns, trailing_months=12)
         trailing_3y = self._get_trailing_batting_avg(returns=returns, trailing_months=36)
         trailing_5y = self._get_trailing_batting_avg(returns=returns, trailing_months=60)
+        rolling_1_batting = self._get_rolling_batting_avg(returns=returns, trailing_months=12)
+        trailing_5y_median = self._summarize_rolling_median(rolling_1_batting, trailing_months=60)
 
-        stats = [trailing_1y.mean(), trailing_3y.mean(), trailing_5y.mean()]
+        stats = [trailing_1y.mean(), trailing_3y.mean(), trailing_5y.mean(), trailing_5y_median.mean().squeeze()]
         summary = pd.DataFrame({'AvgBattingAvg': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y'])
+                               index=['TTM', '3Y', '5Y', '5YMedian'])
 
         return summary
 
@@ -850,10 +1044,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=12)
         trailing_3y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=36)
         trailing_5y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=60)
+        rolling_1y = self._get_rolling_win_loss_ratio(returns=returns, trailing_months=12)
+        trailing_5y_median = self._summarize_rolling_median(rolling_1y, trailing_months=60)
 
-        stats = [trailing_1y.mean(), trailing_3y.mean(), trailing_5y.mean()]
+        stats = [trailing_1y.mean(), trailing_3y.mean(), trailing_5y.mean(), trailing_5y_median.mean().squeeze()]
         summary = pd.DataFrame({'AvgWinLoss': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y'])
+                               index=['TTM', '3Y', '5Y', '5YMedian'])
 
         return summary
 
@@ -870,12 +1066,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_sharpes = self._get_fund_rolling_sharpe_summary()
         rolling_sharpes.columns = ['Sharpe_'] + rolling_sharpes.columns
 
-        summary = vol.merge(beta, left_index=True, right_index=True)
-        summary = summary.merge(sharpe, left_index=True, right_index=True)
-        summary = summary.merge(batting_avg, left_index=True, right_index=True)
-        summary = summary.merge(win_loss, left_index=True, right_index=True)
-        summary = summary.merge(rolling_returns, left_index=True, right_index=True)
-        summary = summary.merge(rolling_sharpes, left_index=True, right_index=True)
+        summary = vol.merge(beta, left_index=True, right_index=True, how='left')
+        summary = summary.merge(sharpe, left_index=True, right_index=True, how='left')
+        summary = summary.merge(batting_avg, left_index=True, right_index=True, how='left')
+        summary = summary.merge(win_loss, left_index=True, right_index=True, how='left')
+        summary = summary.merge(rolling_returns, left_index=True, right_index=True, how='left')
+        summary = summary.merge(rolling_sharpes, left_index=True, right_index=True, how='left')
 
         summary = summary[['Vol', 'Beta', 'Sharpe', 'BattingAvg', 'WinLoss',
                            'Return_min', 'Return_25%', 'Return_75%', 'Return_max',
@@ -898,12 +1094,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
             rolling_sharpes = self._get_peer_rolling_sharpe_summary()
             rolling_sharpes.columns = ['AvgSharpe_'] + rolling_sharpes.columns
 
-            summary = vol.merge(beta, left_index=True, right_index=True)
-            summary = summary.merge(sharpe, left_index=True, right_index=True)
-            summary = summary.merge(batting_avg, left_index=True, right_index=True)
-            summary = summary.merge(win_loss, left_index=True, right_index=True)
-            summary = summary.merge(rolling_returns, left_index=True, right_index=True)
-            summary = summary.merge(rolling_sharpes, left_index=True, right_index=True)
+            summary = vol.merge(beta, left_index=True, right_index=True, how='left')
+            summary = summary.merge(sharpe, left_index=True, right_index=True, how='left')
+            summary = summary.merge(batting_avg, left_index=True, right_index=True, how='left')
+            summary = summary.merge(win_loss, left_index=True, right_index=True, how='left')
+            summary = summary.merge(rolling_returns, left_index=True, right_index=True, how='left')
+            summary = summary.merge(rolling_sharpes, left_index=True, right_index=True, how='left')
 
             summary = summary[['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
                                'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
@@ -913,7 +1109,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             summary = pd.DataFrame(columns=['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
                                             'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
                                             'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max'],
-                                   index=['TTM', '3Y', '5Y'])
+                                   index=['TTM', '3Y', '5Y', '5YMedian'])
         return summary
 
     def _validate_inputs(self):
@@ -935,6 +1131,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         peer_ptile_2_heading = self.get_peer_ptile_2_heading()
 
         rba_summary = self.build_rba_summary()
+        pba_summary = self.build_pba_summary()
+        pba_mtd = pba_summary.loc[['MTD - Publics', 'MTD - Privates']]
+        pba_qtd = pba_summary.loc[['QTD - Publics', 'QTD - Privates']]
+        pba_ytd = pba_summary.loc[['YTD - Publics', 'YTD - Privates']]
 
         performance_stability_fund_summary = self.build_performance_stability_fund_summary()
         performance_stability_peer_summary = self.build_performance_stability_peer_summary()
@@ -953,6 +1153,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "performance_stability_fund_summary": performance_stability_fund_summary,
             "performance_stability_peer_summary": performance_stability_peer_summary,
             "rba_summary": rba_summary,
+            "pba_mtd": pba_mtd,
+            "pba_qtd": pba_qtd,
+            "pba_ytd": pba_ytd,
             "exposure_summary": exposure_summary,
             "latest_exposure_heading": latest_exposure_heading,
         }
@@ -968,6 +1171,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "performance_stability_fund_summary": performance_stability_fund_summary.to_json(orient='index'),
             "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient='index'),
             "rba_summary": rba_summary.to_json(orient='index'),
+            "pba_mtd": pba_mtd.to_json(orient='index'),
+            "pba_qtd": pba_qtd.to_json(orient='index'),
+            "pba_ytd": pba_ytd.to_json(orient='index'),
             "exposure_summary": exposure_summary.to_json(orient='index'),
             "latest_exposure_heading": latest_exposure_heading.to_json(orient='index'),
         }

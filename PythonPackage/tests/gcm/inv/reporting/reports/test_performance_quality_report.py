@@ -37,7 +37,7 @@ class TestPerformanceQualityReport:
         params['fund_name'] = 'Skye'
         params['vertical'] = 'ARS'
         params['entity'] = 'PFUND'
-        return PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31), params=params)
+        return PerformanceQualityReport(runner=runner, as_of_date=dt.date(2022, 3, 31), params=params)
 
     def test_performance_quality_report_data(self, runner):
         params = {'vertical': 'ARS', 'entity': 'PFUND',
@@ -53,6 +53,7 @@ class TestPerformanceQualityReport:
 
         report_inputs = perf_quality.get_performance_quality_report_inputs()
 
+        ###
         # gcm_peer_constituent_returns = pd.read_json(report_inputs['gcm_peer_constituent_returns'], orient='index')
         # gcm_peer_columns = [ast.literal_eval(x) for x in gcm_peer_constituent_returns.columns]
         # gcm_peer_columns = pd.MultiIndex.from_tuples(gcm_peer_columns, names=['PeerGroupName', 'SourceInvestmentId'])
@@ -71,6 +72,7 @@ class TestPerformanceQualityReport:
         # import json
         # with open('gcm/inv/reporting/test_data/performance_quality_report_inputs.json', 'w') as fp:
         #     json.dump(report_inputs, fp)
+        ###
 
         fund_dimn = pd.read_json(report_inputs['fund_dimn'], orient='index')
         fund_returns = pd.read_json(report_inputs['fund_returns'], orient='index')
@@ -93,6 +95,8 @@ class TestPerformanceQualityReport:
         exposure_5y = pd.read_json(report_inputs['exposure_5y'], orient='index')
         exposure_10y = pd.read_json(report_inputs['exposure_10y'], orient='index')
         rba = pd.read_json(report_inputs['rba'], orient='index')
+        pba_publics = pd.read_json(report_inputs['pba_publics'], orient='index')
+        pba_privates = pd.read_json(report_inputs['pba_privates'], orient='index')
 
         assert fund_dimn.shape[0] > 0
         assert fund_returns.shape[0] > 0
@@ -106,6 +110,8 @@ class TestPerformanceQualityReport:
         assert exposure_5y.shape[0] == 3
         assert exposure_10y.shape[0] == 3
         assert rba.shape[0] > 0
+        assert pba_publics.shape[0] > 0
+        assert pba_privates.shape[0] > 0
 
     @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
     def test_performance_quality_report_skye(self, mock_download, performance_quality_report_inputs,
@@ -148,56 +154,6 @@ class TestPerformanceQualityReport:
         report = perf_quality_report.generate_performance_quality_report()
         assert report == 'Invalid inputs'
 
-    @pytest.mark.skip(reason='for debugging only')
-    def test_performance_quality_report_data_all(self, runner):
-        params = {'status': 'EMM', 'vertical': 'ARS', 'entity': 'PFUND',
-                  'run': 'PerformanceQualityReportData'}
-        perf_quality = PerformanceQualityReportData(
-            runner=runner,
-            start_date=dt.date(2012, 1, 1),
-            end_date=dt.date(2022, 3, 31),
-            as_of_date=dt.date(2022, 3, 31),
-            params=params
-        )
-        start = dt.datetime.now()
-        perf_quality.get_performance_quality_report_inputs()
-        end = dt.datetime.now()
-        print(end - start)
-
-    @pytest.mark.skip(reason='for debugging only')
-    def test_performance_quality_report_all(self, runner, performance_quality_report_inputs_all):
-        report_inputs = performance_quality_report_inputs_all
-        report_inputs['vertical'] = 'ARS'
-        report_inputs['entity'] = 'PFUND'
-        funds = pd.read_json(report_inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
-        for fund in funds:
-            print(fund)
-            report_inputs['fund_name'] = fund
-            perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
-                                                           params=report_inputs)
-            perf_quality_report.generate_performance_quality_report()
-
-    @pytest.mark.skip(reason='debugging')
-    def test_debug(self, runner):
-        params = {'vertical': 'ARS', 'entity': 'PFUND',
-                  'status': 'EMM', 'investment_ids': '[62737, 71394]'}
-
-        perf_quality = PerformanceQualityReportData(
-            runner=runner,
-            start_date=dt.date(2012, 1, 1),
-            end_date=dt.date(2022, 3, 31),
-            as_of_date=dt.date(2022, 3, 31),
-            params=params
-        )
-
-        perf_quality.execute()
-
-    @pytest.mark.skip(reason='for debugging only')
-    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
-    def test_performance_quality_report_skye_debug(self, mock_download, performance_quality_report_inputs, perf_quality_report):
-        mock_download.return_value = performance_quality_report_inputs
-        perf_quality_report.execute()
-
     @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
     def test_exposure_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):
         mock_download.return_value = performance_quality_report_inputs
@@ -212,7 +168,7 @@ class TestPerformanceQualityReport:
         mock_download.return_value = performance_quality_report_inputs
         stability_summary = perf_quality_report.build_performance_stability_fund_summary()
         assert stability_summary.shape[0] > 0
-        assert all(stability_summary.index == ['TTM', '3Y', '5Y'])
+        assert all(stability_summary.index == ['TTM', '3Y', '5Y', '5YMedian'])
         assert all(stability_summary.columns == ['Vol', 'Beta', 'Sharpe', 'BattingAvg', 'WinLoss',
                                                  'Return_min', 'Return_25%', 'Return_75%', 'Return_max',
                                                  'Sharpe_min', 'Sharpe_25%', 'Sharpe_75%', 'Sharpe_max'])
@@ -222,7 +178,7 @@ class TestPerformanceQualityReport:
         mock_download.return_value = performance_quality_report_inputs
         stability_summary = perf_quality_report.build_performance_stability_peer_summary()
         assert stability_summary.shape[0] > 0
-        assert all(stability_summary.index == ['TTM', '3Y', '5Y'])
+        assert all(stability_summary.index == ['TTM', '3Y', '5Y', '5YMedian'])
         assert all(stability_summary.columns == ['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
                                                  'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
                                                  'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max'])
@@ -232,9 +188,19 @@ class TestPerformanceQualityReport:
         mock_download.return_value = performance_quality_report_inputs
         rba = perf_quality_report.build_rba_summary()
         assert rba.shape[0] > 0
-        assert all(rba.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'])
+        assert all(rba.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y'])
         assert all(rba.columns == ['Total', 'Market Beta', 'Region', 'Industries', 'Styles',
                                    'Hedge Fund Technicals', 'Selection Risk', 'Unexplained'])
+
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
+    def test_pba_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):
+        mock_download.return_value = performance_quality_report_inputs
+        pba = perf_quality_report.build_pba_summary()
+        assert pba.shape[0] > 0
+        assert all(pba.index == ['MTD - Publics', 'MTD - Privates', 'QTD - Publics',
+                                 'QTD - Privates', 'YTD - Publics', 'YTD - Privates'])
+        assert all(pba.columns == ['Total', 'Beta', 'Regional', 'Industry', 'MacroRV', 'LS_Equity',
+                                   'LS_Credit', 'Residual', 'Fees', 'Unallocated'])
 
     @pytest.mark.skip(reason='slow')
     def test_report_binder(self, runner):
