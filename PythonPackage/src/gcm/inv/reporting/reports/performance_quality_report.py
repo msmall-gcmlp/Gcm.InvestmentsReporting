@@ -340,7 +340,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             heading = 'Latest (' + self._latest_exposure_date.strftime('%b %Y') + ')'
             return pd.DataFrame({'latest_exposure_heading': [heading]})
         else:
-            return pd.DataFrame({'peer_ptile_2_heading': ['']})
+            return pd.DataFrame({'latest_exposure_heading': ['']})
 
     def _get_return_summary(self, returns, return_type):
         returns = returns.copy()
@@ -649,9 +649,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                              periodicity=Periodicity.Monthly,
                                                              include_history=True)
 
-    @staticmethod
-    def _summarize_rolling_data(rolling_data, trailing_months):
+    def _summarize_rolling_data(self, rolling_data, trailing_months):
+        if rolling_data.index.max().date() < self._as_of_date.replace(day=1):
+            rolling_data = pd.DataFrame()
+
         rolling_data = rolling_data.iloc[-trailing_months:]
+
         index = ['min', '25%', '75%', 'max']
         if len(rolling_data) == trailing_months:
             summary = rolling_data.describe().loc[index].round(2)
@@ -771,6 +774,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _get_peer_rolling_sharpe_summary(self):
         returns = self._primary_peer_constituent_returns.copy()
         rolling_12m_sharpes = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
+
+        #outlier removal
+        max_sharpe = rolling_12m_sharpes.max().quantile(0.95)
+        min_sharpe = rolling_12m_sharpes.min().quantile(0.05)
+        outlier_ind = (rolling_12m_sharpes < min_sharpe) | (rolling_12m_sharpes > max_sharpe)
+
+        rolling_12m_sharpes[outlier_ind] = None
 
         rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=12)
         rolling_1y_summary = rolling_1y_summary.mean(axis=1)
@@ -946,6 +956,34 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "exposure_summary": exposure_summary,
             "latest_exposure_heading": latest_exposure_heading,
         }
+
+        input_data_json = {
+            "header_info": header_info.to_json(orient='index'),
+            "benchmark_summary": return_summary.to_json(orient='index'),
+            "absolute_return_benchmark": absolute_return_benchmark.to_json(orient='index'),
+            "peer_group_heading": peer_group_heading.to_json(orient='index'),
+            "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading.to_json(orient='index'),
+            "peer_ptile_1_heading": peer_ptile_1_heading.to_json(orient='index'),
+            "peer_ptile_2_heading": peer_ptile_2_heading.to_json(orient='index'),
+            "performance_stability_fund_summary": performance_stability_fund_summary.to_json(orient='index'),
+            "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient='index'),
+            "rba_summary": rba_summary.to_json(orient='index'),
+            "exposure_summary": exposure_summary.to_json(orient='index'),
+            "latest_exposure_heading": latest_exposure_heading.to_json(orient='index'),
+        }
+
+        data_to_write = json.dumps(input_data_json)
+        write_location = "lab/rqs/azurefunctiondata"
+        write_params = AzureDataLakeDao.create_get_data_params(
+            write_location,
+            self._fund_name + "_performance_quality_report_report_analytics.json",
+            retry=False,
+        )
+        self._runner.execute(
+            params=write_params,
+            source=DaoSource.DataLake,
+            operation=lambda dao, params: dao.post_data(params, data_to_write)
+        )
 
         with Scenario(asofdate=self._as_of_date).context():
             report_name = "PFUND_PerformanceQuality_" + self._fund_name.replace('/', '')

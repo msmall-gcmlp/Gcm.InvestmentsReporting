@@ -8,20 +8,21 @@ from os.path import exists
 
 class ReportBinder(ReportingRunnerBase):
 
-    def __init__(self, runner, as_of_date):
+    def __init__(self, runner, as_of_date, portfolio_acronyms):
         super().__init__(runner=runner)
         pub_portfolio_holdings_query = PubPortfolioHoldingsQuery(runner=runner, as_of_date=as_of_date)
         entity_master = EntityMaster(runner=runner, as_of_date=as_of_date)
         self._as_of_date = as_of_date
         self._portfolio_holdings = PortfolioHoldings(pub_portfolio_holdings_query=pub_portfolio_holdings_query,
                                                      entity_master=entity_master)
+        self._portfolio_acronyms = portfolio_acronyms
 
     def aggregate_reports(self):
         file_path = "C:/Users/CMCNAMEE/OneDrive - GCM Grosvenor/Desktop/tmp/"
         path1 = 'ARS PFUND_PFUND_PerformanceQuality_'
-        path2 = '_2021-12-31.pdf'
+        path2 = '_2022-03-31.pdf'
         holdings = self._portfolio_holdings.get_portfolio_holdings(allocation_date=self._as_of_date,
-                                                                   portfolio_acronyms=['GIP', 'IFC'])
+                                                                   portfolio_acronyms=portfolio_acronyms)
 
         portfolios = holdings['Acronym'].unique()
         for portfolio in portfolios:
