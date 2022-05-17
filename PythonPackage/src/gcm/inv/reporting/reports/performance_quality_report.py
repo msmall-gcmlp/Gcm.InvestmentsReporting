@@ -29,6 +29,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         self.__all_eurekahedge_constituent_returns = None
         self.__all_exposure = None
         self.__all_rba = None
+        self.__all_rba_risk_decomp = None
+        self.__all_rba_adj_r_squared = None
         self.__all_pba_publics = None
         self.__all_pba_privates = None
         self.__inputs = None
@@ -138,6 +140,18 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return self.__all_rba
 
     @property
+    def _all_rba_risk_decomp(self):
+        if self.__all_rba_risk_decomp is None:
+            self.__all_rba_risk_decomp = pd.read_json(self._inputs['rba_risk_decomp'], orient='index')
+        return self.__all_rba_risk_decomp
+
+    @property
+    def _all_rba_adj_r_squared(self):
+        if self.__all_rba_adj_r_squared is None:
+            self.__all_rba_adj_r_squared = pd.read_json(self._inputs['rba_adj_r_squared'], orient='index')
+        return self.__all_rba_adj_r_squared
+
+    @property
     def _all_pba_publics(self):
         if self.__all_pba_publics is None:
             pba = pd.read_json(self._inputs['pba_publics'], orient='index')
@@ -204,6 +218,41 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return fund_rba
         else:
             return pd.DataFrame()
+
+    @property
+    def _fund_rba_risk_decomp(self):
+        decomp = self._all_rba_risk_decomp.copy()
+        decomp = decomp[decomp['InvestmentGroupName'] == self._fund_name]
+        decomp = decomp[['FactorGroup1', '1Y', '3Y', '5Y']]
+        decomp.rename(columns={'1Y': 'TTM'}, inplace=True)
+        mapping = pd.DataFrame({'FactorGroup1': ['Market Beta',
+                                                 'Industries', 'Regional',
+                                                 'Styles', 'Hedge Fund Technicals',
+                                                 'Unexplained', 'Selection Risk'],
+                                'Group': ['Beta',
+                                          'X-Asset', 'X-Asset',
+                                          'L/S', 'L/S',
+                                          'Residual', 'Residual']})
+
+        decomp = decomp.merge(mapping, how='left').groupby('Group').sum()
+
+        risk_decomp_columns = pd.DataFrame(columns=['Beta', 'X-Asset', 'L/S', 'Residual'])
+        risk_decomp = pd.concat([risk_decomp_columns, decomp.T])
+        risk_decomp = risk_decomp.fillna(0)
+        risk_decomp = risk_decomp.round(2)
+        return risk_decomp
+
+    @property
+    def _fund_rba_adj_r_squared(self):
+        r2 = self._all_rba_adj_r_squared.copy()
+        r2 = r2[r2['InvestmentGroupName'] == self._fund_name]
+        r2 = r2[['1Y', '3Y', '5Y']]
+        r2.rename(columns={'1Y': 'TTM'}, inplace=True)
+
+        r2 = r2.T
+        r2.columns = ['AdjR2']
+        r2 = r2.round(2)
+        return r2
 
     @property
     def _fund_pba_publics(self):
@@ -709,10 +758,18 @@ class PerformanceQualityReport(ReportingRunnerBase):
             rba = self._get_rba_summary()
             summary = fund_returns.merge(rba, left_index=True, right_index=True)
             summary.drop('10Y', inplace=True)
+
+            rba_risk_decomp = self._fund_rba_risk_decomp.copy()
+            summary = summary.merge(rba_risk_decomp, left_index=True, right_index=True, how='left')
+
+            rba_r2 = self._fund_rba_adj_r_squared.copy()
+            summary = summary.merge(rba_r2, left_index=True, right_index=True, how='left')
+
         else:
             summary = pd.DataFrame(index=['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y'],
                                    columns=['Total', 'Market Beta', 'Region', 'Industries', 'Styles',
-                                            'Hedge Fund Technicals', 'Selection Risk', 'Unexplained'])
+                                            'Hedge Fund Technicals', 'Selection Risk', 'Unexplained',
+                                            'Beta', 'X-Asset', 'L/S', 'Residual', 'AdjR2'])
         return summary
 
     def build_pba_summary(self):

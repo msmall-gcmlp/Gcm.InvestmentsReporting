@@ -95,6 +95,9 @@ class TestPerformanceQualityReport:
         exposure_5y = pd.read_json(report_inputs['exposure_5y'], orient='index')
         exposure_10y = pd.read_json(report_inputs['exposure_10y'], orient='index')
         rba = pd.read_json(report_inputs['rba'], orient='index')
+        rba_risk_decomp = pd.read_json(report_inputs['rba_risk_decomp'], orient='index')
+        rba_adj_r_squared = pd.read_json(report_inputs['rba_adj_r_squared'], orient='index')
+
         pba_publics = pd.read_json(report_inputs['pba_publics'], orient='index')
         pba_privates = pd.read_json(report_inputs['pba_privates'], orient='index')
 
@@ -110,6 +113,8 @@ class TestPerformanceQualityReport:
         assert exposure_5y.shape[0] == 3
         assert exposure_10y.shape[0] == 3
         assert rba.shape[0] > 0
+        assert rba_risk_decomp.shape[0] > 0
+        assert rba_adj_r_squared.shape[0] > 0
         assert pba_publics.shape[0] > 0
         assert pba_privates.shape[0] > 0
 
@@ -190,7 +195,8 @@ class TestPerformanceQualityReport:
         assert rba.shape[0] > 0
         assert all(rba.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y'])
         assert all(rba.columns == ['Total', 'Market Beta', 'Region', 'Industries', 'Styles',
-                                   'Hedge Fund Technicals', 'Selection Risk', 'Unexplained'])
+                                   'Hedge Fund Technicals', 'Selection Risk', 'Unexplained',
+                                   'Beta', 'X-Asset', 'L/S', 'Residual', 'AdjR2'])
 
     @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
     def test_pba_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):

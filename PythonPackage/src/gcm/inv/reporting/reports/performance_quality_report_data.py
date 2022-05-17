@@ -173,6 +173,54 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                     group_type='FactorGroup1',
                                                     frequency='M')
 
+        start_1y = self._end_date - relativedelta(years=1)
+        rba_risk_1y = self._attribution.get_average_risk_decomp_by_group(investment_ids=investment_ids,
+                                                                         start_date=start_1y,
+                                                                         end_date=self._end_date,
+                                                                         group_type='FactorGroup1',
+                                                                         frequency='M',
+                                                                         wide=False)
+        rba_risk_1y.rename(columns={'AvgRiskContrib': '1Y'}, inplace=True)
+
+        rba_risk_3y = self._attribution.get_average_risk_decomp_by_group(investment_ids=investment_ids,
+                                                                         start_date=start_3y,
+                                                                         end_date=self._end_date,
+                                                                         group_type='FactorGroup1',
+                                                                         frequency='M',
+                                                                         wide=False)
+        rba_risk_3y.rename(columns={'AvgRiskContrib': '3Y'}, inplace=True)
+
+        rba_risk_5y = self._attribution.get_average_risk_decomp_by_group(investment_ids=investment_ids,
+                                                                         start_date=start_5y,
+                                                                         end_date=self._end_date,
+                                                                         group_type='FactorGroup1',
+                                                                         frequency='M',
+                                                                         wide=False)
+        rba_risk_5y.rename(columns={'AvgRiskContrib': '5Y'}, inplace=True)
+
+        rba_risk_decomp = rba_risk_1y.merge(rba_risk_3y, how='outer').merge(rba_risk_5y, how='outer')
+        rba_risk_decomp = rba_risk_decomp.fillna(0)
+
+        rba_r2_1y = self._attribution.get_average_adj_r2(investment_ids=investment_ids,
+                                                         start_date=start_1y,
+                                                         end_date=self._end_date,
+                                                         frequency='M')
+        rba_r2_1y.rename(columns={'AvgAdjR2': '1Y'}, inplace=True)
+
+        rba_r2_3y = self._attribution.get_average_adj_r2(investment_ids=investment_ids,
+                                                         start_date=start_3y,
+                                                         end_date=self._end_date,
+                                                         frequency='M')
+        rba_r2_3y.rename(columns={'AvgAdjR2': '3Y'}, inplace=True)
+
+        rba_r2_5y = self._attribution.get_average_adj_r2(investment_ids=investment_ids,
+                                                         start_date=start_5y,
+                                                         end_date=self._end_date,
+                                                         frequency='M')
+        rba_r2_5y.rename(columns={'AvgAdjR2': '5Y'}, inplace=True)
+
+        rba_adj_r_squared = rba_r2_1y.merge(rba_r2_3y, how='outer').merge(rba_r2_5y, how='outer')
+
         pba_publics = self._attribution.get_pba_ts_by_group(investment_ids=investment_ids,
                                                             start_date=self._start_date,
                                                             end_date=self._end_date,
@@ -201,6 +249,8 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         report_inputs['exposure_10y'] = exposure_10y.to_json(orient='index')
         report_inputs['market_factor_returns'] = market_factor_returns.to_json(orient='index')
         report_inputs['rba'] = rba.to_json(orient='index')
+        report_inputs['rba_risk_decomp'] = rba_risk_decomp.to_json(orient='index')
+        report_inputs['rba_adj_r_squared'] = rba_adj_r_squared.to_json(orient='index')
         report_inputs['pba_publics'] = pba_publics.to_json(orient='index')
         report_inputs['pba_privates'] = pba_privates.to_json(orient='index')
 

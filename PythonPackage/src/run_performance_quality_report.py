@@ -59,7 +59,7 @@ class RunPerformanceQualityReports:
 
 if __name__ == "__main__":
     report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 3, 31))
-    #fund_names = report_runner.generate_report_data()
+    fund_names = report_runner.generate_report_data()
     report_runner.generate_fund_reports(fund_names=['Tairen Alpha'])
     #aggregate_return_summary = report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
     #report_runner.combine_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
