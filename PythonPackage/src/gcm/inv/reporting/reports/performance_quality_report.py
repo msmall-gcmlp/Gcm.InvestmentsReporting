@@ -350,7 +350,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def get_peer_group_heading(self):
         if self._primary_peer_group is not None:
             group = self._primary_peer_group + ' Peer'
-            group = group.replace('GCM ', '')
             return pd.DataFrame({'peer_group_heading': ['v. ' + group]})
         else:
             return pd.DataFrame({'peer_group_heading': ['v. GCM Peer']})
@@ -369,13 +368,15 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def get_peer_ptile_1_heading(self):
         if self._primary_peer_group is not None:
-            return pd.DataFrame({'peer_ptile_1_heading': [self._primary_peer_group]})
+            group = self._primary_peer_group.replace('GCM ', '')
+            return pd.DataFrame({'peer_ptile_1_heading': [group]})
         else:
             return pd.DataFrame({'peer_ptile_1_heading': ['']})
 
     def get_peer_ptile_2_heading(self):
         if self._secondary_peer_group is not None:
-            return pd.DataFrame({'peer_ptile_2_heading': [self._secondary_peer_group]})
+            group = self._primary_peer_group.replace('GCM ', '')
+            return pd.DataFrame({'peer_ptile_2_heading': [group]})
         else:
             return pd.DataFrame({'peer_ptile_2_heading': ['']})
 
