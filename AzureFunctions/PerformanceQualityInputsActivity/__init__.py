@@ -31,7 +31,7 @@ def main(requestBody) -> str:
     else:
         investment_ids = ast.literal_eval(params.get('investment_ids'))
 
-    PerformanceQualityReportData(
+    return PerformanceQualityReportData(
         runner=runner,
         start_date=as_of_date - relativedelta(years=10),
         end_date=as_of_date,

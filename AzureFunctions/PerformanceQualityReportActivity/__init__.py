@@ -25,7 +25,7 @@ def main(requestBody) -> str:
     as_of_date = dt.date(2022, 3, 31)
     fund_name = params['fund_name']
 
-    PerformanceQualityReport(
+    return PerformanceQualityReport(
         runner=runner,
         as_of_date=as_of_date,
         fund_name=fund_name
