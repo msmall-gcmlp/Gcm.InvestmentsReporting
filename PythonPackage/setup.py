@@ -48,7 +48,7 @@ setup(
         "datetime",
         "openpyxl",
         "pillow",
-        "gcm-investmentsdataprovider==0.6.0.dev2205181339",
+        "gcm-investmentsdataprovider==0.7.0.dev2205181622",
         "gcm-investmentsquantlib==0.38.0.dev2205172313",
         "gcm_investmentsutils==0.10.0.dev2205121701",
         "PyPDF2"

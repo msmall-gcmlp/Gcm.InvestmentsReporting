@@ -15,11 +15,11 @@ from .reporting_runner_base import ReportingRunnerBase
 
 class PerformanceQualityReport(ReportingRunnerBase):
 
-    def __init__(self, runner, as_of_date, params):
+    def __init__(self, runner, as_of_date, fund_name):
         super().__init__(runner=runner)
         self._as_of_date = as_of_date
         self._analytics = Analytics()
-        self._params = params
+        self._fund_name = fund_name
         self.__all_fund_dimn = None
         self.__all_fund_returns = None
         self.__all_abs_bmrk_returns = None
@@ -188,11 +188,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _entity_type(self):
-        return self._params['vertical'] + ' ' + self._params['entity']
-
-    @property
-    def _fund_name(self):
-        return self._params['fund_name']
+        return 'ARS PFUND'
 
     @property
     def _fund_dimn(self):

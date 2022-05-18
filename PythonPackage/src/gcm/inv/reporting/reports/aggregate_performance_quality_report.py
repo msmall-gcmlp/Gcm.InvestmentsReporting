@@ -64,8 +64,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
                 fund_summaries = fund_summaries.append(fund_summary)
 
         portfolio_summary = fund_summaries.merge(holdings, on='InvestmentGroupName', how='left')
-        portfolio_summary = portfolio_summary[portfolio_summary['Value'] != '']
-        portfolio_summary = portfolio_summary[~portfolio_summary['Value'].isna()]
+        portfolio_summary = portfolio_summary[pd.to_numeric(portfolio_summary['Value'], errors='coerce').notnull()]
 
         total_nav_by_group = portfolio_summary.groupby(['Period', 'Field'], as_index=False)['PctNav'].sum()
         total_nav_by_group.rename(columns={'PctNav': 'TotalNav'}, inplace=True)
@@ -98,7 +97,13 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
         performance_stability_fund_summary = self._aggregate_portfolio_summary('performance_stability_fund_summary')
         performance_stability_peer_summary = self._aggregate_portfolio_summary('performance_stability_peer_summary')
         rba_summary = self._aggregate_portfolio_summary('rba_summary')
+        pba_mtd = self._aggregate_portfolio_summary('pba_mtd')
+        pba_qtd = self._aggregate_portfolio_summary('pba_qtd')
+        pba_ytd = self._aggregate_portfolio_summary('pba_ytd')
+        shortfall_summary = pd.DataFrame({'shortfall_summary': []})
+        risk_model_expectations = self._aggregate_portfolio_summary('risk_model_expectations')
         exposure_summary = self._aggregate_portfolio_summary('exposure_summary')
+        latest_exposure_heading = pd.DataFrame({'latest_exposure_heading': ['Latest']})
 
         input_data = {
             "header_info": header_info,
@@ -111,8 +116,13 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
             "performance_stability_fund_summary": performance_stability_fund_summary,
             "performance_stability_peer_summary": performance_stability_peer_summary,
             "rba_summary": rba_summary,
+            "pba_mtd": pba_mtd,
+            "pba_qtd": pba_qtd,
+            "pba_ytd": pba_ytd,
+            "shortfall_summary": shortfall_summary,
+            "risk_model_expectations": risk_model_expectations,
             "exposure_summary": exposure_summary,
-            "latest_exposure_heading": pd.DataFrame({'latest_exposure_heading': ['Latest']}),
+            "latest_exposure_heading": latest_exposure_heading,
         }
 
         with Scenario(asofdate=self._as_of_date).context():

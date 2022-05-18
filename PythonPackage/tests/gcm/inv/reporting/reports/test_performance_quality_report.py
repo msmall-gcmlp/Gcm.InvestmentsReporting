@@ -31,22 +31,15 @@ class TestPerformanceQualityReport:
     @pytest.fixture
     def perf_quality_report(self, runner):
         # TODO consider refactoring as_of_date to Scenario
-        params = dict()
-        params['fund_name'] = 'Skye'
-        params['vertical'] = 'ARS'
-        params['entity'] = 'PFUND'
-        return PerformanceQualityReport(runner=runner, as_of_date=dt.date(2022, 3, 31), params=params)
+        return PerformanceQualityReport(runner=runner, as_of_date=dt.date(2022, 3, 31), fund_name='Skye')
 
     def test_performance_quality_report_data(self, runner):
-        params = {'vertical': 'ARS', 'entity': 'PFUND',
-                  'status': 'EMM', 'investment_ids': '[34411, 41096, 139998]'}
-
         perf_quality = PerformanceQualityReportData(
             runner=runner,
             start_date=dt.date(2012, 3, 1),
             end_date=dt.date(2022, 3, 31),
             as_of_date=dt.date(2022, 3, 31),
-            params=params
+            investment_ids=[34411, 41096, 139998]
         )
 
         report_inputs = perf_quality.get_performance_quality_report_inputs()

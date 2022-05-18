@@ -1,4 +1,3 @@
-import ast
 import pandas as pd
 import json
 
@@ -28,7 +27,7 @@ from gcm.inv.quantlib.timeseries.analytics import Analytics
 
 class PerformanceQualityReportData(ReportingRunnerBase):
 
-    def __init__(self, runner, start_date, end_date, as_of_date, params):
+    def __init__(self, runner, start_date, end_date, as_of_date, investment_ids):
         super().__init__(runner=runner)
         self._start_date = start_date
         self._end_date = end_date
@@ -73,16 +72,9 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         self._inv_exposure = investment_exposure
         self._entity_master = entity_master
 
-        self._entity_type = params.get('vertical') + ' ' + params.get('entity')
-        self._status = params.get('status')
-        self._params = params
-
-    @property
-    def _investment_ids(self):
-        if self._params.get('investment_ids') is None:
-            return None
-        else:
-            return ast.literal_eval(self._params.get('investment_ids'))
+        self._entity_type = 'ARS PFUND'
+        self._status = 'EMM'
+        self._investment_ids = investment_ids
 
     def get_performance_quality_report_inputs(self):
         # pre-filtering to EMMs to avoid performance issues. refactor later to occur behind the scenes in data provider
