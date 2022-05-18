@@ -9,7 +9,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     fund_names = yield context.call_activity("PerformanceQualityInputsActivity", inputs_request)
 
     parallel_tasks = []
-    for fund in fund_names[0:20]:
+    for fund in fund_names:
         params = requestBody.copy()
         params['params']['fund_name'] = fund
         params = json.dumps(params)
