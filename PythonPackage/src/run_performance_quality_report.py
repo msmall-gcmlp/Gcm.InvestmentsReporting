@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # High Priority
     # TODO add folder structure to data lake dumps/pass in file paths
     # TODO remove duplicate funds (same group) from FactorAnalysis_New
-    # TODO add secondary peer
+    # TODO add strategy peer group
 
     # Next up
     # TODO add to Data pipelines imports of RBA, PBA, and Abs Benchmark Returns
