@@ -289,7 +289,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _secondary_peer_group(self):
-        return ' '
+        return 'GCM ' + self._fund_dimn['Strategy'].squeeze()
 
     @property
     def _primary_peer_returns(self):
@@ -379,6 +379,18 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return returns
 
     @property
+    def _fle_scl(self):
+        return self._fund_dimn['FleScl'].squeeze().round(2)
+
+    @property
+    def _risk_model_expected_return(self):
+        return self._fund_dimn['RiskModelExpectedReturn'].squeeze().round(2)
+
+    @property
+    def _risk_model_expected_vol(self):
+        return self._fund_dimn['RiskModelExpectedVol'].squeeze().round(2)
+
+    @property
     def _exposure(self):
         if any(self._all_exposure['InvestmentGroupName'] == self._fund_name):
             exposure = self._all_exposure[self._all_exposure['InvestmentGroupName'] == self._fund_name]
@@ -424,7 +436,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def get_peer_ptile_2_heading(self):
         if self._secondary_peer_group is not None:
-            group = self._primary_peer_group.replace('GCM ', '')
+            group = self._secondary_peer_group.replace('GCM ', '')
             return pd.DataFrame({'peer_ptile_2_heading': [group]})
         else:
             return pd.DataFrame({'peer_ptile_2_heading': ['']})
@@ -1170,6 +1182,32 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                    index=['TTM', '3Y', '5Y', '5YMedian'])
         return summary
 
+    def build_shortfall_summary(self):
+        returns = self._fund_returns.copy()
+        drawdown = self._analytics.compute_max_drawdown(ror=returns,
+                                                        window=12,
+                                                        as_of_date=self._as_of_date,
+                                                        periodicity=Periodicity.Monthly)
+        drawdown = round(drawdown.squeeze(), 2)
+
+        trigger = self._fle_scl.copy()
+
+        if drawdown < trigger:
+            pass_fail = 'Fail'
+        else:
+            pass_fail = 'Pass'
+
+        summary = pd.DataFrame({'Trigger': trigger,
+                                'Drawdown': drawdown,
+                                'Pass/Fail': pass_fail}, index=['SCL'])
+        return summary
+
+    def build_risk_model_expectations_summary(self):
+        summary = pd.DataFrame({'Expectations': [self._risk_model_expected_return.copy(),
+                                                 self._risk_model_expected_vol.copy()]},
+                               index=['ExpectedReturn', 'ExpectedVolatility'])
+        return summary
+
     def _validate_inputs(self):
         if self._fund_returns.shape[0] == 0:
             return False
@@ -1197,6 +1235,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         performance_stability_fund_summary = self.build_performance_stability_fund_summary()
         performance_stability_peer_summary = self.build_performance_stability_peer_summary()
 
+        shortfall_summary = self.build_shortfall_summary()
+        risk_model_expectations = self.build_risk_model_expectations_summary()
+
         exposure_summary = self.build_exposure_summary()
         latest_exposure_heading = self.get_latest_exposure_heading()
 
@@ -1214,6 +1255,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "pba_mtd": pba_mtd,
             "pba_qtd": pba_qtd,
             "pba_ytd": pba_ytd,
+            "shortfall_summary": shortfall_summary,
+            "risk_model_expectations": risk_model_expectations,
             "exposure_summary": exposure_summary,
             "latest_exposure_heading": latest_exposure_heading,
         }
@@ -1232,6 +1275,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "pba_mtd": pba_mtd.to_json(orient='index'),
             "pba_qtd": pba_qtd.to_json(orient='index'),
             "pba_ytd": pba_ytd.to_json(orient='index'),
+            "shortfall_summary": shortfall_summary.to_json(orient='index'),
+            "risk_model_expectations": risk_model_expectations.to_json(orient='index'),
             "exposure_summary": exposure_summary.to_json(orient='index'),
             "latest_exposure_heading": latest_exposure_heading.to_json(orient='index'),
         }

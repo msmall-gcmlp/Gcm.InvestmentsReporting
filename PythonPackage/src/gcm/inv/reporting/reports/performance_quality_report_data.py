@@ -115,7 +115,10 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                        'InvestmentStatus',
                                        'ReportingPeerGroup',
                                        'Strategy',
-                                       'SubStrategy']]
+                                       'SubStrategy',
+                                       'FleScl',
+                                       'RiskModelExpectedReturn',
+                                       'RiskModelExpectedVol']]
 
         returns_source = [SourceDimension.Pub_InvestmentDimn]
         fund_monthly_returns = \

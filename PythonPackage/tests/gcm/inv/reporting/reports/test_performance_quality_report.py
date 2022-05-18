@@ -9,8 +9,6 @@ from gcm.inv.reporting.reports.performance_quality_report import PerformanceQual
 from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 
-from gcm.inv.reporting.reports.report_binder import ReportBinder
-
 
 class TestPerformanceQualityReport:
     @pytest.fixture
@@ -208,6 +206,15 @@ class TestPerformanceQualityReport:
         assert all(pba.columns == ['Total', 'Beta', 'Regional', 'Industry', 'MacroRV', 'LS_Equity',
                                    'LS_Credit', 'Residual', 'Fees', 'Unallocated'])
 
-    @pytest.mark.skip(reason='slow')
-    def test_report_binder(self, runner):
-        ReportBinder(runner=runner, as_of_date=dt.date(2022, 2, 28)).aggregate_reports()
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
+    def test_shortfall_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):
+        mock_download.return_value = performance_quality_report_inputs
+        shortfall = perf_quality_report.build_shortfall_summary()
+        assert all(shortfall.columns == ['Trigger', 'Drawdown', 'Pass/Fail'])
+
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
+    def test_risk_model_expectations_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):
+        mock_download.return_value = performance_quality_report_inputs
+        summary = perf_quality_report.build_risk_model_expectations_summary()
+        assert all(summary.columns == ['Expectations'])
+        assert all(summary.index == ['ExpectedReturn', 'ExpectedVolatility'])
