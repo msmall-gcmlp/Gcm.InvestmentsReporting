@@ -138,18 +138,6 @@ class TestPerformanceQualityReport:
                             'EH50Ptile', 'EHI200Ptile']
         assert all(benchmark_summary.columns == expected_columns)
 
-    @pytest.mark.skip(reason='inputs no longer passed in through params')
-    def test_performance_quality_report_missing_returns(self, runner, performance_quality_report_inputs):
-        returns = pd.read_json(performance_quality_report_inputs['fund_returns'], orient='index').drop(columns={'Skye'})
-        performance_quality_report_inputs['fund_returns'] = returns.to_json(orient='index')
-        performance_quality_report_inputs['fund_name'] = 'Skye'
-        performance_quality_report_inputs['vertical'] = 'ARS'
-        performance_quality_report_inputs['entity'] = 'PFUND'
-        perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2021, 12, 31),
-                                                       params=performance_quality_report_inputs)
-        report = perf_quality_report.generate_performance_quality_report()
-        assert report == 'Invalid inputs'
-
     @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
     def test_exposure_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):
         mock_download.return_value = performance_quality_report_inputs

@@ -106,6 +106,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                        'InceptionDate',
                                        'InvestmentStatus',
                                        'ReportingPeerGroup',
+                                       'StrategyPeerGroup',
                                        'Strategy',
                                        'SubStrategy',
                                        'FleScl',

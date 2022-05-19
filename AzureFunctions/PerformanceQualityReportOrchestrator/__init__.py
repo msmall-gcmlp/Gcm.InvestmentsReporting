@@ -17,6 +17,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
             "PerformanceQualityReportActivity", params
         ))
     yield context.task_all(parallel_tasks)
+    return True
 
 
 main = df.Orchestrator.create(orchestrator_function)

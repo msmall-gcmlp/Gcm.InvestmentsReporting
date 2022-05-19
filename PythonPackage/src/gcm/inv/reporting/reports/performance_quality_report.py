@@ -2,6 +2,7 @@ import json
 import pandas as pd
 import ast
 import numpy as np
+import datetime as dt
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes
@@ -180,7 +181,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             if len(returns) > 0:
                 returns = AggregateFromDaily().transform(data=returns, method='geometric',
                                                          period=Periodicity.Monthly)
-                returns.index = [pd.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
+                returns.index = [dt.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
                 self.__market_factor_returns = returns
             else:
                 self.__market_factor_returns = pd.DataFrame()
@@ -285,7 +286,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _secondary_peer_group(self):
-        return 'GCM ' + self._fund_dimn['Strategy'].squeeze()
+        return self._fund_dimn['StrategyPeerGroup'].squeeze()
 
     @property
     def _primary_peer_returns(self):
@@ -711,9 +712,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                                   method='arithmetic')
             ytd_publics.name = 'YTD - Publics'
         else:
-            mtd_publics = pd.Series(index=factor_group_index.index, name='MTD - Publics')
-            qtd_publics = pd.Series(index=factor_group_index.index, name='QTD - Publics')
-            ytd_publics = pd.Series(index=factor_group_index.index, name='YTD - Publics')
+            mtd_publics = pd.Series(index=factor_group_index.index, name='MTD - Publics', dtype='float64')
+            qtd_publics = pd.Series(index=factor_group_index.index, name='QTD - Publics', dtype='float64')
+            ytd_publics = pd.Series(index=factor_group_index.index, name='YTD - Publics', dtype='float64')
 
         if fund_pba_privates.shape[0] > 1:
             mtd_privates = self._analytics.compute_periodic_return(ror=fund_pba_privates,
@@ -734,9 +735,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                                    method='arithmetic')
             ytd_privates.name = 'YTD - Privates'
         else:
-            mtd_privates = pd.Series(index=factor_group_index.index, name='MTD - Privates')
-            qtd_privates = pd.Series(index=factor_group_index.index, name='QTD - Privates')
-            ytd_privates = pd.Series(index=factor_group_index.index, name='YTD - Privates')
+            mtd_privates = pd.Series(index=factor_group_index.index, name='MTD - Privates', dtype='float64')
+            qtd_privates = pd.Series(index=factor_group_index.index, name='QTD - Privates', dtype='float64')
+            ytd_privates = pd.Series(index=factor_group_index.index, name='YTD - Privates', dtype='float64')
 
         #TODO only fill na if some non na's
         summary = factor_group_index.merge(mtd_publics, left_index=True, right_index=True, how='left')
@@ -887,7 +888,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def _summarize_rolling_median(self, rolling_data, trailing_months):
-        if rolling_data.index.max().date() < self._as_of_date.replace(day=1):
+        if len(rolling_data) == 0:
+            rolling_data = pd.DataFrame()
+        elif rolling_data.index.max().date() < self._as_of_date.replace(day=1):
             rolling_data = pd.DataFrame()
 
         rolling_data = rolling_data.iloc[-trailing_months:]
@@ -918,9 +921,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def _get_fund_trailing_beta_summary(self):
         returns = self._fund_returns.copy()
-        trailing_1y_beta = self._get_trailing_vol(returns=returns, trailing_months=12)
-        trailing_3y_beta = self._get_trailing_vol(returns=returns, trailing_months=36)
-        trailing_5y_beta = self._get_trailing_vol(returns=returns, trailing_months=60)
+        trailing_1y_beta = self._get_trailing_beta(returns=returns, trailing_months=12)
+        trailing_3y_beta = self._get_trailing_beta(returns=returns, trailing_months=36)
+        trailing_5y_beta = self._get_trailing_beta(returns=returns, trailing_months=60)
         rolling_1y_beta = self._get_rolling_beta(returns=returns, trailing_months=12)
         trailing_5y_median_beta = self._summarize_rolling_median(rolling_1y_beta, trailing_months=60)
 
@@ -1281,7 +1284,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         write_location = "lab/rqs/azurefunctiondata"
         write_params = AzureDataLakeDao.create_get_data_params(
             write_location,
-            self._fund_name + "_performance_quality_report_report_analytics.json",
+            self._fund_name.replace('/', '') + "_performance_quality_report_report_analytics.json",
             retry=False,
         )
         self._runner.execute(
