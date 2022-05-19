@@ -5,6 +5,7 @@ import datetime as dt
 import pandas as pd
 import ast
 
+from gcm.inv.reporting.reports.performance_quality_peer_summary_report import PerformanceQualityPeerSummaryReport
 from gcm.inv.reporting.reports.performance_quality_report import PerformanceQualityReport
 from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
@@ -32,6 +33,12 @@ class TestPerformanceQualityReport:
     def perf_quality_report(self, runner):
         # TODO consider refactoring as_of_date to Scenario
         return PerformanceQualityReport(runner=runner, as_of_date=dt.date(2022, 3, 31), fund_name='Skye')
+
+    @pytest.fixture
+    def perf_quality_peer(self, runner):
+        # TODO consider refactoring as_of_date to Scenario
+        return PerformanceQualityPeerSummaryReport(runner=runner, as_of_date=dt.date(2022, 3, 31),
+                                                   peer_group='GCM TMT')
 
     def test_performance_quality_report_data(self, runner):
         perf_quality = PerformanceQualityReportData(
@@ -157,6 +164,7 @@ class TestPerformanceQualityReport:
                                                  'Return_min', 'Return_25%', 'Return_75%', 'Return_max',
                                                  'Sharpe_min', 'Sharpe_25%', 'Sharpe_75%', 'Sharpe_max'])
 
+    @pytest.mark.skip('replaced by read in peer summary')
     @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
     def test_perf_stability_peer_skye(self, mock_download, performance_quality_report_inputs, perf_quality_report):
         mock_download.return_value = performance_quality_report_inputs
@@ -199,3 +207,13 @@ class TestPerformanceQualityReport:
         summary = perf_quality_report.build_risk_model_expectations_summary()
         assert all(summary.columns == ['Expectations'])
         assert all(summary.index == ['ExpectedReturn', 'ExpectedVolatility'])
+
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_peer_summary_report.PerformanceQualityPeerSummaryReport.download_performance_quality_report_inputs", autospec=True)
+    def test_peer_summary(self, mock_download, performance_quality_report_inputs, perf_quality_peer):
+        mock_download.return_value = performance_quality_report_inputs
+        summary = perf_quality_peer.build_performance_stability_peer_summary()
+        assert summary.shape[0] > 0
+        assert all(summary.index == ['TTM', '3Y', '5Y', '5YMedian'])
+        assert all(summary.columns == ['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
+                                       'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
+                                       'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max'])

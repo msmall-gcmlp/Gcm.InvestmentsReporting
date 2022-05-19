@@ -51,6 +51,20 @@ class PerformanceQualityReport(ReportingRunnerBase):
         )
         return json.loads(file.content)
 
+    def download_performance_quality_peer_summary(self) -> dict:
+        location = "lab/rqs/azurefunctiondata/peer_summaries"
+        read_params = AzureDataLakeDao.create_get_data_params(
+            location,
+            self._primary_peer_group + "_performance_quality_report_report_analytics.json",
+            retry=False,
+        )
+        file = self._runner.execute(
+            params=read_params,
+            source=DaoSource.DataLake,
+            operation=lambda dao, params: dao.get_data(read_params)
+        )
+        return json.loads(file.content)
+
     @property
     def _inputs(self):
         if self.__inputs is None:
@@ -1148,32 +1162,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def build_performance_stability_peer_summary(self):
-        peer_returns = self._primary_peer_constituent_returns.copy()
-
-        if peer_returns.shape[0] > 0:
-            vol = self._get_peer_trailing_vol_summary(returns=peer_returns)
-            beta = self._get_peer_trailing_beta_summary(returns=peer_returns)
-            sharpe = self._get_peer_trailing_sharpe_summary(returns=peer_returns)
-            batting_avg = self._get_peer_trailing_batting_average_summary(returns=peer_returns)
-            win_loss = self._get_peer_trailing_win_loss_ratio_summary(returns=peer_returns)
-
-            rolling_returns = self._get_peer_rolling_return_summary()
-            rolling_returns.columns = ['AvgReturn_'] + rolling_returns.columns
-
-            rolling_sharpes = self._get_peer_rolling_sharpe_summary()
-            rolling_sharpes.columns = ['AvgSharpe_'] + rolling_sharpes.columns
-
-            summary = vol.merge(beta, left_index=True, right_index=True, how='left')
-            summary = summary.merge(sharpe, left_index=True, right_index=True, how='left')
-            summary = summary.merge(batting_avg, left_index=True, right_index=True, how='left')
-            summary = summary.merge(win_loss, left_index=True, right_index=True, how='left')
-            summary = summary.merge(rolling_returns, left_index=True, right_index=True, how='left')
-            summary = summary.merge(rolling_sharpes, left_index=True, right_index=True, how='left')
-
-            summary = summary[['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
-                               'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
-                               'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max']]
-
+        if self._primary_peer_group is not None:
+            summary = self.download_performance_quality_peer_summary()
+            summary = pd.read_json(summary['performance_stability_peer_summary'], orient='index')
         else:
             summary = pd.DataFrame(columns=['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
                                             'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',

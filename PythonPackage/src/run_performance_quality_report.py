@@ -1,8 +1,10 @@
 import datetime as dt
+import json
 
 from pandas._libs.tslibs.offsets import relativedelta
 
 from gcm.inv.reporting.reports.aggregate_performance_quality_report import AggregatePerformanceQualityReport
+from gcm.inv.reporting.reports.performance_quality_peer_summary_report import PerformanceQualityPeerSummaryReport
 from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.inv.reporting.reports.performance_quality_report import PerformanceQualityReport
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
@@ -36,6 +38,14 @@ class RunPerformanceQualityReports:
             investment_ids=investment_ids)
         return perf_quality_data.execute()
 
+    def generate_peer_summaries(self, peer_groups):
+        for peer_group in peer_groups:
+            perf_quality_data = PerformanceQualityPeerSummaryReport(
+                runner=self._runner,
+                as_of_date=self._as_of_date,
+                peer_group=peer_group)
+            perf_quality_data.execute()
+
     def generate_fund_reports(self, fund_names):
         for fund in fund_names:
             params = self._params.copy()
@@ -59,10 +69,16 @@ class RunPerformanceQualityReports:
 
 if __name__ == "__main__":
     report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 3, 31))
-    #fund_names = report_runner.generate_report_data(investment_ids=None)
-    report_runner.generate_fund_reports(fund_names=['Brevan Howard FG Macro'])
-    #aggregate_return_summary = report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
-    #report_runner.combine_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
+    funds_and_peers = report_runner.generate_report_data(investment_ids=None)
+
+    funds_and_peers = json.loads(funds_and_peers)
+    fund_names = funds_and_peers.get('fund_names')
+    peer_groups = funds_and_peers.get('peer_groups')
+
+    report_runner.generate_peer_summaries(peer_groups=peer_groups)
+    report_runner.generate_fund_reports(fund_names=fund_names)
+    report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
+    report_runner.combine_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
 
     # High Priority
     # TODO check canyon opp credit median peer sharpe
@@ -70,7 +86,6 @@ if __name__ == "__main__":
     # TODO add folder structure to data lake dumps/pass in file paths. avoid ove
     # TODO remove duplicate funds (same group) from FactorAnalysis_New
     # TODO add strategy aggregations
-
 
     # Next up
     # TODO run new RBA

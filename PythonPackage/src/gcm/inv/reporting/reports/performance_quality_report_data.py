@@ -266,9 +266,18 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             source=DaoSource.DataLake,
             operation=lambda dao, params: dao.post_data(params, data_to_write)
         )
-        fund_names = pd.read_json(inputs['fund_dimn'], orient='index')['InvestmentGroupName'].tolist()
+        fund_dimn = pd.read_json(inputs['fund_dimn'], orient='index')
+        fund_names = fund_dimn['InvestmentGroupName'].tolist()
         fund_names = sorted(fund_names)
-        return fund_names
+
+        peer_groups = fund_dimn['ReportingPeerGroup'].unique().tolist()
+        # remove nas
+        peer_groups = [i for i in peer_groups if i]
+        peer_groups = sorted(peer_groups)
+
+        funds = dict({'fund_names': fund_names, 'peer_groups': peer_groups})
+        funds = json.dumps(funds)
+        return funds
 
     def run(self, **kwargs):
         return self.generate_inputs_and_write_to_datalake()
