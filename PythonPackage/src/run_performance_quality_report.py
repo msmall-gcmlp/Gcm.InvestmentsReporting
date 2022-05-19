@@ -65,6 +65,7 @@ if __name__ == "__main__":
     #report_runner.combine_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
 
     # High Priority
+    # TODO check canyon opp credit median peer sharpe
     # TODO add folder structure to data lake dumps/pass in file paths
     # TODO remove duplicate funds (same group) from FactorAnalysis_New
     # TODO add strategy peer group
