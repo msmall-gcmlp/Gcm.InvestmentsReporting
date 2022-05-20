@@ -77,14 +77,11 @@ if __name__ == "__main__":
 
     report_runner.generate_peer_summaries(peer_groups=peer_groups)
     report_runner.generate_fund_reports(fund_names=fund_names)
-    report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
-    report_runner.combine_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
+    # report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
+    # report_runner.combine_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
 
     # High Priority
-    # TODO check canyon opp credit median peer sharpe
-    # TODO check Whale Rock Long/Short flows through to GIP
     # TODO add folder structure to data lake dumps/pass in file paths. avoid ove
-    # TODO remove duplicate funds (same group) from FactorAnalysis_New
     # TODO add strategy aggregations
 
     # Next up

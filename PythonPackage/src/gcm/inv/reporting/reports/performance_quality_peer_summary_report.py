@@ -146,12 +146,19 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
                                                     include_history=True)
 
     def _get_rolling_sharpe_ratio(self, returns, trailing_months):
-        return self._analytics.compute_trailing_sharpe_ratio(ror=returns,
-                                                             rf_ror=self._rf_return,
-                                                             window=trailing_months,
-                                                             as_of_date=self._as_of_date,
-                                                             periodicity=Periodicity.Monthly,
-                                                             include_history=True)
+        rolling_sharpe = self._analytics.compute_trailing_sharpe_ratio(ror=returns,
+                                                                       rf_ror=self._rf_return,
+                                                                       window=trailing_months,
+                                                                       as_of_date=self._as_of_date,
+                                                                       periodicity=Periodicity.Monthly,
+                                                                       include_history=True)
+        # outlier removal
+        max_sharpe = min(10, rolling_sharpe.max().quantile(0.95))
+        min_sharpe = rolling_sharpe.min().quantile(0.05)
+        outlier_ind = (rolling_sharpe < min_sharpe) | (rolling_sharpe > max_sharpe)
+
+        rolling_sharpe[outlier_ind] = None
+        return rolling_sharpe
 
     def _get_rolling_beta(self, returns, trailing_months):
         return self._analytics.compute_trailing_beta(ror=returns,
@@ -228,13 +235,6 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
     def _get_peer_rolling_sharpe_summary(self):
         returns = self._primary_peer_constituent_returns.copy()
         rolling_12m_sharpes = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
-
-        #outlier removal
-        max_sharpe = rolling_12m_sharpes.max().quantile(0.95)
-        min_sharpe = rolling_12m_sharpes.min().quantile(0.05)
-        outlier_ind = (rolling_12m_sharpes < min_sharpe) | (rolling_12m_sharpes > max_sharpe)
-
-        rolling_12m_sharpes[outlier_ind] = None
 
         rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=12)
         rolling_1y_summary = rolling_1y_summary.mean(axis=1)
@@ -369,7 +369,7 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         write_location = "lab/rqs/azurefunctiondata/peer_summaries"
         write_params = AzureDataLakeDao.create_get_data_params(
             write_location,
-            self._peer_group.replace('/', '') + "_performance_quality_report_report_analytics.json",
+            self._peer_group + "_performance_quality_report_report_analytics.json",
             retry=False,
         )
         self._runner.execute(

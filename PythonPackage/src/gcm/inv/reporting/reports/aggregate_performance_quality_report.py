@@ -37,7 +37,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
         location = "lab/rqs/azurefunctiondata/051822"
         read_params = AzureDataLakeDao.create_get_data_params(
             location,
-            fund_name + "_performance_quality_report_report_analytics.json",
+            fund_name.replace('/', '') + "_performance_quality_report_report_analytics.json",
             retry=False,
         )
 
