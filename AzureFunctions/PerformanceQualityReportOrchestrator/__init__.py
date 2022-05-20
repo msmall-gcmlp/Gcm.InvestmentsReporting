@@ -22,18 +22,15 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
         ))
     yield context.task_all(parallel_peer_tasks)
 
-    funds_chunked = [fund_names[i:i + 50] for i in range(0, len(fund_names), 50)]
-
-    for fund_chunk in funds_chunked:
-        parallel_fund_tasks = []
-        for fund in fund_chunk:
-            params = requestBody.copy()
-            params['params']['fund_name'] = fund
-            params = json.dumps(params)
-            parallel_fund_tasks.append(context.call_activity(
-                "PerformanceQualityReportActivity", params
-            ))
-        yield context.task_all(parallel_fund_tasks)
+    parallel_fund_tasks = []
+    for fund in fund_names:
+        params = requestBody.copy()
+        params['params']['fund_name'] = fund
+        params = json.dumps(params)
+        parallel_fund_tasks.append(context.call_activity(
+            "PerformanceQualityReportActivity", params
+        ))
+    yield context.task_all(parallel_fund_tasks)
 
     return True
 
