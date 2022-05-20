@@ -86,14 +86,14 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
 
     def generate_performance_quality_report(self):
         header_info = pd.DataFrame({'header_info': [self._portfolio_acronym,
-                                                    'FUND',
+                                                    'ARS FUND - Cap-Weighted Pro Forma (Current Weights)',
                                                     self._as_of_date]})
         benchmark_summary = self._aggregate_portfolio_summary('benchmark_summary')
         absolute_return_benchmark = pd.DataFrame({'absolute_return_benchmark': [' ']})
         peer_group_heading = pd.DataFrame({'peer_group_heading': ['v. GCM Peer']})
         eurekahedge_benchmark_heading = pd.DataFrame({'eurekahedge_benchmark_heading': ['v. EHI Index']})
         peer_ptile_1_heading = pd.DataFrame({'peer_ptile_1_heading': ['Primary Peer']})
-        peer_ptile_2_heading = pd.DataFrame({'peer_ptile_2_heading': ['']})
+        peer_ptile_2_heading = pd.DataFrame({'peer_ptile_2_heading': ['Secondary Peer']})
         performance_stability_fund_summary = self._aggregate_portfolio_summary('performance_stability_fund_summary')
         performance_stability_peer_summary = self._aggregate_portfolio_summary('performance_stability_peer_summary')
         rba_summary = self._aggregate_portfolio_summary('rba_summary')
