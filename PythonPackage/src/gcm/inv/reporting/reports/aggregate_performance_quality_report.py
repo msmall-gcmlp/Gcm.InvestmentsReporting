@@ -14,23 +14,34 @@ from gcm.Scenario.scenario import Scenario
 
 class AggregatePerformanceQualityReport(ReportingRunnerBase):
 
-    def __init__(self, runner, as_of_date, acronym, params):
+    def __init__(self, runner, as_of_date, acronyms):
         super().__init__(runner=runner)
         self._as_of_date = as_of_date
-        self._params = params
         pub_portfolio_holdings_query = PubPortfolioHoldingsQuery(runner=runner, as_of_date=as_of_date)
         entity_master = EntityMaster(runner=runner, as_of_date=as_of_date)
         self._as_of_date = as_of_date
         self._portfolio_holdings = PortfolioHoldings(pub_portfolio_holdings_query=pub_portfolio_holdings_query,
                                                      entity_master=entity_master)
-        self._portfolio_acronym = acronym
+        self._portfolio_acronyms = acronyms
         self._entity_type = 'FUND'
+        self._portfolio_acronym = None
+        self.__all_holdings = None
+
+    @property
+    def _all_holdings(self):
+        if self.__all_holdings is None:
+            holdings = self._portfolio_holdings.get_portfolio_holdings(allocation_date=self._as_of_date,
+                                                                       portfolio_acronyms=self._portfolio_acronyms)
+            self.__all_holdings = holdings[['Acronym', 'InvestmentGroupName', 'PctNav']]
+        return self.__all_holdings
+
+    @property
+    def _all_acronyms(self):
+        return self._all_holdings['Acronym'].unique().tolist()
 
     @property
     def _holdings(self):
-        holdings = self._portfolio_holdings.get_portfolio_holdings(allocation_date=self._as_of_date,
-                                                                   portfolio_acronyms=self._portfolio_acronym)
-        return holdings[['InvestmentGroupName', 'PctNav']]
+        return self._all_holdings[self._all_holdings['Acronym'] == self._portfolio_acronym]
 
     @functools.lru_cache(maxsize=None)
     def download_performance_quality_report_inputs(self, fund_name) -> dict:
@@ -54,6 +65,10 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
     def _aggregate_portfolio_summary(self, item):
         fund_summaries = pd.DataFrame()
         holdings = self._holdings.copy()
+
+        if holdings['PctNav'].sum().round(2) == 0:
+            return pd.DataFrame()
+
         for fund_name in holdings['InvestmentGroupName']:
             json_inputs = self.download_performance_quality_report_inputs(fund_name=fund_name)
             if json_inputs is not None:
@@ -63,12 +78,21 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
                 fund_summary['InvestmentGroupName'] = fund_name
                 fund_summaries = fund_summaries.append(fund_summary)
 
+        if len(fund_summaries) == 0:
+            return pd.DataFrame()
+
         portfolio_summary = fund_summaries.merge(holdings, on='InvestmentGroupName', how='left')
         portfolio_summary = portfolio_summary[pd.to_numeric(portfolio_summary['Value'], errors='coerce').notnull()]
+
+        if len(portfolio_summary) == 0:
+            return pd.DataFrame()
 
         total_nav_by_group = portfolio_summary.groupby(['Period', 'Field'], as_index=False)['PctNav'].sum()
         total_nav_by_group.rename(columns={'PctNav': 'TotalNav'}, inplace=True)
         portfolio_summary = portfolio_summary.merge(total_nav_by_group, on=['Period', 'Field'], how='left')
+
+        if total_nav_by_group['TotalNav'].sum() == 0:
+            return pd.DataFrame()
 
         portfolio_summary['UnadjContrib'] = portfolio_summary['Value'] * portfolio_summary['PctNav']
         portfolio_summary['Contrib'] = portfolio_summary['UnadjContrib'] / portfolio_summary['TotalNav']
@@ -81,7 +105,9 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
         original_columns = pd.DataFrame(columns=inputs.columns[1:])
         original_rows = inputs['Period']
         portfolio_summary = pd.concat([original_columns, portfolio_summary])
-        portfolio_summary = portfolio_summary.loc[original_rows]
+        index = original_rows.to_frame()
+        portfolio_summary = index.merge(portfolio_summary, left_on='Period', right_index=True, how='left')
+        portfolio_summary = portfolio_summary.set_index('Period')
         return portfolio_summary
 
     def generate_performance_quality_report(self):
@@ -100,7 +126,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
         pba_mtd = self._aggregate_portfolio_summary('pba_mtd')
         pba_qtd = self._aggregate_portfolio_summary('pba_qtd')
         pba_ytd = self._aggregate_portfolio_summary('pba_ytd')
-        shortfall_summary = pd.DataFrame({'shortfall_summary': []})
+        shortfall_summary = pd.DataFrame({'Trigger': '', 'Drawdown': '', 'Pass/Fail': ''}, index=['SCL'])
         risk_model_expectations = self._aggregate_portfolio_summary('risk_model_expectations')
         exposure_summary = self._aggregate_portfolio_summary('exposure_summary')
         latest_exposure_heading = pd.DataFrame({'latest_exposure_heading': ['Latest']})
@@ -143,6 +169,11 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
 
         return True
 
+    def generate_all_performance_quality_reports(self):
+        for acronym in self._all_acronyms:
+            self._portfolio_acronym = acronym
+            self.generate_performance_quality_report()
+
     def run(self, **kwargs):
-        self.generate_performance_quality_report()
+        self.generate_all_performance_quality_reports()
         return True

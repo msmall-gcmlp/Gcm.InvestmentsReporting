@@ -8,7 +8,7 @@ from os.path import exists
 
 class ReportBinder(ReportingRunnerBase):
 
-    def __init__(self, runner, as_of_date, portfolio_acronyms):
+    def __init__(self, runner, as_of_date, portfolio_acronyms=None):
         super().__init__(runner=runner)
         pub_portfolio_holdings_query = PubPortfolioHoldingsQuery(runner=runner, as_of_date=as_of_date)
         entity_master = EntityMaster(runner=runner, as_of_date=as_of_date)
@@ -26,9 +26,12 @@ class ReportBinder(ReportingRunnerBase):
 
         portfolios = holdings['Acronym'].unique()
         for portfolio in portfolios:
+            portfolio_path = 'FUND_FUND_PerformanceQuality_' + portfolio + '_2022-03-31.pdf'
+
             investments = holdings[holdings['Acronym'] == portfolio]['InvestmentGroupName']
 
-            pdfs = [file_path + path1 + fund + path2 for fund in list(investments)]
+            investment_paths = [file_path + path1 + fund + path2 for fund in list(investments)]
+            pdfs = [file_path + portfolio_path] + investment_paths
             pdfs = [path for path in pdfs if exists(path)]
             merger = PdfFileMerger()
 

@@ -1,15 +1,12 @@
 import datetime as dt
 import json
-
 from pandas._libs.tslibs.offsets import relativedelta
-
 from gcm.inv.reporting.reports.aggregate_performance_quality_report import AggregatePerformanceQualityReport
 from gcm.inv.reporting.reports.performance_quality_peer_summary_report import PerformanceQualityPeerSummaryReport
 from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.inv.reporting.reports.performance_quality_report import PerformanceQualityReport
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
-
 from gcm.inv.reporting.reports.report_binder import ReportBinder
 
 
@@ -54,17 +51,15 @@ class RunPerformanceQualityReports:
                                                            fund_name=fund)
             perf_quality_report.execute()
 
-    def combine_by_portfolio(self, portfolio_acronyms):
+    def combine_by_portfolio(self, portfolio_acronyms=None):
         agg_perf_quality = ReportBinder(runner=self._runner, as_of_date=self._as_of_date,
                                         portfolio_acronyms=portfolio_acronyms)
         agg_perf_quality.execute()
 
-    def agg_perf_quality_by_portfolio(self, portfolio_acronyms):
-        for acronym in portfolio_acronyms:
-            params = self._params.copy()
-            agg_perf_quality = AggregatePerformanceQualityReport(runner=self._runner, as_of_date=self._as_of_date,
-                                                                 acronym=acronym, params=params)
-            agg_perf_quality.execute()
+    def agg_perf_quality_by_portfolio(self, portfolio_acronyms=None):
+        agg_perf_quality = AggregatePerformanceQualityReport(runner=self._runner, as_of_date=self._as_of_date,
+                                                             acronyms=portfolio_acronyms)
+        agg_perf_quality.execute()
 
 
 if __name__ == "__main__":
@@ -77,19 +72,23 @@ if __name__ == "__main__":
 
     report_runner.generate_peer_summaries(peer_groups=peer_groups)
     report_runner.generate_fund_reports(fund_names=fund_names)
-    # report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
-    # report_runner.combine_by_portfolio(portfolio_acronyms=['GIP', 'IFC'])
+    report_runner.agg_perf_quality_by_portfolio()
+    report_runner.combine_by_portfolio()
 
     # High Priority
-    # TODO add folder structure to data lake dumps/pass in file paths. avoid ove
-    # TODO add strategy aggregations
+    # TODO post to reporting hub
+    # TODO trace blob not found errors
 
     # Next up
+    # TODO Add portfolios to azure function
+    # TODO add folder structure to data lake dumps/pass in file paths.
     # TODO run new RBA
+    # TODO add strategy aggregations
     # TODO add to Data pipelines imports of RBA, PBA, and Abs Benchmark Returns
     # TODO populate HYG
     # TODO icelandic method
-    # TODO review excess aggregation assumption w/ amy (i.e. Fund returns without Abs Bmrk returns)
+    # TODO review excess aggregation assumption w/ amy (i.e. Fund returns without
+    #  Excess Return at portfolio level doesnt match Fund minus Benchmark Abs Bmrk returns)
     # TODO incorporate macro model
     # TODO run peer group stats only once
     # TODO update report tagging/write to reporting hub
