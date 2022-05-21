@@ -369,7 +369,7 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         write_location = "lab/rqs/azurefunctiondata/peer_summaries"
         write_params = AzureDataLakeDao.create_get_data_params(
             write_location,
-            self._peer_group + "_performance_quality_report_report_analytics.json",
+            self._peer_group.replace('/', '') + "_performance_quality_report_report_analytics.json",
             retry=False,
         )
         self._runner.execute(

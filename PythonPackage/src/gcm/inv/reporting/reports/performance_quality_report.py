@@ -55,7 +55,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         location = "lab/rqs/azurefunctiondata/peer_summaries"
         read_params = AzureDataLakeDao.create_get_data_params(
             location,
-            self._primary_peer_group + "_performance_quality_report_report_analytics.json",
+            self._primary_peer_group.replace('/', '') + "_performance_quality_report_report_analytics.json",
             retry=False,
         )
         file = self._runner.execute(
@@ -408,7 +408,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             exposure = exposure.set_index('Period')
             return exposure
         else:
-            return pd.DataFrame(columns=['LongNotional', 'ShortNotional', 'GrossNotional', 'NetNotional'],
+            return pd.DataFrame(columns=['InvestmentGroupName', 'InvestmentGroupId', 'Date',
+                                         'LongNotional', 'ShortNotional', 'GrossNotional', 'NetNotional'],
                                 index=['Latest', '3Y', '5Y', '10Y'])
 
     @property
@@ -453,7 +454,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.DataFrame({'peer_ptile_2_heading': ['']})
 
     def get_latest_exposure_heading(self):
-        if self._latest_exposure_date is not None:
+        if self._latest_exposure_date is not None and ~np.isnan(self._latest_exposure_date):
             heading = 'Latest (' + self._latest_exposure_date.strftime('%b %Y') + ')'
             return pd.DataFrame({'latest_exposure_heading': [heading]})
         else:
