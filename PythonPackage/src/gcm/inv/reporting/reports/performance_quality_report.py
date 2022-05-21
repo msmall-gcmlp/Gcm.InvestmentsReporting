@@ -414,7 +414,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _latest_exposure_date(self):
-        return self._exposure.loc['Latest']['Date']
+        date = self._exposure.loc['Latest']['Date']
+        if isinstance(date, dt.datetime):
+            return date
+        else:
+            return None
 
     def get_header_info(self):
         header = pd.DataFrame({'header_info': [self._fund_name, self._entity_type, self._as_of_date]})
@@ -454,7 +458,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.DataFrame({'peer_ptile_2_heading': ['']})
 
     def get_latest_exposure_heading(self):
-        if self._latest_exposure_date is not None and ~np.isnan(self._latest_exposure_date):
+        if self._latest_exposure_date is not None:
             heading = 'Latest (' + self._latest_exposure_date.strftime('%b %Y') + ')'
             return pd.DataFrame({'latest_exposure_heading': [heading]})
         else:
