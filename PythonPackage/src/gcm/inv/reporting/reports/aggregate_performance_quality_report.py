@@ -45,7 +45,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
 
     @functools.lru_cache(maxsize=None)
     def download_performance_quality_report_inputs(self, fund_name) -> dict:
-        location = "lab/rqs/azurefunctiondata/051822"
+        location = "lab/rqs/azurefunctiondata"
         read_params = AzureDataLakeDao.create_get_data_params(
             location,
             fund_name.replace('/', '') + "_performance_quality_report_report_analytics.json",
