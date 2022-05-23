@@ -30,9 +30,7 @@ template_location = (
     + "/"
 )
 
-base_output_location = (
-    "/".join(["lab", "rqs", "Reports", "Scripted Outputs"]) + "/"
-)
+base_output_location = "/".join(["performance"]) + "/"
 
 
 class ReportStage(Enum):
@@ -47,13 +45,6 @@ class ReportVertical(Enum):
     ARS = (1,)
     SIG = (2,)
     FirmWide = (3,)
-
-
-class ReportType(Enum):
-    Risk = (0,)
-    CapitalAndExposure = (1,)
-    Performance = (2,)
-    CommitmentsAndFlows = (3,)
 
 
 class ReportSubstrategy(Enum):
@@ -110,48 +101,11 @@ class ReportingEntityTag(object):
             if self._entity_id_holder is not None:
                 # simply set and forget.
                 self._entity_id = self._entity_id_holder
-            elif self.entity_source is not None:
-                # utilize the DAO to attempt to get an ID
-                self._entity_id = self._generate_entity_id()
+            else:
+                raise NotImplementedError(
+                    "You must have passed in Entity Id Holder"
+                )
         return self._entity_id
-
-    def _generate_entity_id(self):
-        # TODO: This is TEMPORARY
-        # replace logic with EntityHierarchy
-        params = {}
-        get_id_by = ""
-        if self.entity_source == DaoSource.PubDwh:
-            if self.entity_type == ReportingEntityTypes.portfolio:
-                params = {
-                    "table": "Portfolios",
-                    "schema": "Analytics",
-                    # eventually paramterize this further...
-                    "operation": lambda query, item: query.filter(
-                        item.Acronym == self.entity_name
-                    ),
-                }
-                get_id_by = "PortfolioMasterId"
-            if self.entity_type == ReportingEntityTypes.manager_fund:
-                s: Scenario = Scenario.current_scenario()
-                params = {
-                    "table": "PortfolioInvestmentBalances",
-                    "schema": "Analytics",
-                    # eventually paramterize this further...
-                    "operation": lambda query, item: query.filter(
-                        item.InvestmentName == self.entity_name,
-                        item.PeriodDate == s.get_attribute("asofdate"),
-                    ),
-                }
-                get_id_by = "InvestmentMasterId"
-
-        data = self.runner.execute(
-            params=params,
-            source=self.entity_source,
-            operation=lambda dao, params: dao.get_data(params),
-        )
-        selected = data[get_id_by]
-        value = list(selected)[0]
-        return value
 
 
 # seperate class in case we want to load once
@@ -194,24 +148,25 @@ class ReportTemplate(object):
 class ReportStructure(ABC):
     def __init__(
         self,
-        report_name,
+        report_type,
         data,
         asofdate,
         runner,
         aggregate_intervals=[AggregateInterval.Daily],
-        report_types=[ReportType.Risk],
         stage=ReportStage.Active,
         report_vertical=[ReportVertical.FirmWide],
         report_substrategy=[ReportSubstrategy.All],
         report_consumers=[RiskReportConsumer.RiskMonitoring],
     ):
-        self.report_name = report_name
         self.data = data
+
+        # report type is the aggregate 'report name'
+        # per discussion with Mark and co
+        self.gcm_report_type = report_type
 
         # gcm tags
         self.gcm_as_of_date = asofdate
         self.gcm_report_period = aggregate_intervals
-        self.gcm_report_type = report_types
         self.gcm_report_target_stage = stage
         self.gcm_business_group = report_vertical
         self.gcm_strategy = report_substrategy
@@ -300,7 +255,7 @@ class ReportStructure(ABC):
         if kwargs.get("save", False):
             self._runner.execute(
                 params=params,
-                source=DaoSource.DataLake,
+                source=DaoSource.ReportingStorage,
                 operation=lambda d, v: d.post_data(v, b),
             )
 
@@ -308,7 +263,7 @@ class ReportStructure(ABC):
         s = ""
         if self._report_entity is not None:
             s += f"{self._report_entity.display_name}_"
-        s += f"{self.report_name}_"
+        s += f"{self.gcm_report_type}_"
         s += f'{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
         return s
 
