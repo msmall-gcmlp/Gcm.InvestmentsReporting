@@ -214,6 +214,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return self._fund_dimn['InvestmentGroupId']
 
     @property
+    def _pub_investment_group_id(self):
+        return self._fund_dimn['PubInvestmentGroupId']
+
+    @property
     def _fund_returns(self):
         if any(self._all_fund_returns.columns == self._fund_name):
             return self._all_fund_returns[self._fund_name].to_frame()
@@ -1299,7 +1303,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 save=True,
                 report_name=report_name,
                 runner=self._runner,
-                entity_name='GIP',
+                entity_name=self._pub_investment_group_id,
                 entity_display_name=self._entity_type,
                 entity_type=ReportingEntityTypes.portfolio,
                 entity_source=DaoSource.PubDwh,

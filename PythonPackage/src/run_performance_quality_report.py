@@ -75,9 +75,11 @@ if __name__ == "__main__":
     report_runner.agg_perf_quality_by_portfolio()
     report_runner.combine_by_portfolio()
 
-    # High Priority
-    # TODO post to reporting hub
-    # TODO trace blob not found errors
+    # TODO - Update Abs Benchmark Returns
+    # TODO - Add fns to template
+    # TODO - Properly tag excel meta data for InvestmentGroup and Portfolio Excels
+    # TODO - copy excel meta data to pdfs
+    # TODO - generate cross asset meta data for aggregates
 
     # Next up
     # TODO Add portfolios to azure function

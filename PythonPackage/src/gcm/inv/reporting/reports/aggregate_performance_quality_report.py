@@ -22,10 +22,12 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
         self._as_of_date = as_of_date
         self._portfolio_holdings = PortfolioHoldings(pub_portfolio_holdings_query=pub_portfolio_holdings_query,
                                                      entity_master=entity_master)
+        self._pub_port_dimn_query = PubPortDimensionsQuery(runner=runner, as_of_date=as_of_date)
         self._portfolio_acronyms = acronyms
         self._entity_type = 'FUND'
         self._portfolio_acronym = None
         self.__all_holdings = None
+        self.__all_pub_port_dimn = None
 
     @property
     def _all_holdings(self):
@@ -42,6 +44,18 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
     @property
     def _holdings(self):
         return self._all_holdings[self._all_holdings['Acronym'] == self._portfolio_acronym]
+
+    @property
+    def _all_pub_port_dimn(self):
+        if self.__all_pub_port_dimn is None:
+            dimn = self._pub_port_dimn_query.get_pub_dwh_portfolio_dimn(portfolio_acronyms=self._portfolio_acronyms)
+            self.__all_pub_port_dimn = dimn[['Acronym', 'MasterId']].rename(columns={'MasterId': 'PubPortfolioId'})
+        return self.__all_pub_port_dimn
+
+    @property
+    def _pub_portfolio_id(self):
+        port_dimn = self._all_pub_port_dimn[self.__all_pub_port_dimn['Acronym'] == self._portfolio_acronym]
+        return port_dimn['PubPortfolioId']
 
     @functools.lru_cache(maxsize=None)
     def download_performance_quality_report_inputs(self, fund_name) -> dict:
@@ -161,7 +175,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
                 save=True,
                 report_name=report_name,
                 runner=self._runner,
-                entity_name='GIP',
+                entity_name=self._pub_portfolio_id,
                 entity_display_name=self._entity_type,
                 entity_type=ReportingEntityTypes.portfolio,
                 entity_source=DaoSource.PubDwh,

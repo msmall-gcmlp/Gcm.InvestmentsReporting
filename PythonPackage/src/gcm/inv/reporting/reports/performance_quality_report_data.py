@@ -99,6 +99,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                                                    investment_ids=investment_ids)
 
         filtered_dimn = filtered_dimn[['InvestmentGroupId',
+                                       'PubInvestmentGroupId',
                                        'InvestmentGroupName',
                                        'AbsoluteBenchmarkId',
                                        'AbsoluteBenchmarkName',
