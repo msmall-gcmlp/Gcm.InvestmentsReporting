@@ -1,3 +1,5 @@
+import os
+import glob
 from PyPDF2 import PdfFileMerger
 from .reporting_runner_base import ReportingRunnerBase
 from gcm.inv.dataprovider.portfolio_holdings import PortfolioHoldings
@@ -38,8 +40,29 @@ class ReportBinder(ReportingRunnerBase):
             for pdf in pdfs:
                 merger.append(pdf)
 
-            merger.write(file_path + portfolio + "_PerformanceQuality.pdf")
+            merger.write(file_path + 'ARS_FUND_PerformanceQuality_' + portfolio + "_2022-03-31.pdf")
             merger.close()
+
+        # combine all pfunds
+        os.chdir(file_path)
+        pfunds = [file_path + file for file in glob.glob("ARS PFUND_PFUND*.pdf")]
+        merger = PdfFileMerger()
+
+        for pdf in pfunds:
+            merger.append(pdf)
+
+        merger.write(file_path + 'ARS_PFUND_PerformanceQuality_All_2022-03-31.pdf')
+        merger.close()
+
+        # combine all funds
+        funds = [file_path + file for file in glob.glob("FUND_FUND*.pdf")]
+        merger = PdfFileMerger()
+
+        for pdf in funds:
+            merger.append(pdf)
+
+        merger.write(file_path + 'ARS_FUND_PerformanceQuality_All_2022-03-31.pdf')
+        merger.close()
 
     def run(self, **kwargs):
         self.aggregate_reports()
