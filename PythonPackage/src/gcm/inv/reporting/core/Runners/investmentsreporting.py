@@ -28,7 +28,7 @@ class InvestmentsReportRunner(ProgramRunner):
         # (1) ensure run in scenario (date)
         # (2) enable a single dao instance
         # (3) load items sequentially
-        data = kwargs["data"]
+        data = kwargs.get("data", None)
         final_data = None
         if data is not None:
             final_data = {}
