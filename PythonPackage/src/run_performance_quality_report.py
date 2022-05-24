@@ -64,21 +64,21 @@ class RunPerformanceQualityReports:
 
 if __name__ == "__main__":
     report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 3, 31))
-    funds_and_peers = report_runner.generate_report_data(investment_ids=None)
+    #funds_and_peers = report_runner.generate_report_data(investment_ids=None)
 
     # funds_and_peers = json.loads(funds_and_peers)
     # fund_names = funds_and_peers.get('fund_names')
     # peer_groups = funds_and_peers.get('peer_groups')
     #
     # report_runner.generate_peer_summaries(peer_groups=peer_groups)
-    # report_runner.generate_fund_reports(fund_names=['Citadel'])
-    report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP'])
+    report_runner.generate_fund_reports(fund_names=['Citadel', 'Citadel Global Equities',
+                                                    'D1 Capital', 'Element', 'Elliott'])
+    #report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP'])
     # report_runner.combine_by_portfolio()
 
     # TODO - Incorporate changes to ReportRunner (add required tags)
     # TODO - copy excel meta data to pdfs
     # TODO - generate cross asset meta data for aggregates
-    # TODO - check citadle ge returns
 
     # Next up
     # TODO Add portfolios to azure function

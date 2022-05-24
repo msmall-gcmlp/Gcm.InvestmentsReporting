@@ -5,7 +5,7 @@ import numpy as np
 import datetime as dt
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes
+from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType
 from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
 from gcm.Scenario.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
@@ -1300,23 +1300,18 @@ class PerformanceQualityReport(ReportingRunnerBase):
         )
 
         with Scenario(asofdate=self._as_of_date).context():
-            #report_name = "PFUND_PerformanceQuality_" + self._fund_name.replace('/', '')
-            report_name = 'Performance Quality'
-            entity_name = self._fund_name
-            vertical = 'ARS'
-            entity_id = self._pub_investment_group_id
-
-            #TODO GIP is placeholder
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="PFUND_PerformanceQuality_Template.xlsx",
                 save=True,
-                report_name=report_name,
                 runner=self._runner,
-                entity_name=self._pub_investment_group_id,
-                entity_display_name=self._entity_type,
-                entity_type=ReportingEntityTypes.portfolio,
+                entity_type=ReportingEntityTypes.manager_fund_group,
+                entity_name=self._fund_name,
+                entity_display_name=self._fund_name.replace('/', ''),
+                entity_ids=[self._pub_investment_group_id],
                 entity_source=DaoSource.PubDwh,
+                report_name='Performance Quality',
+                report_type=ReportType.Risk
             )
 
     def run(self, **kwargs):
