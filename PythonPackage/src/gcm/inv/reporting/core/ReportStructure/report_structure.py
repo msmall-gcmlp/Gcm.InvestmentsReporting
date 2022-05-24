@@ -2,7 +2,6 @@ from abc import ABC
 from enum import Enum
 import logging
 from gcm.Scenario.scenario_enums import AggregateInterval
-from gcm.Scenario.scenario import Scenario
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
     AzureDataLakeFile,
