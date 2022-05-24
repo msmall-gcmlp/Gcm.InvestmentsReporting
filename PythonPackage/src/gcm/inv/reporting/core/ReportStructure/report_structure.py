@@ -315,7 +315,7 @@ class ReportStructure(ABC):
                             metadata = json.dumps(
                                 list(map(lambda x: x.name, val))
                             )
-                        if all(type(f) == int for f in val):
+                        else:
                             metadata = json.dumps(
                                 list(map(lambda x: x, val))
                             )
