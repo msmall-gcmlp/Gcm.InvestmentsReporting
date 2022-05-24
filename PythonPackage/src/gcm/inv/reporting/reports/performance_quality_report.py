@@ -1308,7 +1308,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 entity_type=ReportingEntityTypes.manager_fund_group,
                 entity_name=self._fund_name,
                 entity_display_name=self._fund_name.replace('/', ''),
-                entity_ids=[self._pub_investment_group_id],
+                entity_ids=[self._pub_investment_group_id.astype(str)],
                 entity_source=DaoSource.PubDwh,
                 report_name='Performance Quality',
                 report_type=ReportType.Risk

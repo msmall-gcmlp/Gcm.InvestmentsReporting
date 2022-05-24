@@ -31,7 +31,7 @@ template_location = (
     + "/"
 )
 
-base_output_location = "/Performance/"
+base_output_location = "performance/"
 
 
 class ReportType(Enum):
@@ -292,7 +292,7 @@ class ReportStructure(ABC):
                 self._report_entity.entity_type
             ]
             s += f"{entity_type_display}_"
-        s += f"{self.gcm_report_type}_"
+        s += f"{self.gcm_report_type.name}_"
         s += f'{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
         return s
 

@@ -14,6 +14,10 @@ def main(requestBody) -> str:
                 "Environment": "uat",
                 "Subscription": "nonprd",
             },
+            DaoSource.ReportingStorage.name: {
+                "Environment": "uat",
+                "Subscription": "nonprd",
+            }
         }
     }
 
