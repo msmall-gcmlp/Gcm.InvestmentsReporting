@@ -70,7 +70,6 @@ class InvestmentsReportRunner(ProgramRunner):
                 entity_name: str = kwargs["entity_name"]
                 entity_type: ReportingEntityTypes = kwargs["entity_type"]
                 entity_id = kwargs.get("entity_id", None)
-                entity_source = kwargs["entity_source"]
                 entity_display_name = kwargs.get(
                     "entity_display_name", entity_name
                 )
@@ -79,8 +78,6 @@ class InvestmentsReportRunner(ProgramRunner):
                     entity_name,
                     entity_display_name,
                     entity_id,
-                    entity_source,
-                    runner,
                 )
                 report.load_reporting_entity(reporting_entity)
             if "save" in kwargs:

@@ -63,9 +63,10 @@ class RiskReportConsumer(Enum):
 
 
 class ReportingEntityTypes(Enum):
-    portfolio = (0,)
-    manager_fund = (1,)
-    cross_entity = (2,)
+    portfolio = 0
+    manager_fund = 1
+    manager_fund_group = 2
+    cross_entity = 3
 
 
 class ReportingEntityTag(object):
@@ -75,21 +76,17 @@ class ReportingEntityTag(object):
         entity_name: str,
         display_name: str,
         entity_id: int,
-        source: DaoSource,
-        runner: DaoRunner,
     ):
         self.entity_type = entity_type
         self.entity_name = entity_name
         self.display_name = display_name
         self._entity_id_holder = entity_id
         self._entity_id = None
-        self.entity_source = source
-        self.runner = runner
 
     def to_metadata_tags(self):
         if self.get_entity_id() is not None:
             return {
-                f"gcm_{self.entity_type.name}_id": str(
+                f"gcm_{self.entity_type.name}_ids": str(
                     self.get_entity_id()
                 )
             }
