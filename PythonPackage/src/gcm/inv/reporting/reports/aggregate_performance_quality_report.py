@@ -8,7 +8,7 @@ from gcm.inv.dataprovider.portfolio_holdings import PortfolioHoldings
 from gcm.inv.dataprovider.pub_dwh.pub_portfolio_holdings import PubPortfolioHoldingsQuery
 from gcm.inv.dataprovider.pub_dwh.pub_port_dimensions_query import PubPortDimensionsQuery
 from gcm.inv.dataprovider.entity_master import EntityMaster
-from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes
+from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType
 from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
 from gcm.Scenario.scenario import Scenario
 
@@ -167,19 +167,18 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
         }
 
         with Scenario(asofdate=self._as_of_date).context():
-            report_name = "FUND_PerformanceQuality_" + self._portfolio_acronym.replace('/', '')
-
-            #TODO GIP is placeholder
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="PFUND_PerformanceQuality_Template.xlsx",
                 save=True,
-                report_name=report_name,
                 runner=self._runner,
-                entity_name=self._pub_portfolio_id,
-                entity_display_name=self._entity_type,
                 entity_type=ReportingEntityTypes.portfolio,
+                entity_name=self._portfolio_acronym,
+                entity_display_name=self._portfolio_acronym.replace('/', ''),
+                entity_ids=[self._pub_portfolio_id.item()],
                 entity_source=DaoSource.PubDwh,
+                report_name='Performance Quality',
+                report_type=ReportType.Risk
             )
 
         return True

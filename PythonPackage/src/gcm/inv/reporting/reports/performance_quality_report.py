@@ -1308,10 +1308,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 entity_type=ReportingEntityTypes.manager_fund_group,
                 entity_name=self._fund_name,
                 entity_display_name=self._fund_name.replace('/', ''),
-                entity_ids=[self._pub_investment_group_id.astype(str)],
+                entity_ids=[self._pub_investment_group_id.item()],
                 entity_source=DaoSource.PubDwh,
                 report_name='Performance Quality',
-                report_type=ReportType.Risk
+                report_type=ReportType.Risk,
             )
 
     def run(self, **kwargs):
