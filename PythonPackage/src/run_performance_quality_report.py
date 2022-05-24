@@ -64,7 +64,7 @@ class RunPerformanceQualityReports:
 
 if __name__ == "__main__":
     report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 3, 31))
-    # funds_and_peers = report_runner.generate_report_data(investment_ids=None)
+    funds_and_peers = report_runner.generate_report_data(investment_ids=None)
 
     # funds_and_peers = json.loads(funds_and_peers)
     # fund_names = funds_and_peers.get('fund_names')
@@ -75,7 +75,6 @@ if __name__ == "__main__":
     report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP'])
     # report_runner.combine_by_portfolio()
 
-    # TODO - Update Abs Benchmark Returns
     # TODO - Incorporate changes to ReportRunner (add required tags)
     # TODO - copy excel meta data to pdfs
     # TODO - generate cross asset meta data for aggregates

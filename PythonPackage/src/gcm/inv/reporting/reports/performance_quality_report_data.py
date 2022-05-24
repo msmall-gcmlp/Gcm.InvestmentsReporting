@@ -85,6 +85,12 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             investment_ids = self._entity_master.get_investment_ids_by_source_id(source_inv_ids=pub_ids,
                                                                                  source_id=pub_id)
             investment_ids = investment_ids['InvestmentId'].tolist()
+
+            investment_master = self._entity_master.get_investment_reporting_managers()
+            master_subset = investment_master[investment_master['InvestmentId'].isin(investment_ids)]
+            subset_groups = master_subset['InvestmentGroupId'].unique().tolist()
+            subset_investments = investment_master[investment_master['InvestmentGroupId'].isin(subset_groups)]
+            investment_ids = subset_investments['InvestmentId'].unique().tolist()
         else:
             investment_ids = self._investment_ids.copy()
 

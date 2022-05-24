@@ -1300,7 +1300,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
         )
 
         with Scenario(asofdate=self._as_of_date).context():
-            report_name = "PFUND_PerformanceQuality_" + self._fund_name.replace('/', '')
+            #report_name = "PFUND_PerformanceQuality_" + self._fund_name.replace('/', '')
+            report_name = 'Performance Quality'
+            entity_name = self._fund_name
+            vertical = 'ARS'
+            entity_id = self._pub_investment_group_id
 
             #TODO GIP is placeholder
             InvestmentsReportRunner().execute(
