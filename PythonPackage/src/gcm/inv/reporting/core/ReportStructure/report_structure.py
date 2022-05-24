@@ -15,6 +15,7 @@ from openpyxl.writer.excel import save_virtual_workbook
 import datetime as dt
 import json
 from openpyxl import Workbook
+from typing import List
 
 template_location = (
     "/".join(
@@ -64,8 +65,8 @@ class RiskReportConsumer(Enum):
 
 class ReportingEntityTypes(Enum):
     portfolio = 0
-    manager_fund = 1
-    manager_fund_group = 2
+    manager_fund = 1  # investment
+    manager_fund_group = 2  # investmentgroup
     cross_entity = 3
 
 
@@ -75,24 +76,23 @@ class ReportingEntityTag(object):
         entity_type: ReportingEntityTypes,
         entity_name: str,
         display_name: str,
-        entity_id: int,
+        entity_ids: List[int],
     ):
         self.entity_type = entity_type
         self.entity_name = entity_name
         self.display_name = display_name
-        self._entity_id_holder = entity_id
+        self._entity_id_holder = entity_ids
         self._entity_id = None
 
     def to_metadata_tags(self):
-        if self.get_entity_id() is not None:
-            return {
-                f"gcm_{self.entity_type.name}_ids": str(
-                    self.get_entity_id()
-                )
-            }
+        if self.get_entity_ids() is not None:
+            list_of_ids = self.get_entity_ids()
+            concat = ",".join([str(x) for x in list_of_ids])
+            f"[{concat}]"
+            return {f"gcm_{self.entity_type.name}_ids": str()}
         return None
 
-    def get_entity_id(self):
+    def get_entity_ids(self):
         if self._entity_id is None:
             if self._entity_id_holder is not None:
                 # simply set and forget.
