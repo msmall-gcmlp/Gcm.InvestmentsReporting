@@ -298,6 +298,30 @@ class ReportStructure(ABC):
         s += f"{self.gcm_as_of_date}.xlsx"
         return s
 
+    def _get_metadata_from_property(self, all_data, k):
+        metadata = None
+        if k.startswith("gcm_"):
+            # we want to serialize this:
+            val = all_data[k]
+            metadata = None
+            if type(val) == dt.datetime:
+                metadata = val.strftime("%Y-%m-%d")
+            elif type(val) == list:
+                if len(val) > 0:
+                    if all(issubclass(type(f), Enum) for f in val):
+                        metadata = json.dumps(
+                            list(map(lambda x: x.name, val))
+                        )
+                    else:
+                        metadata = json.dumps(list(map(lambda x: x, val)))
+            elif issubclass(type(val), ExtendedEnum):
+                metadata = val.value
+            elif issubclass(type(val), Enum):
+                metadata = val.name
+            elif type(val) == str:
+                metadata = val
+        return metadata
+
     def serialize_metadata(self):
         # convert tags from above
         # to json-serializable dictionary
@@ -305,30 +329,9 @@ class ReportStructure(ABC):
         all_data = self.__dict__
         for k in all_data:
             k: str = k
-            if k.startswith("gcm_"):
-                # we want to serialize this:
-                val = all_data[k]
-                metadata = None
-                if type(val) == dt.datetime:
-                    metadata = val.strftime("%Y-%m-%d")
-                elif type(val) == list:
-                    if len(val) > 0:
-                        if all(issubclass(type(f), Enum) for f in val):
-                            metadata = json.dumps(
-                                list(map(lambda x: x.name, val))
-                            )
-                        else:
-                            metadata = json.dumps(
-                                list(map(lambda x: x, val))
-                            )
-                elif issubclass(type(val), ExtendedEnum):
-                    metadata = val.value
-                elif issubclass(type(val), Enum):
-                    metadata = val.name
-                elif type(val) == str:
-                    metadata = val
-                if metadata is not None:
-                    d[k] = metadata
+            metadata = self._get_metadata_from_property(all_data, k)
+            if metadata is not None:
+                d[k] = metadata
         if self._report_entity is not None:
             # merge
             d2 = self._report_entity.to_metadata_tags()
