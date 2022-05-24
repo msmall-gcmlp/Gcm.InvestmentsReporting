@@ -31,7 +31,7 @@ template_location = (
     + "/"
 )
 
-base_output_location = "/"
+base_output_location = "/Performance/"
 
 
 class ReportType(Enum):
@@ -234,10 +234,10 @@ class ReportStructure(ABC):
         output_dir = (
             kwargs.get(
                 "output_dir",
-                f"{base_output_location}/{self.gcm_report_type.name}",
+                {base_output_location},
             )
-            + self.gcm_report_type
-        )
+        ) + self.gcm_report_type.name
+
         if self._raw_pdf is not None:
             b = self._raw_pdf.content
         else:
