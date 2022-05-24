@@ -31,7 +31,7 @@ template_location = (
     + "/"
 )
 
-base_output_location = "/"
+base_output_location = "/Performance/"
 
 
 class ReportType(Enum):
@@ -96,20 +96,23 @@ class ReportingEntityTag(object):
     def to_metadata_tags(self):
         if self.get_entity_ids() is not None:
             list_of_ids = self.get_entity_ids()
-            concat = ",".join([str(x) for x in list_of_ids])
-            f"[{concat}]"
-            return {f"gcm_{self.entity_type.name}_ids": str()}
+            if list_of_ids is not None:
+                list_of_ids = json.dumps(
+                    list(map(lambda x: x, list_of_ids))
+                )
+                return {f"gcm_{self.entity_type.name}_ids": list_of_ids}
         return None
 
     def get_entity_ids(self):
         if self._entity_id is None:
-            if self._entity_id_holder is not None:
-                # simply set and forget.
-                self._entity_id = self._entity_id_holder
-            else:
-                raise NotImplementedError(
-                    "You must have passed in Entity Id Holder"
-                )
+            if self.entity_type != ReportingEntityTypes.cross_entity:
+                if self._entity_id_holder is not None:
+                    # simply set and forget.
+                    self._entity_id = self._entity_id_holder
+                else:
+                    raise NotImplementedError(
+                        "You must have passed in Entity Id Holder"
+                    )
         return self._entity_id
 
 
@@ -229,9 +232,12 @@ class ReportStructure(ABC):
 
     def print_report(self, **kwargs):
         output_dir = (
-            kwargs.get("output_dir", base_output_location)
-            + self.gcm_report_type
-        )
+            kwargs.get(
+                "output_dir",
+                {base_output_location},
+            )
+        ) + self.gcm_report_type.name
+
         if self._raw_pdf is not None:
             b = self._raw_pdf.content
         else:
@@ -308,6 +314,10 @@ class ReportStructure(ABC):
                         if all(issubclass(type(f), Enum) for f in val):
                             metadata = json.dumps(
                                 list(map(lambda x: x.name, val))
+                            )
+                        else:
+                            metadata = json.dumps(
+                                list(map(lambda x: x, val))
                             )
 
                 elif issubclass(type(val), Enum):
