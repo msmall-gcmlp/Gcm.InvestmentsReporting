@@ -215,7 +215,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _pub_investment_group_id(self):
-        return self._fund_dimn['PubInvestmentGroupId']
+        return self._fund_dimn['PubInvestmentGroupId'].squeeze()
 
     @property
     def _fund_returns(self):

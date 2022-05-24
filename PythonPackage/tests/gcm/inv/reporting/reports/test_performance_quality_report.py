@@ -43,7 +43,8 @@ class TestPerformanceQualityReport:
     def test_performance_quality_report_data(self, runner):
         perf_quality = PerformanceQualityReportData(
             runner=runner,
-            start_date=dt.date(2012, 3, 1),
+            #start_date=dt.date(2012, 3, 1),
+            start_date=dt.date(2021, 3, 1),
             end_date=dt.date(2022, 3, 31),
             as_of_date=dt.date(2022, 3, 31),
             investment_ids=[34411, 41096, 139998]
@@ -217,3 +218,9 @@ class TestPerformanceQualityReport:
         assert all(summary.columns == ['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
                                        'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
                                        'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max'])
+
+    @mock.patch("gcm.inv.reporting.reports.performance_quality_report.PerformanceQualityReport.download_performance_quality_report_inputs", autospec=True)
+    def test_pub_investment_group_id(self, mock_download, performance_quality_report_inputs, perf_quality_report):
+        mock_download.return_value = performance_quality_report_inputs
+        id = perf_quality_report._pub_investment_group_id
+        assert id == 618

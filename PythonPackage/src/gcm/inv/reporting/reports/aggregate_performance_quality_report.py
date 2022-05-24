@@ -6,6 +6,7 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from .reporting_runner_base import ReportingRunnerBase
 from gcm.inv.dataprovider.portfolio_holdings import PortfolioHoldings
 from gcm.inv.dataprovider.pub_dwh.pub_portfolio_holdings import PubPortfolioHoldingsQuery
+from gcm.inv.dataprovider.pub_dwh.pub_port_dimensions_query import PubPortDimensionsQuery
 from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes
 from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
@@ -48,14 +49,14 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
     @property
     def _all_pub_port_dimn(self):
         if self.__all_pub_port_dimn is None:
-            dimn = self._pub_port_dimn_query.get_pub_dwh_portfolio_dimn(portfolio_acronyms=self._portfolio_acronyms)
+            dimn = self._pub_port_dimn_query.get_pub_dwh_portfolio_dimn(acronyms=self._portfolio_acronyms)
             self.__all_pub_port_dimn = dimn[['Acronym', 'MasterId']].rename(columns={'MasterId': 'PubPortfolioId'})
         return self.__all_pub_port_dimn
 
     @property
     def _pub_portfolio_id(self):
         port_dimn = self._all_pub_port_dimn[self.__all_pub_port_dimn['Acronym'] == self._portfolio_acronym]
-        return port_dimn['PubPortfolioId']
+        return port_dimn['PubPortfolioId'].squeeze()
 
     @functools.lru_cache(maxsize=None)
     def download_performance_quality_report_inputs(self, fund_name) -> dict:
