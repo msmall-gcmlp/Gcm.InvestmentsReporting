@@ -15,6 +15,8 @@ from openpyxl.writer.excel import save_virtual_workbook
 import datetime as dt
 import json
 from openpyxl import Workbook
+from typing import List
+
 
 template_location = (
     "/".join(
@@ -29,7 +31,15 @@ template_location = (
     + "/"
 )
 
-base_output_location = "/".join(["performance"]) + "/"
+base_output_location = "/"
+
+
+class ReportType(Enum):
+    Risk = 0
+    Capital_and_Exposure = 1
+    Performance = 2
+    Commitments_and_Flows = 3
+    Market = 4
 
 
 class ReportStage(Enum):
@@ -46,7 +56,7 @@ class ReportVertical(Enum):
     FirmWide = (3,)
 
 
-class ReportSubstrategy(Enum):
+class ReportStrategy(Enum):
     Credit = (0,)
     Equities = (1,)
     Primaries = (2,)
@@ -63,9 +73,10 @@ class RiskReportConsumer(Enum):
 
 
 class ReportingEntityTypes(Enum):
-    portfolio = (0,)
-    manager_fund = (1,)
-    cross_entity = (2,)
+    portfolio = 0
+    manager_fund = 1  # investment
+    manager_fund_group = 2  # investmentgroup
+    cross_entity = 3
 
 
 class ReportingEntityTag(object):
@@ -74,28 +85,23 @@ class ReportingEntityTag(object):
         entity_type: ReportingEntityTypes,
         entity_name: str,
         display_name: str,
-        entity_id: int,
-        source: DaoSource,
-        runner: DaoRunner,
+        entity_ids: List[int],
     ):
         self.entity_type = entity_type
         self.entity_name = entity_name
         self.display_name = display_name
-        self._entity_id_holder = entity_id
+        self._entity_id_holder = entity_ids
         self._entity_id = None
-        self.entity_source = source
-        self.runner = runner
 
     def to_metadata_tags(self):
-        if self.get_entity_id() is not None:
-            return {
-                f"gcm_{self.entity_type.name}_id": str(
-                    self.get_entity_id()
-                )
-            }
+        if self.get_entity_ids() is not None:
+            list_of_ids = self.get_entity_ids()
+            concat = ",".join([str(x) for x in list_of_ids])
+            f"[{concat}]"
+            return {f"gcm_{self.entity_type.name}_ids": str()}
         return None
 
-    def get_entity_id(self):
+    def get_entity_ids(self):
         if self._entity_id is None:
             if self._entity_id_holder is not None:
                 # simply set and forget.
@@ -145,22 +151,32 @@ class ReportTemplate(object):
 # wiki/spaces/IN/pages/2719186981/
 # Metadata+Fields
 class ReportStructure(ABC):
+    _display_mapping_dict = {
+        ReportingEntityTypes.manager_fund: "PFUND",
+        ReportingEntityTypes.manager_fund_group: "PFUND",
+        ReportingEntityTypes.portfolio: "PORTFOLIO",
+        ReportingEntityTypes.cross_entity: "XENTITY",
+    }
+
     def __init__(
         self,
-        report_type,
+        report_name,
         data,
         asofdate,
         runner,
+        report_type=ReportType.Risk,
+        report_frequency=[AggregateInterval.MTD],
         aggregate_intervals=[AggregateInterval.Daily],
         stage=ReportStage.Active,
         report_vertical=[ReportVertical.FirmWide],
-        report_substrategy=[ReportSubstrategy.All],
+        report_substrategy=[ReportStrategy.All],
         report_consumers=[RiskReportConsumer.RiskMonitoring],
     ):
         self.data = data
-
+        self.report_name = report_name
         # report type is the aggregate 'report name'
         # per discussion with Mark and co
+        self.gcm_report_frequency = report_frequency
         self.gcm_report_type = report_type
 
         # gcm tags
@@ -170,6 +186,7 @@ class ReportStructure(ABC):
         self.gcm_business_group = report_vertical
         self.gcm_strategy = report_substrategy
         self.gcm_target_audience = report_consumers
+        self.gcm_modified_date = dt.datetime.utcnow().strftime("%Y-%m-%d")
 
         self.template: ReportTemplate = None
         self._workbook: openpyxl.Workbook = None
@@ -211,7 +228,10 @@ class ReportStructure(ABC):
             logging.log("pdf has already been set")
 
     def print_report(self, **kwargs):
-        output_dir = kwargs.get("output_dir", base_output_location)
+        output_dir = (
+            kwargs.get("output_dir", base_output_location)
+            + self.gcm_report_type
+        )
         if self._raw_pdf is not None:
             b = self._raw_pdf.content
         else:
@@ -259,9 +279,13 @@ class ReportStructure(ABC):
             )
 
     def output_name(self):
-        s = ""
+        s = f"{self.report_name}_"
         if self._report_entity is not None:
             s += f"{self._report_entity.display_name}_"
+            entity_type_display = ReportStructure._display_mapping_dict[
+                self._report_entity.entity_type
+            ]
+            s += f"{entity_type_display}_"
         s += f"{self.gcm_report_type}_"
         s += f'{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
         return s
