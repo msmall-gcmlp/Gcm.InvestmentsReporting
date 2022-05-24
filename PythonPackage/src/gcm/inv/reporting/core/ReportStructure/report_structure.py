@@ -101,12 +101,8 @@ class ReportingEntityTag(object):
         if self.get_entity_ids() is not None:
             list_of_ids = self.get_entity_ids()
             if list_of_ids is not None:
-                metadata = json.dumps(
-                                list(map(lambda x: x, list_of_ids))
-                            )
-                return {
-                    f"gcm_{self.entity_type.name}_ids": metadata
-                }
+                metadata = json.dumps(list(map(lambda x: x, list_of_ids)))
+                return {f"gcm_{self.entity_type.name}_ids": metadata}
         return None
 
     def get_entity_ids(self):
@@ -172,12 +168,12 @@ class ReportStructure(ABC):
         report_name,
         data,
         asofdate: dt.datetime,
-        runner,
+        runner: DaoRunner,
         report_type=ReportType.Risk,
         report_frequency=AggregateInterval.MTD,
         aggregate_intervals=AggregateInterval.Daily,
         stage=ReportStage.Active,
-        report_vertical=ReportVertical.FirmWide,
+        report_vertical=ReportVertical.ARS,
         report_substrategy=[ReportStrategy.All],
         report_consumers=[RiskReportConsumer.Risk],
     ):
@@ -299,7 +295,7 @@ class ReportStructure(ABC):
             ]
             s += f"{entity_type_display}_"
         s += f"{self.gcm_report_type.name}_"
-        s += f'{self.gcm_as_of_date}.xlsx'
+        s += f"{self.gcm_as_of_date}.xlsx"
         return s
 
     def serialize_metadata(self):
