@@ -218,6 +218,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return self._fund_dimn['PubInvestmentGroupId'].squeeze()
 
     @property
+    def _substrategy(self):
+        return self._fund_dimn['SubStrategy'].squeeze()
+
+    @property
     def _fund_returns(self):
         if any(self._all_fund_returns.columns == self._fund_name):
             return self._all_fund_returns[self._fund_name].to_frame()
@@ -425,7 +429,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return None
 
     def get_header_info(self):
-        header = pd.DataFrame({'header_info': [self._fund_name, self._entity_type, self._as_of_date]})
+        header = pd.DataFrame({'header_info': [self._fund_name,
+                                               self._entity_type + '-' + self._substrategy,
+                                               self._as_of_date]})
         return header
 
     def get_peer_group_heading(self):
@@ -439,7 +445,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._abs_return_benchmark is not None:
             return pd.DataFrame({'absolute_return_benchmark': [self._abs_return_benchmark]})
         else:
-            return pd.DataFrame({'absolute_return_benchmark': ['N/A']})
+            return pd.DataFrame({'absolute_return_benchmark': ['To be agreed']})
 
     def get_eurekahedge_benchmark_heading(self):
         if self._eurekahedge_benchmark is not None:

@@ -76,10 +76,10 @@ if __name__ == "__main__":
     # report_runner.combine_by_portfolio()
 
     # TODO - Update Abs Benchmark Returns
-    # TODO - Add fns to template
-    # TODO - Properly tag excel meta data for InvestmentGroup and Portfolio Excels
+    # TODO - Incorporate changes to ReportRunner (add required tags)
     # TODO - copy excel meta data to pdfs
     # TODO - generate cross asset meta data for aggregates
+    # TODO - check citadle ge returns
 
     # Next up
     # TODO Add portfolios to azure function
