@@ -69,6 +69,7 @@ class InvestmentsReportRunner(ProgramRunner):
             if "entity_name" in kwargs:
                 entity_name: str = kwargs["entity_name"]
                 entity_type: ReportingEntityTypes = kwargs["entity_type"]
+                # must be a list of ints
                 entity_ids = kwargs.get("entity_ids", None)
                 entity_display_name = kwargs.get(
                     "entity_display_name", entity_name
