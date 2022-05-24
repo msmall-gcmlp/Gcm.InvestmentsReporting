@@ -97,10 +97,11 @@ class ReportingEntityTag(object):
         if self.get_entity_ids() is not None:
             list_of_ids = self.get_entity_ids()
             if list_of_ids is not None:
-                str_list_of_ids = ",".join([str(x) for x in list_of_ids])
-                str_list_of_ids = f"[{str_list_of_ids}]"
+                metadata = json.dumps(
+                                list(map(lambda x: x, list_of_ids))
+                            )
                 return {
-                    f"gcm_{self.entity_type.name}_ids": str_list_of_ids
+                    f"gcm_{self.entity_type.name}_ids": metadata
                 }
         return None
 
