@@ -66,10 +66,14 @@ class ReportStrategy(Enum):
 
 
 class RiskReportConsumer(Enum):
-    RiskMonitoring = 0
-    InternalExRMA = 1
-    CIO = 2
-    External = 3
+    Risk = 0
+    ARS_IC = 1
+    ARS_PM = 2
+    ARS_Research = 3
+    PEREI_Deal_Team = 4
+    PEREI_PM = 5
+    PEREI_IC = 6
+    CIO = 7
 
 
 class ReportingEntityTypes(Enum):
@@ -167,15 +171,15 @@ class ReportStructure(ABC):
         self,
         report_name,
         data,
-        asofdate,
+        asofdate: dt.datetime,
         runner,
         report_type=ReportType.Risk,
-        report_frequency=[AggregateInterval.MTD],
-        aggregate_intervals=[AggregateInterval.Daily],
+        report_frequency=AggregateInterval.MTD,
+        aggregate_intervals=AggregateInterval.Daily,
         stage=ReportStage.Active,
-        report_vertical=[ReportVertical.FirmWide],
+        report_vertical=ReportVertical.FirmWide,
         report_substrategy=[ReportStrategy.All],
-        report_consumers=[RiskReportConsumer.RiskMonitoring],
+        report_consumers=[RiskReportConsumer.Risk],
     ):
         self.data = data
         self.report_name = report_name
@@ -295,7 +299,7 @@ class ReportStructure(ABC):
             ]
             s += f"{entity_type_display}_"
         s += f"{self.gcm_report_type.name}_"
-        s += f'{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
+        s += f'{self.gcm_as_of_date}.xlsx'
         return s
 
     def serialize_metadata(self):
