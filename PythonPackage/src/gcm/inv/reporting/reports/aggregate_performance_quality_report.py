@@ -1,6 +1,7 @@
 import functools
 import json
 import pandas as pd
+import datetime as dt
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from .reporting_runner_base import ReportingRunnerBase
@@ -166,7 +167,8 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
             "latest_exposure_heading": latest_exposure_heading,
         }
 
-        with Scenario(asofdate=self._as_of_date).context():
+        as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
+        with Scenario(asofdate=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="PFUND_PerformanceQuality_Template.xlsx",

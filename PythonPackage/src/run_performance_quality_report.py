@@ -1,6 +1,8 @@
 import datetime as dt
 import json
+import glob
 from pandas._libs.tslibs.offsets import relativedelta
+from gcm.inv.reporting.core.Utils.aggregate_file_utils import copy_metadata
 from gcm.inv.reporting.reports.aggregate_performance_quality_report import AggregatePerformanceQualityReport
 from gcm.inv.reporting.reports.performance_quality_peer_summary_report import PerformanceQualityPeerSummaryReport
 from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
@@ -65,6 +67,42 @@ class RunPerformanceQualityReports:
                                                              acronyms=portfolio_acronyms)
         agg_perf_quality.execute()
 
+    def copy_meta_data_from_excels(self):
+        file_path = "C:/Users/CMCNAMEE/OneDrive - GCM Grosvenor/Desktop/tmp"
+        files = glob.glob(file_path + "/*.pdf")
+
+        file_path = file_path.removesuffix('\\') + '\\'
+        file_names = [x.removeprefix(file_path).removesuffix('.pdf') for x in files]
+
+        for file in file_names:
+            copy_metadata(runner=self._runner,
+                          target_file_location='performance/Risk',
+                          target_file_name=file + '.pdf',
+                          target_dao_type=DaoSource.ReportingStorage,
+                          source_file_location='performance/Risk',
+                          source_file_name=file + '.xlsx',
+                          source_dao_type=DaoSource.ReportingStorage,
+                          )
+
+    def copy_portfolio_meta_data(self):
+        file_path = "C:/Users/CMCNAMEE/OneDrive - GCM Grosvenor/Desktop/tmp"
+        files = glob.glob(file_path + "/*.pdf")
+        files = [k for k in files if 'PORTFOLIO' in k]
+
+        file_path = file_path.removesuffix('\\') + '\\'
+        file_names = [x.removeprefix(file_path).removesuffix('.pdf') for x in files]
+
+        for file in file_names:
+            source_file = file + '.pdf'
+            target_file = source_file.replace('PORTFOLIO', 'FundAggregate')
+            copy_metadata(runner=self._runner,
+                          target_file_location='performance/Risk',
+                          target_file_name=target_file,
+                          target_dao_type=DaoSource.ReportingStorage,
+                          source_file_location='performance/Risk',
+                          source_file_name=source_file,
+                          source_dao_type=DaoSource.ReportingStorage,
+                          )
 
 if __name__ == "__main__":
     report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 3, 31))
@@ -78,11 +116,14 @@ if __name__ == "__main__":
     report_runner.generate_fund_reports(fund_names=['Citadel', 'Citadel Global Equities',
                                                     'D1 Capital', 'Element', 'Elliott'])
     report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['GIP'])
+    # TODO convert all individual excels to pdf
+    # TODO for all file names in directory, apply metadata from pdf to excel
+    report_runner.copy_meta_data_from_excels()
     report_runner.combine_by_portfolio()
-
-    # TODO - Incorporate changes to ReportRunner (add required tags)
-    # TODO - copy excel meta data to pdfs
-    # TODO - generate cross asset meta data for aggregates
+    report_runner.copy_portfolio_meta_data()
+    # TODO apply meta data to portfolio packets, using meta data from cover page
+    # TODO apply meta data to All Portfolio packet
+    # TODO apply meta data to All Fund packet
 
     # Next up
     # TODO Add portfolios to azure function

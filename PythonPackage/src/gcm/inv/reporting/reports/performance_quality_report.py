@@ -1299,7 +1299,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             operation=lambda dao, params: dao.post_data(params, data_to_write)
         )
 
-        with Scenario(asofdate=self._as_of_date).context():
+        as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
+        with Scenario(asofdate=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="PFUND_PerformanceQuality_Template.xlsx",

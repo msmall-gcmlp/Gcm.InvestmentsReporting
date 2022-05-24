@@ -40,7 +40,7 @@ class ReportBinder(ReportingRunnerBase):
             for pdf in pdfs:
                 merger.append(pdf)
 
-            merger.write(file_path + 'ARS_FUND_PerformanceQuality_' + portfolio + "_2022-03-31.pdf")
+            merger.write(file_path + 'Performance Quality_' + portfolio + "_FundAggregate_Risk_2022-03-31.pdf")
             merger.close()
 
         # combine all pfunds

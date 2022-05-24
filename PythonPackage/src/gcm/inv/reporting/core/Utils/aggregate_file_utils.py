@@ -4,7 +4,7 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
 )
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.DaoRunner import DaoRunner
-from typing import List, dict
+from typing import List
 import itertools
 
 # standard utils:
