@@ -66,10 +66,14 @@ class ReportStrategy(Enum):
 
 
 class RiskReportConsumer(Enum):
-    RiskMonitoring = 0
-    InternalExRMA = 1
-    CIO = 2
-    External = 3
+    Risk = 0
+    ARS_IC = 1
+    ARS_PM = 2
+    ARS_Research = 3
+    PEREI_Deal_Team = 4
+    PEREI_PM = 5
+    PEREI_IC = 6
+    CIO = 7
 
 
 class ReportingEntityTypes(Enum):
@@ -97,11 +101,8 @@ class ReportingEntityTag(object):
         if self.get_entity_ids() is not None:
             list_of_ids = self.get_entity_ids()
             if list_of_ids is not None:
-                str_list_of_ids = ",".join([str(x) for x in list_of_ids])
-                str_list_of_ids = f"[{str_list_of_ids}]"
-                return {
-                    f"gcm_{self.entity_type.name}_ids": str_list_of_ids
-                }
+                metadata = json.dumps(list(map(lambda x: x, list_of_ids)))
+                return {f"gcm_{self.entity_type.name}_ids": metadata}
         return None
 
     def get_entity_ids(self):
@@ -166,15 +167,15 @@ class ReportStructure(ABC):
         self,
         report_name,
         data,
-        asofdate,
-        runner,
+        asofdate: dt.datetime,
+        runner: DaoRunner,
         report_type=ReportType.Risk,
-        report_frequency=[AggregateInterval.MTD],
-        aggregate_intervals=[AggregateInterval.Daily],
+        report_frequency=AggregateInterval.MTD,
+        aggregate_intervals=AggregateInterval.Daily,
         stage=ReportStage.Active,
-        report_vertical=[ReportVertical.FirmWide],
+        report_vertical=ReportVertical.ARS,
         report_substrategy=[ReportStrategy.All],
-        report_consumers=[RiskReportConsumer.RiskMonitoring],
+        report_consumers=[RiskReportConsumer.Risk],
     ):
         self.data = data
         self.report_name = report_name
@@ -294,7 +295,7 @@ class ReportStructure(ABC):
             ]
             s += f"{entity_type_display}_"
         s += f"{self.gcm_report_type.name}_"
-        s += f'{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
+        s += f"{self.gcm_as_of_date}.xlsx"
         return s
 
     def serialize_metadata(self):
