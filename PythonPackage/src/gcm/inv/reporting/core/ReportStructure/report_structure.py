@@ -1,5 +1,6 @@
 from abc import ABC
 from enum import Enum
+from .extended_enum import ExtendedEnum
 import logging
 from gcm.Scenario.scenario_enums import AggregateInterval
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
@@ -34,12 +35,12 @@ template_location = (
 base_output_location = "performance/"
 
 
-class ReportType(Enum):
-    Risk = 0
-    Capital_and_Exposure = 1
-    Performance = 2
-    Commitments_and_Flows = 3
-    Market = 4
+class ReportType(ExtendedEnum):
+    Risk = "Risk"
+    Capital_and_Exposure = "Capital & Exposure"
+    Performance = "Performance"
+    Commitments_and_Flows = "Commitments & Flows"
+    Market = "Market"
 
 
 class ReportStage(Enum):
@@ -170,7 +171,7 @@ class ReportStructure(ABC):
         asofdate: dt.datetime,
         runner: DaoRunner,
         report_type=ReportType.Risk,
-        report_frequency=AggregateInterval.MTD,
+        report_frequency="Monthly",
         aggregate_intervals=AggregateInterval.Daily,
         stage=ReportStage.Active,
         report_vertical=ReportVertical.ARS,
@@ -178,10 +179,9 @@ class ReportStructure(ABC):
         report_consumers=[RiskReportConsumer.Risk],
     ):
         self.data = data
-        self.report_name = report_name
-        # report type is the aggregate 'report name'
-        # per discussion with Mark and co
-        self.gcm_report_frequency = report_frequency
+
+        # Standards
+        self.gcm_report_name = report_name
         self.gcm_report_type = report_type
 
         # gcm tags
@@ -192,7 +192,7 @@ class ReportStructure(ABC):
         self.gcm_strategy = report_substrategy
         self.gcm_target_audience = report_consumers
         self.gcm_modified_date = dt.datetime.utcnow().strftime("%Y-%m-%d")
-
+        self.gcm_report_frequency = report_frequency
         self.template: ReportTemplate = None
         self._workbook: openpyxl.Workbook = None
         self._report_entity: ReportingEntityTag = None
@@ -287,7 +287,7 @@ class ReportStructure(ABC):
             )
 
     def output_name(self):
-        s = f"{self.report_name}_"
+        s = f"{self.gcm_report_name}_"
         if self._report_entity is not None:
             s += f"{self._report_entity.display_name}_"
             entity_type_display = ReportStructure._display_mapping_dict[
@@ -321,7 +321,8 @@ class ReportStructure(ABC):
                             metadata = json.dumps(
                                 list(map(lambda x: x, val))
                             )
-
+                elif issubclass(type(val), ExtendedEnum):
+                    metadata = val.value
                 elif issubclass(type(val), Enum):
                     metadata = val.name
                 elif type(val) == str:
