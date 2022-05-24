@@ -28,7 +28,7 @@ class InvestmentsReportRunner(ProgramRunner):
         # (1) ensure run in scenario (date)
         # (2) enable a single dao instance
         # (3) load items sequentially
-        data = kwargs["data"]
+        data = kwargs.get("data", None)
         final_data = None
         if data is not None:
             final_data = {}
@@ -69,8 +69,8 @@ class InvestmentsReportRunner(ProgramRunner):
             if "entity_name" in kwargs:
                 entity_name: str = kwargs["entity_name"]
                 entity_type: ReportingEntityTypes = kwargs["entity_type"]
-                entity_id = kwargs.get("entity_id", None)
-                entity_source = kwargs["entity_source"]
+                # must be a list of ints
+                entity_ids = kwargs.get("entity_ids", None)
                 entity_display_name = kwargs.get(
                     "entity_display_name", entity_name
                 )
@@ -78,9 +78,7 @@ class InvestmentsReportRunner(ProgramRunner):
                     entity_type,
                     entity_name,
                     entity_display_name,
-                    entity_id,
-                    entity_source,
-                    runner,
+                    entity_ids,
                 )
                 report.load_reporting_entity(reporting_entity)
             if "save" in kwargs:
