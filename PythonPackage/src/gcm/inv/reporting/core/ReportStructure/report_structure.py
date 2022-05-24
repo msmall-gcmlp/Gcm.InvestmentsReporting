@@ -295,7 +295,7 @@ class ReportStructure(ABC):
             ]
             s += f"{entity_type_display}_"
         s += f"{self.gcm_report_type.name}_"
-        s += f"{self.gcm_as_of_date}.xlsx"
+        s += f'{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
         return s
 
     def _get_metadata_from_property(self, all_data, k):
