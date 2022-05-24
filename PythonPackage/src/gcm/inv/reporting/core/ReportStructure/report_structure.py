@@ -43,33 +43,33 @@ class ReportType(Enum):
 
 
 class ReportStage(Enum):
-    PreDeployment = (0,)
-    IC = (1,)
-    Active = (2,)
-    Legacy = (3,)
+    PreDeployment = 0
+    IC = 1
+    Active = 2
+    Legacy = 3
 
 
 class ReportVertical(Enum):
-    PEREI = (0,)
-    ARS = (1,)
-    SIG = (2,)
-    FirmWide = (3,)
+    PEREI = 0
+    ARS = 1
+    SIG = 2
+    FirmWide = 3
 
 
 class ReportStrategy(Enum):
-    Credit = (0,)
-    Equities = (1,)
-    Primaries = (2,)
-    Secondaries = (3,)
-    Infrastructure = (4,)
-    All = (5,)
+    Credit = 0
+    Equities = 1
+    Primaries = 2
+    Secondaries = 3
+    Infrastructure = 4
+    All = 5
 
 
 class RiskReportConsumer(Enum):
-    RiskMonitoring = (0,)
-    InternalExRMA = (1,)
-    CIO = (2,)
-    External = (3,)
+    RiskMonitoring = 0
+    InternalExRMA = 1
+    CIO = 2
+    External = 3
 
 
 class ReportingEntityTypes(Enum):
@@ -319,5 +319,6 @@ class ReportStructure(ABC):
         if self._report_entity is not None:
             # merge
             d2 = self._report_entity.to_metadata_tags()
-            d.update(d2)
+            if d2 is not None:
+                d.update(d2)
         return d
