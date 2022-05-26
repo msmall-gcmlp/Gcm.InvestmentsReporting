@@ -64,9 +64,7 @@ def merge_metadata_to_target_file(
 ) -> None:
 
     ordered_values = [
-        v
-        for d in itertools.chain(metadata_list)
-        for _, v in sorted(d.items())
+        v for d in itertools.chain(metadata_list) for _, v in sorted(d.items())
     ]
     result = dict(zip(metadata_list.count(1), ordered_values))
     copy_metadata(
