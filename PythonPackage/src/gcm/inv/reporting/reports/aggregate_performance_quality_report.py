@@ -9,7 +9,7 @@ from gcm.inv.dataprovider.portfolio_holdings import PortfolioHoldings
 from gcm.inv.dataprovider.pub_dwh.pub_portfolio_holdings import PubPortfolioHoldingsQuery
 from gcm.inv.dataprovider.pub_dwh.pub_port_dimensions_query import PubPortDimensionsQuery
 from gcm.inv.dataprovider.entity_master import EntityMaster
-from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType
+from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, AggregateInterval
 from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
 from gcm.Scenario.scenario import Scenario
 
@@ -180,7 +180,8 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
                 entity_ids=[self._pub_portfolio_id.item()],
                 entity_source=DaoSource.PubDwh,
                 report_name='Performance Quality',
-                report_type=ReportType.Risk
+                report_type=ReportType.Risk,
+                aggregate_intervals=AggregateInterval.MTD,
             )
 
         return True

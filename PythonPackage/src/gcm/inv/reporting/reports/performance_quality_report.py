@@ -5,7 +5,7 @@ import numpy as np
 import datetime as dt
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType
+from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, AggregateInterval
 from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
 from gcm.Scenario.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
@@ -430,7 +430,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def get_header_info(self):
         header = pd.DataFrame({'header_info': [self._fund_name,
-                                               self._entity_type + '-' + self._substrategy,
+                                               self._entity_type + ' - ' + self._substrategy,
                                                self._as_of_date]})
         return header
 
@@ -1313,6 +1313,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 entity_source=DaoSource.PubDwh,
                 report_name='Performance Quality',
                 report_type=ReportType.Risk,
+                aggregate_intervals=AggregateInterval.MTD
             )
 
     def run(self, **kwargs):

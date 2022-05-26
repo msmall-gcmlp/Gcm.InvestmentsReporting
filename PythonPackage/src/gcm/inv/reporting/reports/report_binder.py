@@ -21,14 +21,14 @@ class ReportBinder(ReportingRunnerBase):
 
     def aggregate_reports(self):
         file_path = "C:/Users/CMCNAMEE/OneDrive - GCM Grosvenor/Desktop/tmp/"
-        path1 = 'ARS PFUND_PFUND_PerformanceQuality_'
-        path2 = '_2022-03-31.pdf'
+        path1 = 'Performance Quality_'
+        path2 = '_PFUND_Risk_2022-03-31.pdf'
         holdings = self._portfolio_holdings.get_portfolio_holdings(allocation_date=self._as_of_date,
                                                                    portfolio_acronyms=self._portfolio_acronyms)
 
         portfolios = holdings['Acronym'].unique()
         for portfolio in portfolios:
-            portfolio_path = 'FUND_FUND_PerformanceQuality_' + portfolio + '_2022-03-31.pdf'
+            portfolio_path = 'Performance Quality_' + portfolio + '_PORTFOLIO_Risk_2022-03-31.pdf'
 
             investments = holdings[holdings['Acronym'] == portfolio]['InvestmentGroupName']
 
@@ -45,23 +45,23 @@ class ReportBinder(ReportingRunnerBase):
 
         # combine all pfunds
         os.chdir(file_path)
-        pfunds = [file_path + file for file in glob.glob("ARS PFUND_PFUND*.pdf")]
+        pfunds = [file_path + file for file in glob.glob("*PFUND_Risk*.pdf")]
         merger = PdfFileMerger()
 
         for pdf in pfunds:
             merger.append(pdf)
 
-        merger.write(file_path + 'ARS_PFUND_PerformanceQuality_All_2022-03-31.pdf')
+        merger.write(file_path + 'Performance Quality_' + 'AllActive' + "_PFUND_Risk_2022-03-31.pdf")
         merger.close()
 
         # combine all funds
-        funds = [file_path + file for file in glob.glob("FUND_FUND*.pdf")]
+        funds = [file_path + file for file in glob.glob("*PORTFOLIO_Risk*.pdf")]
         merger = PdfFileMerger()
 
         for pdf in funds:
             merger.append(pdf)
 
-        merger.write(file_path + 'ARS_FUND_PerformanceQuality_All_2022-03-31.pdf')
+        merger.write(file_path + 'Performance Quality_' + 'AllActive' + "_PORTFOLIO_Risk_2022-03-31.pdf")
         merger.close()
 
     def run(self, **kwargs):

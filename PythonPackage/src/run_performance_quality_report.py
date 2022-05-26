@@ -42,19 +42,17 @@ class RunPerformanceQualityReports:
         return perf_quality_data.execute()
 
     def generate_peer_summaries(self, peer_groups):
-        for peer_group in peer_groups:
-            perf_quality_data = PerformanceQualityPeerSummaryReport(
-                runner=self._runner,
-                as_of_date=self._as_of_date,
-                peer_group=peer_group)
-            perf_quality_data.execute()
+        perf_quality_report = PerformanceQualityPeerSummaryReport(runner=self._runner, as_of_date=self._as_of_date,
+                                                                  peer_group=None)
+        for peer in peer_groups:
+            perf_quality_report._peer_group = peer
+            perf_quality_report.execute()
 
     def generate_fund_reports(self, fund_names):
+        perf_quality_report = PerformanceQualityReport(runner=self._runner, as_of_date=self._as_of_date,
+                                                       fund_name=None)
         for fund in fund_names:
-            params = self._params.copy()
-            params['fund_name'] = fund
-            perf_quality_report = PerformanceQualityReport(runner=self._runner, as_of_date=self._as_of_date,
-                                                           fund_name=fund)
+            perf_quality_report._fund_name = fund
             perf_quality_report.execute()
 
     def combine_by_portfolio(self, portfolio_acronyms=None):
@@ -87,7 +85,8 @@ class RunPerformanceQualityReports:
     def copy_portfolio_meta_data(self):
         file_path = "C:/Users/CMCNAMEE/OneDrive - GCM Grosvenor/Desktop/tmp"
         files = glob.glob(file_path + "/*.pdf")
-        files = [k for k in files if 'PORTFOLIO' in k]
+        files = [k for k in files if 'PORTFOLIO_Risk' in k]
+        files = [k for k in files if 'AllActive' not in k]
 
         file_path = file_path.removesuffix('\\') + '\\'
         file_names = [x.removeprefix(file_path).removesuffix('.pdf') for x in files]
@@ -118,12 +117,18 @@ if __name__ == "__main__":
     report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['IFC'])
     # TODO convert all individual excels to pdf
     # TODO for all file names in directory, apply metadata from pdf to excel
-    # report_runner.copy_meta_data_from_excels()
-    # report_runner.combine_by_portfolio()
-    # report_runner.copy_portfolio_meta_data()
-    # TODO apply meta data to portfolio packets, using meta data from cover page
+    report_runner.copy_meta_data_from_excels()
+    report_runner.combine_by_portfolio()
+    # TODO MANUAL: drop FundAggregates and AllActive summaries in ReportingHub UAT
+    report_runner.copy_portfolio_meta_data()
+
     # TODO apply meta data to All Portfolio packet
     # TODO apply meta data to All Fund packet
+
+    # TODO copy *FundAggregate_Risk_2022-03-31.pdf* from UAT to prod
+    # TODO copy *PFUND_Risk_2022-03-31.pdf* from UAT to prod
+    # TODO copy *AllActive_PFUND_Risk_2022-03-31.pdf* from UAT to prod
+    # TODO copy *AllActive_PORTFOLIO_Risk_2022-03-31.pdf* from UAT to prod
 
     # Next up
     # TODO Add portfolios to azure function
