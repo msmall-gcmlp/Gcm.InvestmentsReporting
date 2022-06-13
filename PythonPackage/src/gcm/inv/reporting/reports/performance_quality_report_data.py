@@ -101,7 +101,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             exclude_filters = None
             exclude_gcm_portfolios = False
 
-
         fund_dimn = self._investments.get_condensed_investment_group_dimensions(as_dataframe=True,
                                                                                 investment_ids=investment_ids)
 
