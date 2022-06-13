@@ -2,8 +2,8 @@ import pandas as pd
 import json
 
 from gcm.Dao.DaoSources import DaoSource
-from gcm.inv.dataprovider.attribution import Attribution
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
+from gcm.inv.dataprovider.attribution import Attribution
 from gcm.inv.dataprovider.inv_dwh.attribution_query import AttributionQuery
 from gcm.inv.dataprovider.inv_dwh.benchmarking_query import BenchmarkingQuery
 from gcm.inv.dataprovider.inv_dwh.factors_query import FactorsQuery
@@ -91,18 +91,25 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             subset_groups = master_subset['InvestmentGroupId'].unique().tolist()
             subset_investments = investment_master[investment_master['InvestmentGroupId'].isin(subset_groups)]
             investment_ids = subset_investments['InvestmentId'].unique().tolist()
+
+            include_filters = dict(status=[self._status])
+            exclude_filters = dict(strategy=['Other', 'Aggregated Prior Period Adjustment'])
+            exclude_gcm_portfolios = True
         else:
             investment_ids = self._investment_ids.copy()
+            include_filters = None
+            exclude_filters = None
+            exclude_gcm_portfolios = False
+
 
         fund_dimn = self._investments.get_condensed_investment_group_dimensions(as_dataframe=True,
                                                                                 investment_ids=investment_ids)
 
-        include_filters = dict(status=[self._status])
-        exclude_filters = dict(strategy=['Other', 'Aggregated Prior Period Adjustment'])
-        filtered_dimn = self._investments.get_filtered_investment_group_dimensions(include_filters=include_filters,
-                                                                                   exclude_filters=exclude_filters,
-                                                                                   exclude_gcm_portfolios=True,
-                                                                                   investment_ids=investment_ids)
+        filtered_dimn = \
+            self._investments.get_filtered_investment_group_dimensions(include_filters=include_filters,
+                                                                       exclude_filters=exclude_filters,
+                                                                       exclude_gcm_portfolios=exclude_gcm_portfolios,
+                                                                       investment_ids=investment_ids)
 
         filtered_dimn = filtered_dimn[['InvestmentGroupId',
                                        'PubInvestmentGroupId',
@@ -119,7 +126,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                        'FleScl',
                                        'RiskModelExpectedReturn',
                                        'RiskModelExpectedVol']]
-
         returns_source = [SourceDimension.Pub_InvestmentDimn]
         fund_monthly_returns = \
             self._inv_returns.get_investment_group_monthly_returns(start_date=self._start_date,
