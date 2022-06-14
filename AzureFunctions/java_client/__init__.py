@@ -6,7 +6,7 @@ import jdk
 
 def install_jre():
     logging.info('Starting JRE install')
-    
+
     if 'JAVA_HOME' in os.environ:
         logging.info('Skipping JRE install. JRE is already set up')
         return
@@ -21,7 +21,7 @@ def install_jre():
     else:
         logging.info('Installing JRE')
         java_home_path = jdk.install('18', jre=True)
-    
+
     logging.info('Setting JAVA_HOME and PATH environment variables')
 
     os.environ['JAVA_HOME'] = java_home_path
