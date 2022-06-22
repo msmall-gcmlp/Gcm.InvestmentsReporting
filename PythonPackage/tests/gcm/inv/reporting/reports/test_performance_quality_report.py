@@ -223,6 +223,7 @@ class TestPerformanceQualityReport:
         id = perf_quality_report._pub_investment_group_id
         assert id == 618
 
+    @pytest.mark.skip("debugging purposes only")
     def test_debug(self):
         from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao, AzureDataLakeFile
         runner = DaoRunner(
