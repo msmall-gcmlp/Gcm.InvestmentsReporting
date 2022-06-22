@@ -1,5 +1,5 @@
 from unittest import mock
-
+from gcm.Scenario.scenario import Scenario
 import pytest
 import datetime as dt
 import pandas as pd
@@ -42,16 +42,13 @@ class TestPerformanceQualityReport:
 
     @pytest.mark.skip(reason='slow')
     def test_performance_quality_report_data(self, runner):
-        perf_quality = PerformanceQualityReportData(
-            runner=runner,
-            #start_date=dt.date(2012, 3, 1),
-            start_date=dt.date(2021, 3, 1),
-            end_date=dt.date(2022, 3, 31),
-            as_of_date=dt.date(2022, 3, 31),
-            investment_ids=[34411, 41096, 139998]
-        )
+        with Scenario(runner=runner, as_of_date=dt.date(2022, 3, 31)).context():
+            perf_quality = PerformanceQualityReportData(start_date=dt.date(2012, 3, 1),
+                                                        end_date=dt.date(2022, 3, 31),
+                                                        investment_group_ids=[19224, 23319, 74984]
+                                                        )
 
-        report_inputs = perf_quality.get_performance_quality_report_inputs()
+            report_inputs = perf_quality.get_performance_quality_report_inputs()
 
         ###
         # gcm_peer_constituent_returns = pd.read_json(report_inputs['gcm_peer_constituent_returns'], orient='index')
@@ -225,3 +222,24 @@ class TestPerformanceQualityReport:
         mock_download.return_value = performance_quality_report_inputs
         id = perf_quality_report._pub_investment_group_id
         assert id == 618
+
+    def test_debug(self):
+        from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao, AzureDataLakeFile
+        runner = DaoRunner(
+            container_lambda=lambda b, i: b.config.from_dict(i),
+            config_params={
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.ReportingStorage.name: {
+                        "Environment": "uat",
+                        "Subscription": "nonprd",
+                    }
+                }
+            })
+        file_path = 'Performance Quality_Whale Rock_PFUND_Risk_2022-05-31.xlsx'
+        params = AzureDataLakeDao.create_get_data_params('performance/Risk', file_path)
+        file: AzureDataLakeFile = runner.execute(
+            params=params,
+            source=DaoSource.ReportingStorage,
+            operation=lambda dao, params: dao.get_data(params),
+        )
+        file.content

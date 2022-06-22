@@ -5,10 +5,7 @@ import datetime as dt
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from .reporting_runner_base import ReportingRunnerBase
-from gcm.inv.dataprovider.portfolio_holdings import PortfolioHoldings
-from gcm.inv.dataprovider.pub_dwh.pub_portfolio_holdings import PubPortfolioHoldingsQuery
-from gcm.inv.dataprovider.pub_dwh.pub_port_dimensions_query import PubPortDimensionsQuery
-from gcm.inv.dataprovider.entity_master import EntityMaster
+from gcm.inv.dataprovider.portfolio import Portfolio
 from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, AggregateInterval
 from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
 from gcm.Scenario.scenario import Scenario
@@ -19,13 +16,8 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
     def __init__(self, runner, as_of_date, acronyms):
         super().__init__(runner=runner)
         self._as_of_date = as_of_date
-        pub_portfolio_holdings_query = PubPortfolioHoldingsQuery(runner=runner, as_of_date=as_of_date)
-        entity_master = EntityMaster(runner=runner, as_of_date=as_of_date)
         self._as_of_date = as_of_date
-        self._portfolio_holdings = PortfolioHoldings(pub_portfolio_holdings_query=pub_portfolio_holdings_query,
-                                                     entity_master=entity_master)
-        self._pub_port_dimn_query = PubPortDimensionsQuery(runner=runner, as_of_date=as_of_date)
-        self._portfolio_acronyms = acronyms
+        self._portfolio = Portfolio(acronyms=acronyms)
         self._entity_type = 'FUND'
         self._portfolio_acronym = None
         self.__all_holdings = None
@@ -34,8 +26,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
     @property
     def _all_holdings(self):
         if self.__all_holdings is None:
-            holdings = self._portfolio_holdings.get_portfolio_holdings(allocation_date=self._as_of_date,
-                                                                       portfolio_acronyms=self._portfolio_acronyms)
+            holdings = self._portfolio.get_holdings(allocation_date=self._as_of_date)
             self.__all_holdings = holdings[['Acronym', 'InvestmentGroupName', 'PctNav']]
         return self.__all_holdings
 
@@ -50,7 +41,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
     @property
     def _all_pub_port_dimn(self):
         if self.__all_pub_port_dimn is None:
-            dimn = self._pub_port_dimn_query.get_pub_dwh_portfolio_dimn(acronyms=self._portfolio_acronyms)
+            dimn = self._portfolio.get_dimensions()
             self.__all_pub_port_dimn = dimn[['Acronym', 'MasterId']].rename(columns={'MasterId': 'PubPortfolioId'})
         return self.__all_pub_port_dimn
 

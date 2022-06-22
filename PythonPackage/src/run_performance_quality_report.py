@@ -20,8 +20,8 @@ class RunPerformanceQualityReports:
             config_params={
                 DaoRunnerConfigArgs.dao_global_envs.name: {
                     DaoSource.PubDwh.name: {
-                        "Environment": "uat",
-                        "Subscription": "nonprd",
+                        "Environment": "prd",
+                        "Subscription": "prd",
                     },
                     DaoSource.ReportingStorage.name: {
                         "Environment": "uat",
@@ -105,22 +105,26 @@ class RunPerformanceQualityReports:
 
 
 if __name__ == "__main__":
-    report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 3, 31))
-    funds_and_peers = report_runner.generate_report_data(investment_ids=None)
+    report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 5, 31))
+    funds_and_peers = report_runner.generate_report_data(investment_ids=[9290, 10611, 74663, 86301,
+                                                                         127434, 127478, 130008, 150603,
+                                                                         159121, 161394, 34411, 115937])
 
     funds_and_peers = json.loads(funds_and_peers)
     fund_names = funds_and_peers.get('fund_names')
     peer_groups = funds_and_peers.get('peer_groups')
 
     report_runner.generate_peer_summaries(peer_groups=peer_groups)
-    report_runner.generate_fund_reports(fund_names=['Skye'])
-    report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['IFC'])
+    report_runner.generate_fund_reports(fund_names=['Altimeter', 'Anatole', 'Hollis Park', 'Lake Bleu',
+                                                    'RedCo', 'Redmile', 'Rokos', 'Tiger Global', 'Voyager',
+                                                    'Whale Rock'])
+    # report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['IFC'])
     # TODO convert all individual excels to pdf
     # TODO for all file names in directory, apply metadata from pdf to excel
-    report_runner.copy_meta_data_from_excels()
-    report_runner.combine_by_portfolio()
+    # report_runner.copy_meta_data_from_excels()
+    # report_runner.combine_by_portfolio()
     # TODO MANUAL: drop FundAggregates and AllActive summaries in ReportingHub UAT
-    report_runner.copy_portfolio_meta_data()
+    # report_runner.copy_portfolio_meta_data()
 
     # TODO apply meta data to All Portfolio packet
     # TODO apply meta data to All Fund packet
