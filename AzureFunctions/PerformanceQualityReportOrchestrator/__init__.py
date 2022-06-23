@@ -3,10 +3,18 @@ import json
 
 
 def orchestrator_function(context: df.DurableOrchestrationContext):
-    requestBody: str = context.get_input()
-    inputs_request = requestBody.copy()
-    inputs_request = json.dumps(inputs_request)
-    funds_and_peers = yield context.call_activity("PerformanceQualityInputsActivity", inputs_request)
+    client_input: dict = context.get_input()
+    params = client_input["params"]
+
+    first_retry_interval_in_milliseconds = 600000
+    max_number_of_attempts = 3
+    retry_options = df.RetryOptions(first_retry_interval_in_milliseconds, max_number_of_attempts)
+
+    params.update({"run": "PerformanceQualityReportData"})
+    data_params = {"params": params, "data": {}}
+
+    funds_and_peers = \
+        yield context.call_activity_with_retry("PerformanceQualityReportActivity", retry_options, data_params)
 
     funds_and_peers = json.loads(funds_and_peers)
     fund_names = funds_and_peers.get('fund_names')
@@ -14,21 +22,17 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
 
     parallel_peer_tasks = []
     for peer in peer_groups:
-        params = requestBody.copy()
-        params['params']['peer_group'] = peer
-        params = json.dumps(params)
-        parallel_peer_tasks.append(context.call_activity(
-            "PerformanceQualityPeerSummaryActivity", params
+        peer_params = {"params": {"run": "PerformanceQualityPeerSummaryReport", "peer_group": peer}, "data": {}}
+        parallel_peer_tasks.append(context.call_activity_with_retry(
+            "PerformanceQualityReportActivity", retry_options, peer_params
         ))
     yield context.task_all(parallel_peer_tasks)
 
     parallel_fund_tasks = []
     for fund in fund_names:
-        params = requestBody.copy()
-        params['params']['fund_name'] = fund
-        params = json.dumps(params)
-        parallel_fund_tasks.append(context.call_activity(
-            "PerformanceQualityReportActivity", params
+        report_params = {"params": {"run": "PerformanceQualityReport", "fund_name": fund}, "data": {}}
+        parallel_fund_tasks.append(context.call_activity_with_retry(
+            "PerformanceQualityReportActivity", retry_options, report_params
         ))
     yield context.task_all(parallel_fund_tasks)
 
