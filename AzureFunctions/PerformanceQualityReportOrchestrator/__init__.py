@@ -22,7 +22,9 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
 
     parallel_peer_tasks = []
     for peer in peer_groups:
-        peer_params = {"params": {"run": "PerformanceQualityPeerSummaryReport", "peer_group": peer}, "data": {}}
+        params.update({"run": "PerformanceQualityPeerSummaryReport"})
+        params.update({"peer_group": peer})
+        peer_params = {"params": params, "data": {}}
         parallel_peer_tasks.append(context.call_activity_with_retry(
             "PerformanceQualityReportActivity", retry_options, peer_params
         ))
@@ -30,7 +32,9 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
 
     parallel_fund_tasks = []
     for fund in fund_names:
-        report_params = {"params": {"run": "PerformanceQualityReport", "fund_name": fund}, "data": {}}
+        params.update({"run": "PerformanceQualityReport"})
+        params.update({"fund_name": fund})
+        report_params = {"params": params, "data": {}}
         parallel_fund_tasks.append(context.call_activity_with_retry(
             "PerformanceQualityReportActivity", retry_options, report_params
         ))
