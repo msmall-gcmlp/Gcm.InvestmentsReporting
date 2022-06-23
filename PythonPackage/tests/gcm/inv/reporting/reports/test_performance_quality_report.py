@@ -40,7 +40,7 @@ class TestPerformanceQualityReport:
         return PerformanceQualityPeerSummaryReport(runner=runner, as_of_date=dt.date(2022, 3, 31),
                                                    peer_group='GCM TMT')
 
-    #@pytest.mark.skip(reason='slow')
+    @pytest.mark.skip(reason='slow')
     def test_performance_quality_report_data(self, runner):
         with Scenario(runner=runner, as_of_date=dt.date(2022, 3, 31)).context():
             perf_quality = PerformanceQualityReportData(start_date=dt.date(2012, 3, 1),
