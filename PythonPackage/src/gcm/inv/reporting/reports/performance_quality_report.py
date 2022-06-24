@@ -1,4 +1,6 @@
 import json
+import logging
+
 import pandas as pd
 import ast
 import numpy as np
@@ -44,12 +46,15 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "performance_quality_report_inputs.json",
             retry=False,
         )
+        logging.info('Downloading report inputs for: ' + self._fund_name)
         file = self._runner.execute(
             params=read_params,
             source=DaoSource.DataLake,
             operation=lambda dao, params: dao.get_data(read_params)
         )
-        return json.loads(file.content)
+        inputs = json.loads(file.content)
+        logging.info('Download complete for: ' + self._fund_name)
+        return inputs
 
     def download_performance_quality_peer_summary(self) -> dict:
         location = "lab/rqs/azurefunctiondata/peer_summaries"
@@ -58,12 +63,15 @@ class PerformanceQualityReport(ReportingRunnerBase):
             self._primary_peer_group.replace('/', '') + "_performance_quality_report_report_analytics.json",
             retry=False,
         )
+        logging.info('Downloading peer report inputs for: ' + self._fund_name)
         file = self._runner.execute(
             params=read_params,
             source=DaoSource.DataLake,
             operation=lambda dao, params: dao.get_data(read_params)
         )
-        return json.loads(file.content)
+        inputs = json.loads(file.content)
+        logging.info('Downloading complete for: ' + self._fund_name)
+        return inputs
 
     @property
     def _inputs(self):
@@ -1223,6 +1231,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if not self._validate_inputs():
             return 'Invalid inputs'
 
+        logging.info('Generating report for: ' + self._fund_name)
         header_info = self.get_header_info()
         return_summary = self.build_benchmark_summary()
         absolute_return_benchmark = self.get_absolute_return_benchmark()
@@ -1245,6 +1254,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         exposure_summary = self.build_exposure_summary()
         latest_exposure_heading = self.get_latest_exposure_heading()
+
+        logging.info('Report summary data generated for: ' + self._fund_name)
 
         input_data = {
             "header_info": header_info,
@@ -1299,6 +1310,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             operation=lambda dao, params: dao.post_data(params, data_to_write)
         )
 
+        logging.info('JSON stored to DataLake for: ' + self._fund_name)
+
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         with Scenario(asofdate=as_of_date).context():
             InvestmentsReportRunner().execute(
@@ -1315,6 +1328,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 report_type=ReportType.Risk,
                 aggregate_intervals=AggregateInterval.MTD
             )
+
+        logging.info('Excel stored to DataLake for: ' + self._fund_name)
 
     def run(self, **kwargs):
         self.generate_performance_quality_report()
