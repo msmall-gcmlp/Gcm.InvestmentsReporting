@@ -17,8 +17,7 @@
       }
     },
     "durableTask": {
-      "hubName": "ReportingOrchestratorTaskHub001",
-      "maxConcurrentActivityFunctions": 5
+      "hubName": "ReportingOrchestratorTaskHub001"
     }
   },
   "extensionBundle": {
