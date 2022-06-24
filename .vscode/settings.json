@@ -1,8 +1,0 @@
-{
-    "azureFunctions.deploySubpath": "AzureFunctions",
-    "azureFunctions.pythonVenv": "../.venv",
-    "azureFunctions.projectLanguage": "Python",
-    "azureFunctions.projectRuntime": "~3",
-    "python.pythonPath": ".venv/Scripts/python.exe",
-    "azureFunctions.projectSubpath": "artifacts/AzureFunctions"
-}

@@ -3,13 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32328.378
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AzureFunctions", "AzureFunctions", "{9261FE45-58AC-4992-9501-9183D6598DDF}"
+Project("FAE04EC0-301F-11D3-BF4B-00C04F79EFBC") = "AzureFunctions", "AzureFunctions\AzureFunctions.pytproj", "{1C84693D-9667-450F-86A5-09E956B58D59}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PythonPackage", "PythonPackage", "{EDB663E9-EFF5-4305-90DE-06206D03875E}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Gcm.PythonPackage", "PythonPackage\PythonPackage.pytproj", "{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureFunctions", "AzureFunctions\AzureFunctions.pytproj", "{9660BB80-617A-4560-A01C-905EFCD84E86}"
+Project("FAE04EC0-301F-11D3-BF4B-00C04F79EFBC") = "PythonPackage", "PythonPackage\PythonPackage.pytproj", "{489BD5E3-4B83-4464-9996-AFA291FAD1F2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,21 +13,17 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9660BB80-617A-4560-A01C-905EFCD84E86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9660BB80-617A-4560-A01C-905EFCD84E86}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9660BB80-617A-4560-A01C-905EFCD84E86}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9660BB80-617A-4560-A01C-905EFCD84E86}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C84693D-9667-450F-86A5-09E956B58D59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C84693D-9667-450F-86A5-09E956B58D59}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C84693D-9667-450F-86A5-09E956B58D59}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C84693D-9667-450F-86A5-09E956B58D59}.Release|Any CPU.Build.0 = Release|Any CPU
+		{489BD5E3-4B83-4464-9996-AFA291FAD1F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{489BD5E3-4B83-4464-9996-AFA291FAD1F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{489BD5E3-4B83-4464-9996-AFA291FAD1F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{489BD5E3-4B83-4464-9996-AFA291FAD1F2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{704CE4D7-7B9E-452B-BBAC-AFDE874C67A8} = {EDB663E9-EFF5-4305-90DE-06206D03875E}
-		{9660BB80-617A-4560-A01C-905EFCD84E86} = {9261FE45-58AC-4992-9501-9183D6598DDF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AF065C79-0E5E-420C-A80F-CFFA129B2F7C}
