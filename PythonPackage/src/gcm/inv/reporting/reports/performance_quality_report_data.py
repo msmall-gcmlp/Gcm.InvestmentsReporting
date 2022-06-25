@@ -1,4 +1,3 @@
-import pandas as pd
 import json
 from gcm.Scenario.scenario import Scenario
 from gcm.Dao.DaoSources import DaoSource
@@ -143,50 +142,133 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                      public_or_private='Private')
 
         report_inputs = dict()
-        report_inputs['fund_dimn'] = fund_dimn.to_json(orient='index')
-        report_inputs['fund_returns'] = fund_monthly_returns.to_json(orient='index')
-        report_inputs['eurekahedge_returns'] = eurekahedge_returns.to_json(orient='index')
-        report_inputs['abs_bmrk_returns'] = abs_bmrk_returns.to_json(orient='index')
-        report_inputs['gcm_peer_returns'] = gcm_peer_returns.to_json(orient='index')
-        report_inputs['gcm_peer_constituent_returns'] = gcm_peer_constituent_returns.to_json(orient='index')
-        report_inputs['eurekahedge_constituent_returns'] = eurekahedge_constituent_returns.to_json(orient='index')
-        report_inputs['exposure_latest'] = exposure_latest.to_json(orient='index')
-        report_inputs['exposure_3y'] = exposure_3y.to_json(orient='index')
-        report_inputs['exposure_5y'] = exposure_5y.to_json(orient='index')
-        report_inputs['exposure_10y'] = exposure_10y.to_json(orient='index')
+        report_inputs['fund_inputs'] = dict()
+        report_inputs['peer_inputs'] = dict()
+        report_inputs['eurekahedge_inputs'] = dict()
+        report_inputs['market_factor_returns'] = dict()
+        for fund_id in fund_dimn['InvestmentGroupId']:
+            fund_inputs = dict()
+            dimn = fund_dimn[fund_dimn['InvestmentGroupId'] == fund_id]
+            fund_inputs['fund_dimn'] = dimn.to_json(orient='index')
+            name = dimn['InvestmentGroupName'].squeeze()
+
+            returns = fund_monthly_returns.loc[:, fund_monthly_returns.columns.isin([name])]
+            fund_inputs['fund_returns'] = returns.to_json(orient='index')
+
+            abs_returns = abs_bmrk_returns.loc[:, abs_bmrk_returns.columns.isin([fund_id])]
+            fund_inputs['abs_bmrk_returns'] = abs_returns.to_json(orient='index')
+
+            exp_latest = exposure_latest[exposure_latest['InvestmentGroupId'] == fund_id]
+            fund_inputs['exposure_latest'] = exp_latest.to_json(orient='index')
+
+            exp_3y = exposure_3y[exposure_3y['InvestmentGroupId'] == fund_id]
+            fund_inputs['exposure_3y'] = exp_3y.to_json(orient='index')
+
+            exp_5y = exposure_5y[exposure_5y['InvestmentGroupId'] == fund_id]
+            fund_inputs['exposure_5y'] = exp_5y.to_json(orient='index')
+
+            exp_10y = exposure_10y[exposure_10y['InvestmentGroupId'] == fund_id]
+            fund_inputs['exposure_10y'] = exp_10y.to_json(orient='index')
+
+            rba_index = rba.columns.get_level_values(1) == fund_id
+            fund_inputs['rba'] = rba.iloc[:, rba_index].to_json(orient='index')
+
+            decomp = rba_risk_decomp[rba_risk_decomp['InvestmentGroupId'] == fund_id]
+            fund_inputs['rba_risk_decomp'] = decomp.to_json(orient='index')
+
+            r2 = rba_adj_r_squared[rba_adj_r_squared['InvestmentGroupId'] == fund_id]
+            fund_inputs['rba_adj_r_squared'] = r2.to_json(orient='index')
+
+            publics_index = pba_publics.columns.get_level_values(1) == fund_id
+            fund_inputs['pba_publics'] = pba_publics.iloc[:, publics_index].to_json(orient='index')
+
+            privates_index = pba_privates.columns.get_level_values(1) == fund_id
+            fund_inputs['pba_privates'] = pba_privates.iloc[:, privates_index].to_json(orient='index')
+
+            report_inputs['fund_inputs'][name] = fund_inputs
+
+        for peer in gcm_peer_returns.columns:
+            peer_inputs = dict()
+            peer_inputs['gcm_peer_returns'] = gcm_peer_returns[peer].to_json(orient='index')
+            peer_index = gcm_peer_constituent_returns.columns.get_level_values(0) == peer
+            constituents = gcm_peer_constituent_returns.iloc[:, peer_index]
+            peer_inputs['gcm_peer_constituent_returns'] = constituents.to_json(orient='index')
+
+            report_inputs['peer_inputs'][peer] = peer_inputs
+
+        for eh_name in eurekahedge_returns.columns:
+            eh_inputs = dict()
+            eh_inputs['eurekahedge_returns'] = eurekahedge_returns[eh_name].to_json(orient='index')
+            eh_index = eurekahedge_constituent_returns.columns.get_level_values(0) == eh_name
+            eh_constituents = eurekahedge_constituent_returns.iloc[:, eh_index]
+            eh_inputs['eurekahedge_constituent_returns'] = eh_constituents.to_json(orient='index')
+
+            report_inputs['eurekahedge_inputs'][eh_name] = eh_inputs
+
         report_inputs['market_factor_returns'] = market_factor_returns.to_json(orient='index')
-        report_inputs['rba'] = rba.to_json(orient='index')
-        report_inputs['rba_risk_decomp'] = rba_risk_decomp.to_json(orient='index')
-        report_inputs['rba_adj_r_squared'] = rba_adj_r_squared.to_json(orient='index')
-        report_inputs['pba_publics'] = pba_publics.to_json(orient='index')
-        report_inputs['pba_privates'] = pba_privates.to_json(orient='index')
 
         return report_inputs
 
     def generate_inputs_and_write_to_datalake(self) -> dict:
         inputs = self.get_performance_quality_report_inputs()
-        data_to_write = json.dumps(inputs)
-        write_location = "lab/rqs/azurefunctiondata"
+        write_location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
+        asofdate = self._as_of_date.strftime('%Y-%m-%d')
+
+        fund_names = sorted(list(inputs['fund_inputs'].keys()))
+        for fund in fund_names:
+            fund_input = json.dumps(inputs['fund_inputs'][fund])
+            write_params = AzureDataLakeDao.create_get_data_params(
+                write_location,
+                fund.replace('/', '') + '_fund_inputs_' + asofdate + '.json',
+                retry=False,
+            )
+            self._runner.execute(
+                params=write_params,
+                source=DaoSource.DataLake,
+                operation=lambda dao, params: dao.post_data(params, fund_input)
+            )
+
+        peer_names = sorted(list(inputs['peer_inputs'].keys()))
+        for peer in peer_names:
+            peer_input = json.dumps(inputs['peer_inputs'][peer])
+            write_params = AzureDataLakeDao.create_get_data_params(
+                write_location,
+                peer.replace('/', '') + '_peer_inputs_' + asofdate + '.json',
+                retry=False,
+            )
+            self._runner.execute(
+                params=write_params,
+                source=DaoSource.DataLake,
+                operation=lambda dao, params: dao.post_data(params, peer_input)
+            )
+
+        eh_names = sorted(list(inputs['eurekahedge_inputs'].keys()))
+        for eh in eh_names:
+            eh_input = json.dumps(inputs['eurekahedge_inputs'][eh])
+            write_params = AzureDataLakeDao.create_get_data_params(
+                write_location,
+                eh.replace('/', '') + '_eurekahedge_inputs_' + asofdate + '.json',
+                retry=False,
+            )
+            self._runner.execute(
+                params=write_params,
+                source=DaoSource.DataLake,
+                operation=lambda dao, params: dao.post_data(params, eh_input)
+            )
+
+        market_factor_returns = json.dumps(inputs['market_factor_returns'])
         write_params = AzureDataLakeDao.create_get_data_params(
             write_location,
-            "performance_quality_report_inputs.json",
+            'market_factor_returns_' + asofdate + '.json',
             retry=False,
         )
         self._runner.execute(
             params=write_params,
             source=DaoSource.DataLake,
-            operation=lambda dao, params: dao.post_data(params, data_to_write)
+            operation=lambda dao, params: dao.post_data(params, market_factor_returns)
         )
-        fund_dimn = pd.read_json(inputs['fund_dimn'], orient='index')
-        fund_names = fund_dimn['InvestmentGroupName'].tolist()
-        fund_names = sorted(fund_names)
 
-        peer_groups = fund_dimn['ReportingPeerGroup'].unique().tolist()
-        # remove nas
-        peer_groups = [i for i in peer_groups if i]
-        peer_groups = sorted(peer_groups)
-
-        funds = dict({'fund_names': fund_names, 'peer_groups': peer_groups})
+        funds = dict({'fund_names': fund_names, 'peer_groups': peer_names})
         funds = json.dumps(funds)
         return funds
 

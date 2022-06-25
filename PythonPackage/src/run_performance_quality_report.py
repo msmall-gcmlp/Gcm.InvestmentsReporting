@@ -34,7 +34,7 @@ class RunPerformanceQualityReports:
         self._params = {'status': 'EMM', 'vertical': 'ARS', 'entity': 'PFUND'}
 
     def generate_report_data(self, investment_group_ids):
-        with Scenario(runner=self._runner, as_of_date=dt.date(2022, 3, 31)).context():
+        with Scenario(runner=self._runner, as_of_date=self._as_of_date).context():
             perf_quality_data = PerformanceQualityReportData(
                 start_date=self._as_of_date - relativedelta(years=10),
                 end_date=self._as_of_date,
@@ -42,17 +42,15 @@ class RunPerformanceQualityReports:
             return perf_quality_data.execute()
 
     def generate_peer_summaries(self, peer_groups):
-        perf_quality_report = PerformanceQualityPeerSummaryReport(runner=self._runner, as_of_date=self._as_of_date,
-                                                                  peer_group=None)
         for peer in peer_groups:
-            perf_quality_report._peer_group = peer
+            perf_quality_report = PerformanceQualityPeerSummaryReport(runner=self._runner, as_of_date=self._as_of_date,
+                                                                      peer_group=peer)
             perf_quality_report.execute()
 
     def generate_fund_reports(self, fund_names):
-        perf_quality_report = PerformanceQualityReport(runner=self._runner, as_of_date=self._as_of_date,
-                                                       fund_name=None)
         for fund in fund_names:
-            perf_quality_report._fund_name = fund
+            perf_quality_report = PerformanceQualityReport(runner=self._runner, as_of_date=self._as_of_date,
+                                                           fund_name=fund)
             perf_quality_report.execute()
 
     def combine_by_portfolio(self, portfolio_acronyms=None):
@@ -105,17 +103,15 @@ class RunPerformanceQualityReports:
 
 
 if __name__ == "__main__":
-    report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 5, 31))
-    funds_and_peers = report_runner.generate_report_data(investment_group_ids=[19224, 23319, 74984])
+    report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 3, 31))
+    funds_and_peers = report_runner.generate_report_data(investment_group_ids=None)
 
     funds_and_peers = json.loads(funds_and_peers)
     fund_names = funds_and_peers.get('fund_names')
     peer_groups = funds_and_peers.get('peer_groups')
 
     report_runner.generate_peer_summaries(peer_groups=peer_groups)
-    report_runner.generate_fund_reports(fund_names=['Altimeter', 'Anatole', 'Hollis Park', 'Lake Bleu',
-                                                    'RedCo', 'Redmile', 'Rokos', 'Tiger Global', 'Voyager',
-                                                    'Whale Rock'])
+    report_runner.generate_fund_reports(fund_names=fund_names)
     # report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['IFC'])
     # TODO convert all individual excels to pdf
     # TODO for all file names in directory, apply metadata from pdf to excel

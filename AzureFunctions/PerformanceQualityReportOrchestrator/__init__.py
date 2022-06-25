@@ -1,6 +1,5 @@
 import azure.durable_functions as df
 import json
-import numpy as np
 
 
 def orchestrator_function(context: df.DurableOrchestrationContext):
@@ -32,17 +31,15 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
         ))
     yield context.task_all(parallel_peer_tasks)
 
-    funds_chunked = np.array_split(fund_names, round(len(fund_names) / 30), 0)
-    for fund_chunk in funds_chunked:
-        parallel_fund_tasks = []
-        for fund in fund_chunk:
-            params.update({"run": "PerformanceQualityReport"})
-            params.update({"fund_name": fund})
-            report_params = {"params": params, "data": {}}
-            parallel_fund_tasks.append(context.call_activity_with_retry(
-                "PerformanceQualityReportActivity", retry_options, report_params
-            ))
-        yield context.task_all(parallel_fund_tasks)
+    parallel_fund_tasks = []
+    for fund in fund_names:
+        params.update({"run": "PerformanceQualityReport"})
+        params.update({"fund_name": fund})
+        report_params = {"params": params, "data": {}}
+        parallel_fund_tasks.append(context.call_activity_with_retry(
+            "PerformanceQualityReportActivity", retry_options, report_params
+        ))
+    yield context.task_all(parallel_fund_tasks)
 
     return True
 
