@@ -399,26 +399,23 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @property
     def _primary_peer_group(self):
         group = self._fund_dimn['ReportingPeerGroup'].squeeze()
-        if np.isnan(group):
-            return None
-        else:
-            return group
+        if not isinstance(np.nan, str):
+            group = None
+        return group
 
     @property
     def _secondary_peer_group(self):
         group = self._fund_dimn['StrategyPeerGroup'].squeeze()
-        if np.isnan(group):
-            return None
-        else:
-            return group
+        if not isinstance(np.nan, str):
+            group = None
+        return group
 
     @property
     def _eurekahedge_benchmark(self):
         group = self._fund_dimn['EurekahedgeBenchmark'].squeeze()
-        if np.isnan(group):
-            return None
-        else:
-            return group
+        if not isinstance(np.nan, str):
+            group = None
+        return group
 
     @property
     def _abs_return_benchmark(self):
