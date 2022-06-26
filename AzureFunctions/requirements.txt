@@ -4,7 +4,7 @@
 
 azure-functions
 azure-functions-durable
-gcm-investmentsreporting==0.27.0.dev2206262006
+gcm-investmentsreporting==0.27.0.dev2206262156
 jpype1
 aspose-cells
 install-jdk
