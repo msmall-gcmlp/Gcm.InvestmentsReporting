@@ -112,7 +112,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _exposure(self):
-        if any(self._all_exposure['InvestmentGroupName'] == self._fund_name):
+        if self._all_exposure.shape[0] > 0:
             exposure = self._all_exposure[self._all_exposure['InvestmentGroupName'] == self._fund_name]
             exposure = exposure.set_index('Period')
             return exposure
@@ -399,21 +399,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @property
     def _primary_peer_group(self):
         group = self._fund_dimn['ReportingPeerGroup'].squeeze()
-        if not isinstance(np.nan, str):
+        if not isinstance(group, str):
             group = None
         return group
 
     @property
     def _secondary_peer_group(self):
         group = self._fund_dimn['StrategyPeerGroup'].squeeze()
-        if not isinstance(np.nan, str):
+        if not isinstance(group, str):
             group = None
         return group
 
     @property
     def _eurekahedge_benchmark(self):
         group = self._fund_dimn['EurekahedgeBenchmark'].squeeze()
-        if not isinstance(np.nan, str):
+        if not isinstance(group, str):
             group = None
         return group
 
