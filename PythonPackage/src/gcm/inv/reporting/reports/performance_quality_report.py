@@ -168,7 +168,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _primary_peer_inputs(self):
-        if self._primary_peer_inputs_cache is None:
+        if self._primary_peer_inputs_cache is None and self._primary_peer_group is not None:
             asofdate = self._as_of_date.strftime('%Y-%m-%d')
             file = self._primary_peer_group.replace('/', '') + '_peer_inputs_' + asofdate + '.json'
             location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
@@ -177,7 +177,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _secondary_peer_inputs(self):
-        if self._secondary_peer_inputs_cache is None:
+        if self._secondary_peer_inputs_cache is None and self._secondary_peer_group is not None:
             asofdate = self._as_of_date.strftime('%Y-%m-%d')
             file = self._secondary_peer_group.replace('/', '') + '_peer_inputs_' + asofdate + '.json'
             location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
@@ -186,31 +186,31 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _primary_peer_returns(self):
-        returns = pd.read_json(self._primary_peer_inputs['gcm_peer_returns'], orient='index')
-        if isinstance(returns, pd.DataFrame):
+        returns = self._primary_peer_inputs
+        if returns is not None:
+            returns = pd.read_json(returns['gcm_peer_returns'], orient='index')
             return returns.squeeze()
         else:
             return pd.Series()
 
     @property
     def _secondary_peer_returns(self):
-        returns = pd.read_json(self._secondary_peer_inputs['gcm_peer_returns'], orient='index')
-        if isinstance(returns, pd.DataFrame):
+        returns = self._secondary_peer_inputs
+        if returns is not None:
+            returns = pd.read_json(returns['gcm_peer_returns'], orient='index')
             return returns.squeeze()
         else:
             return pd.Series()
 
     @property
     def _primary_peer_constituent_returns(self):
-        returns = pd.read_json(self._primary_peer_inputs['gcm_peer_constituent_returns'], orient='index')
-        returns_columns = [ast.literal_eval(x) for x in returns.columns]
-        returns_columns = pd.MultiIndex.from_tuples(returns_columns,
-                                                    names=['PeerGroupName', 'SourceInvestmentId'])
-        returns.columns = returns_columns
-        peer_group_index = returns.columns.get_level_values(0) == self._primary_peer_group
-
-        if any(peer_group_index):
-            returns = returns.loc[:, peer_group_index]
+        returns = self._primary_peer_inputs
+        if returns is not None:
+            returns = pd.read_json(returns['gcm_peer_constituent_returns'], orient='index')
+            returns_columns = [ast.literal_eval(x) for x in returns.columns]
+            returns_columns = pd.MultiIndex.from_tuples(returns_columns,
+                                                        names=['PeerGroupName', 'SourceInvestmentId'])
+            returns.columns = returns_columns
             returns = returns.droplevel(0, axis=1)
         else:
             returns = pd.DataFrame()
@@ -218,15 +218,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _secondary_peer_constituent_returns(self):
-        returns = pd.read_json(self._secondary_peer_inputs['gcm_peer_constituent_returns'], orient='index')
-        returns_columns = [ast.literal_eval(x) for x in returns.columns]
-        returns_columns = pd.MultiIndex.from_tuples(returns_columns,
-                                                    names=['PeerGroupName', 'SourceInvestmentId'])
-        returns.columns = returns_columns
-        peer_group_index = returns.columns.get_level_values(0) == self._secondary_peer_group
-
-        if any(peer_group_index):
-            returns = returns.loc[:, peer_group_index]
+        returns = self._secondary_peer_inputs
+        if returns is not None:
+            returns = pd.read_json(returns['gcm_peer_constituent_returns'], orient='index')
+            returns_columns = [ast.literal_eval(x) for x in returns.columns]
+            returns_columns = pd.MultiIndex.from_tuples(returns_columns,
+                                                        names=['PeerGroupName', 'SourceInvestmentId'])
+            returns.columns = returns_columns
             returns = returns.droplevel(0, axis=1)
         else:
             returns = pd.DataFrame()
@@ -234,7 +232,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _eurekahedge_inputs(self):
-        if self._eurekahedge_inputs_cache is None:
+        if self._eurekahedge_inputs_cache is None and self._eurekahedge_benchmark is not None:
             asofdate = self._as_of_date.strftime('%Y-%m-%d')
             file = self._eurekahedge_benchmark.replace('/', '') + '_eurekahedge_inputs_' + asofdate + '.json'
             location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
@@ -252,8 +250,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _ehi50_returns(self):
-        returns = pd.read_json(self._eurekahedge_inputs['eurekahedge_returns'], orient='index')
-        if isinstance(returns, pd.DataFrame):
+        returns = self._eurekahedge_inputs
+        if returns is not None:
+            returns = pd.read_json(returns['eurekahedge_returns'], orient='index')
             return returns.squeeze()
         else:
             return pd.Series()
@@ -268,18 +267,16 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _eurekahedge_constituent_returns(self):
-        returns = pd.read_json(self._eurekahedge_inputs['eurekahedge_constituent_returns'], orient='index')
-        returns_columns = [ast.literal_eval(x) for x in returns.columns]
-        returns_columns = pd.MultiIndex.from_tuples(returns_columns,
-                                                    names=['EurekahedgeBenchmark', 'SourceInvestmentId'])
-        returns.columns = returns_columns
-
-        if isinstance(returns, pd.DataFrame):
-            returns = returns.droplevel(0, axis=1)
+        returns = self._eurekahedge_inputs
+        if returns is not None:
+            returns = pd.read_json(returns['eurekahedge_constituent_returns'], orient='index')
+            returns_columns = [ast.literal_eval(x) for x in returns.columns]
+            returns_columns = pd.MultiIndex.from_tuples(returns_columns,
+                                                        names=['EurekahedgeBenchmark', 'SourceInvestmentId'])
+            returns.columns = returns_columns
+            return returns.droplevel(0, axis=1)
         else:
-            returns = pd.Series()
-
-        return returns
+            return pd.Series()
 
     @property
     def _ehi200_constituent_returns(self):
@@ -401,15 +398,27 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _primary_peer_group(self):
-        return self._fund_dimn['ReportingPeerGroup'].squeeze()
+        group = self._fund_dimn['ReportingPeerGroup'].squeeze()
+        if np.isnan(group):
+            return None
+        else:
+            return group
 
     @property
     def _secondary_peer_group(self):
-        return self._fund_dimn['StrategyPeerGroup'].squeeze()
+        group = self._fund_dimn['StrategyPeerGroup'].squeeze()
+        if np.isnan(group):
+            return None
+        else:
+            return group
 
     @property
     def _eurekahedge_benchmark(self):
-        return self._fund_dimn['EurekahedgeBenchmark'].squeeze()
+        group = self._fund_dimn['EurekahedgeBenchmark'].squeeze()
+        if np.isnan(group):
+            return None
+        else:
+            return group
 
     @property
     def _abs_return_benchmark(self):

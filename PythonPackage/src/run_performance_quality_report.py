@@ -103,7 +103,7 @@ class RunPerformanceQualityReports:
 
 
 if __name__ == "__main__":
-    report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 3, 31))
+    report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 5, 31))
     funds_and_peers = report_runner.generate_report_data(investment_group_ids=None)
 
     funds_and_peers = json.loads(funds_and_peers)
