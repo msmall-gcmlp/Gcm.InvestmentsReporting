@@ -1,6 +1,6 @@
 import datetime as dt
-import json
 import glob
+import json
 from gcm.Scenario.scenario import Scenario
 from pandas._libs.tslibs.offsets import relativedelta
 from gcm.inv.reporting.core.Utils.aggregate_file_utils import copy_metadata
@@ -8,7 +8,7 @@ from gcm.inv.reporting.reports.aggregate_performance_quality_report import Aggre
 from gcm.inv.reporting.reports.performance_quality_peer_summary_report import PerformanceQualityPeerSummaryReport
 from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.inv.reporting.reports.performance_quality_report import PerformanceQualityReport
-from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.DaoRunner import DaoRunner
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.reporting.reports.report_binder import ReportBinder
 
@@ -16,20 +16,7 @@ from gcm.inv.reporting.reports.report_binder import ReportBinder
 class RunPerformanceQualityReports:
 
     def __init__(self, as_of_date):
-        self._runner = DaoRunner(
-            container_lambda=lambda b, i: b.config.from_dict(i),
-            config_params={
-                DaoRunnerConfigArgs.dao_global_envs.name: {
-                    DaoSource.PubDwh.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
-                    },
-                    DaoSource.ReportingStorage.name: {
-                        "Environment": "uat",
-                        "Subscription": "nonprd",
-                    }
-                }
-            })
+        self._runner = DaoRunner()
         self._as_of_date = as_of_date
         self._params = {'status': 'EMM', 'vertical': 'ARS', 'entity': 'PFUND'}
 
@@ -130,17 +117,6 @@ if __name__ == "__main__":
 
     # Next up
     # TODO Add portfolios to azure function
-    # TODO add folder structure to data lake dumps/pass in file paths.
-    # TODO run new RBA
+    # TODO schedule RBA (macro and equity)
     # TODO add strategy aggregations
     # TODO add to Data pipelines imports of RBA, PBA, and Abs Benchmark Returns
-    # TODO populate HYG
-    # TODO icelandic method
-    # TODO review excess aggregation assumption w/ amy (i.e. Fund returns without
-    #  Excess Return at portfolio level doesnt match Fund minus Benchmark Abs Bmrk returns)
-    # TODO incorporate macro model
-    # TODO run peer group stats only once
-    # TODO update report tagging/write to reporting hub
-    # TODO check Aspex RBA/compounding
-    # TODO Add asofdate to params
-    # TODO Document report and data provider (document default waterfall logic)

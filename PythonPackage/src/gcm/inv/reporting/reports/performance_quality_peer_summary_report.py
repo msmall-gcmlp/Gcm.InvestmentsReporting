@@ -22,11 +22,12 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         self._peer_inputs_cache = None
         self._market_factor_inputs_cache = None
         self._market_factor_returns_cache = None
+        self._underlying_data_location = "raw/investmentsreporting/underlyingdata/performancequality"
+        self._summary_data_location = "raw/investmentsreporting/summarydata/performancequality"
 
     def _download_inputs(self, file_name) -> dict:
-        location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
         read_params = AzureDataLakeDao.create_get_data_params(
-            location,
+            self._underlying_data_location,
             file_name,
             retry=False,
         )
@@ -377,10 +378,9 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         }
 
         data_to_write = json.dumps(input_data_json)
-        write_location = "lab/rqs/azurefunctiondata/summary_data/performance_quality"
         asofdate = self._as_of_date.strftime('%Y-%m-%d')
         write_params = AzureDataLakeDao.create_get_data_params(
-            write_location,
+            self._summary_data_location,
             self._peer_group.replace('/', '') + "_peer_" + asofdate + ".json",
             retry=False,
         )

@@ -4,7 +4,7 @@ from gcm.Scenario.scenario import Scenario
 from gcm.inv.reporting.reports.performance_quality_report_data import PerformanceQualityReportData
 from gcm.inv.reporting.reports.performance_quality_peer_summary_report import PerformanceQualityPeerSummaryReport
 from gcm.inv.reporting.reports.performance_quality_report import PerformanceQualityReport
-from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
+from gcm.Dao.DaoRunner import DaoRunner
 from dateutil.relativedelta import relativedelta
 
 
@@ -13,24 +13,7 @@ def main(requestBody) -> str:
     run = params["run"]
     asofdate = params['asofdate']
     as_of_date = datetime.strptime(asofdate, '%Y-%m-%d').date()
-
-    config_params = {
-        DaoRunnerConfigArgs.dao_global_envs.name: {
-            DaoSource.PubDwh.name: {
-                "Environment": "uat",
-                "Subscription": "nonprd",
-            },
-            DaoSource.ReportingStorage.name: {
-                "Environment": "uat",
-                "Subscription": "nonprd",
-            },
-        }
-    }
-
-    runner = DaoRunner(
-        container_lambda=lambda b, i: b.config.from_dict(i),
-        config_params=config_params,
-    )
+    runner = DaoRunner()
 
     if run == 'PerformanceQualityReportData':
         if params.get('investment_group_ids') is None:

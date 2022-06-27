@@ -13,6 +13,7 @@ from ..ReportStructure.report_structure import (
     ReportingEntityTag,
     ReportingEntityTypes,
 )
+from gcm.Dao.DaoSources import DaoSource
 
 
 class InvestmentsReportRunner(ProgramRunner):
@@ -81,7 +82,8 @@ class InvestmentsReportRunner(ProgramRunner):
                 report.load_reporting_entity(reporting_entity)
             if "save" in kwargs:
                 output_dir = kwargs.get("output_dir", base_output_location)
-                report.print_report(output_dir=output_dir, save=kwargs["save"])
+                output_source = kwargs.get("report_output_source", DaoSource.ReportingStorage)
+                report.print_report(output_source=output_source, output_dir=output_dir, save=kwargs["save"])
             return True
         else:
             raise RuntimeError("You must specify a report name")

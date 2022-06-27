@@ -39,6 +39,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         self._eurekahedge200_inputs_cache = None
         self._market_factor_inputs_cache = None
         self._market_factor_returns_cache = None
+        self._underlying_data_location = "raw/investmentsreporting/underlyingdata/performancequality"
+        self._summary_data_location = "raw/investmentsreporting/summarydata/performancequality"
 
     def _download_inputs(self, location, file_path) -> dict:
         read_params = AzureDataLakeDao.create_get_data_params(
@@ -59,8 +61,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._fund_inputs_cache is None:
             asofdate = self._as_of_date.strftime('%Y-%m-%d')
             file = self._fund_name.replace('/', '') + '_fund_inputs_' + asofdate + '.json'
-            location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
-            self._fund_inputs_cache = self._download_inputs(location=location, file_path=file)
+            self._fund_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
         return self._fund_inputs_cache
 
     @property
@@ -171,8 +172,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._primary_peer_inputs_cache is None and self._primary_peer_group is not None:
             asofdate = self._as_of_date.strftime('%Y-%m-%d')
             file = self._primary_peer_group.replace('/', '') + '_peer_inputs_' + asofdate + '.json'
-            location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
-            self._primary_peer_inputs_cache = self._download_inputs(location=location, file_path=file)
+            self._primary_peer_inputs_cache = self._download_inputs(location=self._underlying_data_location,
+                                                                    file_path=file)
         return self._primary_peer_inputs_cache
 
     @property
@@ -180,8 +181,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._secondary_peer_inputs_cache is None and self._secondary_peer_group is not None:
             asofdate = self._as_of_date.strftime('%Y-%m-%d')
             file = self._secondary_peer_group.replace('/', '') + '_peer_inputs_' + asofdate + '.json'
-            location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
-            self._secondary_peer_inputs_cache = self._download_inputs(location=location, file_path=file)
+            self._secondary_peer_inputs_cache = self._download_inputs(location=self._underlying_data_location,
+                                                                      file_path=file)
         return self._secondary_peer_inputs_cache
 
     @property
@@ -235,8 +236,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._eurekahedge_inputs_cache is None and self._eurekahedge_benchmark is not None:
             asofdate = self._as_of_date.strftime('%Y-%m-%d')
             file = self._eurekahedge_benchmark.replace('/', '') + '_eurekahedge_inputs_' + asofdate + '.json'
-            location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
-            self._eurekahedge_inputs_cache = self._download_inputs(location=location, file_path=file)
+            self._eurekahedge_inputs_cache = self._download_inputs(location=self._underlying_data_location,
+                                                                   file_path=file)
         return self._eurekahedge_inputs_cache
 
     @property
@@ -244,8 +245,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._eurekahedge200_inputs_cache is None:
             asofdate = self._as_of_date.strftime('%Y-%m-%d')
             file = 'Eurekahedge Institutional 200' + '_eurekahedge_inputs_' + asofdate + '.json'
-            location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
-            self._eurekahedge200_inputs_cache = self._download_inputs(location=location, file_path=file)
+            self._eurekahedge200_inputs_cache = self._download_inputs(location=self._underlying_data_location,
+                                                                      file_path=file)
         return self._eurekahedge200_inputs_cache
 
     @property
@@ -298,8 +299,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._market_factor_inputs_cache is None:
             asofdate = self._as_of_date.strftime('%Y-%m-%d')
             file = 'market_factor_returns_' + asofdate + '.json'
-            location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
-            self._market_factor_inputs_cache = self._download_inputs(location=location, file_path=file)
+            self._market_factor_inputs_cache = self._download_inputs(location=self._underlying_data_location,
+                                                                     file_path=file)
         return self._market_factor_inputs_cache
 
     @property
@@ -1203,9 +1204,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def build_performance_stability_peer_summary(self):
         if self._primary_peer_group is not None:
             asofdate = self._as_of_date.strftime('%Y-%m-%d')
-            location = "lab/rqs/azurefunctiondata/summary_data/performance_quality"
             file = self._primary_peer_group.replace('/', '') + "_peer_" + asofdate + ".json"
-            summary = self._download_inputs(location=location, file_path=file)
+            summary = self._download_inputs(location=self._summary_data_location, file_path=file)
             summary = pd.read_json(summary['performance_stability_peer_summary'], orient='index')
         else:
             summary = pd.DataFrame(columns=['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
@@ -1322,10 +1322,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         }
 
         data_to_write = json.dumps(input_data_json)
-        write_location = "lab/rqs/azurefunctiondata/summary_data/performance_quality"
         asofdate = self._as_of_date.strftime('%Y-%m-%d')
         write_params = AzureDataLakeDao.create_get_data_params(
-            write_location,
+            self._summary_data_location,
             self._fund_name.replace('/', '') + "_fund_" + asofdate + ".json",
             retry=False,
         )
@@ -1351,7 +1350,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 entity_source=DaoSource.PubDwh,
                 report_name='Performance Quality',
                 report_type=ReportType.Risk,
-                aggregate_intervals=AggregateInterval.MTD
+                aggregate_intervals=AggregateInterval.MTD,
+                output_dir="cleansed/investmentsreporting/printedexcels/",
+                report_output_source=DaoSource.DataLake
             )
 
         logging.info('Excel stored to DataLake for: ' + self._fund_name)

@@ -22,6 +22,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         self._entity_type = 'ARS PFUND'
         self._status = 'EMM'
         self._inv_group_ids = investment_group_ids
+        self._underlying_data_location = "raw/investmentsreporting/underlyingdata/performancequality"
 
     def get_performance_quality_report_inputs(self):
         # pre-filtering to EMMs to avoid performance issues. refactor later to occur behind the scenes in data provider
@@ -217,14 +218,13 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
     def generate_inputs_and_write_to_datalake(self) -> dict:
         inputs = self.get_performance_quality_report_inputs()
-        write_location = "lab/rqs/azurefunctiondata/underlying_data/performance_quality"
         asofdate = self._as_of_date.strftime('%Y-%m-%d')
 
         fund_names = sorted(list(inputs['fund_inputs'].keys()))
         for fund in fund_names:
             fund_input = json.dumps(inputs['fund_inputs'][fund])
             write_params = AzureDataLakeDao.create_get_data_params(
-                write_location,
+                self._underlying_data_location,
                 fund.replace('/', '') + '_fund_inputs_' + asofdate + '.json',
                 retry=False,
             )
@@ -240,7 +240,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         for peer in peer_names:
             peer_input = json.dumps(inputs['peer_inputs'][peer])
             write_params = AzureDataLakeDao.create_get_data_params(
-                write_location,
+                self._underlying_data_location,
                 peer.replace('/', '') + '_peer_inputs_' + asofdate + '.json',
                 retry=False,
             )
@@ -254,7 +254,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         for eh in eh_names:
             eh_input = json.dumps(inputs['eurekahedge_inputs'][eh])
             write_params = AzureDataLakeDao.create_get_data_params(
-                write_location,
+                self._underlying_data_location,
                 eh.replace('/', '') + '_eurekahedge_inputs_' + asofdate + '.json',
                 retry=False,
             )
@@ -266,7 +266,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
         market_factor_returns = json.dumps(inputs['market_factor_returns'])
         write_params = AzureDataLakeDao.create_get_data_params(
-            write_location,
+            self._underlying_data_location,
             'market_factor_returns_' + asofdate + '.json',
             retry=False,
         )
