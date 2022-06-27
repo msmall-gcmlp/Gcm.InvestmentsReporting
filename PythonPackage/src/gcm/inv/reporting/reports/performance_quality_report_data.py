@@ -1,4 +1,5 @@
 import json
+import pandas as pd
 from gcm.Scenario.scenario import Scenario
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
@@ -38,10 +39,12 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                              include_filters=include_filters,
                                              exclude_filters=exclude_filters)
 
-        fund_dimn = fund_dimn[['InvestmentGroupId', 'PubInvestmentGroupId', 'InvestmentGroupName',
-                               'AbsoluteBenchmarkId', 'AbsoluteBenchmarkName', 'EurekahedgeBenchmark',
-                               'InceptionDate', 'InvestmentStatus', 'ReportingPeerGroup', 'StrategyPeerGroup',
-                               'Strategy', 'SubStrategy', 'FleScl', 'RiskModelExpectedReturn', 'RiskModelExpectedVol']]
+        fund_dimn_columns = ['InvestmentGroupId', 'PubInvestmentGroupId', 'InvestmentGroupName',
+                             'AbsoluteBenchmarkId', 'AbsoluteBenchmarkName', 'EurekahedgeBenchmark',
+                             'InceptionDate', 'InvestmentStatus', 'ReportingPeerGroup', 'StrategyPeerGroup',
+                             'Strategy', 'SubStrategy', 'FleScl', 'RiskModelExpectedReturn', 'RiskModelExpectedVol']
+
+        fund_dimn = fund_dimn.reindex(columns=fund_dimn_columns, fill_value=None)
 
         # returns_source = [SourceDimension.Pub_InvestmentDimn]
         filter_ids = fund_dimn['InvestmentGroupId']
@@ -207,6 +210,9 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
         report_inputs['market_factor_returns'] = market_factor_returns.to_json(orient='index')
 
+        peers = pd.concat([fund_dimn['ReportingPeerGroup'], fund_dimn['StrategyPeerGroup']]).tolist()
+        report_inputs['filtered_peers'] = peers
+
         return report_inputs
 
     def generate_inputs_and_write_to_datalake(self) -> dict:
@@ -228,7 +234,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                 operation=lambda dao, params: dao.post_data(params, fund_input)
             )
 
-        peer_names = sorted(list(inputs['peer_inputs'].keys()))
+        peer_names = sorted(inputs['filtered_peers'])
         for peer in peer_names:
             peer_input = json.dumps(inputs['peer_inputs'][peer])
             write_params = AzureDataLakeDao.create_get_data_params(

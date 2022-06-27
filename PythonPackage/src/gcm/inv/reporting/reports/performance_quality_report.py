@@ -83,7 +83,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _abs_bmrk_returns(self):
         if self._abs_bmrk_returns_cache is None:
             returns = pd.read_json(self._fund_inputs['abs_bmrk_returns'], orient='index')
-            if len(returns) > 0:
+            if len(returns) > 1:
                 self._abs_bmrk_returns_cache = AggregateFromDaily().transform(data=returns, method='geometric',
                                                                               period=Periodicity.Monthly)
             else:
@@ -1220,14 +1220,19 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                         window=12,
                                                         as_of_date=self._as_of_date,
                                                         periodicity=Periodicity.Monthly)
-        drawdown = round(drawdown.squeeze(), 2)
 
+        drawdown = drawdown.squeeze()
         trigger = self._fle_scl.copy()
 
-        if drawdown < trigger:
-            pass_fail = 'Fail'
+        if drawdown is not None:
+            drawdown = round(drawdown, 2)
+
+            if drawdown < trigger:
+                pass_fail = 'Fail'
+            else:
+                pass_fail = 'Pass'
         else:
-            pass_fail = 'Pass'
+            pass_fail = ''
 
         summary = pd.DataFrame({'Trigger': trigger,
                                 'Drawdown': drawdown,
