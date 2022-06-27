@@ -234,7 +234,9 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                 operation=lambda dao, params: dao.post_data(params, fund_input)
             )
 
-        peer_names = sorted(inputs['filtered_peers'])
+        peer_names = list(set(inputs['filtered_peers']))
+        peer_names = [x for x in peer_names if pd.isnull(x) is False]
+        peer_names = sorted(peer_names)
         for peer in peer_names:
             peer_input = json.dumps(inputs['peer_inputs'][peer])
             write_params = AzureDataLakeDao.create_get_data_params(
