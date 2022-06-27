@@ -90,25 +90,23 @@ class RunPerformanceQualityReports:
 
 
 if __name__ == "__main__":
-    report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 5, 31))
-    funds_and_peers = report_runner.generate_report_data(investment_group_ids=None)
+    report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 4, 30))
+    funds_and_peers = report_runner.generate_report_data(investment_group_ids=[19224, 23319, 74984])
 
     funds_and_peers = json.loads(funds_and_peers)
     fund_names = funds_and_peers.get('fund_names')
     peer_groups = funds_and_peers.get('peer_groups')
 
     report_runner.generate_peer_summaries(peer_groups=peer_groups)
-    report_runner.generate_fund_reports(fund_names=fund_names)
+    report_runner.generate_fund_reports(fund_names=['Skye', 'Citadel', 'D1 Capital'])
     # report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['IFC'])
-    # TODO convert all individual excels to pdf
-    # TODO for all file names in directory, apply metadata from pdf to excel
+    # manually convert all individual excels to pdf
     # report_runner.copy_meta_data_from_excels()
     # report_runner.combine_by_portfolio()
-    # TODO MANUAL: drop FundAggregates and AllActive summaries in ReportingHub UAT
+    # manually drop FundAggregates and AllActive summaries in ReportingHub UAT
     # report_runner.copy_portfolio_meta_data()
-
-    # TODO apply meta data to All Portfolio packet
-    # TODO apply meta data to All Fund packet
+    # manually apply meta-data to All Portfolio packet
+    # manually apply meta-data to All Fund packet
 
     # TODO copy *FundAggregate_Risk_2022-03-31.pdf* from UAT to prod
     # TODO copy *PFUND_Risk_2022-03-31.pdf* from UAT to prod
