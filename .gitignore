@@ -7,3 +7,8 @@
 .idea
 __pycache__
 /venv
+AzureFunctions/bin/
+AzureFunctions/obj/
+AzureFunctions/Gcm.ConfigurationLoader.dll
+AzureFunctions/local.settings.json
+AzureFunctions/settings.base.json
