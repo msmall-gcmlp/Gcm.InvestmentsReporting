@@ -16,9 +16,7 @@ def package_files(directory):
     paths = []
     for (path, directories, filenames) in os.walk(directory):
         if "pycache" not in path and "egg-info" not in path:
-            paths.append(
-                path.replace(f"{base_src}/", "").replace("\\", ".")
-            )
+            paths.append(path.replace(f"{base_src}/", "").replace("\\", "."))
     return paths
 
 
@@ -47,11 +45,16 @@ setup(
         "pandas",
         "datetime",
         "openpyxl",
+        "pillow",
+        "gcm-investmentsdataprovider>=0.12.0",
+        "gcm-investmentsquantlib>=0.8.0",
+        "gcm-investmentsutils",
+        "PyPDF2",
     ],
     extras_require={
         "dev": ["pytest>=3.7", "tox>=3.23", "wheel"],
     },
     url="https://github.com/GCMGrosvenor/Gcm.InvestmentsReporting",
-    author="Anna Galstyan",
-    author_email="agalstyan@gcmlp.com",
+    author="Nobody",
+    author_email="nobody@gcmlp.com",
 )

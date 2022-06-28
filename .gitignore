@@ -1,14 +1,32 @@
-/.venv
-/artifacts
-/PythonPackage/bin
-/PythonPackage/build
-/PythonPackage/dist
-/PythonPackage/obj
+artifacts
+bin
+dist
+obj
 .idea
 __pycache__
+node_modules
+*.egg-info/
+.vs
+.suo
+build
+# Local python packages
+.python_packages/
+# Python Environments
+.env
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
 /venv
 AzureFunctions/bin/
 AzureFunctions/obj/
 AzureFunctions/Gcm.ConfigurationLoader.dll
 AzureFunctions/local.settings.json
 AzureFunctions/settings.base.json
+PythonPackage/VERSION
