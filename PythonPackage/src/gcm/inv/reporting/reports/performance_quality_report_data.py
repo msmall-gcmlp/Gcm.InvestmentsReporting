@@ -47,7 +47,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
         fund_dimn = fund_dimn.reindex(columns=fund_dimn_columns, fill_value=None)
 
-        # returns_source = [SourceDimension.Pub_InvestmentDimn]
         filter_ids = fund_dimn['InvestmentGroupId']
         inv_group = InvestmentGroup(investment_group_ids=filter_ids)
         fund_monthly_returns = inv_group.get_monthly_returns(start_date=self._start_date,
