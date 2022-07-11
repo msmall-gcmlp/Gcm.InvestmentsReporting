@@ -39,5 +39,8 @@ class TestPerformanceQualityReport:
         )
         data = {"all": file_all, "realized": file_realized}
         PerformanceConcentrationReport(
-            runner, asofdate=dt.datetime(2021, 12, 31)
+            runner, asofdate=dt.datetime(2021, 12, 31),
+            managername="NorthBridge Partners",
+            vertical='Real Estate',
+            underwriting='Fund IV'
         ).execute(data=data)
