@@ -1,4 +1,3 @@
-from re import S
 from ...reporting_runner_base import ReportingRunnerBase
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeFile,
@@ -56,9 +55,7 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
         for s in sheet_names:
             if "Top " in s:
                 temp_i = self.get_sheet_as_df(data.content, s)
-                temp_i["InvestedCapital"] = abs(
-                    temp_i["InvestedCapital"]
-                )
+                temp_i["InvestedCapital"] = abs(temp_i["InvestedCapital"])
                 top_items.append(temp_i)
             elif "Other" in s:
                 other = self.get_sheet_as_df(data.content, s)
@@ -77,13 +74,13 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
                     dist_returns["InvestedCapital"]
                 )
         # now clean up columns
-       
+
         other_asset_copy = copy.deepcopy(other)
         other_asset_copy["AssetName"] = "Other"
-       
+
         top_deals = pd.concat([top_deals, other_asset_copy])
         top_deals.reset_index(drop=True, inplace=True)
-       
+
         total["Bucket"] = (
             total["Bucket"]
             + " (Deals: "

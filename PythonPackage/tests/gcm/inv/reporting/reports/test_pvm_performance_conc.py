@@ -7,7 +7,6 @@ from gcm.inv.reporting.reports.Pvm.TrackRecord.performance_concentration import 
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeDao,
     AzureDataLakeFile,
-    TabularDataOutputTypes,
 )
 import datetime as dt
 
