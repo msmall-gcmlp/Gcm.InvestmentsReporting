@@ -17,6 +17,7 @@ from gcm.inv.reporting.core.Runners.investmentsreporting import (
 from gcm.Scenario.scenario import Scenario
 import openpyxl
 import pandas as pd
+import copy
 
 
 class PerformanceConcentrationReport(ReportingRunnerBase):
@@ -55,14 +56,31 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
                 dist_returns = self.get_sheet_as_df(data.content, s)
         # now clean up columns
         top_items.append(other)
+        other_asset_copy = copy.deepcopy(other)
+        other_asset_copy["AssetName"] = "Other"
         top_items = pd.concat(top_items)
-        top_deals = pd.concat([top_deals, other])
+        top_deals = pd.concat([top_deals, other_asset_copy])
         top_deals.reset_index(drop=True, inplace=True)
         top_items.reset_index(drop=True, inplace=True)
+        total["Bucket"] = (
+            total["Bucket"] + " (Deals: " + total.PositionCount.map(str) + ")"
+        )
         if wb_name.lower() == "all":
             top_deals = top_deals[
                 [
                     "AssetName",
+                    "PositionInvestmentDate",
+                    "InvestedCapital",
+                    "UnrealizedValue",
+                    "TotalValue",
+                    "InvestmentGain",
+                    "MOIC",
+                    "IRR",
+                ]
+            ]
+            total = total[
+                [
+                    "Bucket",
                     "PositionInvestmentDate",
                     "InvestedCapital",
                     "UnrealizedValue",
@@ -85,7 +103,34 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
                     "IRR",
                 ]
             ]
-        return {f"TopDeals_{wb_name.lower()}": top_deals}
+            total = total[
+                [
+                    "Bucket",
+                    "PositionInvestmentDate",
+                    "InvestedCapital",
+                    "PositionExitDate",
+                    "TotalValue",
+                    "InvestmentGain",
+                    "MOIC",
+                    "IRR",
+                ]
+            ]
+        total_capital = total["InvestedCapital"].sum()
+        dist_returns = dist_returns[
+            ["Distribution", "PositionCount", "IRR", "InvestedCapital"]
+        ]
+        dist_returns["InvestedCapital"] = (
+            dist_returns["InvestedCapital"] / total_capital
+        )
+        top_items['Bucket'] = "Top " + top_items.Bucket.map(str)
+        top_items = top_items[['Bucket', 'IRR', 'MOIC']]
+        return {
+            f"TopDeals_{wb_name.lower()}": top_deals,
+            f"Total_{wb_name.lower()}": total,
+            f"DistRet_{wb_name.lower()}": dist_returns,
+            f"TopBuckets_{wb_name.lower()}": top_items,
+            "AsOfDate": pd.DataFrame({"AsOfDate": [self.asofdate]})
+        }
 
     def generate_performance_concentration_report(self, **kwargs):
         input_data = kwargs["data"]
