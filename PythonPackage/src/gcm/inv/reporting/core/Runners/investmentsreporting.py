@@ -41,8 +41,8 @@ class InvestmentsReportRunner(ProgramRunner):
                     df: pd.DataFrame = df
                 final_data[i] = df
         runner: DaoRunner = kwargs["runner"]
-        current_date: dt.datetime = Scenario.current_scenario().get_attribute(
-            "asofdate"
+        current_date: dt.datetime = (
+            Scenario.current_scenario().get_attribute("asofdate")
         )
         if "report_name" in kwargs:
 
@@ -50,7 +50,9 @@ class InvestmentsReportRunner(ProgramRunner):
                 kwargs["report_name"], final_data, current_date, runner
             )
             if "template" in kwargs:
-                template_dir = kwargs.get("template_dir", template_location)
+                template_dir = kwargs.get(
+                    "template_dir", template_location
+                )
                 report.load_template(
                     ReportTemplate(
                         kwargs["template"],
@@ -82,14 +84,19 @@ class InvestmentsReportRunner(ProgramRunner):
                 report.load_reporting_entity(reporting_entity)
             if "save" in kwargs:
                 output_dir = kwargs.get("output_dir", base_output_location)
-                output_source = kwargs.get("report_output_source", DaoSource.ReportingStorage)
-                report.print_report(output_source=output_source, output_dir=output_dir, save=kwargs["save"])
+                output_source = kwargs.get(
+                    "report_output_source", DaoSource.ReportingStorage
+                )
+                report.print_report(
+                    output_source=output_source,
+                    output_dir=output_dir,
+                    save=kwargs["save"]
+                )
             return True
         else:
             raise RuntimeError("You must specify a report name")
 
-    def global_post_conditions(self, **kwargs):
-        return super().global_post_conditions(**kwargs)
+    def global_post_conditions(self, **kwargs):        return super().global_post_conditions(**kwargs)
 
     def global_preconditions(self, **kwargs):
         return super().global_preconditions(**kwargs)
