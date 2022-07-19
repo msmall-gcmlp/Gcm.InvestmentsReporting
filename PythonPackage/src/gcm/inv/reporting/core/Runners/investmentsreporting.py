@@ -45,7 +45,6 @@ class InvestmentsReportRunner(ProgramRunner):
             Scenario.current_scenario().get_attribute("asofdate")
         )
         if "report_name" in kwargs:
-
             report = ReportStructure(
                 kwargs["report_name"], final_data, current_date, runner
             )
@@ -90,13 +89,14 @@ class InvestmentsReportRunner(ProgramRunner):
                 report.print_report(
                     output_source=output_source,
                     output_dir=output_dir,
-                    save=kwargs["save"]
+                    save=kwargs["save"],
                 )
             return True
         else:
             raise RuntimeError("You must specify a report name")
 
-    def global_post_conditions(self, **kwargs):        return super().global_post_conditions(**kwargs)
+    def global_post_conditions(self, **kwargs):
+        return super().global_post_conditions(**kwargs)
 
     def global_preconditions(self, **kwargs):
         return super().global_preconditions(**kwargs)
