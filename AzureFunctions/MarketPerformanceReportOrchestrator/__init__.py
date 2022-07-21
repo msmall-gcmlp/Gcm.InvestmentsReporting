@@ -6,10 +6,10 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     client_input: dict = context.get_input()
     params = client_input["params"]
     disct1 = {
-            "params": {
-                "run": "RunMarketPerformanceQualityReportData",
-                "asofdate": params['asofdate']
-            },
+        "params": {
+            "run": "RunMarketPerformanceQualityReportData",
+            "asofdate": params["asofdate"],
+        },
     }
 
     tables = yield context.call_activity(

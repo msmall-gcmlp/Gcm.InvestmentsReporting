@@ -25,18 +25,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     file_path = os.path.join(temp_dir.name, "test_pdf.pdf")
 
     runner = DaoRunner(
-        container_lambda = lambda b, i: b.config.from_dict(i),
-        config_params = {
+        container_lambda=lambda b, i: b.config.from_dict(i),
+        config_params={
             DaoRunnerConfigArgs.dao_global_envs.name: {
                 DaoSource.ReportingStorage.name: {
                     "Environment": "dev",
-                    "Subscription": "nonprd"
+                    "Subscription": "nonprd",
                 }
             }
-        }
+        },
     )
-    file_path = 'Performance Quality_Whale Rock_PFUND_Risk_2022-05-31.xlsx'
-    params = AzureDataLakeDao.create_get_data_params('performance/Risk', file_path)
+    file_path = "Performance Quality_Whale Rock_PFUND_Risk_2022-05-31.xlsx"
+    params = AzureDataLakeDao.create_get_data_params(
+        "performance/Risk", file_path
+    )
     file: AzureDataLakeFile = runner.execute(
         params=params,
         source=DaoSource.ReportingStorage,
@@ -50,8 +52,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     # )
     loadOptions = LoadOptions()
     workbook = Workbook()
-    wb1 = workbook.createWorkbookFromBytes(file.content,
-                                           loadOptions = loadOptions)
+    wb1 = workbook.createWorkbookFromBytes(
+        file.content, loadOptions=loadOptions
+    )
 
     # workbook = Workbook()
     # workbook = Workbook("C:\\Users\\CMCNAMEE\\OneDrive -
