@@ -20,6 +20,7 @@ from gcm.Dao.Utils.tabular_data_util_outputs import (
     TabularDataOutputTypes,
 )
 
+
 def main(requestBody) -> str:
     params = requestBody["params"]
     run = params["run"]
@@ -47,11 +48,11 @@ def main(requestBody) -> str:
         )
         with Scenario(runner=runner, as_of_date=as_of_date).context():
             input_data = MarketPerformanceQualityReportData(
-                    start_date=start_date,
-                    runner=runner,
-                    as_of_date=as_of_date,
-                    ticker_map=df,
-                ).execute()
+                start_date=start_date,
+                runner=runner,
+                as_of_date=as_of_date,
+                ticker_map=df,
+            ).execute()
         runner2 = DaoRunner()
         MarketPerformance = MarketPerformanceReport(
             runner=runner2,
