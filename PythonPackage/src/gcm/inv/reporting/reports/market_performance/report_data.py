@@ -10,19 +10,15 @@ from gcm.inv.utils.date import DatePeriod
 
 
 class MarketPerformanceQualityReportData(ReportingRunnerBase):
-    def __init__(self, runner, start_date, as_of_date):
+    def __init__(self, runner, start_date, as_of_date, ticker_map):
         super().__init__(runner=runner)
         self._start_date = start_date
         self._as_of_date = as_of_date
         self._analytics = Analytics()
+        self._ticker_map = ticker_map
 
-        current_path = os.path.dirname(os.path.realpath(__file__))
-        ticker_map = pd.read_csv(
-            current_path + "/input_data/market_performance_tickers.csv"
-        )
         factors = Factor(tickers=ticker_map.Ticker.values.tolist())
         self._factors = factors
-        self._ticker_map = ticker_map
 
     def get_market_performance_quality_report_inputs(self):
         # pre-filtering to EMMs to avoid performance issues. refactor later to occur behind the scenes in data provider
@@ -50,8 +46,7 @@ class MarketPerformanceQualityReportData(ReportingRunnerBase):
         return (
             market_factor_returns,
             price,
-            level_change,
-            self._ticker_map,
+            level_change
         )
 
     def run(self, **kwargs):
