@@ -18,7 +18,7 @@ class MarketPerformanceQualityReportData(ReportingRunnerBase):
 
         current_path = os.path.dirname(os.path.realpath(__file__))
         ticker_map = pd.read_csv(
-            current_path + r"\input_data\market_performance_tickers.csv"
+            current_path + "/input_data/market_performance_tickers.csv"
         )
         factors = Factor(tickers=ticker_map.Ticker.values.tolist())
         self._factors = factors
