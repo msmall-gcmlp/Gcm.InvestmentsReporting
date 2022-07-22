@@ -252,7 +252,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         ].to_dict()
         price.rename(columns=mapping_dict, inplace=True)
         last_price = price.tail(1).T
-        last_price = last_price.fillna(0).astype("int")
+        last_price = last_price.fillna(0).astype("float")
         last_price.columns = ["Last"]
         return last_price
 
@@ -340,8 +340,8 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 agg_stat = agg_stat.apply(function)
             else:
                 function = (
-                    lambda x: x
-                )  # round(x.astype('int')) if (x.name in columns_transform) else round(x, 4) if (x.name in ['MTD','DTD']) else x
+                    lambda x: round(x,2)
+                )
                 agg_stat = agg_stat.apply(function)
 
             # to add % sign
