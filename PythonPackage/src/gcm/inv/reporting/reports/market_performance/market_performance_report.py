@@ -340,7 +340,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 agg_stat = agg_stat.apply(function)
             else:
                 function = (
-                    lambda x: round(x,2)
+                    lambda x: round(x, 2)
                 )
                 agg_stat = agg_stat.apply(function)
 
