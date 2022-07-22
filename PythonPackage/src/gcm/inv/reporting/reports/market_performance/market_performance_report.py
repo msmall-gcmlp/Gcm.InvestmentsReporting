@@ -158,7 +158,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 as_of_date=self._as_of_date,
                 periodicity=Periodicity.Daily,
             )
-            drawdown = drawdown["Max PTT (TTM)"]
+            drawdown = drawdown["Max PTT (TTM)"].values
         else:
             drawdown = self._analytics.compute_max_drawdown(
                 ror=returns,
@@ -412,7 +412,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
             base_summary.drop(columns="description", inplace=True)
             base_summary.set_index("index", inplace=True)
             if category == "L_S_Equity_Industry_Factors":
-                ##TODO: subset dynamically based on the target threshold
+                # TODO: subset dynamically based on the target threshold
                 base_summary["MTD1abs"] = abs(base_summary["MTD1"])
                 base_summary = base_summary.sort_values(
                     by=["MTD1abs"], ascending=False
