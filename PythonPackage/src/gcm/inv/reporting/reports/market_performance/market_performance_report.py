@@ -252,7 +252,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         ].to_dict()
         price.rename(columns=mapping_dict, inplace=True)
         last_price = price.tail(1).T
-        last_price = last_price.astype("int")
+        last_price = last_price.astype("int").fillna(0)
         last_price.columns = ["Last"]
         return last_price
 
