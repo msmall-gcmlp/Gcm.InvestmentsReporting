@@ -1,0 +1,140 @@
+Category,description,Ticker,Transformation,Unit_Mul100,Unit_in_prct,family,format
+Commodities,Brent Crude Oil,CO1 Comdty,geometric,FALSE,TRUE,,FALSE
+Commodities,Corn,C 1 Comdty,geometric,FALSE,TRUE,,FALSE
+Commodities,Gold,GOLDS Comdty,geometric,FALSE,TRUE,,FALSE
+Commodities,GSCI Commodity Index,SPGSCITR Index,geometric,FALSE,TRUE,,FALSE
+Commodities,Natural Gas,NG1 Comdty,geometric,FALSE,TRUE,,FALSE
+Commodities,WTI Crude Oil,CLA COMDTY,geometric,FALSE,TRUE,,FALSE
+Commodities,Copper,LP1 Comdty,geometric,FALSE,TRUE,,FALSE
+Credit_bps,HY OAS Trigger,SPHY US Equity,arithmetic,TRUE,FALSE,,FALSE
+Credit_bps,European High-Yield Bond Index,ITRX XOVER CDSI GEN 5Y Corp,arithmetic,TRUE,FALSE,,FALSE
+Credit_Percent,Invesco Senior Loan ETF,BKLN US Equity,geometric,FALSE,TRUE,,FALSE
+Credit_Percent,Merrill Lynch US High Yield Corporate Master Index,H0A0 Index,geometric,FALSE,TRUE,,FALSE
+Credit_Percent,BBG US IG TR Index,LUACTRUU Index,geometric,FALSE,TRUE,,FALSE
+Credit_Percent,BBG US HY TR Index,LF98TRUU Index,geometric,FALSE,TRUE,,FALSE
+Credit_Percent,S&P/LSTA LL TR Index,SPBDALB Index,geometric,FALSE,TRUE,,FALSE
+Credit_Percent,BBG Barclays US Agg,LBUSTRUU Index,geometric,FALSE,TRUE,,FALSE
+Currencies,AUD/USD,AUDUSD Curncy,geometric,FALSE,TRUE,,FALSE
+Currencies,CAD/USD,CADUSD Curncy,geometric,FALSE,TRUE,,FALSE
+Currencies,CHF/USD,CHFUSD Curncy,geometric,FALSE,TRUE,,FALSE
+Currencies,DXY,DXY Curncy,geometric,FALSE,TRUE,,FALSE
+Currencies,EUR/USD,EURUSD Curncy,geometric,FALSE,TRUE,,FALSE
+Currencies,GBP/USD,GBPUSD Curncy,geometric,FALSE,TRUE,,FALSE
+Currencies,USD/CNY,USDCNY Curncy,geometric,FALSE,TRUE,,FALSE
+Currencies,USD/JPY,USDJPY Curncy,geometric,FALSE,TRUE,,FALSE
+Global Equities,Golden Dragon China,PGJ US Equity,geometric,FALSE,TRUE,,FALSE
+Global Equities,GS VIP Index,GVIP US Equity,geometric,FALSE,TRUE,,FALSE
+Global Equities,KOSPI 200 Index,KOSPI2 Index,geometric,FALSE,TRUE,,FALSE
+Global Equities,MSCI AC Asia Pacific,MXAP INDEX,geometric,FALSE,TRUE,,FALSE
+Global Equities,MSCI ACWI IMI,MXWDIM Index,geometric,FALSE,TRUE,,FALSE
+Global Equities,MSCI China ,MXCN Index,geometric,FALSE,TRUE,,FALSE
+Global Equities,MSCI Emerging Markets,MXEF Index,geometric,FALSE,TRUE,,FALSE
+Global Equities,MSCI World Ex-USA (USD),MXWOU Index,geometric,FALSE,TRUE,,FALSE
+Global Equities,NASDAQ,CCMP Index,geometric,FALSE,TRUE,,FALSE
+Global Equities,Nikkei,NKY Index,geometric,FALSE,TRUE,,FALSE
+Global Equities,S&P 500,SPX Index,geometric,FALSE,TRUE,,FALSE
+Global Equities,S&P 500 Equal Weighted,SPW INDEX,geometric,FALSE,TRUE,,FALSE
+Global Equities,Shanghai SE Composite,SHCOMP INDEX,geometric,FALSE,TRUE,,FALSE
+Global Equities,Stoxx 600 (EUR),SXXP Index,geometric,FALSE,TRUE,,FALSE
+Global Equities,MSCI World,GDDUWI Index,geometric,FALSE,TRUE,,FALSE
+Global Equities,Russell 2000,RU20INTR Index,geometric,FALSE,TRUE,,FALSE
+L_S_Equity_Industry_Factors,US Semiconductors,USSLOWL_SEMICOND,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Oil and Gas Exploration and Production,USSLOWL_OILGSEXP,geometric,FALSE,TRUE,Commodities,FALSE
+L_S_Equity_Industry_Factors,US Semiconductor Equipment,USSLOWL_SEMIEQP,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Specialty Chemicals,USSLOWL_SPTYCHEM,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Oil Gas and Consumable Fuels,USSLOWL_OILGSCON,geometric,FALSE,TRUE,Commodities,FALSE
+L_S_Equity_Industry_Factors,US Electrical Equipment,USSLOWL_ELECEQP,geometric,FALSE,TRUE,Defensives,FALSE
+L_S_Equity_Industry_Factors,US Diversified Telecommunication Services,USSLOWL_TELECOM,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Chemicals,USSLOWL_CHEM,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Construction and Engineering,USSLOWL_CNSTENG,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Oil and Gas Drilling,USSLOWL_OILGSDRL,geometric,FALSE,TRUE,Commodities,FALSE
+L_S_Equity_Industry_Factors,US Oil and Gas Equipment and Services,USSLOWL_OILGSEQP,geometric,FALSE,TRUE,Commodities,FALSE
+L_S_Equity_Industry_Factors,US Multi-Utilities Water Utilities Power,USSLOWL_MULTUTIL,geometric,FALSE,TRUE,Defensives,FALSE
+L_S_Equity_Industry_Factors,US Gas Utilities,USSLOWL_GASUTIL,geometric,FALSE,TRUE,Defensives,FALSE
+L_S_Equity_Industry_Factors,US Wireless Telecommunication Services,USSLOWL_WIRELESS,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Insurance Brokers and Reinsurance,USSLOWL_INSURNCE,geometric,FALSE,TRUE,Financials,FALSE
+L_S_Equity_Industry_Factors,US Automobiles and Components,USSLOWL_AUTO,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Media,USSLOWL_MEDIA,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Pharmaceuticals,USSLOWL_PHARMA,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Building Products,USSLOWL_BLDGPROD,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Transportation Air Freight and Marine,USSLOWL_TRANSPRT,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Industrial Machinery,USSLOWL_INDMACH,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Electric Utilities,USSLOWL_ELECUTIL,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Banks,USSLOWL_BANKS,geometric,FALSE,TRUE,Financials,FALSE
+L_S_Equity_Industry_Factors,US Construction and Farm Machinery,USSLOWL_CNSTMACH,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Computers Electronics,USSLOWL_COMPELEC,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Industrial Conglomerates,USSLOWL_CONGLOM,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Diversified Financials,USSLOWL_DIVFIN,geometric,FALSE,TRUE,Financials,FALSE
+L_S_Equity_Industry_Factors,US Homebuilding,USSLOWL_HOMEBLDG,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Paper and Forest Products,USSLOWL_PAPER,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Health Care Providers (non-HMO),USSLOWL_HLTHSVCS,geometric,FALSE,TRUE,Defensives,FALSE
+L_S_Equity_Industry_Factors,US Biotechnology Life Sciences,USSLOWL_BIOLIFE,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Managed Health Care,USSLOWL_MGDHLTH,geometric,FALSE,TRUE,Defensives,FALSE
+L_S_Equity_Industry_Factors,US Beverages Tobacco,USSLOWL_BEVTOB,geometric,FALSE,TRUE,Defensives,FALSE
+L_S_Equity_Industry_Factors,US Aerospace and Defense,USSLOWL_AERODEF,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Specialty Retail,USSLOWL_SPLTYRET,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Construction Materials,USSLOWL_CNSTMATL,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Airlines,USSLOWL_AIRLINES,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Communications Equipment,USSLOWL_COMMEQP,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Trading Companies and Distributors,USSLOWL_TRADECO,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Restaurants,USSLOWL_RESTAUR,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Health Care Equipment and Technology,USSLOWL_HLTHEQP,geometric,FALSE,TRUE,Defensives,FALSE
+L_S_Equity_Industry_Factors,US Precious Metals Gold Mining,USSLOWL_PRECMTLS,geometric,FALSE,TRUE,Commodities,FALSE
+L_S_Equity_Industry_Factors,US Life Health and Multi-line Insurance,USSLOWL_LIFEINS,geometric,FALSE,TRUE,Financials,FALSE
+L_S_Equity_Industry_Factors,US Commercial and Professional Services,USSLOWL_COMSVCS,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Containers and Packaging,USSLOWL_CONTAINR,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Aluminum Steel,USSLOWL_ALUMSTEL,geometric,FALSE,TRUE,Commodities,FALSE
+L_S_Equity_Industry_Factors,US Internet Software and IT Services,USSLOWL_INTERNET,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Leisure Products Textiles Apparel and Luxury,USSLOWL_LEISPROD,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Software,USSLOWL_SOFTWARE,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Internet and Catalog Retail,USSLOWL_NETRET,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Apparel and Textiles,USSLOWL_APPAREL,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Hotels Leisure and Consumer Services,USSLOWL_LEISSVCS,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Food Products,USSLOWL_FOODPROD,geometric,FALSE,TRUE,Defensives,FALSE
+L_S_Equity_Industry_Factors,US Real Estate,USSLOWL_REALEST,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Household and Personal Products,USSLOWL_PSNLPROD,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Household Durables (non-Homebuilding),USSLOWL_HOUSEDUR,geometric,FALSE,TRUE,Defensives,FALSE
+L_S_Equity_Industry_Factors,US Distributors Multiline Retail,USSLOWL_DISTRIB,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Specialty Stores,USSLOWL_SPTYSTOR,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Road and Rail,USSLOWL_ROADRAIL,geometric,FALSE,TRUE,Cyclicals,FALSE
+L_S_Equity_Industry_Factors,US Food and Staples Retailing,USSLOWL_FOODRET,geometric,FALSE,TRUE,Defensives,FALSE
+L_S_Equity_Styles,US Earnings Yield,USSLOWL_EARNYILD,geometric,FALSE,TRUE,Quality,FALSE
+L_S_Equity_Styles,US Dividend Yield,USSLOWL_DIVYILD,geometric,FALSE,TRUE,Value,FALSE
+L_S_Equity_Styles,US Value,USSLOWL_VALUE,geometric,FALSE,TRUE,Value,FALSE
+L_S_Equity_Styles,US Management Quality,USSLOWL_MGMTQLTY,geometric,FALSE,TRUE,Quality,FALSE
+L_S_Equity_Styles,US Growth,USSLOWL_GROWTH,geometric,FALSE,TRUE,Growth,FALSE
+L_S_Equity_Styles,US Profitability,USSLOWL_PROFIT,geometric,FALSE,TRUE,Quality,FALSE
+L_S_Equity_Styles,US Mid Capitalization,USSLOWL_MIDCAP,geometric,FALSE,TRUE,Size,FALSE
+L_S_Equity_Styles,US Leverage,USSLOWL_LEVERAGE,geometric,FALSE,TRUE,Quality,FALSE
+L_S_Equity_Styles,US Size,USSLOWL_SIZE,geometric,FALSE,TRUE,Size,FALSE
+L_S_Equity_Styles,US Prospect,USSLOWL_PROSPECT,geometric,FALSE,TRUE,Other,FALSE
+L_S_Equity_Styles,US Long-Term Reversal,USSLOWL_LTREVRSL,geometric,FALSE,TRUE,Value,FALSE
+L_S_Equity_Styles,US Residual Volatility,USSLOWL_RESVOL,geometric,FALSE,TRUE,Residual Vol,FALSE
+L_S_Equity_Styles,US Beta,USSLOWL_BETA,geometric,FALSE,TRUE,Beta,FALSE
+L_S_Equity_Styles,US Earnings Quality,USSLOWL_EARNQLTY,geometric,FALSE,TRUE,Quality,FALSE
+L_S_Equity_Styles,US Momentum,USSLOWL_MOMENTUM,geometric,FALSE,TRUE,Momentum,FALSE
+L_S_Equity_Styles,US Liquidity,USSLOWL_LIQUIDTY,geometric,FALSE,TRUE,Liquidity,FALSE
+Rates,ICE LIBOR - USD - Overnight,US00O/N Index,arithmetic,TRUE,FALSE,,FALSE
+Rates,US Treasury - 10 Year,GT10 Govt,arithmetic,TRUE,FALSE,,FALSE
+Rates,US Treasury - 2 Year,GT2 Govt,arithmetic,TRUE,FALSE,,FALSE
+Rates,US Treasury - 30 Year,GT30 Govt,arithmetic,TRUE,FALSE,,FALSE
+Rates,US Treasury - 5 Year,GT5 Govt,arithmetic,TRUE,FALSE,,FALSE
+Rates,2 to 10 Year Spread,USYC2Y10 Index,arithmetic,FALSE,FALSE,,FALSE
+Rates,2 to 30 Year Spread,USYC2Y30 Index,arithmetic,FALSE,FALSE,,FALSE
+Rates,SOFR,SOFRRATE Index,arithmetic,TRUE,FALSE,,FALSE
+SP_Sectors,Biotechnology,SPSIBITR Index,geometric,FALSE,TRUE,,FALSE
+SP_Sectors,Communication Services,SPTRTELS Index,geometric,FALSE,TRUE,,FALSE
+SP_Sectors,Consumer Discretionary,SPTRCOND Index,geometric,FALSE,TRUE,,FALSE
+SP_Sectors,Consumer Staples,SPTRCONS Index,geometric,FALSE,TRUE,,FALSE
+SP_Sectors,Energy,SPTRENRS Index,geometric,FALSE,TRUE,,FALSE
+SP_Sectors,Financials,SPTRFINL Index,geometric,FALSE,TRUE,,FALSE
+SP_Sectors,Health Care,SPTRHLTH Index,geometric,FALSE,TRUE,,FALSE
+SP_Sectors,Industrials,SPTRINDU Index,geometric,FALSE,TRUE,,FALSE
+SP_Sectors,Information Technology,SPTRINFT Index,geometric,FALSE,TRUE,,FALSE
+SP_Sectors,Materials,SPTRMATR Index,geometric,FALSE,TRUE,,FALSE
+SP_Sectors,Real Estate,S5RLST Index,geometric,FALSE,TRUE,,FALSE
+SP_Sectors,Utilities,SPTRUTIL Index,geometric,FALSE,TRUE,,FALSE
+Volatility,Rate Volatility (MOVE),MOVE Index,arithmetic,FALSE,FALSE,,TRUE
+Volatility,CBOE Crude Oil Volatility Index,IVOLCRUD Index,geometric,TRUE,TRUE,,TRUE
+Volatility,Equity Volatility (VIX),VIX Index,geometric,TRUE,TRUE,,TRUE
+Volatility,EURO STOXX 50 Volatility Index,V2X Index,geometric,TRUE,TRUE,,TRUE
