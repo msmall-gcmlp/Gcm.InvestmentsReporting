@@ -17,6 +17,7 @@ class TestPerformanceQualityReport:
         runner = DaoRunner()
         return runner
 
+    @pytest.mark.skip()
     def test_report_construction(self, runner):
         params_all = AzureDataLakeDao.create_get_data_params(
             "raw/test/rqstest/rqstest/Re Uploads/",
