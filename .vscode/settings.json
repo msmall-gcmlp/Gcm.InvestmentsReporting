@@ -4,5 +4,10 @@
     "azureFunctions.projectLanguage": "Python",
     "azureFunctions.projectRuntime": "~3",
     "python.pythonPath": ".venv/Scripts/python.exe",
-    "azureFunctions.projectSubpath": "artifacts/AzureFunctions"
+    "azureFunctions.projectSubpath": "artifacts/AzureFunctions",
+    "python.testing.pytestArgs": [
+        "PythonPackage"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }
