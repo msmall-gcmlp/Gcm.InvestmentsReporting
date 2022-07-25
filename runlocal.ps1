@@ -1,8 +1,4 @@
 $ErrorActionPreference = 'Stop'
-$VenvFolder = ".venv"
-$RootFolder = $PSScriptRoot
-$HostFile = "host.json"
-$RequirementsFile = "requirements.txt"
 
 #region Solution-Wide
 function Create-Virtual-Environment() {
@@ -57,6 +53,27 @@ function Start-Azurite() {
     }
     Pop-Location
 }
+
+function Update-VSCode-SettingsJson() {
+    $settingsFile = "$vsCodePath\\settings.json"
+    $original = Get-Content -Raw -Path $settingsFile | ConvertFrom-Json
+    $original.'azureFunctions.projectSubpath' = "$functionName"
+    $original.'azureFunctions.deploySubpath' = "$functionName"
+    [System.IO.File]::WriteAllLines($settingsFile, @($original | ConvertTo-Json -Depth 100))
+}
+
+function Get-Function-Name() {
+    gci $PSScriptRoot -Filter '*.pytproj' -Depth 1 | % {
+        $functionName = $_.BaseName
+        $functionProject = Get-Content -Raw -Path $_.FullName
+        if ($functionProject.ToLower().Contains("gcm.azurefunctions.sdk")) {
+            return $functionName;
+        }
+    }
+    if (!$functionName) {
+        throw "No Azure Functions project was found"
+    }
+}
 #endregion Solution-Wide
 
 #region Project-Wide
@@ -96,46 +113,51 @@ function Merge-Json ($target, $source) {
     }
 }
 
-function Get-Function-Name($function) {
-    $functionName = $_.BaseName.Replace("Deploy.", "")
-    if (Test-Path "$($function.Directory)\$HostFile") {
-        return $functionName
-    }
-    else {
-        Write-Host "Skipping $functionName because it's not an Azure Function"
-        return $null
-    }
+function Copy-Files($fileName) {
+    Copy-Item -Path "$artifactsPath\$functionName\$fileName" -Destination "$functionPath\$fileName" -Force
+    Write-Host "Copying $fileName"
 }
-function Run-Function($projectName) {
-    Write-Host "Running Function $projectName on port $Port"
-    Start-Process powershell -ArgumentList "func host start --port $Port" -WindowStyle Normal
-    Write-Host "$projectName is ready to go at http://localhost:$Port"
-}
+
 #endregion Project-Wide
 
+#region Variables
+$VenvFolder = ".venv"
+$RootFolder = $PSScriptRoot
+$HostFile = "host.json"
+$RequirementsFile = "requirements.txt"
+$artifacts = "artifacts"
+$artifactsPath = "$PSScriptRoot\\artifacts"
+$functionName = Get-Function-Name
+$functionPath = "$PSScriptRoot\\$functionName"
+$vsCode = ".vscode"
+$vsCodePath = "$PSScriptRoot\\$vsCode"
+#endregion Variables
+
 #region Run
+try { Get-ChildItem $artifacts -Recurse -Exclude "Gcm.ConfigurationLoader.dll" | Remove-Item -Recurse -Force }
+catch [System.UnauthorizedAccessException] {
+    Write-Error @"
+Failed to delete the artifacts folder because files are being used by another process. `
+Close any processes that might be using the contents of this folder and try again. `
+Exception: $($_.Exception.Message)
+"@
+}
+
 try { & $PSScriptRoot/Build/build.ps1 -u $false }
 catch [System.UnauthorizedAccessException] {
     Write-Warning "Gcm.ConfigurationLoader.dll is being used by another process, continuing..." 
     # in case Gcm.ConfigurationLoader.dll is being used by another process, happens if the user runs it twice
 }
 
+Update-VSCode-SettingsJson
 Create-Virtual-Environment
 Activate-Virtual-Environment
 Start-Azurite
-$artifacts = "$PSScriptRoot\artifacts"
-$Port = 7071;
-gci $artifacts -Filter '*.proj' -Depth 1 | % {
-    $functionName = Get-Function-Name($_)
-    if (!$functionName) {
-        continue;
-    }
-    Push-Location $_.Directory
-    Update-Settings
-    Add-ExtensionBundle
-    Install-Pip-Requirements
-    Run-Function $functionName
-    $Port = $Port + 1
-    Pop-Location
-}
+
+Push-Location "$artifactsPath\$functionName"
+Update-Settings
+Add-ExtensionBundle
+Install-Pip-Requirements
+@("host.json", "local.settings.json") | % { Copy-Files $_ }
+Pop-Location
 #endregion Run
