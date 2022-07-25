@@ -19,8 +19,8 @@ class TestPerformanceQualityReport:
 
     def test_report_construction(self, runner):
         params_all = AzureDataLakeDao.create_get_data_params(
-            "raw/test/rqstest/rqstest/",
-            "NBPartners_All_2021-12-31.xlsx",
+            "raw/test/rqstest/rqstest/Re Uploads/",
+            "Ethos_09-30-2021_All.xlsx",
         )
         file_all: AzureDataLakeFile = runner.execute(
             source=DaoSource.DataLake,
@@ -28,8 +28,8 @@ class TestPerformanceQualityReport:
             operation=lambda dao, p: dao.get_data(p),
         )
         params_realized = AzureDataLakeDao.create_get_data_params(
-            "raw/test/rqstest/rqstest/",
-            "NBPartners_Realized_2021-12-31.xlsx",
+            "raw/test/rqstest/rqstest/Re Uploads/",
+            "Ethos_09-30-2021_Realized.xlsx",
         )
         file_realized: AzureDataLakeFile = runner.execute(
             source=DaoSource.DataLake,
@@ -38,8 +38,8 @@ class TestPerformanceQualityReport:
         )
         data = {"all": file_all, "realized": file_realized}
         PerformanceConcentrationReport(
-            runner, asofdate=dt.datetime(2021, 12, 31),
-            managername="NorthBridge Partners",
+            runner, asofdate=dt.datetime(2021, 9, 30),
+            managername="Ethos",
             vertical='Real Estate',
             underwriting='Fund IV'
-        ).execute(data=data)
+                    ).execute(data=data)

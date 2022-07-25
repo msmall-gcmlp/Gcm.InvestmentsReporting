@@ -74,12 +74,12 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
                     dist_returns["InvestedCapital"]
                 )
         # now clean up columns
+        if other is not None:
+            other_asset_copy = copy.deepcopy(other)
+            other_asset_copy["AssetName"] = "Other"
 
-        other_asset_copy = copy.deepcopy(other)
-        other_asset_copy["AssetName"] = "Other"
-
-        top_deals = pd.concat([top_deals, other_asset_copy])
-        top_deals.reset_index(drop=True, inplace=True)
+            top_deals = pd.concat([top_deals, other_asset_copy])
+            top_deals.reset_index(drop=True, inplace=True)
 
         total["Bucket"] = (
             total["Bucket"]
@@ -147,8 +147,9 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
         top_items = pd.concat(top_items)
         top_items.reset_index(drop=True, inplace=True)
         top_items["Bucket"] = "Top " + top_items.Bucket.map(str)
-        top_items = pd.concat([top_items, other])
-        top_items.reset_index(drop=True, inplace=True)
+        if other is not None:
+            top_items = pd.concat([top_items, other])
+            top_items.reset_index(drop=True, inplace=True)
         top_items = top_items[["Bucket", "IRR", "MOIC"]]
         return {
             f"TopDeals_{wb_name.lower()}": top_deals,
@@ -180,7 +181,7 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
                 template="Pvm.ReturnConcentration.xlsx",
                 save=True,
                 runner=self._runner,
-                report_name="PvmReturnConcentration",
+                report_name="Ethos_PvmReturnConcentration",
                 report_type=ReportType.Performance,
                 aggregate_intervals=AggregateInterval.Daily,
                 output_dir="raw/investmentsreporting/printedexcels/",
