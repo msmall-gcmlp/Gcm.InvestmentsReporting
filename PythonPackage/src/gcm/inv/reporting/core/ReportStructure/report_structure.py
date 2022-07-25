@@ -23,16 +23,15 @@ template_location = (
     "/".join(
         [
             "raw",
-            "test",
-            "rqstest",
-            "rqstest",
-            "ReportingTemplates",
+            "investmentsreporting",
+            "exceltemplates",
         ]
     )
     + "/"
 )
 
 base_output_location = "performance/"
+#base_output_location = "cleansed/investmentsreporting/printedexcels/"
 
 
 class ReportType(ExtendedEnum):
@@ -280,7 +279,7 @@ class ReportStructure(ABC):
         if kwargs.get("save", False):
             self._runner.execute(
                 params=params,
-                source=DaoSource.ReportingStorage,
+                source=kwargs.get("output_source", DaoSource.ReportingStorage),
                 operation=lambda d, v: d.post_data(v, b),
             )
 

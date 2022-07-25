@@ -17,16 +17,18 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         self._as_of_date = as_of_date
         self._peer_group = peer_group
         self._analytics = Analytics()
-        self.__all_gcm_peer_returns = None
-        self.__all_gcm_peer_constituent_returns = None
-        self.__inputs = None
-        self.__market_factor_returns = None
+        self._peer_returns_cache = None
+        self._peer_constituent_returns_cache = None
+        self._peer_inputs_cache = None
+        self._market_factor_inputs_cache = None
+        self._market_factor_returns_cache = None
+        self._underlying_data_location = "raw/investmentsreporting/underlyingdata/performancequality"
+        self._summary_data_location = "raw/investmentsreporting/summarydata/performancequality"
 
-    def download_performance_quality_report_inputs(self) -> dict:
-        location = "lab/rqs/azurefunctiondata"
+    def _download_inputs(self, file_name) -> dict:
         read_params = AzureDataLakeDao.create_get_data_params(
-            location,
-            "performance_quality_report_inputs.json",
+            self._underlying_data_location,
+            file_name,
             retry=False,
         )
         file = self._runner.execute(
@@ -37,40 +39,50 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         return json.loads(file.content)
 
     @property
-    def _inputs(self):
-        if self.__inputs is None:
-            self.__inputs = self.download_performance_quality_report_inputs()
-        return self.__inputs
+    def _peer_inputs(self):
+        if self._peer_inputs_cache is None:
+            asofdate = self._as_of_date.strftime('%Y-%m-%d')
+            file = self._peer_group.replace('/', '') + '_peer_inputs_' + asofdate + '.json'
+            self._peer_inputs_cache = self._download_inputs(file_name=file)
+        return self._peer_inputs_cache
 
     @property
-    def _all_gcm_peer_returns(self):
-        if self.__all_gcm_peer_returns is None:
-            self.__all_gcm_peer_returns = pd.read_json(self._inputs['gcm_peer_returns'], orient='index')
-        return self.__all_gcm_peer_returns
+    def _market_factor_inputs(self):
+        if self._market_factor_inputs_cache is None:
+            asofdate = self._as_of_date.strftime('%Y-%m-%d')
+            file = 'market_factor_returns_' + asofdate + '.json'
+            self._market_factor_inputs_cache = self._download_inputs(file_name=file)
+        return self._market_factor_inputs_cache
 
     @property
-    def _all_gcm_peer_constituent_returns(self):
-        if self.__all_gcm_peer_constituent_returns is None:
-            returns = pd.read_json(self._inputs['gcm_peer_constituent_returns'], orient='index')
+    def _gcm_peer_returns(self):
+        if self._peer_returns_cache is None:
+            self._peer_returns_cache = pd.read_json(self._peer_inputs['gcm_peer_returns'], orient='index')
+        return self._peer_returns_cache
+
+    @property
+    def _gcm_peer_constituent_returns(self):
+        if self._peer_constituent_returns_cache is None:
+            returns = pd.read_json(self._peer_inputs['gcm_peer_constituent_returns'], orient='index')
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
             returns_columns = pd.MultiIndex.from_tuples(returns_columns,
                                                         names=['PeerGroupName', 'SourceInvestmentId'])
             returns.columns = returns_columns
-            self.__all_gcm_peer_constituent_returns = returns
-        return self.__all_gcm_peer_constituent_returns
+            self._peer_constituent_returns_cache = returns
+        return self._peer_constituent_returns_cache
 
     @property
     def _market_factor_returns(self):
-        if self.__market_factor_returns is None:
-            returns = pd.read_json(self._inputs['market_factor_returns'], orient='index')
+        if self._market_factor_returns_cache is None:
+            returns = pd.read_json(self._market_factor_inputs, orient='index')
             if len(returns) > 0:
                 returns = AggregateFromDaily().transform(data=returns, method='geometric',
                                                          period=Periodicity.Monthly)
                 returns.index = [dt.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
-                self.__market_factor_returns = returns
+                self._market_factor_returns_cache = returns
             else:
-                self.__market_factor_returns = pd.DataFrame()
-        return self.__market_factor_returns
+                self._market_factor_returns_cache = pd.DataFrame()
+        return self._market_factor_returns_cache
 
     @property
     def _sp500_return(self):
@@ -87,9 +99,9 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
     @property
     def _primary_peer_constituent_returns(self):
         peer_group_index = \
-            self._all_gcm_peer_constituent_returns.columns.get_level_values(0) == self._peer_group
+            self._gcm_peer_constituent_returns.columns.get_level_values(0) == self._peer_group
         if any(peer_group_index):
-            returns = self._all_gcm_peer_constituent_returns.loc[:, peer_group_index]
+            returns = self._gcm_peer_constituent_returns.loc[:, peer_group_index]
             returns = returns.droplevel(0, axis=1)
         else:
             returns = pd.DataFrame()
@@ -366,10 +378,10 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         }
 
         data_to_write = json.dumps(input_data_json)
-        write_location = "lab/rqs/azurefunctiondata/peer_summaries"
+        asofdate = self._as_of_date.strftime('%Y-%m-%d')
         write_params = AzureDataLakeDao.create_get_data_params(
-            write_location,
-            self._peer_group.replace('/', '') + "_performance_quality_report_report_analytics.json",
+            self._summary_data_location,
+            self._peer_group.replace('/', '') + "_peer_" + asofdate + ".json",
             retry=False,
         )
         self._runner.execute(
