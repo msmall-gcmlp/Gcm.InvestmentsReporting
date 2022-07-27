@@ -350,7 +350,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                         lambda x: x.astype('int').astype("str") + "%"
                         if (x.name in columns_transform)
                         else round(x, 1).astype("str") + "%"
-                        if (x.name in["MTD", "DTD", "WTD"])
+                        if (x.name in ["MTD", "DTD", "WTD"])
                         else round(x, 1)
                     )
                     agg_stat = agg_stat.apply(function)
