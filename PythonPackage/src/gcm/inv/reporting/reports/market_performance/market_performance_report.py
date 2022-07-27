@@ -101,7 +101,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         summary = pd.DataFrame(
             {
                 column_name[0]: [
-                    round(x, 3) if isinstance(x, float) else " "
+                    x if isinstance(x, float) else " "
                     for x in stats
                 ]
             },
@@ -142,7 +142,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         summary = pd.DataFrame(
             {
                 column_name[0]: [
-                    round(x, 3) if isinstance(x, float) else " "
+                    x if isinstance(x, float) else " "
                     for x in stats
                 ]
             },
@@ -174,7 +174,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
 
     def get_header_info(self):
         header = pd.DataFrame(
-            {"header_info": [self._interval, self._as_of_date]}
+            {"header_info": [self._as_of_date]}
         )
         return header
 
@@ -320,7 +320,6 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 self._ticker_mapping["Ticker"] == column
             ].format.values
             columns_transform = [
-                "WTD",
                 "QTD",
                 "YTD",
                 "TTM",
@@ -331,16 +330,16 @@ class MarketPerformanceReport(ReportingRunnerBase):
 
             if unit_mult100[0]:
                 function = (
-                    lambda x: round((100 * x).astype("int"))
+                    lambda x: 100 * x
                     if (x.name in columns_transform)
-                    else round(100 * x, 1)
-                    if (x.name in ["MTD", "DTD"])
+                    else 100 * x
+                    if (x.name in ["MTD", "DTD", "WTD"])
                     else x
                 )
                 agg_stat = agg_stat.apply(function)
             else:
                 function = (
-                    lambda x: round(x, 2)
+                    lambda x: x
                 )
                 agg_stat = agg_stat.apply(function)
 
@@ -348,20 +347,20 @@ class MarketPerformanceReport(ReportingRunnerBase):
             if format[0]:
                 if unit_in_prc[0]:
                     function = (
-                        lambda x: x.astype("str") + "%"
+                        lambda x: x.astype('int').astype("str") + "%"
                         if (x.name in columns_transform)
-                        else x.astype("str") + "%"
-                        if (x.name in ["MTD", "DTD"])
-                        else x
+                        else round(x, 1).astype("str") + "%"
+                        if (x.name in ["MTD", "DTD", "WTD"])
+                        else round(x, 1)
                     )
                     agg_stat = agg_stat.apply(function)
                 else:
                     function = (
-                        lambda x: x.astype("str")
+                        lambda x: x.astype('int').astype("str")
                         if (x.name in columns_transform)
-                        else x.astype("str")
-                        if (x.name in ["MTD", "DTD"])
-                        else x
+                        else round(x, 1).astype("str")
+                        if (x.name in ["MTD", "DTD", "WTD"])
+                        else round(x, 1)
                     )
                     agg_stat = agg_stat.apply(function)
 
