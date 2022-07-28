@@ -1,8 +1,12 @@
 {
-    "azureFunctions.deploySubpath": "AzureFunctions",
-    "azureFunctions.pythonVenv": "../.venv",
-    "azureFunctions.projectLanguage": "Python",
-    "azureFunctions.projectRuntime": "~3",
-    "python.pythonPath": ".venv/Scripts/python.exe",
-    "azureFunctions.projectSubpath": "artifacts/AzureFunctions"
+  "azureFunctions.projectSubpath": "AzureFunctions",
+  "azureFunctions.deploySubpath": "AzureFunctions",
+  "azureFunctions.scmDoBuildDuringDeployment": true,
+  "azureFunctions.pythonVenv": "..\\.venv",
+  "azureFunctions.projectLanguage": "Python",
+  "azureFunctions.projectRuntime": "~4",
+  "debug.internalConsoleOptions": "neverOpen",
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
+  "python.linting.enabled": true
 }
