@@ -1,23 +1,20 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "func",
-			"command": "host start",
-			"problemMatcher": "$func-python-watch",
-			"isBackground": true,
-			"options": {
-				"cwd": "${config:azureFunctions.deploySubpath}"
-			},
-			"dependsOn": "runLocal"
-		},
-		{
-			"label": "runLocal",
-			"type": "shell",
-			"command": "./runlocal.ps1 -SourcePath ${workspaceFolder}/artifacts",
-			"options": {
-				"cwd": "${config:azureFunctions.deploySubpath}"
-			}
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "func",
+      "command": "host start",
+      "problemMatcher": "$func-python-watch",
+      "isBackground": true,
+      "dependsOn": "runLocal",
+      "options": {
+        "cwd": "${config:azureFunctions.deploySubpath}"
+      }
+    },
+    {
+      "label": "runLocal",
+      "type": "shell",
+      "command": "./runlocal.ps1"
+    }
+  ]
 }
