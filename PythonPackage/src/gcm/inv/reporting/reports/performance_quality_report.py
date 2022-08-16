@@ -348,18 +348,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
         decomp = decomp[decomp['InvestmentGroupName'] == self._fund_name]
         decomp = decomp[['FactorGroup1', '1Y', '3Y', '5Y']]
         decomp.rename(columns={'1Y': 'TTM'}, inplace=True)
-        mapping = pd.DataFrame({'FactorGroup1': ['Market Beta',
-                                                 'Industries', 'Regional',
-                                                 'Styles', 'Hedge Fund Technicals',
-                                                 'Unexplained', 'Selection Risk'],
-                                'Group': ['Beta',
-                                          'X-Asset', 'X-Asset',
-                                          'L/S', 'L/S',
-                                          'Residual', 'Residual']})
+        mapping = pd.DataFrame({'FactorGroup1': ['SYSTEMATIC',
+                                                 'X_ASSET_CLASS',
+                                                 'PUBLIC_LS',
+                                                 'NON_FACTOR'],
+                                'Group': ['SYSTEMATIC_RISK',
+                                          'X_ASSET_RISK',
+                                          'PUBLIC_LS_RISK',
+                                          'NON_FACTOR_RISK']})
 
         decomp = decomp.merge(mapping, how='left').groupby('Group').sum()
 
-        risk_decomp_columns = pd.DataFrame(columns=['Beta', 'X-Asset', 'L/S', 'Residual'])
+        risk_decomp_columns = pd.DataFrame(columns=['SYSTEMATIC_RISK',
+                                                    'X_ASSET_RISK',
+                                                    'PUBLIC_LS_RISK',
+                                                    'NON_FACTOR_RISK'])
         risk_decomp = pd.concat([risk_decomp_columns, decomp.T])
         risk_decomp = risk_decomp.fillna(0)
         risk_decomp = risk_decomp.round(2)
@@ -675,8 +678,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def _get_rba_summary(self):
-        factor_group_index = pd.DataFrame(index=['Market Beta', 'Region', 'Industries', 'Styles',
-                                                 'Hedge Fund Technicals', 'Selection Risk', 'Unexplained'])
+        factor_group_index = pd.DataFrame(index=['SYSTEMATIC', 'REGION', 'INDUSTRY', 'REPAY',
+                                                 'LS_EQUITY', 'LS_CREDIT', 'MACRO',
+                                                 'NON_FACTOR_SECURITY_SELECTION',
+                                                 'NON_FACTOR_OUTLIER_EFFECTS'])
         fund_rba = self._fund_rba.copy()
         mtd = self._analytics.compute_periodic_return(ror=fund_rba,
                                                       period=PeriodicROR.MTD,
@@ -742,8 +747,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def _get_pba_summary(self):
-        factor_group_index = pd.DataFrame(index=['Beta', 'Regional', 'Industry', 'MacroRV', 'LS_Equity',
-                                                 'LS_Credit', 'Residual', 'Fees', 'Unallocated'])
+        factor_group_index = pd.DataFrame(index=['Beta', 'Regional', 'Industry', 'LS_Equity', 'LS_Credit',
+                                                 'MacroRV', 'Residual', 'Fees', 'Unallocated'])
         fund_pba_publics = self._fund_pba_publics.copy()
         fund_pba_privates = self._fund_pba_privates.copy()
 
@@ -816,30 +821,36 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def build_rba_summary(self):
         if self._fund_rba.shape[0] > 0:
-            fund_returns = self._get_return_summary(returns=self._fund_returns, return_type='Fund')
-            fund_returns.rename(columns={'Fund': 'Total'}, inplace=True)
+            # fund_returns = self._get_return_summary(returns=self._fund_returns, return_type='Fund')
+            # fund_returns.rename(columns={'Fund': 'Total'}, inplace=True)
             rba = self._get_rba_summary()
-            summary = fund_returns.merge(rba, left_index=True, right_index=True)
+            #summary = fund_returns.merge(rba, left_index=True, right_index=True)
+            summary = rba.copy()
             summary.drop('10Y', inplace=True)
 
             rba_risk_decomp = self._fund_rba_risk_decomp.copy()
             summary = summary.merge(rba_risk_decomp, left_index=True, right_index=True, how='left')
 
-            rba_r2 = self._fund_rba_adj_r_squared.copy()
-            summary = summary.merge(rba_r2, left_index=True, right_index=True, how='left')
+            # rba_r2 = self._fund_rba_adj_r_squared.copy()
+            # summary = summary.merge(rba_r2, left_index=True, right_index=True, how='left')
 
         else:
             summary = pd.DataFrame(index=['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y'],
-                                   columns=['Total', 'Market Beta', 'Region', 'Industries', 'Styles',
-                                            'Hedge Fund Technicals', 'Selection Risk', 'Unexplained',
-                                            'Beta', 'X-Asset', 'L/S', 'Residual', 'AdjR2'])
+                                   columns=['SYSTEMATIC', 'REGION', 'INDUSTRY', 'REPAY',
+                                   'LS_EQUITY', 'LS_CREDIT', 'MACRO',
+                                   'NON_FACTOR_SECURITY_SELECTION',
+                                   'NON_FACTOR_OUTLIER_EFFECTS',
+                                   'SYSTEMATIC_RISK',
+                                   'X_ASSET_RISK',
+                                   'PUBLIC_LS_RISK', 'NON_FACTOR_RISK'])
         return summary
 
     def build_pba_summary(self):
         if self._fund_pba_publics.shape[0] > 0:
             pba = self._get_pba_summary()
-            fund_returns = pd.DataFrame({'Total': pba.sum(axis=1, skipna=False)})
-            summary = fund_returns.merge(pba, left_index=True, right_index=True)
+            #fund_returns = pd.DataFrame({'Total': pba.sum(axis=1, skipna=False)})
+            #summary = fund_returns.merge(pba, left_index=True, right_index=True)
+            summary = pba.copy()
         else:
             summary = pd.DataFrame(index=['MTD - Publics', 'MTD - Privates', 'QTD - Publics', 'QTD - Privates',
                                           'YTD - Publics', 'YTD - Privates'],

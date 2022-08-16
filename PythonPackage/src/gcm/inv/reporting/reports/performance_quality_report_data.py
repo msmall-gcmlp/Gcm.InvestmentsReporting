@@ -85,10 +85,15 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                     end_date=self._end_date,
                                                     fill_na=True)
 
-        rba = inv_group.get_rba_ts_by_factor_group(start_date=self._start_date,
-                                                   end_date=self._end_date,
-                                                   group_type='FactorGroup1',
-                                                   frequency='M')
+        rba_group2 = inv_group.get_rba_ts_by_factor_group(start_date=self._start_date,
+                                                          end_date=self._end_date,
+                                                          group_type='FactorGroup2',
+                                                          frequency='M')
+
+        rba_group1 = inv_group.get_rba_ts_by_factor_group(start_date=self._start_date,
+                                                          end_date=self._end_date,
+                                                          group_type='FactorGroup1',
+                                                          frequency='M')
 
         start_1y = self._end_date - relativedelta(years=1)
         rba_risk_1y = inv_group.get_average_risk_decomp_by_group(start_date=start_1y,
@@ -173,8 +178,12 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             exp_10y = exposure_10y[exposure_10y['InvestmentGroupId'] == fund_id]
             fund_inputs['exposure_10y'] = exp_10y.to_json(orient='index')
 
-            rba_index = rba.columns.get_level_values(1) == fund_id
-            fund_inputs['rba'] = rba.iloc[:, rba_index].to_json(orient='index')
+            rba_group1_index = rba_group1.columns.get_level_values(1) == fund_id
+            fund_rba_group1 = rba_group1.iloc[:, rba_group1_index]
+            rba_group2_index = rba_group2.columns.get_level_values(1) == fund_id
+            fund_rba_group2 = rba_group2.iloc[:, rba_group2_index]
+            fund_rba = fund_rba_group1.merge(fund_rba_group2, left_index=True, right_index=True)
+            fund_inputs['rba'] = fund_rba.to_json(orient='index')
 
             decomp = rba_risk_decomp[rba_risk_decomp['InvestmentGroupId'] == fund_id]
             fund_inputs['rba_risk_decomp'] = decomp.to_json(orient='index')
