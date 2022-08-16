@@ -747,7 +747,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def _get_pba_summary(self):
-        factor_group_index = pd.DataFrame(index=['Beta', 'Regional', 'Industry', 'LS_Equity', 'LS_Credit',
+        factor_group_index = pd.DataFrame(index=['Beta', 'Regional', 'Industry', 'Repay', 'LS_Equity', 'LS_Credit',
                                                  'MacroRV', 'Residual', 'Fees', 'Unallocated'])
         fund_pba_publics = self._fund_pba_publics.copy()
         fund_pba_privates = self._fund_pba_privates.copy()
@@ -831,7 +831,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             rba_risk_decomp = self._fund_rba_risk_decomp.copy()
             summary = summary.merge(rba_risk_decomp, left_index=True, right_index=True, how='left')
 
-            # rba_r2 = self._fund_rba_adj_r_squared.copy()
+            #rba_r2 = self._fund_rba_adj_r_squared.copy()
             # summary = summary.merge(rba_r2, left_index=True, right_index=True, how='left')
 
         else:
@@ -845,6 +845,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                    'PUBLIC_LS_RISK', 'NON_FACTOR_RISK'])
         return summary
 
+    def get_adj_r2(self):
+        rba_r2 = self._fund_rba_adj_r_squared.copy()
+        rba_r2 = rba_r2.loc['5Y'].to_frame()
+        return rba_r2
+
     def build_pba_summary(self):
         if self._fund_pba_publics.shape[0] > 0:
             pba = self._get_pba_summary()
@@ -854,8 +859,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         else:
             summary = pd.DataFrame(index=['MTD - Publics', 'MTD - Privates', 'QTD - Publics', 'QTD - Privates',
                                           'YTD - Publics', 'YTD - Privates'],
-                                   columns=['Total', 'Beta', 'Regional', 'Industry', 'MacroRV',
-                                            'LS_Equity', 'LS_Credit', 'Residual', 'Fees', 'Unallocated'])
+                                   columns=['Beta', 'Regional', 'Industry', 'Repay', 'LS_Equity', 'LS_Credit',
+                                            'MacroRV', 'Residual', 'Fees', 'Unallocated'])
         return summary
 
     def _get_trailing_vol(self, returns, trailing_months):
@@ -1276,6 +1281,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         peer_ptile_2_heading = self.get_peer_ptile_2_heading()
 
         rba_summary = self.build_rba_summary()
+        adj_r2 = self.get_adj_r2()
         pba_summary = self.build_pba_summary()
         pba_mtd = pba_summary.loc[['MTD - Publics', 'MTD - Privates']]
         pba_qtd = pba_summary.loc[['QTD - Publics', 'QTD - Privates']]
@@ -1303,6 +1309,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "performance_stability_fund_summary": performance_stability_fund_summary,
             "performance_stability_peer_summary": performance_stability_peer_summary,
             "rba_summary": rba_summary,
+            "adj_r2": adj_r2,
             "pba_mtd": pba_mtd,
             "pba_qtd": pba_qtd,
             "pba_ytd": pba_ytd,
@@ -1323,6 +1330,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "performance_stability_fund_summary": performance_stability_fund_summary.to_json(orient='index'),
             "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient='index'),
             "rba_summary": rba_summary.to_json(orient='index'),
+            "adj_r2": adj_r2.to_json(orient='index'),
             "pba_mtd": pba_mtd.to_json(orient='index'),
             "pba_qtd": pba_qtd.to_json(orient='index'),
             "pba_ytd": pba_ytd.to_json(orient='index'),

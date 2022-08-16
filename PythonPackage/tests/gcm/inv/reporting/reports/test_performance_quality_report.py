@@ -169,7 +169,7 @@ class TestPerformanceQualityReport:
         assert pba.shape[0] > 0
         assert all(pba.index == ['MTD - Publics', 'MTD - Privates', 'QTD - Publics',
                                  'QTD - Privates', 'YTD - Publics', 'YTD - Privates'])
-        assert all(pba.columns == ['Beta', 'Regional', 'Industry', 'LS_Equity', 'LS_Credit',
+        assert all(pba.columns == ['Beta', 'Regional', 'Industry', 'Repay', 'LS_Equity', 'LS_Credit',
                                    'MacroRV', 'Residual', 'Fees', 'Unallocated'])
 
     def test_shortfall_skye(self, perf_quality_report):
