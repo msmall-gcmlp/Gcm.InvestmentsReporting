@@ -17,6 +17,29 @@ class RunPerformanceQualityReports:
 
     def __init__(self, as_of_date):
         self._runner = DaoRunner()
+        # self._runner = DaoRunner(
+        #     container_lambda=lambda b, i: b.config.from_dict(i),
+        #     config_params={
+        #         DaoRunnerConfigArgs.dao_global_envs.name: {
+        #             DaoSource.DataLake.name: {
+        #                 "Environment": "prd",
+        #                 "Subscription": "prd",
+        #             },
+        #             DaoSource.PubDwh.name: {
+        #                 "Environment": "prd",
+        #                 "Subscription": "prd",
+        #             },
+        #             DaoSource.InvestmentsDwh.name: {
+        #                 "Environment": "prd",
+        #                 "Subscription": "prd",
+        #             },
+        #             DaoSource.DataLake_Blob.name: {
+        #                 "Environment": "prd",
+        #                 "Subscription": "prd",
+        #             },
+        #         }
+        #     },
+        # )
         self._as_of_date = as_of_date
         self._params = {'status': 'EMM', 'vertical': 'ARS', 'entity': 'PFUND'}
 
@@ -46,9 +69,10 @@ class RunPerformanceQualityReports:
         agg_perf_quality.execute()
 
     def agg_perf_quality_by_portfolio(self, portfolio_acronyms=None):
-        agg_perf_quality = AggregatePerformanceQualityReport(runner=self._runner, as_of_date=self._as_of_date,
-                                                             acronyms=portfolio_acronyms)
-        agg_perf_quality.execute()
+        with Scenario(runner=self._runner, as_of_date=self._as_of_date).context():
+            agg_perf_quality = AggregatePerformanceQualityReport(runner=self._runner, as_of_date=self._as_of_date,
+                                                                 acronyms=portfolio_acronyms)
+            agg_perf_quality.execute()
 
     def copy_meta_data_from_excels(self):
         file_path = "C:/Users/CMCNAMEE/OneDrive - GCM Grosvenor/Desktop/tmp"
