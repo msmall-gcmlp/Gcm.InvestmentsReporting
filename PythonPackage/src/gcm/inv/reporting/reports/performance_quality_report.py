@@ -128,7 +128,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             rba = pd.read_json(self._fund_inputs['rba'], orient='index')
             rba_columns = [ast.literal_eval(x) for x in rba.columns]
             rba_columns = pd.MultiIndex.from_tuples(rba_columns,
-                                                    names=['FactorGroup1', 'InvestmentGroupId'])
+                                                    names=['FactorGroup1', 'AggLevel'])
             rba.columns = rba_columns
             self._rba_cache = rba
         return self._rba_cache
@@ -334,11 +334,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _fund_rba(self):
-        fund_index = self._all_rba.columns.get_level_values(1) == self._fund_id.squeeze()
-        if any(fund_index):
-            fund_rba = self._all_rba.iloc[:, fund_index]
-            fund_rba.columns = fund_rba.columns.droplevel(1)
-            return fund_rba
+        if self._all_rba is not None:
+            return self._all_rba.copy()
         else:
             return pd.DataFrame()
 
@@ -678,11 +675,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def _get_rba_summary(self):
-        factor_group_index = pd.DataFrame(index=['SYSTEMATIC', 'REGION', 'INDUSTRY', 'REPAY',
+        factor_group_index = pd.DataFrame(index=['SYSTEMATIC',
+                                                 'REGION', 'INDUSTRY', 'X_ASSET_CLASS_EXCLUDED',
                                                  'LS_EQUITY', 'LS_CREDIT', 'MACRO',
                                                  'NON_FACTOR_SECURITY_SELECTION',
                                                  'NON_FACTOR_OUTLIER_EFFECTS'])
         fund_rba = self._fund_rba.copy()
+        fund_rba.columns = fund_rba.columns.droplevel(0)
         mtd = self._analytics.compute_periodic_return(ror=fund_rba,
                                                       period=PeriodicROR.MTD,
                                                       as_of_date=self._as_of_date,
