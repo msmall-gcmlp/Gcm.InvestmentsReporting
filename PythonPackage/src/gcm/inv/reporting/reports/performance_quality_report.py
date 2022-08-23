@@ -1,10 +1,10 @@
 import json
 import logging
-
 import pandas as pd
 import ast
 import numpy as np
 import datetime as dt
+from functools import partial
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, AggregateInterval
@@ -682,52 +682,24 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                  'NON_FACTOR_OUTLIER_EFFECTS'])
         fund_rba = self._fund_rba.copy()
         fund_rba.columns = fund_rba.columns.droplevel(0)
-        mtd = self._analytics.compute_periodic_return(ror=fund_rba,
-                                                      period=PeriodicROR.MTD,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic')
 
-        qtd = self._analytics.compute_periodic_return(ror=fund_rba,
-                                                      period=PeriodicROR.QTD,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic')
+        quarter_start = dt.datetime(self._as_of_date.year, 3 * ((self._as_of_date.month - 1) // 3) + 1, 1).month
+        qtd_window = self._as_of_date.month - quarter_start + 1
+        ytd_window = self._as_of_date.month
 
-        ytd = self._analytics.compute_periodic_return(ror=fund_rba,
-                                                      period=PeriodicROR.YTD,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic')
+        p_return_attribution = partial(self._analytics.compute_return_attributions,
+                                       attribution_ts=fund_rba,
+                                       periodicity=Periodicity.Monthly,
+                                       as_of_date=self._as_of_date
+                                       )
 
-        ttm = self._analytics.compute_trailing_return(ror=fund_rba,
-                                                      window=12,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic',
-                                                      periodicity=Periodicity.Monthly,
-                                                      annualize=True,
-                                                      include_history=False)
-
-        t3y = self._analytics.compute_trailing_return(ror=fund_rba,
-                                                      window=36,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic',
-                                                      periodicity=Periodicity.Monthly,
-                                                      annualize=True,
-                                                      include_history=False)
-
-        t5y = self._analytics.compute_trailing_return(ror=fund_rba,
-                                                      window=60,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic',
-                                                      periodicity=Periodicity.Monthly,
-                                                      annualize=True,
-                                                      include_history=False)
-
-        t10y = self._analytics.compute_trailing_return(ror=fund_rba,
-                                                       window=120,
-                                                       as_of_date=self._as_of_date,
-                                                       method='arithmetic',
-                                                       periodicity=Periodicity.Monthly,
-                                                       annualize=True,
-                                                       include_history=False)
+        mtd = p_return_attribution(window=1, annualize=False).rename(columns={'CTR': 'MTD'})
+        qtd = p_return_attribution(window=qtd_window, annualize=False).rename(columns={'CTR': 'QTD'})
+        ytd = p_return_attribution(window=ytd_window, annualize=False).rename(columns={'CTR': 'YTD'})
+        ttm = p_return_attribution(window=12, annualize=False).rename(columns={'CTR': 'TTM'})
+        t3y = p_return_attribution(window=36, annualize=True).rename(columns={'CTR': 'T3Y'})
+        t5y = p_return_attribution(window=60, annualize=True).rename(columns={'CTR': 'T5Y'})
+        t10y = p_return_attribution(window=120, annualize=True).rename(columns={'CTR': 'T10Y'})
 
         #TODO only fill na if some non na's
         summary = factor_group_index.merge(mtd, left_index=True, right_index=True, how='left')
