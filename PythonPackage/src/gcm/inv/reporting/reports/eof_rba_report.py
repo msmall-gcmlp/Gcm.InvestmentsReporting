@@ -1,6 +1,6 @@
 import json
 import logging
-
+import numpy as np
 import pandas as pd
 import datetime as dt
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
@@ -12,6 +12,8 @@ from gcm.Scenario.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from .reporting_runner_base import ReportingRunnerBase
+from dateutil.relativedelta import relativedelta
+from gcm.inv.dataprovider.factor import Factor
 
 
 
@@ -50,6 +52,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
                                 'NON_FACTOR_SECURITY_SELECTION_PUBLICS',
                                 'NON_FACTOR_OUTLIER_EFFECTS'
                                 ]
+
         rba_subtotals = self._inv_group.get_rba_return_decomposition_by_date(start_date=self._start_date,
                                                                              end_date=self._end_date,
                                                                              factor_filter=subtotal_factors,
@@ -171,20 +174,104 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         attribution_table = pd.concat([attribution_table.columns.to_frame().T, attribution_table])
         return attribution_table
 
+    @staticmethod
+    def get_days_period_to_date(daily_returns, start_date, end_date):
+        returns_within_range = (pd.to_datetime(daily_returns.index).date >= start_date) & (
+                    pd.to_datetime(daily_returns.index).date <= end_date)
+        days_ptd = sum(returns_within_range)
+        return days_ptd
+
+    @staticmethod
+    def calculate_median_return(returns):
+        median_returns = returns.apply(np.nanmedian)
+        return median_returns
+
+    @staticmethod
+    def calculate_return_percentile(returns):
+        percentile_rank = returns.rank(method='max').apply(lambda x: 100 * (x - 1) / (sum(~x.isnull()) - 1))
+        percentile_rank = percentile_rank.iloc[[-1]]
+        return percentile_rank.round(0).astype(int)
+
+    @staticmethod
+    def calculate_rolling_geometric_returns(returns, window, periodicity=Periodicity.Daily):
+        def _get_annual_periods(periodicity):
+            # when converting price levels to percent changes, need to ensure we have t-1
+            # for daily, pad 7 days to ensure we capture weekends/holidays
+            switcher = {
+                Periodicity.Daily: 252,
+                Periodicity.Monthly: 12,
+                Periodicity.Quarterly: 4,
+                Periodicity.Annual: 1
+            }
+            return switcher.get(periodicity, "nothing")
+
+        annual_periods = _get_annual_periods(periodicity=periodicity)
+        annualizing_factor = min(1, annual_periods / window)
+        rolling_returns = returns.rolling(window=window, min_periods=window).apply(
+            lambda x: np.nanprod(1 + x) ** (annualizing_factor) - 1)
+        return rolling_returns
+
     def _get_factor_performance_tables(self):
-        factor_summary = self._factor_returns.summarise_ptd_factor_returns(start_date=self._start_date,
-                                                                           end_date=self._end_date,
-                                                                           universe=self._universe,
-                                                                           period_to_date=self._periodicity)
+        factors = self._inv_group.get_rba_return_decomposition_by_date(start_date=self._start_date,
+                                                                       end_date=self._end_date,
+                                                                       frequency="M")
+        factors = factors.columns.to_frame().reset_index(drop=True)
 
-        market_factors = factor_summary[factor_summary['FactorGroup1'] == 'Market Beta'].drop(columns='FactorGroup1')
-        market_factors['FactorGroup2'] = [x.replace("Long ", "") for x in market_factors['FactorGroup2']]
-        market_factors = market_factors.rename(columns={"FactorGroup2": "Factor Group"}).drop(columns='Ticker')
+        market_tickers = factors[factors['FactorGroup1'].isin(['SYSTEMATIC', 'X_ASSET_CLASS'])]['AggLevel'].tolist()
+        style_tickers = factors[factors['FactorGroup1'].isin(['PUBLIC_LS'])]['AggLevel'].tolist()
+        tickers = market_tickers + style_tickers
 
-        style_factors = factor_summary[factor_summary['FactorGroup1'] != 'Market Beta'].drop(columns='FactorGroup1')
-        style_factors = style_factors.rename(columns={"FactorGroup2": "Factor Group"})
-        style_factors['Ticker'] = [x.replace(" Index", "") for x in style_factors['Ticker']]
-        style_factors = style_factors.drop(columns={'Factor', 'Factor Group', 'Ticker'})
+        returns = Factor(tickers=tickers).get_returns(start_date=dt.date(2000, 1, 1),
+                                                      end_date=self._end_date,
+                                                      fill_na=True)
+
+        days_ptd = self.get_days_period_to_date(daily_returns=returns,
+                                                start_date=self._start_date,
+                                                end_date=self._end_date)
+
+        rolling_returns = self.calculate_rolling_geometric_returns(returns=returns, window=days_ptd,
+                                                                   periodicity=Periodicity.Daily)
+
+        current_ptd_return = rolling_returns.iloc[[-1]]
+
+        current_ptd_return['Metric'] = self._periodicity.value + 'TD Return (' + str(days_ptd) + ' days)'
+
+        median_returns = self.calculate_median_return(returns=rolling_returns)
+        median_returns['Metric'] = 'Median ' + str(days_ptd) + '-day Return'
+
+        percentiles = self.calculate_return_percentile(returns=rolling_returns)
+        percentiles['Metric'] = 'Ptile vs Avg (Since 2000)'
+
+        summary = current_ptd_return.append(median_returns, ignore_index=True).append(percentiles, ignore_index=True)
+        summary = summary.set_index('Metric')
+
+        summary = summary.T
+
+        factors = Factor(tickers=tickers).get_factor_inventory()
+        factor_hierarchy = Factor(tickers=tickers).get_factor_hierarchy()
+        factors = factors.merge(factor_hierarchy, left_on='HierarchyParent', right_index=True, how='left')
+        factors = factors[['SourceTicker', 'Description', 'Group3']]
+        factors['Group3'] = [x.replace('LS_EQUITY_', '') if x is not None else None for x in factors['Group3']]
+        factors['Group3'] = [x.replace('INDUSTRY_', '') if x is not None else None for x in factors['Group3']]
+        factors['Description'] = factors['Description'] + ' / ' + factors['Group3']
+        factors.drop(columns={'Group3'}, inplace=True)
+        summary = summary.merge(factors, left_index=True, right_on='SourceTicker', how='left')
+
+        market_factors = summary[summary['SourceTicker'].isin(market_tickers)]
+        front_cols = ['Description']
+        market_factors = market_factors[front_cols + [col for col in market_factors.columns if col not in front_cols]]
+        market_factors = pd.concat([market_factors.columns.to_frame().T, market_factors])
+
+        style_factors = summary[summary['SourceTicker'].isin(style_tickers)]
+        # blank column for spacing in excel
+        style_factors[''] = ''
+        front_cols = ['Description', '']
+        style_factors = style_factors[front_cols + [col for col in style_factors.columns if col not in front_cols]]
+        style_factors = pd.concat([style_factors.columns.to_frame().T, style_factors])
+
+        market_factors.drop(columns={'SourceTicker'}, inplace=True)
+        style_factors.drop(columns={'SourceTicker'}, inplace=True)
+
         return market_factors, style_factors
 
     def _write_report_to_data_lake(self, input_data, input_data_json):
@@ -226,18 +313,18 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
 
     def generate_rba_report(self):
         attribution_table = self._get_attribution_table_rba()
-        #market_factor_summary, style_factor_summary = self._get_factor_performance_tables()
+        market_factor_summary, style_factor_summary = self._get_factor_performance_tables()
 
         input_data = {
             "attribution_table": attribution_table,
-            #"market_factor_summary": market_factor_summary,
-            #"style_factor_summary": style_factor_summary
+            "market_factor_summary": market_factor_summary,
+            "style_factor_summary": style_factor_summary
         }
 
         input_data_json = {
             "attribution_table": attribution_table.to_json(orient='index'),
-            #"market_factor_summary": market_factor_summary.to_json(orient='index'),
-            #"style_factor_summary": style_factor_summary.to_json(orient='index')
+            "market_factor_summary": market_factor_summary.to_json(orient='index'),
+            "style_factor_summary": style_factor_summary.to_json(orient='index')
         }
         self._write_report_to_data_lake(input_data=input_data, input_data_json=input_data_json)
 
