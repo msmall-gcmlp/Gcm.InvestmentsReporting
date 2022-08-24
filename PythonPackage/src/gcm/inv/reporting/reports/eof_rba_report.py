@@ -246,7 +246,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         summary = summary.set_index('Metric')
 
         summary = summary.T
-
+        summary = summary.sort_values(by=summary.columns[2], ascending=False)
         factors = Factor(tickers=tickers).get_factor_inventory()
         factor_hierarchy = Factor(tickers=tickers).get_factor_hierarchy()
         factors = factors.merge(factor_hierarchy, left_on='HierarchyParent', right_index=True, how='left')
@@ -255,22 +255,23 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         factors['Group3'] = [x.replace('INDUSTRY_', '') if x is not None else None for x in factors['Group3']]
         factors['Description'] = factors['Description'] + ' / ' + factors['Group3']
         factors.drop(columns={'Group3'}, inplace=True)
+        factors.rename(columns={'Description': 'Description/Group'}, inplace=True)
+
         summary = summary.merge(factors, left_index=True, right_on='SourceTicker', how='left')
-
-        market_factors = summary[summary['SourceTicker'].isin(market_tickers)]
-        front_cols = ['Description']
-        market_factors = market_factors[front_cols + [col for col in market_factors.columns if col not in front_cols]]
-        market_factors = pd.concat([market_factors.columns.to_frame().T, market_factors])
-
-        style_factors = summary[summary['SourceTicker'].isin(style_tickers)]
         # blank column for spacing in excel
-        style_factors[''] = ''
-        front_cols = ['Description', '']
-        style_factors = style_factors[front_cols + [col for col in style_factors.columns if col not in front_cols]]
-        style_factors = pd.concat([style_factors.columns.to_frame().T, style_factors])
+        summary[''] = ''
+        front_cols = ['Description/Group', '']
+        summary = summary[front_cols + [col for col in summary.columns if col not in front_cols]]
 
-        market_factors.drop(columns={'SourceTicker'}, inplace=True)
-        style_factors.drop(columns={'SourceTicker'}, inplace=True)
+        market_factors = summary[summary['SourceTicker'].isin(market_tickers)].drop(columns={'SourceTicker'})
+        style_factors = summary[summary['SourceTicker'].isin(style_tickers)].drop(columns={'SourceTicker'})
+
+        style_factors[' '] = ''
+        front_cols = ['Description/Group', '', ' ']
+        style_factors = style_factors[front_cols + [col for col in style_factors.columns if col not in front_cols]]
+
+        market_factors = pd.concat([market_factors.columns.to_frame().T, market_factors])
+        style_factors = pd.concat([style_factors.columns.to_frame().T, style_factors])
 
         return market_factors, style_factors
 
@@ -288,7 +289,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             operation=lambda dao, params: dao.post_data(params, data_to_write)
         )
 
-        logging.info('JSON stored to DataLake for: ' + "EOF_" + self._periodicity.value)
+        logging.info('JSON stored to DataLake for: ' + "EOF_" + self._periodicity.value + 'TD')
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         with Scenario(asofdate=as_of_date).context():
@@ -302,14 +303,14 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
                 entity_display_name='EOF',
                 entity_ids=[19163],
                 entity_source=DaoSource.PubDwh,
-                report_name='EOF RBA',
+                report_name='RBA_' + self._periodicity.value + 'TD',
                 report_type=ReportType.Risk,
                 aggregate_intervals=AggregateInterval.MTD,
                 output_dir="cleansed/investmentsreporting/printedexcels/",
                 report_output_source=DaoSource.DataLake
             )
 
-        logging.info('Excel stored to DataLake for: ' + "EOF_" + self._periodicity.value)
+        logging.info('Excel stored to DataLake for: ' + "EOF_" + self._periodicity.value + 'TD')
 
     def generate_rba_report(self):
         attribution_table = self._get_attribution_table_rba()
