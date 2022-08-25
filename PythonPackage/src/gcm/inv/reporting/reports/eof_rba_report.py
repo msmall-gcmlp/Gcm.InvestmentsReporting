@@ -93,13 +93,13 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
                                                                           periodicity=Periodicity.Monthly,
                                                                           as_of_date=self._end_date,
                                                                           window=subtotals.shape[0],
-                                                                          annualize=False)
+                                                                          annualize=True)
 
             non_subtotal_decomp = self._analytics.compute_return_attributions(attribution_ts=non_subtotals,
                                                                               periodicity=Periodicity.Monthly,
                                                                               as_of_date=self._end_date,
                                                                               window=non_subtotals.shape[0],
-                                                                              annualize=False)
+                                                                              annualize=True)
 
             fund_rba = pd.concat([subtotal_decomp, non_subtotal_decomp], axis=0)
 

@@ -20,4 +20,5 @@ class RunEofReturnBasedAttributionReport:
 
 if __name__ == "__main__":
     report_runner = RunEofReturnBasedAttributionReport(as_of_date=dt.date(2022, 4, 30))
-    funds_and_peers = report_runner.generate_report(periodicity=PeriodicROR.YTD)
+    report_runner.generate_report(periodicity=PeriodicROR.ITD)
+    report_runner.generate_report(periodicity=PeriodicROR.YTD)
