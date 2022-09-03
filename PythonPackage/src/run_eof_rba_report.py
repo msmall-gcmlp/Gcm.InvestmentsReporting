@@ -10,7 +10,6 @@ class RunEofReturnBasedAttributionReport:
     def __init__(self, as_of_date):
         self._runner = DaoRunner()
         self._as_of_date = as_of_date
-        self._params = {'status': 'EMM', 'vertical': 'ARS', 'entity': 'PFUND'}
 
     def generate_report(self, periodicity):
         with Scenario(runner=self._runner, as_of_date=self._as_of_date, periodicity=periodicity).context():
@@ -19,6 +18,6 @@ class RunEofReturnBasedAttributionReport:
 
 
 if __name__ == "__main__":
-    report_runner = RunEofReturnBasedAttributionReport(as_of_date=dt.date(2022, 4, 30))
+    report_runner = RunEofReturnBasedAttributionReport(as_of_date=dt.date(2022, 3, 2))
     report_runner.generate_report(periodicity=PeriodicROR.ITD)
     report_runner.generate_report(periodicity=PeriodicROR.YTD)

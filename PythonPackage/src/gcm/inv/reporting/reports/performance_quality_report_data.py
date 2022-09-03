@@ -95,13 +95,15 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                                             'MACRO',
                                                                             'NON_FACTOR_SECURITY_SELECTION',
                                                                             'NON_FACTOR_OUTLIER_EFFECTS'],
-                                                             frequency="M")
+                                                             frequency="M",
+                                                             window=24)
 
         start_1y = self._end_date - relativedelta(years=1)
         rba_risk_1y = inv_group.get_average_risk_decomp_by_group(start_date=start_1y,
                                                                  end_date=self._end_date,
                                                                  group_type='FactorGroup1',
                                                                  frequency='M',
+                                                                 window=24,
                                                                  wide=False)
         rba_risk_1y.rename(columns={'AvgRiskContrib': '1Y'}, inplace=True)
 
@@ -109,6 +111,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                                  end_date=self._end_date,
                                                                  group_type='FactorGroup1',
                                                                  frequency='M',
+                                                                 window=24,
                                                                  wide=False)
         rba_risk_3y.rename(columns={'AvgRiskContrib': '3Y'}, inplace=True)
 
@@ -116,6 +119,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
                                                                  end_date=self._end_date,
                                                                  group_type='FactorGroup1',
                                                                  frequency='M',
+                                                                 window=24,
                                                                  wide=False)
         rba_risk_5y.rename(columns={'AvgRiskContrib': '5Y'}, inplace=True)
 
@@ -124,17 +128,20 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
         rba_r2_1y = inv_group.get_average_adj_r2(start_date=start_1y,
                                                  end_date=self._end_date,
-                                                 frequency='M')
+                                                 frequency='M',
+                                                 window=24)
         rba_r2_1y.rename(columns={'AvgAdjR2': '1Y'}, inplace=True)
 
         rba_r2_3y = inv_group.get_average_adj_r2(start_date=start_3y,
                                                  end_date=self._end_date,
-                                                 frequency='M')
+                                                 frequency='M',
+                                                 window=24)
         rba_r2_3y.rename(columns={'AvgAdjR2': '3Y'}, inplace=True)
 
         rba_r2_5y = inv_group.get_average_adj_r2(start_date=start_5y,
                                                  end_date=self._end_date,
-                                                 frequency='M')
+                                                 frequency='M',
+                                                 window=24)
         rba_r2_5y.rename(columns={'AvgAdjR2': '5Y'}, inplace=True)
 
         rba_adj_r_squared = rba_r2_1y.merge(rba_r2_3y, how='outer').merge(rba_r2_5y, how='outer')
