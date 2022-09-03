@@ -260,7 +260,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         factors = factors.merge(factor_hierarchy, left_on='HierarchyParent', right_index=True, how='left')
         factors = factors[['SourceTicker', 'Description']]
         suffix = ' - Excess over MSCI ACWI - Beta Adj'
-        descriptions = [x.replace(suffix, '') if x is not None else None for x in factors['Description'].tolist()]
+        descriptions = [x.replace(suffix, '*') if x is not None else None for x in factors['Description'].tolist()]
         factors['Description'] = descriptions
 
         factors.rename(columns={'Description': 'Description'}, inplace=True)
