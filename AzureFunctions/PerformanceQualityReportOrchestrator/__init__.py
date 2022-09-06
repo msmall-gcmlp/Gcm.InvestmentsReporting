@@ -8,6 +8,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
 
     first_retry_interval_in_milliseconds = 600000
     max_number_of_attempts = 1
+
     retry_options = df.RetryOptions(
         first_retry_interval_in_milliseconds, max_number_of_attempts
     )
