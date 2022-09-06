@@ -187,8 +187,11 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             exp_10y = exposure_10y[exposure_10y['InvestmentGroupId'] == fund_id]
             fund_inputs['exposure_10y'] = exp_10y.to_json(orient='index')
 
-            fund_rba = rba.iloc[:, rba.columns.get_level_values(1) == fund_id]
-            fund_rba.columns = fund_rba.columns.droplevel(0).droplevel(0)
+            if rba.shape[0] > 0:
+                fund_rba = rba.iloc[:, rba.columns.get_level_values(1) == fund_id]
+                fund_rba.columns = fund_rba.columns.droplevel(0).droplevel(0)
+            else:
+                fund_rba = rba.copy()
             fund_inputs['rba'] = fund_rba.to_json(orient='index')
 
             decomp = rba_risk_decomp[rba_risk_decomp['InvestmentGroupId'] == fund_id]
