@@ -178,6 +178,14 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         r2 = self._get_average_adj_r2()
         attribution_table = pd.concat([top_line_summary, rba_summary, risk_decomp, r2])
         attribution_table = pd.concat([attribution_table.columns.to_frame().T, attribution_table])
+
+        cols = list(attribution_table)
+        cols.insert(0, cols.pop(cols.index('GCM Equity Opps Fund')))
+
+        attribution_table = attribution_table.loc[:, cols]
+
+        attribution_table.rename(columns={"GCM Equity Opps Fund": 'EOF'}, inplace=True)
+
         return attribution_table
 
     @staticmethod
