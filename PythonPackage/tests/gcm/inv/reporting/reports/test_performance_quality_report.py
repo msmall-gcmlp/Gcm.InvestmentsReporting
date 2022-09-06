@@ -60,6 +60,11 @@ class TestPerformanceQualityReport:
             report_inputs = perf_quality.get_performance_quality_report_inputs()
 
         fund_inputs = report_inputs['fund_inputs']['Skye']
+
+        # import json
+        # with open("Skye_fund_inputs_2022-03-31.json", 'w') as f:
+        #     json.dump(fund_inputs, f)
+
         fund_dimn = pd.read_json(fund_inputs['fund_dimn'], orient='index')
         fund_returns = pd.read_json(fund_inputs['fund_returns'], orient='index')
         abs_bmrk_returns = pd.read_json(fund_inputs['abs_bmrk_returns'], orient='index')
@@ -151,17 +156,22 @@ class TestPerformanceQualityReport:
         rba = perf_quality_report.build_rba_summary()
         assert rba.shape[0] > 0
         assert all(rba.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y'])
-        assert all(rba.columns == ['Total', 'Market Beta', 'Region', 'Industries', 'Styles',
-                                   'Hedge Fund Technicals', 'Selection Risk', 'Unexplained',
-                                   'Beta', 'X-Asset', 'L/S', 'Residual', 'AdjR2'])
+        assert all(rba.columns == ['SYSTEMATIC',
+                                   'REGION', 'INDUSTRY', 'X_ASSET_CLASS_EXCLUDED',
+                                   'LS_EQUITY', 'LS_CREDIT', 'MACRO',
+                                   'NON_FACTOR_SECURITY_SELECTION',
+                                   'NON_FACTOR_OUTLIER_EFFECTS',
+                                   'SYSTEMATIC_RISK',
+                                   'X_ASSET_RISK',
+                                   'PUBLIC_LS_RISK', 'NON_FACTOR_RISK'])
 
     def test_pba_skye(self, perf_quality_report):
         pba = perf_quality_report.build_pba_summary()
         assert pba.shape[0] > 0
         assert all(pba.index == ['MTD - Publics', 'MTD - Privates', 'QTD - Publics',
                                  'QTD - Privates', 'YTD - Publics', 'YTD - Privates'])
-        assert all(pba.columns == ['Total', 'Beta', 'Regional', 'Industry', 'MacroRV',
-                                   'LS_Equity', 'LS_Credit', 'Residual', 'Fees', 'Unallocated'])
+        assert all(pba.columns == ['Beta', 'Regional', 'Industry', 'Repay', 'LS_Equity', 'LS_Credit',
+                                   'MacroRV', 'Residual', 'Fees', 'Unallocated'])
 
     def test_shortfall_skye(self, perf_quality_report):
         shortfall = perf_quality_report.build_shortfall_summary()
