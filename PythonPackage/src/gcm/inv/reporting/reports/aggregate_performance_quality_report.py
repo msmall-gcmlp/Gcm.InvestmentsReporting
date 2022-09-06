@@ -52,10 +52,10 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
 
     @functools.lru_cache(maxsize=None)
     def download_performance_quality_report_inputs(self, fund_name) -> dict:
-        location = "lab/rqs/azurefunctiondata"
+        location = "raw/investmentsreporting/summarydata/performancequality"
         read_params = AzureDataLakeDao.create_get_data_params(
             location,
-            fund_name.replace('/', '') + "_performance_quality_report_report_analytics.json",
+            fund_name.replace('/', '') + "_fund_" + self._as_of_date.strftime('%Y-%m-%d') + ".json",
             retry=False,
         )
 
@@ -158,6 +158,23 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
             "latest_exposure_heading": latest_exposure_heading,
         }
 
+        # as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
+        # with Scenario(asofdate=as_of_date).context():
+        #     InvestmentsReportRunner().execute(
+        #         data=input_data,
+        #         template="PFUND_PerformanceQuality_Template.xlsx",
+        #         save=True,
+        #         runner=self._runner,
+        #         entity_type=ReportingEntityTypes.portfolio,
+        #         entity_name=self._portfolio_acronym,
+        #         entity_display_name=self._portfolio_acronym.replace('/', ''),
+        #         entity_ids=[self._pub_portfolio_id.item()],
+        #         entity_source=DaoSource.PubDwh,
+        #         report_name='Performance Quality',
+        #         report_type=ReportType.Risk,
+        #         aggregate_intervals=AggregateInterval.MTD,
+        #     )
+
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         with Scenario(asofdate=as_of_date).context():
             InvestmentsReportRunner().execute(
@@ -173,6 +190,8 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
                 report_name='Performance Quality',
                 report_type=ReportType.Risk,
                 aggregate_intervals=AggregateInterval.MTD,
+                output_dir="cleansed/investmentsreporting/printedexcels/",
+                report_output_source=DaoSource.DataLake
             )
 
         return True
