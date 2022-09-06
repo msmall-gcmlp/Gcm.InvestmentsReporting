@@ -368,6 +368,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @property
     def _fund_rba_adj_r_squared(self):
         r2 = self._all_rba_adj_r_squared.copy()
+
+        if r2.shape[0] == 0:
+            return pd.DataFrame(index=['TTM', '3Y', '5Y'],
+                                columns=['AdjR2'])
+
         r2 = r2[r2['InvestmentGroupName'] == self._fund_name]
         r2 = r2[['1Y', '3Y', '5Y']]
         r2.rename(columns={'1Y': 'TTM'}, inplace=True)
@@ -455,8 +460,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return None
 
     def get_header_info(self):
+        if isinstance(self._substrategy, str):
+            entity_type = self._entity_type + ' - ' + self._substrategy
+        else:
+            entity_type = self._entity_type
+
         header = pd.DataFrame({'header_info': [self._fund_name,
-                                               self._entity_type + ' - ' + self._substrategy,
+                                               entity_type,
                                                self._as_of_date]})
         return header
 
@@ -502,6 +512,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def _get_return_summary(self, returns, return_type):
         returns = returns.copy()
+        if returns.shape[0] == 0:
+            return pd.DataFrame(index=['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'],
+                                columns=['Fund'])
+
         mtd_return = self._analytics.compute_periodic_return(ror=returns, period=PeriodicROR.MTD,
                                                              as_of_date=self._as_of_date, method='geometric')
 
@@ -540,14 +554,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def _get_excess_return_summary(self, fund_returns, benchmark_returns, benchmark_name):
-        fund_returns = fund_returns.copy()
+        fund_returns = fund_returns.copy().fillna(' ')
         benchmark_returns = benchmark_returns.copy()
         if benchmark_returns.shape[0] > 0:
             benchmark_returns = self._get_return_summary(returns=benchmark_returns, return_type=benchmark_name)
             summary = fund_returns.merge(benchmark_returns, left_index=True, right_index=True)
             summary['IsNumeric'] = summary.applymap(np.isreal).all(1)
             excess = summary[summary['IsNumeric']]['Fund'] - summary[summary['IsNumeric']][benchmark_name]
-            summary[benchmark_name + 'Excess'] = excess.round(2)
+            summary[benchmark_name + 'Excess'] = excess.astype(float).round(2)
             summary.drop(columns={'IsNumeric'}, inplace=True)
             summary = summary.fillna('')
         else:
@@ -663,6 +677,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = summary.merge(secondary_peer_percentiles, left_index=True, right_index=True)
         summary = summary.merge(eurekahedge_percentiles, left_index=True, right_index=True)
         summary = summary.merge(ehi200_percentiles, left_index=True, right_index=True)
+
+        summary = summary.fillna('')
         return summary
 
     @staticmethod
@@ -1164,6 +1180,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def build_performance_stability_fund_summary(self):
+        if self._fund_returns.shape[0] == 0:
+            return pd.DataFrame(columns=['Vol', 'Beta', 'Sharpe', 'BattingAvg', 'WinLoss',
+                           'Return_min', 'Return_25%', 'Return_75%', 'Return_max',
+                           'Sharpe_min', 'Sharpe_25%', 'Sharpe_75%', 'Sharpe_max'],
+                                index=['TTM', '3y', '5Y', '5Y Median'])
         vol = self._get_fund_trailing_vol_summary()
         beta = self._get_fund_trailing_beta_summary()
         sharpe = self._get_fund_trailing_sharpe_summary()
@@ -1203,12 +1224,16 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def build_shortfall_summary(self):
         returns = self._fund_returns.copy()
-        drawdown = self._analytics.compute_max_drawdown(ror=returns,
-                                                        window=12,
-                                                        as_of_date=self._as_of_date,
-                                                        periodicity=Periodicity.Monthly)
+        if returns.shape[0] > 0:
+            drawdown = self._analytics.compute_max_drawdown(ror=returns,
+                                                            window=12,
+                                                            as_of_date=self._as_of_date,
+                                                            periodicity=Periodicity.Monthly)
 
-        drawdown = drawdown.squeeze()
+            drawdown = drawdown.squeeze()
+        else:
+            drawdown = None
+
         trigger = self._fle_scl.copy()
 
         if drawdown is not None:
@@ -1220,6 +1245,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 pass_fail = 'Pass'
         else:
             pass_fail = ''
+            drawdown = ''
 
         summary = pd.DataFrame({'Trigger': trigger,
                                 'Drawdown': drawdown,
@@ -1239,8 +1265,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return True
 
     def generate_performance_quality_report(self):
-        if not self._validate_inputs():
-            return 'Invalid inputs'
+        # if not self._validate_inputs():
+        #     return 'Invalid inputs'
 
         logging.info('Generating report for: ' + self._fund_name)
         header_info = self.get_header_info()
