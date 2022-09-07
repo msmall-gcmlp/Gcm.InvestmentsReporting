@@ -1258,6 +1258,38 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                index=['ExpectedReturn', 'ExpectedVolatility'])
         return summary
 
+    def build_monthly_performance_summary(self):
+        end_year = self._as_of_date.year
+        years = [x for x in range(end_year - 52, end_year + 1)]
+        months = [x for x in range(1, 13)]
+
+        if self._fund_returns.shape[0] == 0:
+            return pd.DataFrame(columns=months, index=years)
+
+        returns = self._fund_returns.copy()
+        returns['Month'] = returns.index.month
+        returns['Year'] = returns.index.year
+
+        # pivot long to wide
+        monthly_returns = returns.pivot(index=['Year'], columns=['Month'])
+        monthly_returns = monthly_returns.reindex(years, axis=0)
+        monthly_returns.columns = monthly_returns.columns.droplevel(0)
+        monthly_returns = monthly_returns.reindex(months, axis=1)
+        monthly_returns = monthly_returns.sort_values('Year', ascending=False)
+
+        # append ytd returns
+        ytd_returns = monthly_returns.apply(lambda x: np.prod(1 + x) - 1, axis=1)
+        ytd_index = ~monthly_returns.isna().all(axis=1)
+        monthly_returns['YTD'] = None
+        monthly_returns.loc[ytd_index, 'YTD'] = ytd_returns[ytd_index]
+
+        monthly_returns = 100 * monthly_returns.astype(float).round(3)
+        monthly_returns = monthly_returns.reset_index()
+
+        monthly_returns.loc[~ytd_index.values, 'Year'] = None
+
+        return monthly_returns
+
     def _validate_inputs(self):
         if self._fund_returns.shape[0] == 0:
             return False
@@ -1270,6 +1302,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         logging.info('Generating report for: ' + self._fund_name)
         header_info = self.get_header_info()
+
         return_summary = self.build_benchmark_summary()
         absolute_return_benchmark = self.get_absolute_return_benchmark()
         peer_group_heading = self.get_peer_group_heading()
@@ -1293,6 +1326,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         exposure_summary = self.build_exposure_summary()
         latest_exposure_heading = self.get_latest_exposure_heading()
 
+        monthly_performance_summary = self.build_monthly_performance_summary()
+
         logging.info('Report summary data generated for: ' + self._fund_name)
 
         input_data = {
@@ -1314,6 +1349,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "risk_model_expectations": risk_model_expectations,
             "exposure_summary": exposure_summary,
             "latest_exposure_heading": latest_exposure_heading,
+            "monthly_performance_summary": monthly_performance_summary,
         }
 
         input_data_json = {
@@ -1335,6 +1371,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "risk_model_expectations": risk_model_expectations.to_json(orient='index'),
             "exposure_summary": exposure_summary.to_json(orient='index'),
             "latest_exposure_heading": latest_exposure_heading.to_json(orient='index'),
+            "monthly_performance_summary": monthly_performance_summary.to_json(orient='index')
         }
 
         data_to_write = json.dumps(input_data_json)
@@ -1356,7 +1393,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         with Scenario(asofdate=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
-                template="PFUND_PerformanceQuality_Template.xlsx",
+                template="PFUND_PerformanceQuality_TemplateNEW.xlsx",
                 save=True,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.manager_fund_group,

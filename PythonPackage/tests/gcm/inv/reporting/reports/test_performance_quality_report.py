@@ -193,3 +193,8 @@ class TestPerformanceQualityReport:
     def test_pub_investment_group_id(self, perf_quality_report):
         id = perf_quality_report._pub_investment_group_id
         assert id == 618
+
+    def test_build_market_performance_summary(self, perf_quality_report):
+        summary = perf_quality_report.build_monthly_performance_summary()
+        assert all(summary.columns[0:4] == ['Year', 1, 2, 3])
+        assert all(summary.Year[0:4] == [2022, 2021, 2020, 2019])
