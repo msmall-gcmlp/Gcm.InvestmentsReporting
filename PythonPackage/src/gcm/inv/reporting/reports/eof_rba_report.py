@@ -180,6 +180,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         attribution_table = pd.concat([attribution_table.columns.to_frame().T, attribution_table])
 
         cols = list(attribution_table)
+        cols = sorted(cols)
         cols.insert(0, cols.pop(cols.index('GCM Equity Opps Fund')))
 
         attribution_table = attribution_table.loc[:, cols]
