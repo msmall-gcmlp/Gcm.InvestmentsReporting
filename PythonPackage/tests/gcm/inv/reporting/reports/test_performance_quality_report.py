@@ -198,3 +198,8 @@ class TestPerformanceQualityReport:
         summary = perf_quality_report.build_monthly_performance_summary()
         assert all(summary.columns[0:4] == ['Year', 1, 2, 3])
         assert all(summary.Year[0:4] == [2022, 2021, 2020, 2019])
+
+    def test_build_constituent_count_summary(self, perf_quality_report):
+        summary = perf_quality_report.build_constituent_count_summary()
+        assert all(summary.columns == ['primary', 'secondary', 'eureka', 'ehi200'])
+        assert summary.shape[0] == 2

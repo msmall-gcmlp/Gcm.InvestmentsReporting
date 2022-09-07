@@ -218,6 +218,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return returns
 
     @property
+    def _primary_peer_constituent_count(self):
+        return self._primary_peer_constituent_returns.shape[1]
+
+    @property
+    def _current_primary_peer_constituent_count(self):
+        return self._primary_peer_constituent_returns.isna().sum(axis=1)[-1]
+
+    @property
     def _secondary_peer_constituent_returns(self):
         returns = self._secondary_peer_inputs
         if returns is not None:
@@ -230,6 +238,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
         else:
             returns = pd.DataFrame()
         return returns
+
+    @property
+    def _secondary_peer_constituent_count(self):
+        return self._secondary_peer_constituent_returns.shape[1]
+
+    @property
+    def _current_secondary_peer_constituent_count(self):
+        return self._secondary_peer_constituent_returns.isna().sum(axis=1)[-1]
 
     @property
     def _eurekahedge_inputs(self):
@@ -280,6 +296,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.Series()
 
     @property
+    def _eurekahedge_constituent_count(self):
+        return self._eurekahedge_constituent_returns.shape[1]
+
+    @property
+    def _current_eurekahedge_constituent_count(self):
+        return self._eurekahedge_constituent_returns.isna().sum(axis=1)[-1]
+
+    @property
     def _ehi200_constituent_returns(self):
         returns = pd.read_json(self._eurekahedge200_inputs['eurekahedge_constituent_returns'], orient='index')
         returns_columns = [ast.literal_eval(x) for x in returns.columns]
@@ -293,6 +317,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.Series()
 
         return returns
+
+    @property
+    def _ehi200_constituent_count(self):
+        return self._ehi200_constituent_returns.shape[1]
+
+    @property
+    def _current_ehi200_constituent_count(self):
+        return self._ehi200_constituent_returns.isna().sum(axis=1)[-1]
 
     @property
     def _market_factor_inputs(self):
@@ -679,6 +711,18 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = summary.merge(ehi200_percentiles, left_index=True, right_index=True)
 
         summary = summary.fillna('')
+        return summary
+
+    def build_constituent_count_summary(self):
+        primary = [self._current_primary_peer_constituent_count, self._primary_peer_constituent_count]
+        secondary = [self._current_secondary_peer_constituent_count, self._secondary_peer_constituent_count]
+        eureka = [self._current_eurekahedge_constituent_count, self._eurekahedge_constituent_count]
+        ehi200 = [self._current_ehi200_constituent_count, self._ehi200_constituent_count]
+
+        summary = pd.DataFrame({'primary': primary,
+                                'secondary': secondary,
+                                'eureka': eureka,
+                                'ehi200': ehi200})
         return summary
 
     @staticmethod
@@ -1304,6 +1348,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         header_info = self.get_header_info()
 
         return_summary = self.build_benchmark_summary()
+        constituent_count_summary = self.build_constituent_count_summary()
         absolute_return_benchmark = self.get_absolute_return_benchmark()
         peer_group_heading = self.get_peer_group_heading()
         eurekahedge_benchmark_heading = self.get_eurekahedge_benchmark_heading()
@@ -1333,6 +1378,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         input_data = {
             "header_info": header_info,
             "benchmark_summary": return_summary,
+            "constituent_count_summary": constituent_count_summary,
             "absolute_return_benchmark": absolute_return_benchmark,
             "peer_group_heading": peer_group_heading,
             "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading,
@@ -1355,6 +1401,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         input_data_json = {
             "header_info": header_info.to_json(orient='index'),
             "benchmark_summary": return_summary.to_json(orient='index'),
+            "constituent_count_summary": constituent_count_summary.to_json(orient='index'),
             "absolute_return_benchmark": absolute_return_benchmark.to_json(orient='index'),
             "peer_group_heading": peer_group_heading.to_json(orient='index'),
             "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading.to_json(orient='index'),
