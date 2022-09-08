@@ -50,7 +50,7 @@ setup(
         "pillow",
         "gcm-investmentsdataprovider>=0.15.0",
         "gcm-investmentsquantlib>=0.8.0",
-        "gcm-investmentsutils",
+        "gcm-investmentsutils>=0.16.0",
         "PyPDF2",
     ],
     extras_require={
