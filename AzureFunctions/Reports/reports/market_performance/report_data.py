@@ -1,5 +1,5 @@
 from gcm.inv.dataprovider.factor import Factor
-from ..reporting_runner_base import ReportingRunnerBase
+from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.inv.quantlib.timeseries.transformer.level_change import (
     LevelChange,
@@ -30,22 +30,14 @@ class MarketPerformanceQualityReportData(ReportingRunnerBase):
         )
         # extract factor prices
         market_factor_data = self._factors.get_dimensions(
-            date_period=DatePeriod(
-                start_date=self._start_date, end_date=self._as_of_date
-            )
+            date_period=DatePeriod(start_date=self._start_date, end_date=self._as_of_date)
         )
 
-        price = market_factor_data.pivot_table(
-            index="Date", columns="Ticker", values="PxLast"
-        )
+        price = market_factor_data.pivot_table(index="Date", columns="Ticker", values="PxLast")
         # Calculate level change for yields
         level_change = LevelChange().transform(price)
 
-        return (
-            market_factor_returns,
-            price,
-            level_change
-        )
+        return (market_factor_returns, price, level_change)
 
     def run(self, **kwargs):
         return self.get_market_performance_quality_report_inputs()

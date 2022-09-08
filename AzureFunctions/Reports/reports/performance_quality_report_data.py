@@ -7,7 +7,7 @@ from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
 from pandas._libs.tslibs.offsets import relativedelta
-from .reporting_runner_base import ReportingRunnerBase
+from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 
 

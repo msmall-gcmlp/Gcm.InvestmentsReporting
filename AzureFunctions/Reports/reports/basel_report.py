@@ -10,7 +10,7 @@ from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
 from gcm.Scenario.scenario import Scenario
-from .reporting_runner_base import ReportingRunnerBase
+from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
 
 
 class BaselReport(ReportingRunnerBase):
