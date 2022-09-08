@@ -1,6 +1,5 @@
 from abc import ABC
-from enum import Enum
-from .extended_enum import ExtendedEnum
+from gcm.inv.utils.misc.extended_enum import Enum, ExtendedEnum
 import logging
 from gcm.Scenario.scenario_enums import AggregateInterval
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
