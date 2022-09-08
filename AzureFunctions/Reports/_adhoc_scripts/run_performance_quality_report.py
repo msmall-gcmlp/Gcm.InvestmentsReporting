@@ -4,13 +4,13 @@ import json
 from gcm.Scenario.scenario import Scenario
 from pandas._libs.tslibs.offsets import relativedelta
 from gcm.inv.reporting.core.Utils.aggregate_file_utils import copy_metadata
-from ..reports.aggregate_performance_quality_report import AggregatePerformanceQualityReport
-from ..reports.performance_quality_peer_summary_report import PerformanceQualityPeerSummaryReport
-from ..reports.performance_quality_report_data import PerformanceQualityReportData
-from ..reports.performance_quality_report import PerformanceQualityReport
+from Reports.reports.aggregate_performance_quality_report import AggregatePerformanceQualityReport
+from Reports.reports.performance_quality_peer_summary_report import PerformanceQualityPeerSummaryReport
+from Reports.reports.performance_quality_report_data import PerformanceQualityReportData
+from Reports.reports.performance_quality_report import PerformanceQualityReport
 from gcm.Dao.DaoRunner import DaoRunner
 from gcm.Dao.DaoSources import DaoSource
-from ..reports.report_binder import ReportBinder
+from Reports.reports.report_binder import ReportBinder
 
 
 class RunPerformanceQualityReports:
