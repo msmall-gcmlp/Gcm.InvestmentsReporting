@@ -4,14 +4,18 @@ import pandas as pd
 import datetime as dt
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
+from gcm.inv.reporting.core.reporting_runner_base import (
+    ReportingRunnerBase,
+)
 from gcm.inv.dataprovider.portfolio import Portfolio
 from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
     AggregateInterval,
 )
-from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
+from gcm.inv.reporting.core.Runners.investmentsreporting import (
+    InvestmentsReportRunner,
+)
 from gcm.Scenario.scenario import Scenario
 
 
@@ -84,7 +88,12 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
             if json_inputs is not None:
                 inputs = pd.read_json(json_inputs[item], orient="index").reset_index()
                 inputs.rename(columns={"index": "Period"}, inplace=True)
-                fund_summary = pd.melt(inputs, var_name="Field", value_name="Value", id_vars=["Period"])
+                fund_summary = pd.melt(
+                    inputs,
+                    var_name="Field",
+                    value_name="Value",
+                    id_vars=["Period"],
+                )
                 fund_summary["InvestmentGroupName"] = fund_name
                 fund_summaries = fund_summaries.append(fund_summary)
 
@@ -116,7 +125,12 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
         original_rows = inputs["Period"]
         portfolio_summary = pd.concat([original_columns, portfolio_summary])
         index = original_rows.to_frame()
-        portfolio_summary = index.merge(portfolio_summary, left_on="Period", right_index=True, how="left")
+        portfolio_summary = index.merge(
+            portfolio_summary,
+            left_on="Period",
+            right_index=True,
+            how="left",
+        )
         portfolio_summary = portfolio_summary.set_index("Period")
         return portfolio_summary
 

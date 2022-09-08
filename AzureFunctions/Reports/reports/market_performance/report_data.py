@@ -1,5 +1,7 @@
 from gcm.inv.dataprovider.factor import Factor
-from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
+from gcm.inv.reporting.core.reporting_runner_base import (
+    ReportingRunnerBase,
+)
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.inv.quantlib.timeseries.transformer.level_change import (
     LevelChange,

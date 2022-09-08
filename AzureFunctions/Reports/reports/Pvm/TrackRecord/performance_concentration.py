@@ -1,4 +1,6 @@
-from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
+from gcm.inv.reporting.core.reporting_runner_base import (
+    ReportingRunnerBase,
+)
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeFile,
     TabularDataOutputTypes,

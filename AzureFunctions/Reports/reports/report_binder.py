@@ -1,7 +1,9 @@
 import os
 import glob
 from PyPDF2 import PdfFileMerger
-from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
+from gcm.inv.reporting.core.reporting_runner_base import (
+    ReportingRunnerBase,
+)
 from gcm.inv.dataprovider.portfolio import Portfolio
 from os.path import exists
 

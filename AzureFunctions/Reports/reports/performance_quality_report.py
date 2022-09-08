@@ -12,12 +12,18 @@ from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportType,
     AggregateInterval,
 )
-from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
+from gcm.inv.reporting.core.Runners.investmentsreporting import (
+    InvestmentsReportRunner,
+)
 from gcm.Scenario.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
-from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
+from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
+    AggregateFromDaily,
+)
+from gcm.inv.reporting.core.reporting_runner_base import (
+    ReportingRunnerBase,
+)
 
 
 class PerformanceQualityReport(ReportingRunnerBase):
@@ -89,7 +95,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.read_json(self._fund_inputs["abs_bmrk_returns"], orient="index")
             if len(returns) > 1:
                 self._abs_bmrk_returns_cache = AggregateFromDaily().transform(
-                    data=returns, method="geometric", period=Periodicity.Monthly
+                    data=returns,
+                    method="geometric",
+                    period=Periodicity.Monthly,
                 )
             else:
                 self._abs_bmrk_returns_cache = pd.DataFrame()
@@ -221,7 +229,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if returns is not None:
             returns = pd.read_json(returns["gcm_peer_constituent_returns"], orient="index")
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
-            returns_columns = pd.MultiIndex.from_tuples(returns_columns, names=["PeerGroupName", "SourceInvestmentId"])
+            returns_columns = pd.MultiIndex.from_tuples(
+                returns_columns,
+                names=["PeerGroupName", "SourceInvestmentId"],
+            )
             returns.columns = returns_columns
             returns = returns.droplevel(0, axis=1)
         else:
@@ -234,7 +245,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if returns is not None:
             returns = pd.read_json(returns["gcm_peer_constituent_returns"], orient="index")
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
-            returns_columns = pd.MultiIndex.from_tuples(returns_columns, names=["PeerGroupName", "SourceInvestmentId"])
+            returns_columns = pd.MultiIndex.from_tuples(
+                returns_columns,
+                names=["PeerGroupName", "SourceInvestmentId"],
+            )
             returns.columns = returns_columns
             returns = returns.droplevel(0, axis=1)
         else:
@@ -272,7 +286,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _ehi200_returns(self):
-        returns = pd.read_json(self._eurekahedge200_inputs["eurekahedge_returns"], orient="index")
+        returns = pd.read_json(
+            self._eurekahedge200_inputs["eurekahedge_returns"],
+            orient="index",
+        )
         if isinstance(returns, pd.DataFrame):
             return returns.squeeze()
         else:
@@ -285,7 +302,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.read_json(returns["eurekahedge_constituent_returns"], orient="index")
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
             returns_columns = pd.MultiIndex.from_tuples(
-                returns_columns, names=["EurekahedgeBenchmark", "SourceInvestmentId"]
+                returns_columns,
+                names=["EurekahedgeBenchmark", "SourceInvestmentId"],
             )
             returns.columns = returns_columns
             return returns.droplevel(0, axis=1)
@@ -294,10 +312,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _ehi200_constituent_returns(self):
-        returns = pd.read_json(self._eurekahedge200_inputs["eurekahedge_constituent_returns"], orient="index")
+        returns = pd.read_json(
+            self._eurekahedge200_inputs["eurekahedge_constituent_returns"],
+            orient="index",
+        )
         returns_columns = [ast.literal_eval(x) for x in returns.columns]
         returns_columns = pd.MultiIndex.from_tuples(
-            returns_columns, names=["EurekahedgeBenchmark", "SourceInvestmentId"]
+            returns_columns,
+            names=["EurekahedgeBenchmark", "SourceInvestmentId"],
         )
         returns.columns = returns_columns
 
@@ -323,7 +345,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._market_factor_returns_cache is None:
             returns = pd.read_json(self._market_factor_inputs, orient="index")
             if len(returns) > 0:
-                returns = AggregateFromDaily().transform(data=returns, method="geometric", period=Periodicity.Monthly)
+                returns = AggregateFromDaily().transform(
+                    data=returns,
+                    method="geometric",
+                    period=Periodicity.Monthly,
+                )
                 returns.index = [dt.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
                 self._market_factor_returns_cache = returns
             else:
@@ -361,15 +387,30 @@ class PerformanceQualityReport(ReportingRunnerBase):
         decomp.rename(columns={"1Y": "TTM"}, inplace=True)
         mapping = pd.DataFrame(
             {
-                "FactorGroup1": ["SYSTEMATIC", "X_ASSET_CLASS", "PUBLIC_LS", "NON_FACTOR"],
-                "Group": ["SYSTEMATIC_RISK", "X_ASSET_RISK", "PUBLIC_LS_RISK", "NON_FACTOR_RISK"],
+                "FactorGroup1": [
+                    "SYSTEMATIC",
+                    "X_ASSET_CLASS",
+                    "PUBLIC_LS",
+                    "NON_FACTOR",
+                ],
+                "Group": [
+                    "SYSTEMATIC_RISK",
+                    "X_ASSET_RISK",
+                    "PUBLIC_LS_RISK",
+                    "NON_FACTOR_RISK",
+                ],
             }
         )
 
         decomp = decomp.merge(mapping, how="left").groupby("Group").sum()
 
         risk_decomp_columns = pd.DataFrame(
-            columns=["SYSTEMATIC_RISK", "X_ASSET_RISK", "PUBLIC_LS_RISK", "NON_FACTOR_RISK"]
+            columns=[
+                "SYSTEMATIC_RISK",
+                "X_ASSET_RISK",
+                "PUBLIC_LS_RISK",
+                "NON_FACTOR_RISK",
+            ]
         )
         risk_decomp = pd.concat([risk_decomp_columns, decomp.T])
         risk_decomp = risk_decomp.fillna(0)
@@ -475,7 +516,15 @@ class PerformanceQualityReport(ReportingRunnerBase):
         else:
             entity_type = self._entity_type
 
-        header = pd.DataFrame({"header_info": [self._fund_name, entity_type, self._as_of_date]})
+        header = pd.DataFrame(
+            {
+                "header_info": [
+                    self._fund_name,
+                    entity_type,
+                    self._as_of_date,
+                ]
+            }
+        )
         return header
 
     def get_peer_group_heading(self):
@@ -521,18 +570,30 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _get_return_summary(self, returns, return_type):
         returns = returns.copy()
         if returns.shape[0] == 0:
-            return pd.DataFrame(index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y"], columns=["Fund"])
+            return pd.DataFrame(
+                index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y"],
+                columns=["Fund"],
+            )
 
         mtd_return = self._analytics.compute_periodic_return(
-            ror=returns, period=PeriodicROR.MTD, as_of_date=self._as_of_date, method="geometric"
+            ror=returns,
+            period=PeriodicROR.MTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
         )
 
         qtd_return = self._analytics.compute_periodic_return(
-            ror=returns, period=PeriodicROR.QTD, as_of_date=self._as_of_date, method="geometric"
+            ror=returns,
+            period=PeriodicROR.QTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
         )
 
         ytd_return = self._analytics.compute_periodic_return(
-            ror=returns, period=PeriodicROR.YTD, as_of_date=self._as_of_date, method="geometric"
+            ror=returns,
+            period=PeriodicROR.YTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
         )
 
         trailing_1y_return = self._analytics.compute_trailing_return(
@@ -608,7 +669,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def _calculate_periodic_percentile(self, constituent_returns, fund_periodic_return, period):
         periodic = self._analytics.compute_periodic_return(
-            ror=constituent_returns, period=period, as_of_date=self._as_of_date, method="geometric"
+            ror=constituent_returns,
+            period=period,
+            as_of_date=self._as_of_date,
+            method="geometric",
         )
         periodics = pd.concat([pd.Series([fund_periodic_return.squeeze()]), periodic], axis=0)
         ptile = periodics.rank(pct=True)[0:1].squeeze().round(2) * 100
@@ -624,7 +688,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
             periodicity=Periodicity.Monthly,
         )
         if isinstance(fund_periodic_return.squeeze(), float):
-            returns = pd.concat([pd.Series([fund_periodic_return.squeeze()]), returns], axis=0)
+            returns = pd.concat(
+                [pd.Series([fund_periodic_return.squeeze()]), returns],
+                axis=0,
+            )
             ptile = returns.rank(pct=True)[0:1].squeeze().round(2) * 100
         else:
             ptile = ""
@@ -704,7 +771,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
             benchmark_name="GcmPeer",
         )
         ehi_50_summary = self._get_excess_return_summary(
-            fund_returns=fund_returns, benchmark_returns=self._ehi50_returns, benchmark_name="EHI50"
+            fund_returns=fund_returns,
+            benchmark_returns=self._ehi50_returns,
+            benchmark_name="EHI50",
         )
         ehi_200_summary = self._get_excess_return_summary(
             fund_returns=fund_returns,
@@ -736,9 +805,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
         )
 
         summary = absolute_return_summary.copy()
-        summary = summary.merge(gcm_peer_summary.drop(columns={"Fund"}), left_index=True, right_index=True)
-        summary = summary.merge(ehi_50_summary.drop(columns={"Fund"}), left_index=True, right_index=True)
-        summary = summary.merge(ehi_200_summary.drop(columns={"Fund"}), left_index=True, right_index=True)
+        summary = summary.merge(
+            gcm_peer_summary.drop(columns={"Fund"}),
+            left_index=True,
+            right_index=True,
+        )
+        summary = summary.merge(
+            ehi_50_summary.drop(columns={"Fund"}),
+            left_index=True,
+            right_index=True,
+        )
+        summary = summary.merge(
+            ehi_200_summary.drop(columns={"Fund"}),
+            left_index=True,
+            right_index=True,
+        )
         summary = summary.merge(primary_peer_percentiles, left_index=True, right_index=True)
         summary = summary.merge(secondary_peer_percentiles, left_index=True, right_index=True)
         summary = summary.merge(eurekahedge_percentiles, left_index=True, right_index=True)
@@ -750,7 +831,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @staticmethod
     def _get_exposure_summary(exposure):
         index = pd.DataFrame(index=["Latest", "3Y", "5Y", "10Y"])
-        summary = exposure[["LongNotional", "ShortNotional", "GrossNotional", "NetNotional"]]
+        summary = exposure[
+            [
+                "LongNotional",
+                "ShortNotional",
+                "GrossNotional",
+                "NetNotional",
+            ]
+        ]
         summary = index.merge(summary, left_index=True, right_index=True, how="left")
         summary = summary.loc[["Latest", "3Y", "5Y", "10Y"]]
         summary = summary.round(2)
@@ -773,7 +861,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
         fund_rba = self._fund_rba.copy()
         fund_rba.columns = fund_rba.columns.droplevel(0)
 
-        quarter_start = dt.datetime(self._as_of_date.year, 3 * ((self._as_of_date.month - 1) // 3) + 1, 1).month
+        quarter_start = dt.datetime(
+            self._as_of_date.year,
+            3 * ((self._as_of_date.month - 1) // 3) + 1,
+            1,
+        ).month
         qtd_window = self._as_of_date.month - quarter_start + 1
         ytd_window = self._as_of_date.month
 
@@ -851,9 +943,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
             )
             ytd_publics.name = "YTD - Publics"
         else:
-            mtd_publics = pd.Series(index=factor_group_index.index, name="MTD - Publics", dtype="float64")
-            qtd_publics = pd.Series(index=factor_group_index.index, name="QTD - Publics", dtype="float64")
-            ytd_publics = pd.Series(index=factor_group_index.index, name="YTD - Publics", dtype="float64")
+            mtd_publics = pd.Series(
+                index=factor_group_index.index,
+                name="MTD - Publics",
+                dtype="float64",
+            )
+            qtd_publics = pd.Series(
+                index=factor_group_index.index,
+                name="QTD - Publics",
+                dtype="float64",
+            )
+            ytd_publics = pd.Series(
+                index=factor_group_index.index,
+                name="YTD - Publics",
+                dtype="float64",
+            )
 
         if fund_pba_privates.shape[0] > 1:
             mtd_privates = self._analytics.compute_periodic_return(
@@ -880,9 +984,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
             )
             ytd_privates.name = "YTD - Privates"
         else:
-            mtd_privates = pd.Series(index=factor_group_index.index, name="MTD - Privates", dtype="float64")
-            qtd_privates = pd.Series(index=factor_group_index.index, name="QTD - Privates", dtype="float64")
-            ytd_privates = pd.Series(index=factor_group_index.index, name="YTD - Privates", dtype="float64")
+            mtd_privates = pd.Series(
+                index=factor_group_index.index,
+                name="MTD - Privates",
+                dtype="float64",
+            )
+            qtd_privates = pd.Series(
+                index=factor_group_index.index,
+                name="QTD - Privates",
+                dtype="float64",
+            )
+            ytd_privates = pd.Series(
+                index=factor_group_index.index,
+                name="YTD - Privates",
+                dtype="float64",
+            )
 
         # TODO only fill na if some non na's
         summary = factor_group_index.merge(mtd_publics, left_index=True, right_index=True, how="left")
@@ -920,7 +1036,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
             summary.drop("10Y", inplace=True)
 
             rba_risk_decomp = self._fund_rba_risk_decomp.copy()
-            summary = summary.merge(rba_risk_decomp, left_index=True, right_index=True, how="left")
+            summary = summary.merge(
+                rba_risk_decomp,
+                left_index=True,
+                right_index=True,
+                how="left",
+            )
 
             # rba_r2 = self._fund_rba_adj_r_squared.copy()
             # summary = summary.merge(rba_r2, left_index=True, right_index=True, how='left')
@@ -1123,7 +1244,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_1_vol = self._get_rolling_vol(returns=returns, trailing_months=12)
         trailing_5y_median_vol = self._summarize_rolling_median(rolling_1_vol, trailing_months=60)
 
-        stats = [trailing_1y_vol, trailing_3y_vol, trailing_5y_vol, trailing_5y_median_vol]
+        stats = [
+            trailing_1y_vol,
+            trailing_3y_vol,
+            trailing_5y_vol,
+            trailing_5y_median_vol,
+        ]
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame(
             {"Vol": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
@@ -1140,7 +1266,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_1y_beta = self._get_rolling_beta(returns=returns, trailing_months=12)
         trailing_5y_median_beta = self._summarize_rolling_median(rolling_1y_beta, trailing_months=60)
 
-        stats = [trailing_1y_beta, trailing_3y_beta, trailing_5y_beta, trailing_5y_median_beta]
+        stats = [
+            trailing_1y_beta,
+            trailing_3y_beta,
+            trailing_5y_beta,
+            trailing_5y_median_beta,
+        ]
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame(
             {"Beta": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
@@ -1222,7 +1353,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=36)
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
 
-        summary = pd.concat([rolling_1y_summary.T, rolling_3y_summary.T, rolling_5y_summary.T])
+        summary = pd.concat(
+            [
+                rolling_1y_summary.T,
+                rolling_3y_summary.T,
+                rolling_5y_summary.T,
+            ]
+        )
         summary.index = ["TTM", "3Y", "5Y"]
 
         return summary
@@ -1234,7 +1371,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=36)
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=60)
 
-        summary = pd.concat([rolling_1y_summary.T, rolling_3y_summary.T, rolling_5y_summary.T])
+        summary = pd.concat(
+            [
+                rolling_1y_summary.T,
+                rolling_3y_summary.T,
+                rolling_5y_summary.T,
+            ]
+        )
         summary.index = ["TTM", "3Y", "5Y"]
 
         return summary
@@ -1252,7 +1395,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
         rolling_5y_summary = rolling_5y_summary.mean(axis=1)
 
-        summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
+        summary = pd.concat(
+            [rolling_1y_summary, rolling_3y_summary, rolling_5y_summary],
+            axis=1,
+        ).T
         summary.index = ["TTM", "3Y", "5Y"]
         summary = summary.round(2)
 
@@ -1278,7 +1424,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=60)
         rolling_5y_summary = rolling_5y_summary.mean(axis=1)
 
-        summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
+        summary = pd.concat(
+            [rolling_1y_summary, rolling_3y_summary, rolling_5y_summary],
+            axis=1,
+        ).T
         summary.index = ["TTM", "3Y", "5Y"]
         summary = summary.round(2)
 
@@ -1452,7 +1601,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
             asofdate = self._as_of_date.strftime("%Y-%m-%d")
             file = self._primary_peer_group.replace("/", "") + "_peer_" + asofdate + ".json"
             summary = self._download_inputs(location=self._summary_data_location, file_path=file)
-            summary = pd.read_json(summary["performance_stability_peer_summary"], orient="index")
+            summary = pd.read_json(
+                summary["performance_stability_peer_summary"],
+                orient="index",
+            )
         else:
             summary = pd.DataFrame(
                 columns=[
@@ -1478,7 +1630,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         returns = self._fund_returns.copy()
         if returns.shape[0] > 0:
             drawdown = self._analytics.compute_max_drawdown(
-                ror=returns, window=12, as_of_date=self._as_of_date, periodicity=Periodicity.Monthly
+                ror=returns,
+                window=12,
+                as_of_date=self._as_of_date,
+                periodicity=Periodicity.Monthly,
             )
 
             drawdown = drawdown.squeeze()
@@ -1498,7 +1653,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
             pass_fail = ""
             drawdown = ""
 
-        summary = pd.DataFrame({"Trigger": trigger, "Drawdown": drawdown, "Pass/Fail": pass_fail}, index=["SCL"])
+        summary = pd.DataFrame(
+            {
+                "Trigger": trigger,
+                "Drawdown": drawdown,
+                "Pass/Fail": pass_fail,
+            },
+            index=["SCL"],
+        )
         return summary
 
     def build_risk_model_expectations_summary(self):

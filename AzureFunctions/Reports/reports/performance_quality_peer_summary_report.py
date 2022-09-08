@@ -6,8 +6,12 @@ from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.quantlib.enum_source import Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
-from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
+from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
+    AggregateFromDaily,
+)
+from gcm.inv.reporting.core.reporting_runner_base import (
+    ReportingRunnerBase,
+)
 
 
 class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
@@ -62,9 +66,15 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
     @property
     def _gcm_peer_constituent_returns(self):
         if self._peer_constituent_returns_cache is None:
-            returns = pd.read_json(self._peer_inputs["gcm_peer_constituent_returns"], orient="index")
+            returns = pd.read_json(
+                self._peer_inputs["gcm_peer_constituent_returns"],
+                orient="index",
+            )
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
-            returns_columns = pd.MultiIndex.from_tuples(returns_columns, names=["PeerGroupName", "SourceInvestmentId"])
+            returns_columns = pd.MultiIndex.from_tuples(
+                returns_columns,
+                names=["PeerGroupName", "SourceInvestmentId"],
+            )
             returns.columns = returns_columns
             self._peer_constituent_returns_cache = returns
         return self._peer_constituent_returns_cache
@@ -74,7 +84,11 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         if self._market_factor_returns_cache is None:
             returns = pd.read_json(self._market_factor_inputs, orient="index")
             if len(returns) > 0:
-                returns = AggregateFromDaily().transform(data=returns, method="geometric", period=Periodicity.Monthly)
+                returns = AggregateFromDaily().transform(
+                    data=returns,
+                    method="geometric",
+                    period=Periodicity.Monthly,
+                )
                 returns.index = [dt.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
                 self._market_factor_returns_cache = returns
             else:
@@ -256,7 +270,10 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
         rolling_5y_summary = rolling_5y_summary.mean(axis=1)
 
-        summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
+        summary = pd.concat(
+            [rolling_1y_summary, rolling_3y_summary, rolling_5y_summary],
+            axis=1,
+        ).T
         summary.index = ["TTM", "3Y", "5Y"]
         summary = summary.round(2)
 
@@ -275,7 +292,10 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=60)
         rolling_5y_summary = rolling_5y_summary.mean(axis=1)
 
-        summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
+        summary = pd.concat(
+            [rolling_1y_summary, rolling_3y_summary, rolling_5y_summary],
+            axis=1,
+        ).T
         summary.index = ["TTM", "3Y", "5Y"]
         summary = summary.round(2)
 
@@ -406,8 +426,18 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
             summary = summary.merge(sharpe, left_index=True, right_index=True, how="left")
             summary = summary.merge(batting_avg, left_index=True, right_index=True, how="left")
             summary = summary.merge(win_loss, left_index=True, right_index=True, how="left")
-            summary = summary.merge(rolling_returns, left_index=True, right_index=True, how="left")
-            summary = summary.merge(rolling_sharpes, left_index=True, right_index=True, how="left")
+            summary = summary.merge(
+                rolling_returns,
+                left_index=True,
+                right_index=True,
+                how="left",
+            )
+            summary = summary.merge(
+                rolling_sharpes,
+                left_index=True,
+                right_index=True,
+                how="left",
+            )
 
             summary = summary[
                 [

@@ -11,11 +11,15 @@ from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportType,
     AggregateInterval,
 )
-from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
+from gcm.inv.reporting.core.Runners.investmentsreporting import (
+    InvestmentsReportRunner,
+)
 from gcm.Scenario.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
+from gcm.inv.reporting.core.reporting_runner_base import (
+    ReportingRunnerBase,
+)
 from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.dataprovider.portfolio import Portfolio
 
@@ -42,7 +46,12 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         return self._as_of_date
 
     def _get_rba_summary(self):
-        subtotal_factors = ["SYSTEMATIC", "X_ASSET_CLASS", "PUBLIC_LS", "NON_FACTOR"]
+        subtotal_factors = [
+            "SYSTEMATIC",
+            "X_ASSET_CLASS",
+            "PUBLIC_LS",
+            "NON_FACTOR",
+        ]
         non_subtotal_factors = [
             "INDUSTRY",
             "REGION",
@@ -127,7 +136,12 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
 
     @staticmethod
     def _get_top_line_summary(rba_summary):
-        subtotal_factors = ["SYSTEMATIC", "X_ASSET_CLASS", "PUBLIC_LS", "NON_FACTOR"]
+        subtotal_factors = [
+            "SYSTEMATIC",
+            "X_ASSET_CLASS",
+            "PUBLIC_LS",
+            "NON_FACTOR",
+        ]
         subtotal_factors = [x + "_RETURN_ATTRIB" for x in subtotal_factors]
         rba_by_subtotal = rba_summary.loc[subtotal_factors]
         ann_returns = rba_by_subtotal.sum(axis=0).to_frame()
@@ -139,7 +153,16 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         return top_line_summary
 
     def _get_risk_decomp(self):
-        factors = pd.DataFrame(index=["SYSTEMATIC", "X_ASSET_CLASS", "INDUSTRY", "REGION", "PUBLIC_LS", "NON_FACTOR"])
+        factors = pd.DataFrame(
+            index=[
+                "SYSTEMATIC",
+                "X_ASSET_CLASS",
+                "INDUSTRY",
+                "REGION",
+                "PUBLIC_LS",
+                "NON_FACTOR",
+            ]
+        )
 
         decomp_fg1 = self._inv_group.get_average_risk_decomp_by_group(
             start_date=self._start_date,
@@ -159,8 +182,16 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             wide=False,
         )
 
-        decomp_fg1 = decomp_fg1.pivot(index="FactorGroup1", columns="InvestmentGroupName", values="AvgRiskContrib")
-        decomp_fg2 = decomp_fg2.pivot(index="FactorGroup2", columns="InvestmentGroupName", values="AvgRiskContrib")
+        decomp_fg1 = decomp_fg1.pivot(
+            index="FactorGroup1",
+            columns="InvestmentGroupName",
+            values="AvgRiskContrib",
+        )
+        decomp_fg2 = decomp_fg2.pivot(
+            index="FactorGroup2",
+            columns="InvestmentGroupName",
+            values="AvgRiskContrib",
+        )
         decomp = pd.concat([decomp_fg1, decomp_fg2], axis=0)
         decomp = factors.merge(decomp, left_index=True, right_index=True, how="left")
         decomp = decomp.fillna(0)
@@ -248,7 +279,10 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
 
     def _get_factor_performance_tables(self):
         factors = self._inv_group.get_rba_return_decomposition_by_date(
-            start_date=self._start_date, end_date=self._end_date, frequency="D", window=36
+            start_date=self._start_date,
+            end_date=self._end_date,
+            frequency="D",
+            window=36,
         )
         factors = factors.columns.to_frame().reset_index(drop=True)
 
@@ -257,11 +291,15 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         tickers = market_tickers + style_tickers
 
         returns = Factor(tickers=tickers).get_returns(
-            start_date=dt.date(2000, 1, 1), end_date=self._end_date, fill_na=True
+            start_date=dt.date(2000, 1, 1),
+            end_date=self._end_date,
+            fill_na=True,
         )
 
         days_ptd = self.get_days_period_to_date(
-            daily_returns=returns, start_date=self._start_date, end_date=self._end_date
+            daily_returns=returns,
+            start_date=self._start_date,
+            end_date=self._end_date,
         )
 
         rolling_returns = self.calculate_rolling_geometric_returns(
@@ -285,7 +323,12 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         summary = summary.sort_values(by=summary.columns[2], ascending=False)
         factors = Factor(tickers=tickers).get_factor_inventory()
         factor_hierarchy = Factor(tickers=tickers).get_factor_hierarchy()
-        factors = factors.merge(factor_hierarchy, left_on="HierarchyParent", right_index=True, how="left")
+        factors = factors.merge(
+            factor_hierarchy,
+            left_on="HierarchyParent",
+            right_index=True,
+            how="left",
+        )
         factors = factors[["SourceTicker", "Description"]]
         suffix = " - Excess over MSCI ACWI - Beta Adj"
         descriptions = [x.replace(suffix, "*") if x is not None else None for x in factors["Description"].tolist()]
@@ -350,7 +393,10 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
 
     def generate_rba_report(self):
         attribution_table = self._get_attribution_table_rba()
-        market_factor_summary, style_factor_summary = self._get_factor_performance_tables()
+        (
+            market_factor_summary,
+            style_factor_summary,
+        ) = self._get_factor_performance_tables()
 
         input_data = {
             "attribution_table": attribution_table,

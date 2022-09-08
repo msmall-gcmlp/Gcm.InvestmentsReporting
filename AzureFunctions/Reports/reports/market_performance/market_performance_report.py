@@ -15,7 +15,9 @@ from gcm.inv.reporting.core.Runners.investmentsreporting import (
 from gcm.Scenario.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
+from gcm.inv.reporting.core.reporting_runner_base import (
+    ReportingRunnerBase,
+)
 
 
 class MarketPerformanceReport(ReportingRunnerBase):
