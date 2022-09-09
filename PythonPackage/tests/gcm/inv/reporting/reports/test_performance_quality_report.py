@@ -156,7 +156,8 @@ class TestPerformanceQualityReport:
         rba = perf_quality_report.build_rba_summary()
         assert rba.shape[0] > 0
         assert all(rba.index == ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y'])
-        assert all(rba.columns == ['SYSTEMATIC', 'REGION', 'INDUSTRY', 'REPAY',
+        assert all(rba.columns == ['SYSTEMATIC',
+                                   'REGION', 'INDUSTRY', 'X_ASSET_CLASS_EXCLUDED',
                                    'LS_EQUITY', 'LS_CREDIT', 'MACRO',
                                    'NON_FACTOR_SECURITY_SELECTION',
                                    'NON_FACTOR_OUTLIER_EFFECTS',
