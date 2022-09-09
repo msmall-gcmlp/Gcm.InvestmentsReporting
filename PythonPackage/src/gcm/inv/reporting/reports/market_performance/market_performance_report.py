@@ -6,7 +6,8 @@ from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
-    AggregateInterval,
+    ReportVertical,
+    AggregateInterval
 )
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
@@ -376,13 +377,10 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 benchmarking=True,
             )
             base_summary.reset_index(inplace=True)
-            # add empty columns for the formating
-            base_summary["empty"] = " "
             base_summary = base_summary.reindex(
                 columns=[
                     "index",
                     "Out_Under",
-                    "empty",
                     "DTD",
                     "WTD",
                     "MTD",
@@ -420,13 +418,10 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 base_summary.drop(columns=["MTD1abs"], inplace=True)
 
             base_summary.reset_index(inplace=True)
-            # add empty columns for the formating
-            base_summary["empty"] = " "
             base_summary = base_summary.reindex(
                 columns=[
                     "index",
                     "family",
-                    "empty",
                     "DTD",
                     "WTD",
                     "MTD",
@@ -448,11 +443,9 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 base_summary, last_price, left_index=True, right_index=True
             )
             base_summary.reset_index(inplace=True)
-            base_summary["empty1"] = " "
             base_summary = base_summary.reindex(
                 columns=[
                     "index",
-                    "empty1",
                     "Last",
                     "DTD",
                     "WTD",
@@ -511,8 +504,10 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 entity_type=ReportingEntityTypes.cross_entity,
                 entity_source=DaoSource.InvestmentsDwh,
                 report_name="Market Performance",
-                report_type=ReportType.Risk,
-                aggregate_intervals=AggregateInterval.MTD,
+                report_type=ReportType.Market,
+                report_frequency="Daily",
+                report_vertical=ReportVertical.FirmWide,
+                aggregate_intervals=AggregateInterval.Daily,
             )
 
     def run(self, **kwargs):

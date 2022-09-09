@@ -1,10 +1,10 @@
 import json
 import logging
-
 import pandas as pd
 import ast
 import numpy as np
 import datetime as dt
+from functools import partial
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, AggregateInterval
@@ -128,7 +128,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             rba = pd.read_json(self._fund_inputs['rba'], orient='index')
             rba_columns = [ast.literal_eval(x) for x in rba.columns]
             rba_columns = pd.MultiIndex.from_tuples(rba_columns,
-                                                    names=['FactorGroup1', 'InvestmentGroupId'])
+                                                    names=['FactorGroup1', 'AggLevel'])
             rba.columns = rba_columns
             self._rba_cache = rba
         return self._rba_cache
@@ -334,11 +334,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _fund_rba(self):
-        fund_index = self._all_rba.columns.get_level_values(1) == self._fund_id.squeeze()
-        if any(fund_index):
-            fund_rba = self._all_rba.iloc[:, fund_index]
-            fund_rba.columns = fund_rba.columns.droplevel(1)
-            return fund_rba
+        if self._all_rba is not None:
+            return self._all_rba.copy()
         else:
             return pd.DataFrame()
 
@@ -348,18 +345,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
         decomp = decomp[decomp['InvestmentGroupName'] == self._fund_name]
         decomp = decomp[['FactorGroup1', '1Y', '3Y', '5Y']]
         decomp.rename(columns={'1Y': 'TTM'}, inplace=True)
-        mapping = pd.DataFrame({'FactorGroup1': ['Market Beta',
-                                                 'Industries', 'Regional',
-                                                 'Styles', 'Hedge Fund Technicals',
-                                                 'Unexplained', 'Selection Risk'],
-                                'Group': ['Beta',
-                                          'X-Asset', 'X-Asset',
-                                          'L/S', 'L/S',
-                                          'Residual', 'Residual']})
+        mapping = pd.DataFrame({'FactorGroup1': ['SYSTEMATIC',
+                                                 'X_ASSET_CLASS',
+                                                 'PUBLIC_LS',
+                                                 'NON_FACTOR'],
+                                'Group': ['SYSTEMATIC_RISK',
+                                          'X_ASSET_RISK',
+                                          'PUBLIC_LS_RISK',
+                                          'NON_FACTOR_RISK']})
 
         decomp = decomp.merge(mapping, how='left').groupby('Group').sum()
 
-        risk_decomp_columns = pd.DataFrame(columns=['Beta', 'X-Asset', 'L/S', 'Residual'])
+        risk_decomp_columns = pd.DataFrame(columns=['SYSTEMATIC_RISK',
+                                                    'X_ASSET_RISK',
+                                                    'PUBLIC_LS_RISK',
+                                                    'NON_FACTOR_RISK'])
         risk_decomp = pd.concat([risk_decomp_columns, decomp.T])
         risk_decomp = risk_decomp.fillna(0)
         risk_decomp = risk_decomp.round(2)
@@ -368,6 +368,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @property
     def _fund_rba_adj_r_squared(self):
         r2 = self._all_rba_adj_r_squared.copy()
+
+        if r2.shape[0] == 0:
+            return pd.DataFrame(index=['TTM', '3Y', '5Y'],
+                                columns=['AdjR2'])
+
         r2 = r2[r2['InvestmentGroupName'] == self._fund_name]
         r2 = r2[['1Y', '3Y', '5Y']]
         r2.rename(columns={'1Y': 'TTM'}, inplace=True)
@@ -455,8 +460,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return None
 
     def get_header_info(self):
+        if isinstance(self._substrategy, str):
+            entity_type = self._entity_type + ' - ' + self._substrategy
+        else:
+            entity_type = self._entity_type
+
         header = pd.DataFrame({'header_info': [self._fund_name,
-                                               self._entity_type + ' - ' + self._substrategy,
+                                               entity_type,
                                                self._as_of_date]})
         return header
 
@@ -502,6 +512,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def _get_return_summary(self, returns, return_type):
         returns = returns.copy()
+        if returns.shape[0] == 0:
+            return pd.DataFrame(index=['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y'],
+                                columns=['Fund'])
+
         mtd_return = self._analytics.compute_periodic_return(ror=returns, period=PeriodicROR.MTD,
                                                              as_of_date=self._as_of_date, method='geometric')
 
@@ -540,14 +554,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def _get_excess_return_summary(self, fund_returns, benchmark_returns, benchmark_name):
-        fund_returns = fund_returns.copy()
+        fund_returns = fund_returns.copy().fillna(' ')
         benchmark_returns = benchmark_returns.copy()
         if benchmark_returns.shape[0] > 0:
             benchmark_returns = self._get_return_summary(returns=benchmark_returns, return_type=benchmark_name)
             summary = fund_returns.merge(benchmark_returns, left_index=True, right_index=True)
             summary['IsNumeric'] = summary.applymap(np.isreal).all(1)
             excess = summary[summary['IsNumeric']]['Fund'] - summary[summary['IsNumeric']][benchmark_name]
-            summary[benchmark_name + 'Excess'] = excess.round(2)
+            summary[benchmark_name + 'Excess'] = excess.astype(float).round(2)
             summary.drop(columns={'IsNumeric'}, inplace=True)
             summary = summary.fillna('')
         else:
@@ -663,6 +677,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = summary.merge(secondary_peer_percentiles, left_index=True, right_index=True)
         summary = summary.merge(eurekahedge_percentiles, left_index=True, right_index=True)
         summary = summary.merge(ehi200_percentiles, left_index=True, right_index=True)
+
+        summary = summary.fillna('')
         return summary
 
     @staticmethod
@@ -675,55 +691,31 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def _get_rba_summary(self):
-        factor_group_index = pd.DataFrame(index=['Market Beta', 'Region', 'Industries', 'Styles',
-                                                 'Hedge Fund Technicals', 'Selection Risk', 'Unexplained'])
+        factor_group_index = pd.DataFrame(index=['SYSTEMATIC',
+                                                 'REGION', 'INDUSTRY', 'X_ASSET_CLASS_EXCLUDED',
+                                                 'LS_EQUITY', 'LS_CREDIT', 'MACRO',
+                                                 'NON_FACTOR_SECURITY_SELECTION',
+                                                 'NON_FACTOR_OUTLIER_EFFECTS'])
         fund_rba = self._fund_rba.copy()
-        mtd = self._analytics.compute_periodic_return(ror=fund_rba,
-                                                      period=PeriodicROR.MTD,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic')
+        fund_rba.columns = fund_rba.columns.droplevel(0)
 
-        qtd = self._analytics.compute_periodic_return(ror=fund_rba,
-                                                      period=PeriodicROR.QTD,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic')
+        quarter_start = dt.datetime(self._as_of_date.year, 3 * ((self._as_of_date.month - 1) // 3) + 1, 1).month
+        qtd_window = self._as_of_date.month - quarter_start + 1
+        ytd_window = self._as_of_date.month
 
-        ytd = self._analytics.compute_periodic_return(ror=fund_rba,
-                                                      period=PeriodicROR.YTD,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic')
+        p_return_attribution = partial(self._analytics.compute_return_attributions,
+                                       attribution_ts=fund_rba,
+                                       periodicity=Periodicity.Monthly,
+                                       as_of_date=self._as_of_date
+                                       )
 
-        ttm = self._analytics.compute_trailing_return(ror=fund_rba,
-                                                      window=12,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic',
-                                                      periodicity=Periodicity.Monthly,
-                                                      annualize=True,
-                                                      include_history=False)
-
-        t3y = self._analytics.compute_trailing_return(ror=fund_rba,
-                                                      window=36,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic',
-                                                      periodicity=Periodicity.Monthly,
-                                                      annualize=True,
-                                                      include_history=False)
-
-        t5y = self._analytics.compute_trailing_return(ror=fund_rba,
-                                                      window=60,
-                                                      as_of_date=self._as_of_date,
-                                                      method='arithmetic',
-                                                      periodicity=Periodicity.Monthly,
-                                                      annualize=True,
-                                                      include_history=False)
-
-        t10y = self._analytics.compute_trailing_return(ror=fund_rba,
-                                                       window=120,
-                                                       as_of_date=self._as_of_date,
-                                                       method='arithmetic',
-                                                       periodicity=Periodicity.Monthly,
-                                                       annualize=True,
-                                                       include_history=False)
+        mtd = p_return_attribution(window=1, annualize=False).rename(columns={'CTR': 'MTD'})
+        qtd = p_return_attribution(window=qtd_window, annualize=False).rename(columns={'CTR': 'QTD'})
+        ytd = p_return_attribution(window=ytd_window, annualize=False).rename(columns={'CTR': 'YTD'})
+        ttm = p_return_attribution(window=12, annualize=False).rename(columns={'CTR': 'TTM'})
+        t3y = p_return_attribution(window=36, annualize=True).rename(columns={'CTR': 'T3Y'})
+        t5y = p_return_attribution(window=60, annualize=True).rename(columns={'CTR': 'T5Y'})
+        t10y = p_return_attribution(window=120, annualize=True).rename(columns={'CTR': 'T10Y'})
 
         #TODO only fill na if some non na's
         summary = factor_group_index.merge(mtd, left_index=True, right_index=True, how='left')
@@ -742,8 +734,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def _get_pba_summary(self):
-        factor_group_index = pd.DataFrame(index=['Beta', 'Regional', 'Industry', 'MacroRV', 'LS_Equity',
-                                                 'LS_Credit', 'Residual', 'Fees', 'Unallocated'])
+        factor_group_index = pd.DataFrame(index=['Beta', 'Regional', 'Industry', 'Repay', 'LS_Equity', 'LS_Credit',
+                                                 'MacroRV', 'Residual', 'Fees', 'Unallocated'])
         fund_pba_publics = self._fund_pba_publics.copy()
         fund_pba_privates = self._fund_pba_privates.copy()
 
@@ -816,35 +808,46 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def build_rba_summary(self):
         if self._fund_rba.shape[0] > 0:
-            fund_returns = self._get_return_summary(returns=self._fund_returns, return_type='Fund')
-            fund_returns.rename(columns={'Fund': 'Total'}, inplace=True)
+            # fund_returns = self._get_return_summary(returns=self._fund_returns, return_type='Fund')
+            # fund_returns.rename(columns={'Fund': 'Total'}, inplace=True)
             rba = self._get_rba_summary()
-            summary = fund_returns.merge(rba, left_index=True, right_index=True)
+            #summary = fund_returns.merge(rba, left_index=True, right_index=True)
+            summary = rba.copy()
             summary.drop('10Y', inplace=True)
 
             rba_risk_decomp = self._fund_rba_risk_decomp.copy()
             summary = summary.merge(rba_risk_decomp, left_index=True, right_index=True, how='left')
 
-            rba_r2 = self._fund_rba_adj_r_squared.copy()
-            summary = summary.merge(rba_r2, left_index=True, right_index=True, how='left')
+            #rba_r2 = self._fund_rba_adj_r_squared.copy()
+            # summary = summary.merge(rba_r2, left_index=True, right_index=True, how='left')
 
         else:
             summary = pd.DataFrame(index=['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y'],
-                                   columns=['Total', 'Market Beta', 'Region', 'Industries', 'Styles',
-                                            'Hedge Fund Technicals', 'Selection Risk', 'Unexplained',
-                                            'Beta', 'X-Asset', 'L/S', 'Residual', 'AdjR2'])
+                                   columns=['SYSTEMATIC', 'REGION', 'INDUSTRY', 'REPAY',
+                                   'LS_EQUITY', 'LS_CREDIT', 'MACRO',
+                                   'NON_FACTOR_SECURITY_SELECTION',
+                                   'NON_FACTOR_OUTLIER_EFFECTS',
+                                   'SYSTEMATIC_RISK',
+                                   'X_ASSET_RISK',
+                                   'PUBLIC_LS_RISK', 'NON_FACTOR_RISK'])
         return summary
+
+    def get_adj_r2(self):
+        rba_r2 = self._fund_rba_adj_r_squared.copy()
+        rba_r2 = rba_r2.loc['5Y'].to_frame()
+        return rba_r2
 
     def build_pba_summary(self):
         if self._fund_pba_publics.shape[0] > 0:
             pba = self._get_pba_summary()
-            fund_returns = pd.DataFrame({'Total': pba.sum(axis=1, skipna=False)})
-            summary = fund_returns.merge(pba, left_index=True, right_index=True)
+            #fund_returns = pd.DataFrame({'Total': pba.sum(axis=1, skipna=False)})
+            #summary = fund_returns.merge(pba, left_index=True, right_index=True)
+            summary = pba.copy()
         else:
             summary = pd.DataFrame(index=['MTD - Publics', 'MTD - Privates', 'QTD - Publics', 'QTD - Privates',
                                           'YTD - Publics', 'YTD - Privates'],
-                                   columns=['Total', 'Beta', 'Regional', 'Industry', 'MacroRV',
-                                            'LS_Equity', 'LS_Credit', 'Residual', 'Fees', 'Unallocated'])
+                                   columns=['Beta', 'Regional', 'Industry', 'Repay', 'LS_Equity', 'LS_Credit',
+                                            'MacroRV', 'Residual', 'Fees', 'Unallocated'])
         return summary
 
     def _get_trailing_vol(self, returns, trailing_months):
@@ -1177,6 +1180,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def build_performance_stability_fund_summary(self):
+        if self._fund_returns.shape[0] == 0:
+            return pd.DataFrame(columns=['Vol', 'Beta', 'Sharpe', 'BattingAvg', 'WinLoss',
+                           'Return_min', 'Return_25%', 'Return_75%', 'Return_max',
+                           'Sharpe_min', 'Sharpe_25%', 'Sharpe_75%', 'Sharpe_max'],
+                                index=['TTM', '3y', '5Y', '5Y Median'])
         vol = self._get_fund_trailing_vol_summary()
         beta = self._get_fund_trailing_beta_summary()
         sharpe = self._get_fund_trailing_sharpe_summary()
@@ -1216,12 +1224,16 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def build_shortfall_summary(self):
         returns = self._fund_returns.copy()
-        drawdown = self._analytics.compute_max_drawdown(ror=returns,
-                                                        window=12,
-                                                        as_of_date=self._as_of_date,
-                                                        periodicity=Periodicity.Monthly)
+        if returns.shape[0] > 0:
+            drawdown = self._analytics.compute_max_drawdown(ror=returns,
+                                                            window=12,
+                                                            as_of_date=self._as_of_date,
+                                                            periodicity=Periodicity.Monthly)
 
-        drawdown = drawdown.squeeze()
+            drawdown = drawdown.squeeze()
+        else:
+            drawdown = None
+
         trigger = self._fle_scl.copy()
 
         if drawdown is not None:
@@ -1233,6 +1245,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 pass_fail = 'Pass'
         else:
             pass_fail = ''
+            drawdown = ''
 
         summary = pd.DataFrame({'Trigger': trigger,
                                 'Drawdown': drawdown,
@@ -1252,8 +1265,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return True
 
     def generate_performance_quality_report(self):
-        if not self._validate_inputs():
-            return 'Invalid inputs'
+        # if not self._validate_inputs():
+        #     return 'Invalid inputs'
 
         logging.info('Generating report for: ' + self._fund_name)
         header_info = self.get_header_info()
@@ -1265,6 +1278,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         peer_ptile_2_heading = self.get_peer_ptile_2_heading()
 
         rba_summary = self.build_rba_summary()
+        adj_r2 = self.get_adj_r2()
         pba_summary = self.build_pba_summary()
         pba_mtd = pba_summary.loc[['MTD - Publics', 'MTD - Privates']]
         pba_qtd = pba_summary.loc[['QTD - Publics', 'QTD - Privates']]
@@ -1292,6 +1306,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "performance_stability_fund_summary": performance_stability_fund_summary,
             "performance_stability_peer_summary": performance_stability_peer_summary,
             "rba_summary": rba_summary,
+            "adj_r2": adj_r2,
             "pba_mtd": pba_mtd,
             "pba_qtd": pba_qtd,
             "pba_ytd": pba_ytd,
@@ -1312,6 +1327,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "performance_stability_fund_summary": performance_stability_fund_summary.to_json(orient='index'),
             "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient='index'),
             "rba_summary": rba_summary.to_json(orient='index'),
+            "adj_r2": adj_r2.to_json(orient='index'),
             "pba_mtd": pba_mtd.to_json(orient='index'),
             "pba_qtd": pba_qtd.to_json(orient='index'),
             "pba_ytd": pba_ytd.to_json(orient='index'),
