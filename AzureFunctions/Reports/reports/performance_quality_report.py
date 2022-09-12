@@ -241,11 +241,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _primary_peer_constituent_count(self):
-        return self._primary_peer_constituent_returns.shape[1]
+        return self._primary_peer_constituent_returns.notna()[-12:].any().sum()
 
     @property
     def _current_primary_peer_constituent_count(self):
-        return self._primary_peer_constituent_returns.isna().sum(axis=1)[-1]
+        return self._primary_peer_constituent_returns.notna().sum(axis=1)[-1]
 
     @property
     def _secondary_peer_constituent_returns(self):
@@ -265,11 +265,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _secondary_peer_constituent_count(self):
-        return self._secondary_peer_constituent_returns.shape[1]
+        return self._secondary_peer_constituent_returns.notna()[-12:].any().sum()
 
     @property
     def _current_secondary_peer_constituent_count(self):
-        return self._secondary_peer_constituent_returns.isna().sum(axis=1)[-1]
+        return self._secondary_peer_constituent_returns.notna().sum(axis=1)[-1]
 
     @property
     def _eurekahedge_inputs(self):
@@ -328,11 +328,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _eurekahedge_constituent_count(self):
-        return self._eurekahedge_constituent_returns.shape[1]
+        this_year = self._eurekahedge_constituent_returns.index.year >= self._as_of_date.year
+        return self._eurekahedge_constituent_returns.notna()[this_year].any().sum()
 
     @property
     def _current_eurekahedge_constituent_count(self):
-        return self._eurekahedge_constituent_returns.isna().sum(axis=1)[-1]
+        return self._eurekahedge_constituent_returns.notna().sum(axis=1)[-1]
 
     @property
     def _ehi200_constituent_returns(self):
@@ -356,11 +357,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _ehi200_constituent_count(self):
-        return self._ehi200_constituent_returns.shape[1]
+        this_year = self._ehi200_constituent_returns.index.year >= self._as_of_date.year
+        return self._ehi200_constituent_returns.notna()[this_year].any().sum()
 
     @property
     def _current_ehi200_constituent_count(self):
-        return self._ehi200_constituent_returns.isna().sum(axis=1)[-1]
+        return self._ehi200_constituent_returns.notna().sum(axis=1)[-1]
 
     @property
     def _market_factor_inputs(self):
