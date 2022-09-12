@@ -122,6 +122,7 @@ if __name__ == "__main__":
     peer_groups = funds_and_peers.get('peer_groups')
 
     report_runner.generate_peer_summaries(peer_groups=peer_groups)
+
     report_runner.generate_fund_reports(fund_names=['Skye', 'Citadel', 'D1 Capital'])
     # report_runner.agg_perf_quality_by_portfolio(portfolio_acronyms=['IFC'])
     # manually convert all individual excels to pdf
