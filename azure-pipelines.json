@@ -32,5 +32,36 @@
 				}
 
 			]
-		}
+		},
+		"Release": {
+			"Environments": [
+			{
+				"Name": "dev",
+				"VariableGroups": [
+					"Deploy.Nonprd.Default"
+				]
+			},
+			{
+				"Name": "qat",
+				"VariableGroups": [
+					"Deploy.Nonprd.Default"
+				]
+			},
+			{
+				"Name": "uat",
+				"VariableGroups": [
+					"Deploy.Nonprd.Default"
+				]
+			},
+			{
+				"Name": "prd",
+				"VariableGroups": [
+					"Deploy.Prd.Default"
+				],
+				"Approvers": [
+					"Non-GCC Risk Production Approvers"
+				]
+			}
+		]
+	}
 }
