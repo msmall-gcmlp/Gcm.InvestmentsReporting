@@ -2,7 +2,7 @@ import logging
 import os
 import tempfile
 import azure.functions as func
-from java_client import java_client
+from gcm.inv.utils.Java.java_client import java_client
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeDao,
     AzureDataLakeFile,

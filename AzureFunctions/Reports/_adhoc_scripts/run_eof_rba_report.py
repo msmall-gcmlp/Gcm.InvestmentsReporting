@@ -1,6 +1,6 @@
 import datetime as dt
 from gcm.Scenario.scenario import Scenario
-from gcm.inv.reporting.reports.eof_rba_report import EofReturnBasedAttributionReport
+from Reports.reports.eof_rba_report import EofReturnBasedAttributionReport
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.inv.quantlib.enum_source import PeriodicROR
 from gcm.Dao.DaoSources import DaoSource

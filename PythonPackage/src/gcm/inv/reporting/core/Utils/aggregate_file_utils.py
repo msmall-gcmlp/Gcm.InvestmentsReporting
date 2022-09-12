@@ -7,8 +7,6 @@ from gcm.Dao.DaoRunner import DaoRunner
 from typing import List
 import itertools
 
-# standard utils:
-
 
 def copy_metadata(
     runner: DaoRunner,
@@ -40,13 +38,11 @@ def copy_metadata(
         retry=False,
         metadata=metadata,
     )
-
     target_file: AzureDataLakeFile = runner.execute(
         params=target_params,
         source=target_dao_type,
         operation=lambda dao, params: dao.get_data(params),
     )
-
     runner.execute(
         params=target_params,
         source=target_dao_type,
@@ -64,7 +60,9 @@ def merge_metadata_to_target_file(
 ) -> None:
 
     ordered_values = [
-        v for d in itertools.chain(metadata_list) for _, v in sorted(d.items())
+        v
+        for d in itertools.chain(metadata_list)
+        for _, v in sorted(d.items())
     ]
     result = dict(zip(metadata_list.count(1), ordered_values))
     copy_metadata(

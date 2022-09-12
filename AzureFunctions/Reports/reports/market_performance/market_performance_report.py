@@ -7,7 +7,7 @@ from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
     ReportVertical,
-    AggregateInterval
+    AggregateInterval,
 )
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
@@ -15,7 +15,9 @@ from gcm.inv.reporting.core.Runners.investmentsreporting import (
 from gcm.Scenario.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from ..reporting_runner_base import ReportingRunnerBase
+from gcm.inv.reporting.core.reporting_runner_base import (
+    ReportingRunnerBase,
+)
 
 
 class MarketPerformanceReport(ReportingRunnerBase):
@@ -100,12 +102,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         ]
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame(
-            {
-                column_name[0]: [
-                    x if isinstance(x, float) else " "
-                    for x in stats
-                ]
-            },
+            {column_name[0]: [x if isinstance(x, float) else " " for x in stats]},
             index=["DTD", "WTD", "MTD", "QTD", "YTD", "TTM"],
         )
         return summary
@@ -141,12 +138,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         stats = [mtd, annualized_vol, ytd_vol]
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame(
-            {
-                column_name[0]: [
-                    x if isinstance(x, float) else " "
-                    for x in stats
-                ]
-            },
+            {column_name[0]: [x if isinstance(x, float) else " " for x in stats]},
             index=["MTD1", "Vol (Annlzd)", "YTD1"],
         )
         return summary
@@ -174,9 +166,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         return maxptt
 
     def get_header_info(self):
-        header = pd.DataFrame(
-            {"header_info": [self._as_of_date]}
-        )
+        header = pd.DataFrame({"header_info": [self._as_of_date]})
         return header
 
     def _out_under_preformance_vsbenchmark(
@@ -211,11 +201,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         maping = self._ticker_mapping
         tickers_subset = maping[maping["Category"] == category]
         daily_returns = self._daily_returns.copy()
-        daily_returns = daily_returns[
-            daily_returns.columns.intersection(
-                tickers_subset.Ticker.values.tolist()
-            )
-        ]
+        daily_returns = daily_returns[daily_returns.columns.intersection(tickers_subset.Ticker.values.tolist())]
 
         return daily_returns
 
@@ -224,9 +210,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         tickers_subset = maping[maping["Category"] == category]
         daily_price_change = self._daily_price_change.copy()
         daily_price_change = daily_price_change[
-            daily_price_change.columns.intersection(
-                tickers_subset.Ticker.values.tolist()
-            )
+            daily_price_change.columns.intersection(tickers_subset.Ticker.values.tolist())
         ]
 
         return daily_price_change
@@ -236,11 +220,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         maping = self._ticker_mapping
         tickers_subset = maping[maping["Category"] == category]
         daily_price = self._daily_prices.copy()
-        daily_price = daily_price[
-            daily_price.columns.intersection(
-                tickers_subset.Ticker.values.tolist()
-            )
-        ]
+        daily_price = daily_price[daily_price.columns.intersection(tickers_subset.Ticker.values.tolist())]
 
         return daily_price
 
@@ -248,52 +228,32 @@ class MarketPerformanceReport(ReportingRunnerBase):
         price = self._get_price_by_category(category)
         maping = self._ticker_mapping
         tickers_subset = maping[maping["Category"] == category]
-        mapping_dict = tickers_subset.set_index(["Ticker"])[
-            "description"
-        ].to_dict()
+        mapping_dict = tickers_subset.set_index(["Ticker"])["description"].to_dict()
         price.rename(columns=mapping_dict, inplace=True)
         last_price = price.tail(1).T
         last_price = last_price.fillna(0).astype("float")
         last_price.columns = ["Last"]
         return last_price
 
-    def _general_summary(
-        self, category, benchmark_returns=None, benchmarking=False
-    ):
+    def _general_summary(self, category, benchmark_returns=None, benchmarking=False):
 
         output_table = pd.DataFrame()
         returns_by_category = self._get_returns_by_category(category)
-        price_change_by_category = self._get_price_change_by_category(
-            category
-        )
+        price_change_by_category = self._get_price_change_by_category(category)
 
-        combined_columns = set(
-            returns_by_category.columns.append(
-                price_change_by_category.columns
-            )
-        )
+        combined_columns = set(returns_by_category.columns.append(price_change_by_category.columns))
         for column in combined_columns:
-            transformation = self._ticker_mapping[
-                self._ticker_mapping["Ticker"] == column
-            ].Transformation.values
-            description = self._ticker_mapping[
-                self._ticker_mapping["Ticker"] == column
-            ].description.values
+            transformation = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].Transformation.values
+            description = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].description.values
 
             if transformation[0] == "arithmetic":
                 input_returns = price_change_by_category[column]
             else:
                 input_returns = returns_by_category[column]
 
-            agg_returns = self._get_return_summary(
-                input_returns, description, transformation[0]
-            )
-            agg_vol = self._getr_vol_adj_move(
-                input_returns, description, transformation[0]
-            )
-            max_dd = self._max_ppt_ttm(
-                input_returns, column, description, transformation[0]
-            )
+            agg_returns = self._get_return_summary(input_returns, description, transformation[0])
+            agg_vol = self._getr_vol_adj_move(input_returns, description, transformation[0])
+            max_dd = self._max_ppt_ttm(input_returns, column, description, transformation[0])
 
             if benchmarking:
                 out_under = self._out_under_preformance_vsbenchmark(
@@ -302,24 +262,14 @@ class MarketPerformanceReport(ReportingRunnerBase):
                     benchmark_returns,
                     method=transformation[0],
                 )
-                agg_stat = pd.concat(
-                    [out_under, agg_returns.T, agg_vol.T, max_dd], axis=1
-                )
+                agg_stat = pd.concat([out_under, agg_returns.T, agg_vol.T, max_dd], axis=1)
             else:
-                agg_stat = pd.concat(
-                    [agg_returns.T, agg_vol.T, max_dd], axis=1
-                )
+                agg_stat = pd.concat([agg_returns.T, agg_vol.T, max_dd], axis=1)
             # Change the unit, multiply by 100
 
-            unit_mult100 = self._ticker_mapping[
-                self._ticker_mapping["Ticker"] == column
-            ].Unit_Mul100.values
-            unit_in_prc = self._ticker_mapping[
-                self._ticker_mapping["Ticker"] == column
-            ].Unit_in_prct.values
-            format = self._ticker_mapping[
-                self._ticker_mapping["Ticker"] == column
-            ].format.values
+            unit_mult100 = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].Unit_Mul100.values
+            unit_in_prc = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].Unit_in_prct.values
+            format = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].format.values
             columns_transform = [
                 "QTD",
                 "YTD",
@@ -339,16 +289,14 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 )
                 agg_stat = agg_stat.apply(function)
             else:
-                function = (
-                    lambda x: x
-                )
+                function = lambda x: x
                 agg_stat = agg_stat.apply(function)
 
             # to add % sign
             if format[0]:
                 if unit_in_prc[0]:
                     function = (
-                        lambda x: x.astype('int').astype("str") + "%"
+                        lambda x: x.astype("int").astype("str") + "%"
                         if (x.name in columns_transform)
                         else round(x, 1).astype("str") + "%"
                         if (x.name in ["MTD", "DTD", "WTD"])
@@ -357,7 +305,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                     agg_stat = agg_stat.apply(function)
                 else:
                     function = (
-                        lambda x: x.astype('int').astype("str")
+                        lambda x: x.astype("int").astype("str")
                         if (x.name in columns_transform)
                         else round(x, 1).astype("str")
                         if (x.name in ["MTD", "DTD", "WTD"])
@@ -394,10 +342,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 ]
             )
 
-        elif (
-            category == "L_S_Equity_Styles"
-            or category == "L_S_Equity_Industry_Factors"
-        ):
+        elif category == "L_S_Equity_Styles" or category == "L_S_Equity_Industry_Factors":
             base_summary = self._general_summary(category)
             base_summary = pd.merge(
                 self._ticker_mapping[["family", "description"]],
@@ -411,9 +356,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
             if category == "L_S_Equity_Industry_Factors":
                 # TODO: subset dynamically based on the target threshold
                 base_summary["MTD1abs"] = abs(base_summary["MTD1"])
-                base_summary = base_summary.sort_values(
-                    by=["MTD1abs"], ascending=False
-                )
+                base_summary = base_summary.sort_values(by=["MTD1abs"], ascending=False)
                 base_summary = base_summary.iloc[0:30]
                 base_summary.drop(columns=["MTD1abs"], inplace=True)
 
@@ -439,9 +382,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
 
             base_summary = self._general_summary(category)
             last_price = self._get_daily_last_rpice(category)
-            base_summary = pd.merge(
-                base_summary, last_price, left_index=True, right_index=True
-            )
+            base_summary = pd.merge(base_summary, last_price, left_index=True, right_index=True)
             base_summary.reset_index(inplace=True)
             base_summary = base_summary.reindex(
                 columns=[
@@ -459,9 +400,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                     "Max PTT (TTM)",
                 ]
             )
-        base_summary = base_summary.sort_values(
-            by=["MTD1"], ascending=False
-        )
+        base_summary = base_summary.sort_values(by=["MTD1"], ascending=False)
         return base_summary
 
     def generate_market_performance_quality_report(self):
@@ -474,9 +413,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         rates = self.aggregated_stats("Rates")
         currencies = self.aggregated_stats("Currencies")
         ls_equity_styles = self.aggregated_stats("L_S_Equity_Styles")
-        ls_industry_factors = self.aggregated_stats(
-            "L_S_Equity_Industry_Factors"
-        )
+        ls_industry_factors = self.aggregated_stats("L_S_Equity_Industry_Factors")
         volatility = self.aggregated_stats("Volatility")
         input_data = {
             "header_info": header_info,
@@ -492,9 +429,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
             "Volatility": volatility,
         }
 
-        as_of_date = dt.datetime.combine(
-            self._as_of_date, dt.datetime.min.time()
-        )
+        as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         with Scenario(asofdate=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
