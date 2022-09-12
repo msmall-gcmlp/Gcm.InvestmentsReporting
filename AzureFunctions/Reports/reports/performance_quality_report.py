@@ -1859,7 +1859,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         with Scenario(asofdate=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
-                template="PFUND_PerformanceQuality_TemplateNEW.xlsx",
+                template="PFUND_PerformanceQuality_Template.xlsx",
                 save=True,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.manager_fund_group,
