@@ -6,12 +6,15 @@ from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.quantlib.enum_source import Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
-from .reporting_runner_base import ReportingRunnerBase
+from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
+    AggregateFromDaily,
+)
+from gcm.inv.reporting.core.reporting_runner_base import (
+    ReportingRunnerBase,
+)
 
 
 class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
-
     def __init__(self, runner, as_of_date, peer_group):
         super().__init__(runner=runner)
         self._as_of_date = as_of_date
@@ -34,39 +37,44 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         file = self._runner.execute(
             params=read_params,
             source=DaoSource.DataLake,
-            operation=lambda dao, params: dao.get_data(read_params)
+            operation=lambda dao, params: dao.get_data(read_params),
         )
         return json.loads(file.content)
 
     @property
     def _peer_inputs(self):
         if self._peer_inputs_cache is None:
-            asofdate = self._as_of_date.strftime('%Y-%m-%d')
-            file = self._peer_group.replace('/', '') + '_peer_inputs_' + asofdate + '.json'
+            asofdate = self._as_of_date.strftime("%Y-%m-%d")
+            file = self._peer_group.replace("/", "") + "_peer_inputs_" + asofdate + ".json"
             self._peer_inputs_cache = self._download_inputs(file_name=file)
         return self._peer_inputs_cache
 
     @property
     def _market_factor_inputs(self):
         if self._market_factor_inputs_cache is None:
-            asofdate = self._as_of_date.strftime('%Y-%m-%d')
-            file = 'market_factor_returns_' + asofdate + '.json'
+            asofdate = self._as_of_date.strftime("%Y-%m-%d")
+            file = "market_factor_returns_" + asofdate + ".json"
             self._market_factor_inputs_cache = self._download_inputs(file_name=file)
         return self._market_factor_inputs_cache
 
     @property
     def _gcm_peer_returns(self):
         if self._peer_returns_cache is None:
-            self._peer_returns_cache = pd.read_json(self._peer_inputs['gcm_peer_returns'], orient='index')
+            self._peer_returns_cache = pd.read_json(self._peer_inputs["gcm_peer_returns"], orient="index")
         return self._peer_returns_cache
 
     @property
     def _gcm_peer_constituent_returns(self):
         if self._peer_constituent_returns_cache is None:
-            returns = pd.read_json(self._peer_inputs['gcm_peer_constituent_returns'], orient='index')
+            returns = pd.read_json(
+                self._peer_inputs["gcm_peer_constituent_returns"],
+                orient="index",
+            )
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
-            returns_columns = pd.MultiIndex.from_tuples(returns_columns,
-                                                        names=['PeerGroupName', 'SourceInvestmentId'])
+            returns_columns = pd.MultiIndex.from_tuples(
+                returns_columns,
+                names=["PeerGroupName", "SourceInvestmentId"],
+            )
             returns.columns = returns_columns
             self._peer_constituent_returns_cache = returns
         return self._peer_constituent_returns_cache
@@ -74,10 +82,13 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
     @property
     def _market_factor_returns(self):
         if self._market_factor_returns_cache is None:
-            returns = pd.read_json(self._market_factor_inputs, orient='index')
+            returns = pd.read_json(self._market_factor_inputs, orient="index")
             if len(returns) > 0:
-                returns = AggregateFromDaily().transform(data=returns, method='geometric',
-                                                         period=Periodicity.Monthly)
+                returns = AggregateFromDaily().transform(
+                    data=returns,
+                    method="geometric",
+                    period=Periodicity.Monthly,
+                )
                 returns.index = [dt.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
                 self._market_factor_returns_cache = returns
             else:
@@ -86,20 +97,19 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
 
     @property
     def _sp500_return(self):
-        returns = self._market_factor_returns['SPXT Index']
-        returns.name = 'SP500'
+        returns = self._market_factor_returns["SPXT Index"]
+        returns.name = "SP500"
         return returns.to_frame()
 
     @property
     def _rf_return(self):
-        returns = self._market_factor_returns['SBMMTB1 Index']
-        returns.name = '1M_RiskFree'
+        returns = self._market_factor_returns["SBMMTB1 Index"]
+        returns.name = "1M_RiskFree"
         return returns.to_frame()
 
     @property
     def _primary_peer_constituent_returns(self):
-        peer_group_index = \
-            self._gcm_peer_constituent_returns.columns.get_level_values(0) == self._peer_group
+        peer_group_index = self._gcm_peer_constituent_returns.columns.get_level_values(0) == self._peer_group
         if any(peer_group_index):
             returns = self._gcm_peer_constituent_returns.loc[:, peer_group_index]
             returns = returns.droplevel(0, axis=1)
@@ -108,62 +118,78 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         return returns
 
     def _get_trailing_vol(self, returns, trailing_months):
-        return self._analytics.compute_trailing_vol(ror=returns,
-                                                    window=trailing_months,
-                                                    as_of_date=self._as_of_date,
-                                                    periodicity=Periodicity.Monthly,
-                                                    annualize=True)
+        return self._analytics.compute_trailing_vol(
+            ror=returns,
+            window=trailing_months,
+            as_of_date=self._as_of_date,
+            periodicity=Periodicity.Monthly,
+            annualize=True,
+        )
 
     def _get_trailing_beta(self, returns, trailing_months):
-        return self._analytics.compute_trailing_beta(ror=returns,
-                                                     benchmark_ror=self._sp500_return,
-                                                     window=trailing_months,
-                                                     as_of_date=self._as_of_date,
-                                                     periodicity=Periodicity.Monthly)
+        return self._analytics.compute_trailing_beta(
+            ror=returns,
+            benchmark_ror=self._sp500_return,
+            window=trailing_months,
+            as_of_date=self._as_of_date,
+            periodicity=Periodicity.Monthly,
+        )
 
     def _get_trailing_sharpe(self, returns, trailing_months):
-        return self._analytics.compute_trailing_sharpe_ratio(ror=returns,
-                                                             rf_ror=self._rf_return,
-                                                             window=trailing_months,
-                                                             as_of_date=self._as_of_date,
-                                                             periodicity=Periodicity.Monthly)
+        return self._analytics.compute_trailing_sharpe_ratio(
+            ror=returns,
+            rf_ror=self._rf_return,
+            window=trailing_months,
+            as_of_date=self._as_of_date,
+            periodicity=Periodicity.Monthly,
+        )
 
     def _get_trailing_win_loss_ratio(self, returns, trailing_months):
-        return self._analytics.compute_trailing_win_loss_ratio(ror=returns,
-                                                               window=trailing_months,
-                                                               as_of_date=self._as_of_date,
-                                                               periodicity=Periodicity.Monthly)
+        return self._analytics.compute_trailing_win_loss_ratio(
+            ror=returns,
+            window=trailing_months,
+            as_of_date=self._as_of_date,
+            periodicity=Periodicity.Monthly,
+        )
 
     def _get_trailing_batting_avg(self, returns, trailing_months):
-        return self._analytics.compute_trailing_batting_average(ror=returns,
-                                                                window=trailing_months,
-                                                                as_of_date=self._as_of_date,
-                                                                periodicity=Periodicity.Monthly)
+        return self._analytics.compute_trailing_batting_average(
+            ror=returns,
+            window=trailing_months,
+            as_of_date=self._as_of_date,
+            periodicity=Periodicity.Monthly,
+        )
 
     def _get_rolling_return(self, returns, trailing_months):
-        return self._analytics.compute_trailing_return(ror=returns,
-                                                       window=trailing_months,
-                                                       as_of_date=self._as_of_date,
-                                                       method='geometric',
-                                                       periodicity=Periodicity.Monthly,
-                                                       annualize=True,
-                                                       include_history=True)
+        return self._analytics.compute_trailing_return(
+            ror=returns,
+            window=trailing_months,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            periodicity=Periodicity.Monthly,
+            annualize=True,
+            include_history=True,
+        )
 
     def _get_rolling_vol(self, returns, trailing_months):
-        return self._analytics.compute_trailing_vol(ror=returns,
-                                                    window=trailing_months,
-                                                    as_of_date=self._as_of_date,
-                                                    periodicity=Periodicity.Monthly,
-                                                    annualize=True,
-                                                    include_history=True)
+        return self._analytics.compute_trailing_vol(
+            ror=returns,
+            window=trailing_months,
+            as_of_date=self._as_of_date,
+            periodicity=Periodicity.Monthly,
+            annualize=True,
+            include_history=True,
+        )
 
     def _get_rolling_sharpe_ratio(self, returns, trailing_months):
-        rolling_sharpe = self._analytics.compute_trailing_sharpe_ratio(ror=returns,
-                                                                       rf_ror=self._rf_return,
-                                                                       window=trailing_months,
-                                                                       as_of_date=self._as_of_date,
-                                                                       periodicity=Periodicity.Monthly,
-                                                                       include_history=True)
+        rolling_sharpe = self._analytics.compute_trailing_sharpe_ratio(
+            ror=returns,
+            rf_ror=self._rf_return,
+            window=trailing_months,
+            as_of_date=self._as_of_date,
+            periodicity=Periodicity.Monthly,
+            include_history=True,
+        )
         # outlier removal
         max_sharpe = min(10, rolling_sharpe.max().quantile(0.95))
         min_sharpe = rolling_sharpe.min().quantile(0.05)
@@ -173,26 +199,32 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         return rolling_sharpe
 
     def _get_rolling_beta(self, returns, trailing_months):
-        return self._analytics.compute_trailing_beta(ror=returns,
-                                                     benchmark_ror=self._sp500_return,
-                                                     window=trailing_months,
-                                                     as_of_date=self._as_of_date,
-                                                     periodicity=Periodicity.Monthly,
-                                                     include_history=True)
+        return self._analytics.compute_trailing_beta(
+            ror=returns,
+            benchmark_ror=self._sp500_return,
+            window=trailing_months,
+            as_of_date=self._as_of_date,
+            periodicity=Periodicity.Monthly,
+            include_history=True,
+        )
 
     def _get_rolling_batting_avg(self, returns, trailing_months):
-        return self._analytics.compute_trailing_batting_average(ror=returns,
-                                                                window=trailing_months,
-                                                                as_of_date=self._as_of_date,
-                                                                periodicity=Periodicity.Monthly,
-                                                                include_history=True)
+        return self._analytics.compute_trailing_batting_average(
+            ror=returns,
+            window=trailing_months,
+            as_of_date=self._as_of_date,
+            periodicity=Periodicity.Monthly,
+            include_history=True,
+        )
 
     def _get_rolling_win_loss_ratio(self, returns, trailing_months):
-        return self._analytics.compute_trailing_win_loss_ratio(ror=returns,
-                                                               window=trailing_months,
-                                                               as_of_date=self._as_of_date,
-                                                               periodicity=Periodicity.Monthly,
-                                                               include_history=True)
+        return self._analytics.compute_trailing_win_loss_ratio(
+            ror=returns,
+            window=trailing_months,
+            as_of_date=self._as_of_date,
+            periodicity=Periodicity.Monthly,
+            include_history=True,
+        )
 
     def _summarize_rolling_data(self, rolling_data, trailing_months):
         if rolling_data.index.max().date() < self._as_of_date.replace(day=1):
@@ -200,11 +232,11 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
 
         rolling_data = rolling_data.iloc[-trailing_months:]
 
-        index = ['min', '25%', '75%', 'max']
+        index = ["min", "25%", "75%", "max"]
         if len(rolling_data) == trailing_months:
             summary = rolling_data.describe().loc[index].round(2)
         else:
-            summary = pd.DataFrame({'Fund': [''] * len(index)}, index=index)
+            summary = pd.DataFrame({"Fund": [""] * len(index)}, index=index)
 
         return summary
 
@@ -221,7 +253,7 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
             # summary = pd.DataFrame({'Fund': rolling_median.squeeze()}, index=['Median'])
             summary = rolling_data.median().round(2).to_frame()
         else:
-            summary = pd.DataFrame({'Fund': ['']}, index=['Median'])
+            summary = pd.DataFrame({"Fund": [""]}, index=["Median"])
 
         return summary
 
@@ -238,8 +270,11 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
         rolling_5y_summary = rolling_5y_summary.mean(axis=1)
 
-        summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
-        summary.index = ['TTM', '3Y', '5Y']
+        summary = pd.concat(
+            [rolling_1y_summary, rolling_3y_summary, rolling_5y_summary],
+            axis=1,
+        ).T
+        summary.index = ["TTM", "3Y", "5Y"]
         summary = summary.round(2)
 
         return summary
@@ -257,8 +292,11 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=60)
         rolling_5y_summary = rolling_5y_summary.mean(axis=1)
 
-        summary = pd.concat([rolling_1y_summary, rolling_3y_summary, rolling_5y_summary], axis=1).T
-        summary.index = ['TTM', '3Y', '5Y']
+        summary = pd.concat(
+            [rolling_1y_summary, rolling_3y_summary, rolling_5y_summary],
+            axis=1,
+        ).T
+        summary.index = ["TTM", "3Y", "5Y"]
         summary = summary.round(2)
 
         return summary
@@ -271,10 +309,16 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         rolling_1_vol = self._get_rolling_vol(returns=returns, trailing_months=12)
         trailing_5y_median_vol = self._summarize_rolling_median(rolling_1_vol, trailing_months=60)
 
-        stats = [trailing_1y_vol.mean(), trailing_3y_vol.mean(), trailing_5y_vol.mean(),
-                 trailing_5y_median_vol.mean().squeeze()]
-        summary = pd.DataFrame({'AvgVol': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y', '5YMedian'])
+        stats = [
+            trailing_1y_vol.mean(),
+            trailing_3y_vol.mean(),
+            trailing_5y_vol.mean(),
+            trailing_5y_median_vol.mean().squeeze(),
+        ]
+        summary = pd.DataFrame(
+            {"AvgVol": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
+            index=["TTM", "3Y", "5Y", "5YMedian"],
+        )
 
         return summary
 
@@ -286,10 +330,16 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         rolling_1_beta = self._get_rolling_beta(returns=returns, trailing_months=12)
         trailing_5y_median_beta = self._summarize_rolling_median(rolling_1_beta, trailing_months=60)
 
-        stats = [trailing_1y_beta.mean(), trailing_3y_beta.mean(), trailing_5y_beta.mean(),
-                 trailing_5y_median_beta.mean().squeeze()]
-        summary = pd.DataFrame({'AvgBeta': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y', '5YMedian'])
+        stats = [
+            trailing_1y_beta.mean(),
+            trailing_3y_beta.mean(),
+            trailing_5y_beta.mean(),
+            trailing_5y_median_beta.mean().squeeze(),
+        ]
+        summary = pd.DataFrame(
+            {"AvgBeta": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
+            index=["TTM", "3Y", "5Y", "5YMedian"],
+        )
 
         return summary
 
@@ -301,10 +351,16 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         rolling_1_sharpe = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
         trailing_5y_median_sharpe = self._summarize_rolling_median(rolling_1_sharpe, trailing_months=60)
 
-        stats = [trailing_1y_sharpe.mean(), trailing_3y_sharpe.mean(), trailing_5y_sharpe.mean(),
-                 trailing_5y_median_sharpe.mean().squeeze()]
-        summary = pd.DataFrame({'AvgSharpe': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y', '5YMedian'])
+        stats = [
+            trailing_1y_sharpe.mean(),
+            trailing_3y_sharpe.mean(),
+            trailing_5y_sharpe.mean(),
+            trailing_5y_median_sharpe.mean().squeeze(),
+        ]
+        summary = pd.DataFrame(
+            {"AvgSharpe": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
+            index=["TTM", "3Y", "5Y", "5YMedian"],
+        )
 
         return summary
 
@@ -316,9 +372,16 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         rolling_1_batting = self._get_rolling_batting_avg(returns=returns, trailing_months=12)
         trailing_5y_median = self._summarize_rolling_median(rolling_1_batting, trailing_months=60)
 
-        stats = [trailing_1y.mean(), trailing_3y.mean(), trailing_5y.mean(), trailing_5y_median.mean().squeeze()]
-        summary = pd.DataFrame({'AvgBattingAvg': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y', '5YMedian'])
+        stats = [
+            trailing_1y.mean(),
+            trailing_3y.mean(),
+            trailing_5y.mean(),
+            trailing_5y_median.mean().squeeze(),
+        ]
+        summary = pd.DataFrame(
+            {"AvgBattingAvg": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
+            index=["TTM", "3Y", "5Y", "5YMedian"],
+        )
 
         return summary
 
@@ -330,9 +393,16 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         rolling_1y = self._get_rolling_win_loss_ratio(returns=returns, trailing_months=12)
         trailing_5y_median = self._summarize_rolling_median(rolling_1y, trailing_months=60)
 
-        stats = [trailing_1y.mean(), trailing_3y.mean(), trailing_5y.mean(), trailing_5y_median.mean().squeeze()]
-        summary = pd.DataFrame({'AvgWinLoss': [round(x, 2) if isinstance(x, float) else ' ' for x in stats]},
-                               index=['TTM', '3Y', '5Y', '5YMedian'])
+        stats = [
+            trailing_1y.mean(),
+            trailing_3y.mean(),
+            trailing_5y.mean(),
+            trailing_5y_median.mean().squeeze(),
+        ]
+        summary = pd.DataFrame(
+            {"AvgWinLoss": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
+            index=["TTM", "3Y", "5Y", "5YMedian"],
+        )
 
         return summary
 
@@ -347,47 +417,85 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
             win_loss = self._get_peer_trailing_win_loss_ratio_summary(returns=peer_returns)
 
             rolling_returns = self._get_peer_rolling_return_summary()
-            rolling_returns.columns = ['AvgReturn_'] + rolling_returns.columns
+            rolling_returns.columns = ["AvgReturn_"] + rolling_returns.columns
 
             rolling_sharpes = self._get_peer_rolling_sharpe_summary()
-            rolling_sharpes.columns = ['AvgSharpe_'] + rolling_sharpes.columns
+            rolling_sharpes.columns = ["AvgSharpe_"] + rolling_sharpes.columns
 
-            summary = vol.merge(beta, left_index=True, right_index=True, how='left')
-            summary = summary.merge(sharpe, left_index=True, right_index=True, how='left')
-            summary = summary.merge(batting_avg, left_index=True, right_index=True, how='left')
-            summary = summary.merge(win_loss, left_index=True, right_index=True, how='left')
-            summary = summary.merge(rolling_returns, left_index=True, right_index=True, how='left')
-            summary = summary.merge(rolling_sharpes, left_index=True, right_index=True, how='left')
+            summary = vol.merge(beta, left_index=True, right_index=True, how="left")
+            summary = summary.merge(sharpe, left_index=True, right_index=True, how="left")
+            summary = summary.merge(batting_avg, left_index=True, right_index=True, how="left")
+            summary = summary.merge(win_loss, left_index=True, right_index=True, how="left")
+            summary = summary.merge(
+                rolling_returns,
+                left_index=True,
+                right_index=True,
+                how="left",
+            )
+            summary = summary.merge(
+                rolling_sharpes,
+                left_index=True,
+                right_index=True,
+                how="left",
+            )
 
-            summary = summary[['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
-                               'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
-                               'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max']]
+            summary = summary[
+                [
+                    "AvgVol",
+                    "AvgBeta",
+                    "AvgSharpe",
+                    "AvgBattingAvg",
+                    "AvgWinLoss",
+                    "AvgReturn_min",
+                    "AvgReturn_25%",
+                    "AvgReturn_75%",
+                    "AvgReturn_max",
+                    "AvgSharpe_min",
+                    "AvgSharpe_25%",
+                    "AvgSharpe_75%",
+                    "AvgSharpe_max",
+                ]
+            ]
 
         else:
-            summary = pd.DataFrame(columns=['AvgVol', 'AvgBeta', 'AvgSharpe', 'AvgBattingAvg', 'AvgWinLoss',
-                                            'AvgReturn_min', 'AvgReturn_25%', 'AvgReturn_75%', 'AvgReturn_max',
-                                            'AvgSharpe_min', 'AvgSharpe_25%', 'AvgSharpe_75%', 'AvgSharpe_max'],
-                                   index=['TTM', '3Y', '5Y', '5YMedian'])
+            summary = pd.DataFrame(
+                columns=[
+                    "AvgVol",
+                    "AvgBeta",
+                    "AvgSharpe",
+                    "AvgBattingAvg",
+                    "AvgWinLoss",
+                    "AvgReturn_min",
+                    "AvgReturn_25%",
+                    "AvgReturn_75%",
+                    "AvgReturn_max",
+                    "AvgSharpe_min",
+                    "AvgSharpe_25%",
+                    "AvgSharpe_75%",
+                    "AvgSharpe_max",
+                ],
+                index=["TTM", "3Y", "5Y", "5YMedian"],
+            )
         return summary
 
     def generate_performance_quality_peer_summary_report(self):
         performance_stability_peer_summary = self.build_performance_stability_peer_summary()
 
         input_data_json = {
-            "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient='index'),
+            "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient="index"),
         }
 
         data_to_write = json.dumps(input_data_json)
-        asofdate = self._as_of_date.strftime('%Y-%m-%d')
+        asofdate = self._as_of_date.strftime("%Y-%m-%d")
         write_params = AzureDataLakeDao.create_get_data_params(
             self._summary_data_location,
-            self._peer_group.replace('/', '') + "_peer_" + asofdate + ".json",
+            self._peer_group.replace("/", "") + "_peer_" + asofdate + ".json",
             retry=False,
         )
         self._runner.execute(
             params=write_params,
             source=DaoSource.DataLake,
-            operation=lambda dao, params: dao.post_data(params, data_to_write)
+            operation=lambda dao, params: dao.post_data(params, data_to_write),
         )
 
     def run(self, **kwargs):

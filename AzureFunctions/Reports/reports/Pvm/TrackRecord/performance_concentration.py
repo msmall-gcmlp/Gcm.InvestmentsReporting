@@ -1,4 +1,6 @@
-from ...reporting_runner_base import ReportingRunnerBase
+from gcm.inv.reporting.core.reporting_runner_base import (
+    ReportingRunnerBase,
+)
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeFile,
     TabularDataOutputTypes,
@@ -43,9 +45,7 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
     def consolidate_data(self, wb_name, data):
         assert wb_name.lower() in ["all", "realized"]
         assert type(data) == AzureDataLakeFile
-        wb: openpyxl.Workbook = data.to_tabular_data(
-            TabularDataOutputTypes.ExcelWorkBook, {}
-        )
+        wb: openpyxl.Workbook = data.to_tabular_data(TabularDataOutputTypes.ExcelWorkBook, {})
         sheet_names = wb.get_sheet_names()
         top_items = []
         total = None
@@ -65,14 +65,10 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
                 total["InvestedCapital"] = abs(total["InvestedCapital"])
             elif "TopDeals" in s:
                 top_deals = self.get_sheet_as_df(data.content, s)
-                top_deals["InvestedCapital"] = abs(
-                    top_deals["InvestedCapital"]
-                )
+                top_deals["InvestedCapital"] = abs(top_deals["InvestedCapital"])
             elif "Dist" in s:
                 dist_returns = self.get_sheet_as_df(data.content, s)
-                dist_returns["InvestedCapital"] = abs(
-                    dist_returns["InvestedCapital"]
-                )
+                dist_returns["InvestedCapital"] = abs(dist_returns["InvestedCapital"])
         # now clean up columns
         if other is not None:
             other_asset_copy = copy.deepcopy(other)
@@ -81,12 +77,7 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
             top_deals = pd.concat([top_deals, other_asset_copy])
             top_deals.reset_index(drop=True, inplace=True)
 
-        total["Bucket"] = (
-            total["Bucket"]
-            + " (Deals: "
-            + total.PositionCount.map(str)
-            + ")"
-        )
+        total["Bucket"] = total["Bucket"] + " (Deals: " + total.PositionCount.map(str) + ")"
         if wb_name.lower() == "all":
             top_deals = top_deals[
                 [
@@ -138,12 +129,8 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
                 ]
             ]
         total_capital = total["InvestedCapital"].sum()
-        dist_returns = dist_returns[
-            ["Distribution", "PositionCount", "IRR", "InvestedCapital"]
-        ]
-        dist_returns["InvestedCapital"] = (
-            dist_returns["InvestedCapital"] / total_capital
-        )
+        dist_returns = dist_returns[["Distribution", "PositionCount", "IRR", "InvestedCapital"]]
+        dist_returns["InvestedCapital"] = dist_returns["InvestedCapital"] / total_capital
         top_items = pd.concat(top_items)
         top_items.reset_index(drop=True, inplace=True)
         top_items["Bucket"] = "Top " + top_items.Bucket.map(str)
@@ -162,13 +149,9 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
         input_data = kwargs["data"]
         final = {
             "AsOfDate": pd.DataFrame({"AsOfDate": [self.asofdate]}),
-            "ManagerName": pd.DataFrame(
-                {"ManagerName": [self.managername]}
-            ),
+            "ManagerName": pd.DataFrame({"ManagerName": [self.managername]}),
             "Vertical": pd.DataFrame({"Vertical": [self.vertical]}),
-            "Underwriting": pd.DataFrame(
-                {"Underwriting": [self.underwriting]}
-            ),
+            "Underwriting": pd.DataFrame({"Underwriting": [self.underwriting]}),
         }
         for d in input_data:
             temp = self.consolidate_data(d, input_data[d])

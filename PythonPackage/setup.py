@@ -16,7 +16,9 @@ def package_files(directory):
     paths = []
     for (path, directories, filenames) in os.walk(directory):
         if "pycache" not in path and "egg-info" not in path:
-            paths.append(path.replace(f"{base_src}/", "").replace("\\", "."))
+            paths.append(
+                path.replace(f"{base_src}/", "").replace("\\", ".")
+            )
     return paths
 
 
@@ -48,7 +50,7 @@ setup(
         "pillow",
         "gcm-investmentsdataprovider>=0.15.0",
         "gcm-investmentsquantlib>=0.8.0",
-        "gcm-investmentsutils",
+        "gcm-investmentsutils>=0.16.0",
         "PyPDF2",
     ],
     extras_require={

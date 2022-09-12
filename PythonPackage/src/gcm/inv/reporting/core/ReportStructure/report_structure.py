@@ -1,6 +1,5 @@
 from abc import ABC
-from enum import Enum
-from .extended_enum import ExtendedEnum
+from gcm.inv.utils.misc.extended_enum import Enum, ExtendedEnum
 import logging
 from gcm.Scenario.scenario_enums import AggregateInterval
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
@@ -31,7 +30,7 @@ template_location = (
 )
 
 base_output_location = "performance/"
-#base_output_location = "cleansed/investmentsreporting/printedexcels/"
+# base_output_location = "cleansed/investmentsreporting/printedexcels/"
 
 
 class ReportType(ExtendedEnum):
@@ -121,7 +120,9 @@ class ReportingEntityTag(object):
 # seperate class in case we want to load once
 # and pass to multiple report structures
 class ReportTemplate(object):
-    def __init__(self, filename, runner, template_location=template_location):
+    def __init__(
+        self, filename, runner, template_location=template_location
+    ):
         self.filename = filename
         self._excel = None
         self.runner: DaoRunner = runner
@@ -279,7 +280,9 @@ class ReportStructure(ABC):
         if kwargs.get("save", False):
             self._runner.execute(
                 params=params,
-                source=kwargs.get("output_source", DaoSource.ReportingStorage),
+                source=kwargs.get(
+                    "output_source", DaoSource.ReportingStorage
+                ),
                 operation=lambda d, v: d.post_data(v, b),
             )
 
@@ -306,7 +309,9 @@ class ReportStructure(ABC):
             elif type(val) == list:
                 if len(val) > 0:
                     if all(issubclass(type(f), Enum) for f in val):
-                        metadata = json.dumps(list(map(lambda x: x.name, val)))
+                        metadata = json.dumps(
+                            list(map(lambda x: x.name, val))
+                        )
                     else:
                         metadata = json.dumps(list(map(lambda x: x, val)))
             elif issubclass(type(val), ExtendedEnum):

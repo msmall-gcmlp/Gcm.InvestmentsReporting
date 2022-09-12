@@ -5,6 +5,4 @@
 azure-functions
 azure-functions-durable
 gcm-investmentsreporting
-jpype1
 aspose-cells
-install-jdk
