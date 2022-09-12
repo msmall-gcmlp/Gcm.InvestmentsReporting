@@ -1082,12 +1082,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
             summary.drop("10Y", inplace=True)
 
             rba_risk_decomp = self._fund_rba_risk_decomp.copy()
+            valid_rba_index = summary.notna().any(axis=1)
+
             summary = summary.merge(
                 rba_risk_decomp,
                 left_index=True,
                 right_index=True,
                 how="left",
             )
+
+            # Avg risk decomp includes partial periods so we filter to only show for periods with attribution
+            summary.loc[~valid_rba_index] = np.nan
 
             # rba_r2 = self._fund_rba_adj_r_squared.copy()
             # summary = summary.merge(rba_r2, left_index=True, right_index=True, how='left')
