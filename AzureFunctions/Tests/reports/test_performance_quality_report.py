@@ -141,7 +141,7 @@ class TestPerformanceQualityReport:
         benchmark_summary = perf_quality_report.build_exposure_summary()
         latest_exposure_heading = perf_quality_report.get_latest_exposure_heading()
         assert all(benchmark_summary.index == ['Latest', '3Y', '5Y', '10Y'])
-        assert all(benchmark_summary.columns == ['LongNotional', 'ShortNotional', 'GrossNotional', 'NetNotional'])
+        assert all(benchmark_summary.columns.get_level_values(1).unique() == ['LongNotional', 'ShortNotional', 'GrossNotional', 'NetNotional'])
         assert len(latest_exposure_heading) == 1
 
     def test_perf_stability_skye(self, perf_quality_report):
