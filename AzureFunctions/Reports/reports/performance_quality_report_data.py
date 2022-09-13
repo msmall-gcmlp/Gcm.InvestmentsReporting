@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import datetime as dt
 from gcm.Scenario.scenario import Scenario
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
@@ -66,7 +67,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         filter_ids = fund_dimn["InvestmentGroupId"]
         inv_group = InvestmentGroup(investment_group_ids=filter_ids)
         fund_monthly_returns = inv_group.get_monthly_returns(
-            start_date=self._start_date,
+            start_date=dt.date(1970, 1, 1),
             end_date=self._end_date,
             wide=True,
             priority_waterfall=None,
@@ -211,7 +212,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             fund_inputs["fund_dimn"] = dimn.to_json(orient="index")
             name = dimn["InvestmentGroupName"].squeeze()
 
-            returns = fund_monthly_returns.loc[:, fund_monthly_returns.columns.isin([name])]
+            returns = fund_monthly_returns.loc[:, fund_monthly_returns.columns.isin([name])].dropna()
             fund_inputs["fund_returns"] = returns.to_json(orient="index")
 
             abs_returns = abs_bmrk_returns.loc[:, abs_bmrk_returns.columns.isin([fund_id])]
