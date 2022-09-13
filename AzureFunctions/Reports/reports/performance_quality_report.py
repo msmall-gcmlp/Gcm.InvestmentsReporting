@@ -864,10 +864,24 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def build_constituent_count_summary(self):
-        primary = [self._current_primary_peer_constituent_count, self._primary_peer_constituent_count]
-        secondary = [self._current_secondary_peer_constituent_count, self._secondary_peer_constituent_count]
-        eureka = [self._current_eurekahedge_constituent_count, self._eurekahedge_constituent_count]
-        ehi200 = [self._current_ehi200_constituent_count, self._ehi200_constituent_count]
+        def _get_peers_with_returns_in_ttm(returns):
+            return returns.notna()[-12:].any().sum()
+
+        def _get_peers_with_current_month_return(returns):
+            return returns.notna().sum(axis=1)[-1]
+
+        def _summarize_counts(returns):
+            if returns.shape[0] == 0:
+                return [np.nan, np.nan]
+
+            updated_constituents = _get_peers_with_current_month_return(returns)
+            active_constituents = _get_peers_with_returns_in_ttm(returns)
+            return [updated_constituents, active_constituents]
+
+        primary = _summarize_counts(returns=self._primary_peer_constituent_returns)
+        secondary = _summarize_counts(returns=self._secondary_peer_constituent_returns)
+        eureka = _summarize_counts(returns=self._eurekahedge_constituent_returns)
+        ehi200 = _summarize_counts(returns=self._ehi200_constituent_returns)
 
         summary = pd.DataFrame({'primary': primary,
                                 'secondary': secondary,
@@ -1733,7 +1747,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         months = [x for x in range(1, 13)]
 
         if self._fund_returns.shape[0] == 0:
-            return pd.DataFrame(columns=months, index=years)
+            return pd.DataFrame(columns=['Month', 'Year'] + months + ['YTD'], index=years)
 
         returns = self._fund_returns.copy()
         returns['Month'] = returns.index.month
