@@ -24,20 +24,21 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     funds_and_peers = json.loads(funds_and_peers)
     fund_names = funds_and_peers.get("fund_names")
     peer_groups = funds_and_peers.get("peer_groups")
+    assert peer_groups is not None
 
-    parallel_peer_tasks = []
-    for peer in peer_groups:
-        params.update({"run": "PerformanceQualityPeerSummaryReport"})
-        params.update({"peer_group": peer})
-        peer_params = {"params": params, "data": {}}
-        parallel_peer_tasks.append(
-            context.call_activity_with_retry(
-                "PerformanceQualityReportActivity",
-                retry_options,
-                peer_params,
-            )
-        )
-    yield context.task_all(parallel_peer_tasks)
+    # parallel_peer_tasks = []
+    # for peer in peer_groups:
+    #     params.update({"run": "PerformanceQualityPeerSummaryReport"})
+    #     params.update({"peer_group": peer})
+    #     peer_params = {"params": params, "data": {}}
+    #     parallel_peer_tasks.append(
+    #         context.call_activity_with_retry(
+    #             "PerformanceQualityReportActivity",
+    #             retry_options,
+    #             peer_params,
+    #         )
+    #     )
+    # yield context.task_all(parallel_peer_tasks)
 
     parallel_fund_tasks = []
     for fund in fund_names:

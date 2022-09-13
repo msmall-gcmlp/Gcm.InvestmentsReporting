@@ -1,4 +1,5 @@
 from abc import ABC
+from ..Utils.convert_excel_to_pdf import convert
 from gcm.inv.utils.misc.extended_enum import Enum, ExtendedEnum
 import logging
 from gcm.Scenario.scenario_enums import AggregateInterval
@@ -15,6 +16,7 @@ from openpyxl.writer.excel import save_virtual_workbook
 import datetime as dt
 import json
 from openpyxl import Workbook
+import io
 from typing import List
 
 
@@ -284,6 +286,13 @@ class ReportStructure(ABC):
                     "output_source", DaoSource.ReportingStorage
                 ),
                 operation=lambda d, v: d.post_data(v, b),
+            )
+        if kwargs.get("save_as_pdf", True):
+            convert(
+                io.BytesIO(b),
+                self._runner,
+                kwargs.get("output_source", DaoSource.ReportingStorage),
+                params,
             )
 
     def output_name(self):
