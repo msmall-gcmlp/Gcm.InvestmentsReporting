@@ -505,7 +505,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _latest_exposure_date(self):
-        date = self._exposure.loc["Latest"]["Date"]
+        latest = self._exposure.loc["Latest"]
+        if isinstance(latest, pd.Series):
+            date = latest.loc["Date"]
+        else:
+            date = self._exposure.loc["Latest"][0:1]["Date"].squeeze()
+
         if isinstance(date, dt.datetime):
             return date
         else:
@@ -857,18 +862,23 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @staticmethod
     def _get_exposure_summary(exposure):
-        index = pd.DataFrame(index=["Latest", "3Y", "5Y", "10Y"])
-        summary = exposure[
-            [
-                "LongNotional",
-                "ShortNotional",
-                "GrossNotional",
-                "NetNotional",
-            ]
-        ]
-        summary = index.merge(summary, left_index=True, right_index=True, how="left")
-        summary = summary.loc[["Latest", "3Y", "5Y", "10Y"]]
+        exposure_summary = exposure.drop(columns={'InvestmentGroupName', 'InvestmentGroupId', 'Date'})
+        macro_strat = ~exposure_summary['ExposureStrategy'].isin(['Equities', 'Credit'])
+        exposure_summary.loc[macro_strat, 'ExposureStrategy'] = 'Macro'
+        exposure_summary = exposure_summary.groupby(['Period', 'ExposureStrategy']).sum()
+        exposure_summary = exposure_summary.reset_index().set_index('Period')
+        exposure_summary = exposure_summary.pivot(columns=['ExposureStrategy'])
+        exposure_summary.columns = exposure_summary.columns.reorder_levels([1, 0])
+
+        strategies = ['Equities', 'Credit', 'Macro']
+        exposures = [x + 'Notional' for x in ['Long', 'Short', 'Gross', 'Net']]
+
+        new_index = pd.MultiIndex.from_product([strategies, exposures], names=['ExposureStrategy', 'ExposureType'])
+        exposure_summary = exposure_summary.reindex(new_index, axis=1)
+        exposure_summary = exposure_summary.reindex(["Latest", "3Y", "5Y", "10Y"])
+        summary = exposure_summary.loc[["Latest", "3Y", "5Y", "10Y"]]
         summary = summary.round(2)
+        summary = summary * 100
         return summary
 
     def _get_rba_summary(self):
