@@ -241,14 +241,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return returns
 
     @property
-    def _primary_peer_constituent_count(self):
-        return self._primary_peer_constituent_returns.notna()[-12:].any().sum()
-
-    @property
-    def _current_primary_peer_constituent_count(self):
-        return self._primary_peer_constituent_returns.notna().sum(axis=1)[-1]
-
-    @property
     def _secondary_peer_constituent_returns(self):
         returns = self._secondary_peer_inputs
         if returns is not None:
@@ -263,14 +255,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         else:
             returns = pd.DataFrame()
         return returns
-
-    @property
-    def _secondary_peer_constituent_count(self):
-        return self._secondary_peer_constituent_returns.notna()[-12:].any().sum()
-
-    @property
-    def _current_secondary_peer_constituent_count(self):
-        return self._secondary_peer_constituent_returns.notna().sum(axis=1)[-1]
 
     @property
     def _eurekahedge_inputs(self):
@@ -328,15 +312,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.Series()
 
     @property
-    def _eurekahedge_constituent_count(self):
-        this_year = self._eurekahedge_constituent_returns.index.year >= self._as_of_date.year
-        return self._eurekahedge_constituent_returns.notna()[this_year].any().sum()
-
-    @property
-    def _current_eurekahedge_constituent_count(self):
-        return self._eurekahedge_constituent_returns.notna().sum(axis=1)[-1]
-
-    @property
     def _ehi200_constituent_returns(self):
         returns = pd.read_json(
             self._eurekahedge200_inputs["eurekahedge_constituent_returns"],
@@ -355,15 +330,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.Series()
 
         return returns
-
-    @property
-    def _ehi200_constituent_count(self):
-        this_year = self._ehi200_constituent_returns.index.year >= self._as_of_date.year
-        return self._ehi200_constituent_returns.notna()[this_year].any().sum()
-
-    @property
-    def _current_ehi200_constituent_count(self):
-        return self._ehi200_constituent_returns.notna().sum(axis=1)[-1]
 
     @property
     def _market_factor_inputs(self):
