@@ -1295,8 +1295,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y_beta = self._get_trailing_beta(returns=returns, trailing_months=12)
         trailing_3y_beta = self._get_trailing_beta(returns=returns, trailing_months=36)
         trailing_5y_beta = self._get_trailing_beta(returns=returns, trailing_months=60)
-        rolling_1y_beta = self._get_rolling_beta(returns=returns[returns.index >= self._sp500_return.index.min()], trailing_months=12)
-        trailing_5y_median_beta = self._summarize_rolling_median(rolling_1y_beta, trailing_months=60)
+
+        returns_10y = returns[returns.index >= self._sp500_return.index.min()]
+        if returns_10y.shape[0] >= 12:
+            rolling_1y_beta = self._get_rolling_beta(returns=returns_10y, trailing_months=12)
+            trailing_5y_median_beta = self._summarize_rolling_median(rolling_1y_beta, trailing_months=60)
+        else:
+            trailing_5y_median_beta = pd.DataFrame()
 
         stats = [
             trailing_1y_beta,
