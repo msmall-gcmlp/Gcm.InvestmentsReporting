@@ -862,7 +862,16 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @staticmethod
     def _get_exposure_summary(exposure):
+        strategies = ['Equities', 'Credit', 'Macro']
+        exposures = [x + 'Notional' for x in ['Long', 'Short', 'Gross', 'Net']]
+        column_index = pd.MultiIndex.from_product([strategies, exposures], names=['ExposureStrategy', 'ExposureType'])
+        periods = ["Latest", "3Y", "5Y", "10Y"]
+
         exposure_summary = exposure.drop(columns={'InvestmentGroupName', 'InvestmentGroupId', 'Date'})
+
+        if all(exposure_summary.isna()):
+            return pd.DataFrame(index=periods, columns=column_index)
+
         macro_strat = ~exposure_summary['ExposureStrategy'].isin(['Equities', 'Credit'])
         exposure_summary.loc[macro_strat, 'ExposureStrategy'] = 'Macro'
         exposure_summary = exposure_summary.groupby(['Period', 'ExposureStrategy']).sum()
@@ -870,13 +879,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         exposure_summary = exposure_summary.pivot(columns=['ExposureStrategy'])
         exposure_summary.columns = exposure_summary.columns.reorder_levels([1, 0])
 
-        strategies = ['Equities', 'Credit', 'Macro']
-        exposures = [x + 'Notional' for x in ['Long', 'Short', 'Gross', 'Net']]
 
-        new_index = pd.MultiIndex.from_product([strategies, exposures], names=['ExposureStrategy', 'ExposureType'])
-        exposure_summary = exposure_summary.reindex(new_index, axis=1)
-        exposure_summary = exposure_summary.reindex(["Latest", "3Y", "5Y", "10Y"])
-        summary = exposure_summary.loc[["Latest", "3Y", "5Y", "10Y"]]
+        exposure_summary = exposure_summary.reindex(column_index, axis=1)
+        exposure_summary = exposure_summary.reindex(periods)
+        summary = exposure_summary.loc[periods]
         summary = summary.round(2)
         summary = summary * 100
         return summary
