@@ -83,6 +83,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _fund_returns(self):
         if self._fund_returns_cache is None:
             self._fund_returns_cache = pd.read_json(self._fund_inputs["fund_returns"], orient="index")
+            self._fund_returns_cache = self._fund_returns_cache.sort_index()
 
         if any(self._fund_returns_cache.columns == self._fund_name):
             return self._fund_returns_cache[self._fund_name].to_frame()
@@ -828,6 +829,32 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = summary.fillna("")
         return summary
 
+    def build_constituent_count_summary(self):
+        def _get_peers_with_returns_in_ttm(returns):
+            return returns.notna()[-12:].any().sum()
+
+        def _get_peers_with_current_month_return(returns):
+            return returns.notna().sum(axis=1)[-1]
+
+        def _summarize_counts(returns):
+            if returns.shape[0] == 0:
+                return [np.nan, np.nan]
+
+            updated_constituents = _get_peers_with_current_month_return(returns)
+            active_constituents = _get_peers_with_returns_in_ttm(returns)
+            return [updated_constituents, active_constituents]
+
+        primary = _summarize_counts(returns=self._primary_peer_constituent_returns)
+        secondary = _summarize_counts(returns=self._secondary_peer_constituent_returns)
+        eureka = _summarize_counts(returns=self._eurekahedge_constituent_returns)
+        ehi200 = _summarize_counts(returns=self._ehi200_constituent_returns)
+
+        summary = pd.DataFrame({'primary': primary,
+                                'secondary': secondary,
+                                'eureka': eureka,
+                                'ehi200': ehi200})
+        return summary
+
     @staticmethod
     def _get_exposure_summary(exposure):
         index = pd.DataFrame(index=["Latest", "3Y", "5Y", "10Y"])
@@ -1036,12 +1063,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
             summary.drop("10Y", inplace=True)
 
             rba_risk_decomp = self._fund_rba_risk_decomp.copy()
+            valid_rba_index = summary.notna().any(axis=1)
+
             summary = summary.merge(
                 rba_risk_decomp,
                 left_index=True,
                 right_index=True,
                 how="left",
             )
+
+            # Avg risk decomp includes partial periods so we filter to only show for periods with attribution
+            summary.loc[~valid_rba_index] = np.nan
 
             # rba_r2 = self._fund_rba_adj_r_squared.copy()
             # summary = summary.merge(rba_r2, left_index=True, right_index=True, how='left')
@@ -1263,7 +1295,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y_beta = self._get_trailing_beta(returns=returns, trailing_months=12)
         trailing_3y_beta = self._get_trailing_beta(returns=returns, trailing_months=36)
         trailing_5y_beta = self._get_trailing_beta(returns=returns, trailing_months=60)
-        rolling_1y_beta = self._get_rolling_beta(returns=returns, trailing_months=12)
+        rolling_1y_beta = self._get_rolling_beta(returns=returns[returns.index >= self._sp500_return.index.min()], trailing_months=12)
         trailing_5y_median_beta = self._summarize_rolling_median(rolling_1y_beta, trailing_months=60)
 
         stats = [
@@ -1675,6 +1707,38 @@ class PerformanceQualityReport(ReportingRunnerBase):
         )
         return summary
 
+    def build_monthly_performance_summary(self):
+        end_year = self._as_of_date.year
+        years = [x for x in range(end_year - 52, end_year + 1)]
+        months = [x for x in range(1, 13)]
+
+        if self._fund_returns.shape[0] == 0:
+            return pd.DataFrame(columns=['Month', 'Year'] + months + ['YTD'], index=years)
+
+        returns = self._fund_returns.copy()
+        returns['Month'] = returns.index.month
+        returns['Year'] = returns.index.year
+
+        # pivot long to wide
+        monthly_returns = returns.pivot(index=['Year'], columns=['Month'])
+        monthly_returns = monthly_returns.reindex(years, axis=0)
+        monthly_returns.columns = monthly_returns.columns.droplevel(0)
+        monthly_returns = monthly_returns.reindex(months, axis=1)
+        monthly_returns = monthly_returns.sort_values('Year', ascending=False)
+
+        # append ytd returns
+        ytd_returns = monthly_returns.apply(lambda x: np.prod(1 + x) - 1, axis=1)
+        ytd_index = ~monthly_returns.isna().all(axis=1)
+        monthly_returns['YTD'] = None
+        monthly_returns.loc[ytd_index, 'YTD'] = ytd_returns[ytd_index]
+
+        monthly_returns = 100 * monthly_returns.astype(float).round(3)
+        monthly_returns = monthly_returns.reset_index()
+
+        monthly_returns.loc[~ytd_index.values, 'Year'] = None
+
+        return monthly_returns
+
     def _validate_inputs(self):
         if self._fund_returns.shape[0] == 0:
             return False
@@ -1687,7 +1751,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         logging.info("Generating report for: " + self._fund_name)
         header_info = self.get_header_info()
+
         return_summary = self.build_benchmark_summary()
+        constituent_count_summary = self.build_constituent_count_summary()
         absolute_return_benchmark = self.get_absolute_return_benchmark()
         peer_group_heading = self.get_peer_group_heading()
         eurekahedge_benchmark_heading = self.get_eurekahedge_benchmark_heading()
@@ -1710,11 +1776,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
         exposure_summary = self.build_exposure_summary()
         latest_exposure_heading = self.get_latest_exposure_heading()
 
-        logging.info("Report summary data generated for: " + self._fund_name)
+        monthly_performance_summary = self.build_monthly_performance_summary()
+
+        logging.info('Report summary data generated for: ' + self._fund_name)
 
         input_data = {
             "header_info": header_info,
             "benchmark_summary": return_summary,
+            "constituent_count_summary": constituent_count_summary,
             "absolute_return_benchmark": absolute_return_benchmark,
             "peer_group_heading": peer_group_heading,
             "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading,
@@ -1731,27 +1800,30 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "risk_model_expectations": risk_model_expectations,
             "exposure_summary": exposure_summary,
             "latest_exposure_heading": latest_exposure_heading,
+            "monthly_performance_summary": monthly_performance_summary,
         }
 
         input_data_json = {
-            "header_info": header_info.to_json(orient="index"),
-            "benchmark_summary": return_summary.to_json(orient="index"),
-            "absolute_return_benchmark": absolute_return_benchmark.to_json(orient="index"),
-            "peer_group_heading": peer_group_heading.to_json(orient="index"),
-            "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading.to_json(orient="index"),
-            "peer_ptile_1_heading": peer_ptile_1_heading.to_json(orient="index"),
-            "peer_ptile_2_heading": peer_ptile_2_heading.to_json(orient="index"),
-            "performance_stability_fund_summary": performance_stability_fund_summary.to_json(orient="index"),
-            "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient="index"),
-            "rba_summary": rba_summary.to_json(orient="index"),
-            "adj_r2": adj_r2.to_json(orient="index"),
-            "pba_mtd": pba_mtd.to_json(orient="index"),
-            "pba_qtd": pba_qtd.to_json(orient="index"),
-            "pba_ytd": pba_ytd.to_json(orient="index"),
-            "shortfall_summary": shortfall_summary.to_json(orient="index"),
-            "risk_model_expectations": risk_model_expectations.to_json(orient="index"),
-            "exposure_summary": exposure_summary.to_json(orient="index"),
-            "latest_exposure_heading": latest_exposure_heading.to_json(orient="index"),
+            "header_info": header_info.to_json(orient='index'),
+            "benchmark_summary": return_summary.to_json(orient='index'),
+            "constituent_count_summary": constituent_count_summary.to_json(orient='index'),
+            "absolute_return_benchmark": absolute_return_benchmark.to_json(orient='index'),
+            "peer_group_heading": peer_group_heading.to_json(orient='index'),
+            "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading.to_json(orient='index'),
+            "peer_ptile_1_heading": peer_ptile_1_heading.to_json(orient='index'),
+            "peer_ptile_2_heading": peer_ptile_2_heading.to_json(orient='index'),
+            "performance_stability_fund_summary": performance_stability_fund_summary.to_json(orient='index'),
+            "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient='index'),
+            "rba_summary": rba_summary.to_json(orient='index'),
+            "adj_r2": adj_r2.to_json(orient='index'),
+            "pba_mtd": pba_mtd.to_json(orient='index'),
+            "pba_qtd": pba_qtd.to_json(orient='index'),
+            "pba_ytd": pba_ytd.to_json(orient='index'),
+            "shortfall_summary": shortfall_summary.to_json(orient='index'),
+            "risk_model_expectations": risk_model_expectations.to_json(orient='index'),
+            "exposure_summary": exposure_summary.to_json(orient='index'),
+            "latest_exposure_heading": latest_exposure_heading.to_json(orient='index'),
+            "monthly_performance_summary": monthly_performance_summary.to_json(orient='index')
         }
 
         data_to_write = json.dumps(input_data_json)
