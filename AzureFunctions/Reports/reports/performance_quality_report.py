@@ -869,7 +869,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         exposure_summary = exposure.drop(columns={'InvestmentGroupName', 'InvestmentGroupId', 'Date'})
 
-        if all(exposure_summary.isna()):
+        if all(exposure_summary.isna().all()):
             return pd.DataFrame(index=periods, columns=column_index)
 
         macro_strat = ~exposure_summary['ExposureStrategy'].isin(['Equities', 'Credit'])
@@ -878,7 +878,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         exposure_summary = exposure_summary.reset_index().set_index('Period')
         exposure_summary = exposure_summary.pivot(columns=['ExposureStrategy'])
         exposure_summary.columns = exposure_summary.columns.reorder_levels([1, 0])
-
 
         exposure_summary = exposure_summary.reindex(column_index, axis=1)
         exposure_summary = exposure_summary.reindex(periods)
