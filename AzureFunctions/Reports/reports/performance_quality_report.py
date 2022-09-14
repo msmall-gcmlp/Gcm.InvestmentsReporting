@@ -10,7 +10,7 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
-    AggregateInterval,
+    AggregateInterval, ReportVertical, ReportStrategy,
 )
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
@@ -1890,7 +1890,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 entity_ids=[self._pub_investment_group_id.item()],
                 entity_source=DaoSource.PubDwh,
                 report_name="Performance Quality",
-                report_type=ReportType.Risk,
+                report_type=ReportType.Performance,
+                report_vertical=ReportVertical.ARS,
+                report_frequency="Monthly",
                 aggregate_intervals=AggregateInterval.MTD,
                 output_dir="cleansed/investmentsreporting/printedexcels/",
                 report_output_source=DaoSource.DataLake,
