@@ -1,40 +1,26 @@
 {
-	"Build":{
+	"Build": {
 		"Variables": [
-				{
-
-					"name": "InstallVPNBeforeTest",
-
-					"allowOverride": false,
-
-					"isSecret": false,
-
-					"value": "true"
-
-				},
-				{
-
-					"name": "AzureWebJobsDataLake",
-
-					"allowOverride": true,
-
-					"value": "nonprd"
-
-				},
-				{
-
-					"name": "Subscription",
-
-					"allowOverride": true,
-
-					"value": "nonprd"
-
-				}
-
-			]
-		},
-		"Release": {
-			"Environments": [
+			{
+				"name": "InstallVPNBeforeTest",
+				"allowOverride": false,
+				"isSecret": false,
+				"value": "true"
+			},
+			{
+				"name": "AzureWebJobsDataLake",
+				"allowOverride": true,
+				"value": "nonprd"
+			},
+			{
+				"name": "Subscription",
+				"allowOverride": true,
+				"value": "nonprd"
+			}
+		]
+	},
+	"Release": {
+		"Environments": [
 			{
 				"Name": "dev",
 				"VariableGroups": [
