@@ -34,16 +34,20 @@ def convert(
     from asposecells.api import Workbook, SaveFormat, LoadOptions, License
 
     lic = License()
-    license_content: AzureDataLakeFile = runner.execute(
-        params=AzureDataLakeDao.create_get_data_params(
-            license__location,
-            "Aspose.Cells.Java.lic",
-            retry=False,
-        ),
-        source=source,
-        operation=lambda d, p: d.get_data(p),
-    )
-    lic.setLicense(license_content.content)
+    try:
+        license_content: AzureDataLakeFile = runner.execute(
+            params=AzureDataLakeDao.create_get_data_params(
+                license__location,
+                "Aspose.Cells.Java.lic",
+                retry=False,
+            ),
+            source=source,
+            operation=lambda d, p: d.get_data(p),
+        )
+        lic.setLicense(license_content.content)
+    except:
+        logging.info("skipping licensing step")
+
     logging.info("Exporting PDF")
     loadOptions = LoadOptions()
     workbook = Workbook()
