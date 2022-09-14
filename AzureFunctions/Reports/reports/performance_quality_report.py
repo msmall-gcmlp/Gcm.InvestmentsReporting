@@ -1738,8 +1738,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
                 aggregate_intervals=AggregateInterval.MTD,
-                output_dir="cleansed/investmentsreporting/printedexcels/",
-                report_output_source=DaoSource.DataLake,
+                # output_dir="cleansed/investmentsreporting/printedexcels/",
+                # report_output_source=DaoSource.DataLake,
             )
 
         logging.info("Excel stored to DataLake for: " + self._fund_name)

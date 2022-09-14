@@ -79,11 +79,13 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
         benchmarks = StrategyBenchmark()
         eh_benchmark_names = fund_dimn['EurekahedgeBenchmark'].unique().tolist() + ['Eurekahedge Institutional 200']
+        eh_benchmark_names = [x for x in eh_benchmark_names if (str(x) != 'nan') and (x is not None)]
         eurekahedge_returns = benchmarks.get_eurekahedge_returns(start_date=self._start_date, end_date=self._end_date,
                                                                  benchmarks_names=eh_benchmark_names)
 
         peer_groups = fund_dimn['ReportingPeerGroup'].tolist() + fund_dimn['StrategyPeerGroup'].tolist()
         peer_groups = list(set(peer_groups))
+        peer_groups = [x for x in peer_groups if (str(x) != 'nan') and (x is not None)]
         gcm_peer_returns = benchmarks.get_altsoft_peer_returns(start_date=self._start_date, end_date=self._end_date,
                                                                peer_names=peer_groups)
 
