@@ -46,7 +46,7 @@ class InvestmentsReportRunner(ProgramRunner):
         )
         if "report_name" in kwargs:
             report = ReportStructure(
-                kwargs["report_name"], final_data, current_date, runner
+                asofdate=current_date, **kwargs
             )
             if "template" in kwargs:
                 template_dir = kwargs.get(
