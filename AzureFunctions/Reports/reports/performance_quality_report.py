@@ -1066,6 +1066,22 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def build_exposure_summary(self):
         summary = self._get_exposure_summary(self._exposure)
+
+        # nullify exposure where prior to track
+        length_of_track = self._fund_returns.shape[0]
+
+        if length_of_track < 12:
+            summary.loc['1Y'] = np.nan
+
+        if length_of_track < 36:
+            summary.loc['3Y'] = np.nan
+
+        if length_of_track < 60:
+            summary.loc['5Y'] = np.nan
+
+        if length_of_track < 120:
+            summary.loc['10Y'] = np.nan
+
         return summary
 
     def build_rba_summary(self):
