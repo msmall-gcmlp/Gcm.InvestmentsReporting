@@ -10,7 +10,7 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
-    AggregateInterval,
+    AggregateInterval, ReportVertical,
 )
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
@@ -83,6 +83,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _fund_returns(self):
         if self._fund_returns_cache is None:
             self._fund_returns_cache = pd.read_json(self._fund_inputs["fund_returns"], orient="index")
+            self._fund_returns_cache = self._fund_returns_cache.sort_index()
 
         if any(self._fund_returns_cache.columns == self._fund_name):
             return self._fund_returns_cache[self._fund_name].to_frame()
@@ -240,14 +241,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return returns
 
     @property
-    def _primary_peer_constituent_count(self):
-        return self._primary_peer_constituent_returns.notna()[-12:].any().sum()
-
-    @property
-    def _current_primary_peer_constituent_count(self):
-        return self._primary_peer_constituent_returns.notna().sum(axis=1)[-1]
-
-    @property
     def _secondary_peer_constituent_returns(self):
         returns = self._secondary_peer_inputs
         if returns is not None:
@@ -262,14 +255,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         else:
             returns = pd.DataFrame()
         return returns
-
-    @property
-    def _secondary_peer_constituent_count(self):
-        return self._secondary_peer_constituent_returns.notna()[-12:].any().sum()
-
-    @property
-    def _current_secondary_peer_constituent_count(self):
-        return self._secondary_peer_constituent_returns.notna().sum(axis=1)[-1]
 
     @property
     def _eurekahedge_inputs(self):
@@ -327,15 +312,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.Series()
 
     @property
-    def _eurekahedge_constituent_count(self):
-        this_year = self._eurekahedge_constituent_returns.index.year >= self._as_of_date.year
-        return self._eurekahedge_constituent_returns.notna()[this_year].any().sum()
-
-    @property
-    def _current_eurekahedge_constituent_count(self):
-        return self._eurekahedge_constituent_returns.notna().sum(axis=1)[-1]
-
-    @property
     def _ehi200_constituent_returns(self):
         returns = pd.read_json(
             self._eurekahedge200_inputs["eurekahedge_constituent_returns"],
@@ -354,15 +330,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.Series()
 
         return returns
-
-    @property
-    def _ehi200_constituent_count(self):
-        this_year = self._ehi200_constituent_returns.index.year >= self._as_of_date.year
-        return self._ehi200_constituent_returns.notna()[this_year].any().sum()
-
-    @property
-    def _current_ehi200_constituent_count(self):
-        return self._ehi200_constituent_returns.notna().sum(axis=1)[-1]
 
     @property
     def _market_factor_inputs(self):
@@ -538,7 +505,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @property
     def _latest_exposure_date(self):
-        date = self._exposure.loc["Latest"]["Date"]
+        latest = self._exposure.loc["Latest"]
+        if isinstance(latest, pd.Series):
+            date = latest.loc["Date"]
+        else:
+            date = self._exposure.loc["Latest"][0:1]["Date"].squeeze()
+
         if isinstance(date, dt.datetime):
             return date
         else:
@@ -863,10 +835,24 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def build_constituent_count_summary(self):
-        primary = [self._current_primary_peer_constituent_count, self._primary_peer_constituent_count]
-        secondary = [self._current_secondary_peer_constituent_count, self._secondary_peer_constituent_count]
-        eureka = [self._current_eurekahedge_constituent_count, self._eurekahedge_constituent_count]
-        ehi200 = [self._current_ehi200_constituent_count, self._ehi200_constituent_count]
+        def _get_peers_with_returns_in_ttm(returns):
+            return returns.notna()[-12:].any().sum()
+
+        def _get_peers_with_current_month_return(returns):
+            return returns.notna().sum(axis=1)[-1]
+
+        def _summarize_counts(returns):
+            if returns.shape[0] == 0:
+                return [np.nan, np.nan]
+
+            updated_constituents = _get_peers_with_current_month_return(returns)
+            active_constituents = _get_peers_with_returns_in_ttm(returns)
+            return [updated_constituents, active_constituents]
+
+        primary = _summarize_counts(returns=self._primary_peer_constituent_returns)
+        secondary = _summarize_counts(returns=self._secondary_peer_constituent_returns)
+        eureka = _summarize_counts(returns=self._eurekahedge_constituent_returns)
+        ehi200 = _summarize_counts(returns=self._ehi200_constituent_returns)
 
         summary = pd.DataFrame({'primary': primary,
                                 'secondary': secondary,
@@ -876,18 +862,28 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @staticmethod
     def _get_exposure_summary(exposure):
-        index = pd.DataFrame(index=["Latest", "3Y", "5Y", "10Y"])
-        summary = exposure[
-            [
-                "LongNotional",
-                "ShortNotional",
-                "GrossNotional",
-                "NetNotional",
-            ]
-        ]
-        summary = index.merge(summary, left_index=True, right_index=True, how="left")
-        summary = summary.loc[["Latest", "3Y", "5Y", "10Y"]]
+        strategies = ['Equities', 'Credit', 'Macro']
+        exposures = [x + 'Notional' for x in ['Long', 'Short', 'Gross', 'Net']]
+        column_index = pd.MultiIndex.from_product([strategies, exposures], names=['ExposureStrategy', 'ExposureType'])
+        periods = ["Latest", "3Y", "5Y", "10Y"]
+
+        exposure_summary = exposure.drop(columns={'InvestmentGroupName', 'InvestmentGroupId', 'Date'})
+
+        if all(exposure_summary.isna().all()):
+            return pd.DataFrame(index=periods, columns=column_index)
+
+        macro_strat = ~exposure_summary['ExposureStrategy'].isin(['Equities', 'Credit'])
+        exposure_summary.loc[macro_strat, 'ExposureStrategy'] = 'Macro'
+        exposure_summary = exposure_summary.groupby(['Period', 'ExposureStrategy']).sum()
+        exposure_summary = exposure_summary.reset_index().set_index('Period')
+        exposure_summary = exposure_summary.pivot(columns=['ExposureStrategy'])
+        exposure_summary.columns = exposure_summary.columns.reorder_levels([1, 0])
+
+        exposure_summary = exposure_summary.reindex(column_index, axis=1)
+        exposure_summary = exposure_summary.reindex(periods)
+        summary = exposure_summary.loc[periods]
         summary = summary.round(2)
+        summary = summary * 100
         return summary
 
     def _get_rba_summary(self):
@@ -1070,6 +1066,22 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def build_exposure_summary(self):
         summary = self._get_exposure_summary(self._exposure)
+
+        # nullify exposure where prior to track
+        length_of_track = self._fund_returns.shape[0]
+
+        if length_of_track < 12:
+            summary.loc['1Y'] = np.nan
+
+        if length_of_track < 36:
+            summary.loc['3Y'] = np.nan
+
+        if length_of_track < 60:
+            summary.loc['5Y'] = np.nan
+
+        if length_of_track < 120:
+            summary.loc['10Y'] = np.nan
+
         return summary
 
     def build_rba_summary(self):
@@ -1314,8 +1326,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         trailing_1y_beta = self._get_trailing_beta(returns=returns, trailing_months=12)
         trailing_3y_beta = self._get_trailing_beta(returns=returns, trailing_months=36)
         trailing_5y_beta = self._get_trailing_beta(returns=returns, trailing_months=60)
-        rolling_1y_beta = self._get_rolling_beta(returns=returns, trailing_months=12)
-        trailing_5y_median_beta = self._summarize_rolling_median(rolling_1y_beta, trailing_months=60)
+
+        returns_10y = returns[returns.index >= self._sp500_return.index.min()]
+        if returns_10y.shape[0] >= 12:
+            rolling_1y_beta = self._get_rolling_beta(returns=returns_10y, trailing_months=12)
+            trailing_5y_median_beta = self._summarize_rolling_median(rolling_1y_beta, trailing_months=60)
+        else:
+            trailing_5y_median_beta = pd.DataFrame()
 
         stats = [
             trailing_1y_beta,
@@ -1430,162 +1447,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
             ]
         )
         summary.index = ["TTM", "3Y", "5Y"]
-
-        return summary
-
-    def _get_peer_rolling_return_summary(self):
-        returns = self._primary_peer_constituent_returns.copy()
-        rolling_12m_returns = self._get_rolling_return(returns=returns, trailing_months=12)
-
-        rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=12)
-        rolling_1y_summary = rolling_1y_summary.mean(axis=1)
-
-        rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=36)
-        rolling_3y_summary = rolling_3y_summary.mean(axis=1)
-
-        rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
-        rolling_5y_summary = rolling_5y_summary.mean(axis=1)
-
-        summary = pd.concat(
-            [rolling_1y_summary, rolling_3y_summary, rolling_5y_summary],
-            axis=1,
-        ).T
-        summary.index = ["TTM", "3Y", "5Y"]
-        summary = summary.round(2)
-
-        return summary
-
-    def _get_peer_rolling_sharpe_summary(self):
-        returns = self._primary_peer_constituent_returns.copy()
-        rolling_12m_sharpes = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
-
-        # outlier removal
-        max_sharpe = rolling_12m_sharpes.max().quantile(0.95)
-        min_sharpe = rolling_12m_sharpes.min().quantile(0.05)
-        outlier_ind = (rolling_12m_sharpes < min_sharpe) | (rolling_12m_sharpes > max_sharpe)
-
-        rolling_12m_sharpes[outlier_ind] = None
-
-        rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=12)
-        rolling_1y_summary = rolling_1y_summary.mean(axis=1)
-
-        rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=36)
-        rolling_3y_summary = rolling_3y_summary.mean(axis=1)
-
-        rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=60)
-        rolling_5y_summary = rolling_5y_summary.mean(axis=1)
-
-        summary = pd.concat(
-            [rolling_1y_summary, rolling_3y_summary, rolling_5y_summary],
-            axis=1,
-        ).T
-        summary.index = ["TTM", "3Y", "5Y"]
-        summary = summary.round(2)
-
-        return summary
-
-    def _get_peer_trailing_vol_summary(self, returns):
-        returns = returns.copy()
-        trailing_1y_vol = self._get_trailing_vol(returns=returns, trailing_months=12)
-        trailing_3y_vol = self._get_trailing_vol(returns=returns, trailing_months=36)
-        trailing_5y_vol = self._get_trailing_vol(returns=returns, trailing_months=60)
-        rolling_1_vol = self._get_rolling_vol(returns=returns, trailing_months=12)
-        trailing_5y_median_vol = self._summarize_rolling_median(rolling_1_vol, trailing_months=60)
-
-        stats = [
-            trailing_1y_vol.mean(),
-            trailing_3y_vol.mean(),
-            trailing_5y_vol.mean(),
-            trailing_5y_median_vol.mean().squeeze(),
-        ]
-        summary = pd.DataFrame(
-            {"AvgVol": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
-            index=["TTM", "3Y", "5Y", "5YMedian"],
-        )
-
-        return summary
-
-    def _get_peer_trailing_beta_summary(self, returns):
-        returns = returns.copy()
-        trailing_1y_beta = self._get_trailing_beta(returns=returns, trailing_months=12)
-        trailing_3y_beta = self._get_trailing_beta(returns=returns, trailing_months=36)
-        trailing_5y_beta = self._get_trailing_beta(returns=returns, trailing_months=60)
-        rolling_1_beta = self._get_rolling_beta(returns=returns, trailing_months=12)
-        trailing_5y_median_beta = self._summarize_rolling_median(rolling_1_beta, trailing_months=60)
-
-        stats = [
-            trailing_1y_beta.mean(),
-            trailing_3y_beta.mean(),
-            trailing_5y_beta.mean(),
-            trailing_5y_median_beta.mean().squeeze(),
-        ]
-        summary = pd.DataFrame(
-            {"AvgBeta": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
-            index=["TTM", "3Y", "5Y", "5YMedian"],
-        )
-
-        return summary
-
-    def _get_peer_trailing_sharpe_summary(self, returns):
-        returns = returns.copy()
-        trailing_1y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=12)
-        trailing_3y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=36)
-        trailing_5y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=60)
-        rolling_1_sharpe = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
-        trailing_5y_median_sharpe = self._summarize_rolling_median(rolling_1_sharpe, trailing_months=60)
-
-        stats = [
-            trailing_1y_sharpe.mean(),
-            trailing_3y_sharpe.mean(),
-            trailing_5y_sharpe.mean(),
-            trailing_5y_median_sharpe.mean().squeeze(),
-        ]
-        summary = pd.DataFrame(
-            {"AvgSharpe": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
-            index=["TTM", "3Y", "5Y", "5YMedian"],
-        )
-
-        return summary
-
-    def _get_peer_trailing_batting_average_summary(self, returns):
-        returns = returns.copy()
-        trailing_1y = self._get_trailing_batting_avg(returns=returns, trailing_months=12)
-        trailing_3y = self._get_trailing_batting_avg(returns=returns, trailing_months=36)
-        trailing_5y = self._get_trailing_batting_avg(returns=returns, trailing_months=60)
-        rolling_1_batting = self._get_rolling_batting_avg(returns=returns, trailing_months=12)
-        trailing_5y_median = self._summarize_rolling_median(rolling_1_batting, trailing_months=60)
-
-        stats = [
-            trailing_1y.mean(),
-            trailing_3y.mean(),
-            trailing_5y.mean(),
-            trailing_5y_median.mean().squeeze(),
-        ]
-        summary = pd.DataFrame(
-            {"AvgBattingAvg": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
-            index=["TTM", "3Y", "5Y", "5YMedian"],
-        )
-
-        return summary
-
-    def _get_peer_trailing_win_loss_ratio_summary(self, returns):
-        returns = returns.copy()
-        trailing_1y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=12)
-        trailing_3y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=36)
-        trailing_5y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=60)
-        rolling_1y = self._get_rolling_win_loss_ratio(returns=returns, trailing_months=12)
-        trailing_5y_median = self._summarize_rolling_median(rolling_1y, trailing_months=60)
-
-        stats = [
-            trailing_1y.mean(),
-            trailing_3y.mean(),
-            trailing_5y.mean(),
-            trailing_5y_median.mean().squeeze(),
-        ]
-        summary = pd.DataFrame(
-            {"AvgWinLoss": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
-            index=["TTM", "3Y", "5Y", "5YMedian"],
-        )
 
         return summary
 
@@ -1732,7 +1593,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         months = [x for x in range(1, 13)]
 
         if self._fund_returns.shape[0] == 0:
-            return pd.DataFrame(columns=months, index=years)
+            return pd.DataFrame(columns=['Month', 'Year'] + months + ['YTD'], index=years)
 
         returns = self._fund_returns.copy()
         returns['Month'] = returns.index.month
@@ -1873,7 +1734,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 entity_ids=[self._pub_investment_group_id.item()],
                 entity_source=DaoSource.PubDwh,
                 report_name="Performance Quality",
-                report_type=ReportType.Risk,
+                report_type=ReportType.Performance,
+                report_vertical=ReportVertical.ARS,
+                report_frequency="Monthly",
                 aggregate_intervals=AggregateInterval.MTD,
                 output_dir="cleansed/investmentsreporting/printedexcels/",
                 report_output_source=DaoSource.DataLake,

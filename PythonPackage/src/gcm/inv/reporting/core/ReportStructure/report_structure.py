@@ -175,6 +175,7 @@ class ReportStructure(ABC):
         report_vertical=ReportVertical.ARS,
         report_substrategy=[ReportStrategy.All],
         report_consumers=[RiskReportConsumer.Risk],
+        **kwargs
     ):
         self.data = data
 

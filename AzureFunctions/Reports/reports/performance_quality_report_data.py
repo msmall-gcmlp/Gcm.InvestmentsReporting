@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import datetime as dt
 from gcm.Scenario.scenario import Scenario
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
@@ -66,7 +67,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         filter_ids = fund_dimn["InvestmentGroupId"]
         inv_group = InvestmentGroup(investment_group_ids=filter_ids)
         fund_monthly_returns = inv_group.get_monthly_returns(
-            start_date=self._start_date,
+            start_date=dt.date(1970, 1, 1),
             end_date=self._end_date,
             wide=True,
             priority_waterfall=None,
@@ -77,16 +78,21 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         )
 
         benchmarks = StrategyBenchmark()
-        eurekahedge_returns = benchmarks.get_eurekahedge_returns(start_date=self._start_date, end_date=self._end_date)
+        eh_benchmark_names = fund_dimn['EurekahedgeBenchmark'].unique().tolist() + ['Eurekahedge Institutional 200']
+        eurekahedge_returns = benchmarks.get_eurekahedge_returns(start_date=self._start_date, end_date=self._end_date,
+                                                                 benchmarks_names=eh_benchmark_names)
 
-        gcm_peer_returns = benchmarks.get_altsoft_peer_returns(start_date=self._start_date, end_date=self._end_date)
+        peer_groups = fund_dimn['ReportingPeerGroup'].tolist() + fund_dimn['StrategyPeerGroup'].tolist()
+        peer_groups = list(set(peer_groups))
+        gcm_peer_returns = benchmarks.get_altsoft_peer_returns(start_date=self._start_date, end_date=self._end_date,
+                                                               peer_names=peer_groups)
 
         gcm_peer_constituent_returns = benchmarks.get_altsoft_peer_constituent_returns(
-            start_date=self._start_date, end_date=self._end_date
+            start_date=self._start_date, end_date=self._end_date, peer_names=peer_groups
         )
 
         eurekahedge_constituent_returns = benchmarks.get_eurekahedge_constituent_returns(
-            start_date=self._start_date, end_date=self._end_date
+            start_date=self._start_date, end_date=self._end_date, benchmarks_names=eh_benchmark_names
         )
 
         exposure_latest = inv_group.get_latest_exposure(as_of_date=self._as_of_date)
@@ -211,7 +217,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             fund_inputs["fund_dimn"] = dimn.to_json(orient="index")
             name = dimn["InvestmentGroupName"].squeeze()
 
-            returns = fund_monthly_returns.loc[:, fund_monthly_returns.columns.isin([name])]
+            returns = fund_monthly_returns.loc[:, fund_monthly_returns.columns.isin([name])].dropna()
             fund_inputs["fund_returns"] = returns.to_json(orient="index")
 
             abs_returns = abs_bmrk_returns.loc[:, abs_bmrk_returns.columns.isin([fund_id])]

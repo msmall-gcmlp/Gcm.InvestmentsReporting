@@ -265,13 +265,13 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         rolling_12m_returns = self._get_rolling_return(returns=returns, trailing_months=12)
 
         rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=12)
-        rolling_1y_summary = rolling_1y_summary.mean(axis=1)
+        rolling_1y_summary = rolling_1y_summary.median(axis=1)
 
         rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=36)
-        rolling_3y_summary = rolling_3y_summary.mean(axis=1)
+        rolling_3y_summary = rolling_3y_summary.median(axis=1)
 
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
-        rolling_5y_summary = rolling_5y_summary.mean(axis=1)
+        rolling_5y_summary = rolling_5y_summary.median(axis=1)
 
         summary = pd.concat(
             [rolling_1y_summary, rolling_3y_summary, rolling_5y_summary],
@@ -287,13 +287,13 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         rolling_12m_sharpes = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
 
         rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=12)
-        rolling_1y_summary = rolling_1y_summary.mean(axis=1)
+        rolling_1y_summary = rolling_1y_summary.median(axis=1)
 
         rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=36)
-        rolling_3y_summary = rolling_3y_summary.mean(axis=1)
+        rolling_3y_summary = rolling_3y_summary.median(axis=1)
 
         rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=60)
-        rolling_5y_summary = rolling_5y_summary.mean(axis=1)
+        rolling_5y_summary = rolling_5y_summary.median(axis=1)
 
         summary = pd.concat(
             [rolling_1y_summary, rolling_3y_summary, rolling_5y_summary],
@@ -313,10 +313,10 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         trailing_5y_median_vol = self._summarize_rolling_median(rolling_1_vol, trailing_months=60)
 
         stats = [
-            trailing_1y_vol.mean(),
-            trailing_3y_vol.mean(),
-            trailing_5y_vol.mean(),
-            trailing_5y_median_vol.mean().squeeze(),
+            trailing_1y_vol.median(),
+            trailing_3y_vol.median(),
+            trailing_5y_vol.median(),
+            trailing_5y_median_vol.median().squeeze(),
         ]
         summary = pd.DataFrame(
             {"AvgVol": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
@@ -334,10 +334,10 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         trailing_5y_median_beta = self._summarize_rolling_median(rolling_1_beta, trailing_months=60)
 
         stats = [
-            trailing_1y_beta.mean(),
-            trailing_3y_beta.mean(),
-            trailing_5y_beta.mean(),
-            trailing_5y_median_beta.mean().squeeze(),
+            trailing_1y_beta.median(),
+            trailing_3y_beta.median(),
+            trailing_5y_beta.median(),
+            trailing_5y_median_beta.median().squeeze(),
         ]
         summary = pd.DataFrame(
             {"AvgBeta": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
@@ -355,10 +355,10 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         trailing_5y_median_sharpe = self._summarize_rolling_median(rolling_1_sharpe, trailing_months=60)
 
         stats = [
-            trailing_1y_sharpe.mean(),
-            trailing_3y_sharpe.mean(),
-            trailing_5y_sharpe.mean(),
-            trailing_5y_median_sharpe.mean().squeeze(),
+            trailing_1y_sharpe.median(),
+            trailing_3y_sharpe.median(),
+            trailing_5y_sharpe.median(),
+            trailing_5y_median_sharpe.median().squeeze(),
         ]
         summary = pd.DataFrame(
             {"AvgSharpe": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
@@ -376,10 +376,10 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         trailing_5y_median = self._summarize_rolling_median(rolling_1_batting, trailing_months=60)
 
         stats = [
-            trailing_1y.mean(),
-            trailing_3y.mean(),
-            trailing_5y.mean(),
-            trailing_5y_median.mean().squeeze(),
+            trailing_1y.median(),
+            trailing_3y.median(),
+            trailing_5y.median(),
+            trailing_5y_median.median().squeeze(),
         ]
         summary = pd.DataFrame(
             {"AvgBattingAvg": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
@@ -397,10 +397,10 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         trailing_5y_median = self._summarize_rolling_median(rolling_1y, trailing_months=60)
 
         stats = [
-            trailing_1y.mean(),
-            trailing_3y.mean(),
-            trailing_5y.mean(),
-            trailing_5y_median.mean().squeeze(),
+            trailing_1y.median(),
+            trailing_3y.median(),
+            trailing_5y.median(),
+            trailing_5y_median.median().squeeze(),
         ]
         summary = pd.DataFrame(
             {"AvgWinLoss": [round(x, 2) if isinstance(x, float) else " " for x in stats]},
