@@ -1,9 +1,22 @@
 from copy import deepcopy
 import logging
 from gcm.inv.utils.Java.java_client import java_client
-from gcm.Dao.DaoRunner import DaoRunner, DaoSource
-
+from gcm.Dao.DaoRunner import DaoRunner, DaoSource, AzureDataLakeDao
+from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
+    AzureDataLakeFile,
+)
 import io
+
+license__location = (
+    "/".join(
+        [
+            "cleansed",
+            "investmentsreporting",
+            "controls",
+        ]
+    )
+    + "/"
+)
 
 
 def convert(
@@ -14,11 +27,23 @@ def convert(
 ):
     java_client.install_jre()
     java_client.start_jvm()
+
     params = deepcopy(base_params)
     params["file_path"] = params["file_path"].replace(".xlsx", ".pdf")
     assert params is not None
-    from asposecells.api import Workbook, SaveFormat, LoadOptions
+    from asposecells.api import Workbook, SaveFormat, LoadOptions, License
 
+    lic = License()
+    license_content: AzureDataLakeFile = runner.execute(
+        params=AzureDataLakeDao.create_get_data_params(
+            license__location,
+            "Aspose.Cells.Java.lic",
+            retry=False,
+        ),
+        source=source,
+        operation=lambda d, p: d.get_data(p),
+    )
+    lic.setLicense(license_content.content)
     logging.info("Exporting PDF")
     loadOptions = LoadOptions()
     workbook = Workbook()
