@@ -1,4 +1,6 @@
 import json
+
+import numpy as np
 import pandas as pd
 import ast
 import datetime as dt
@@ -234,7 +236,8 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
 
         index = ["min", "25%", "75%", "max"]
         if len(rolling_data) == trailing_months:
-            summary = rolling_data.describe().loc[index].round(2)
+            quantiles = np.quantile(rolling_data, q=[0, .25, .75, 1], axis=0).round(2)
+            summary = pd.DataFrame(quantiles, index=index, columns=rolling_data.columns)
         else:
             summary = pd.DataFrame({"Fund": [""] * len(index)}, index=index)
 
