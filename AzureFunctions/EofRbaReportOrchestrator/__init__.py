@@ -16,6 +16,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
                 period_params,
             )
         )
+
     yield context.task_all(parallel_period_tasks)
 
     return True
