@@ -52,6 +52,7 @@ setup(
         "gcm-investmentsquantlib>=0.8.0",
         "gcm-investmentsutils>=0.16.0",
         "PyPDF2",
+        "aspose-cells >= 22.6.0",
     ],
     extras_require={
         "dev": ["pytest>=3.7", "tox>=3.23", "wheel"],
