@@ -1,7 +1,6 @@
 {
   "recommendations": [
     "ms-azuretools.vscode-azurefunctions",
-    "Azurite.azurite",
     "ms-python.python"
   ]
 }
