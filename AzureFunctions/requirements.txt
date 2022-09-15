@@ -5,5 +5,4 @@
 azure-functions
 azure-functions-durable
 gcm-investmentsreporting
-aspose-cells
 gcm-investmentsutils>=0.16.0
