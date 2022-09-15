@@ -38,7 +38,7 @@ def convert(
         license_content: AzureDataLakeFile = runner.execute(
             params=AzureDataLakeDao.create_get_data_params(
                 license__location,
-                "Aspose.Cells.Java.lic",
+                "Aspose.Cells.PythonviaJava.lic",
                 retry=False,
             ),
             source=source,
