@@ -41,7 +41,7 @@ def convert(
                 "Aspose.Cells.PythonviaJava.lic",
                 retry=False,
             ),
-            source=source,
+            source=DaoSource.DataLake,
             operation=lambda d, p: d.get_data(p),
         )
         lic.setLicense(license_content.content)
