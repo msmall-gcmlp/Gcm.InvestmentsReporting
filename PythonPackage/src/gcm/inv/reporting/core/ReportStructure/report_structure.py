@@ -35,6 +35,7 @@ base_output_location = "performance/"
 # base_output_location = "cleansed/investmentsreporting/printedexcels/"
 daily = AggregateInterval.Daily
 
+
 class ReportType(ExtendedEnum):
     Risk = "Risk"
     Capital_and_Exposure = "Capital & Exposure"
