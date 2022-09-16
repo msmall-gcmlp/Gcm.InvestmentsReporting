@@ -10,6 +10,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
         params.update({"run": "EofRbaReport"})
         params.update({"periodicity": periodicity})
         period_params = {"params": params, "data": {}}
+
         parallel_period_tasks.append(
             context.call_activity(
                 "EofRbaReportActivity",
