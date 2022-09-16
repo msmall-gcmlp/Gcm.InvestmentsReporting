@@ -2,7 +2,6 @@ from abc import ABC
 from ..Utils.convert_excel_to_pdf import convert
 from gcm.inv.utils.misc.extended_enum import Enum, ExtendedEnum
 import logging
-from gcm.Scenario.scenario_enums import AggregateInterval
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
     AzureDataLakeFile,
@@ -172,11 +171,11 @@ class ReportStructure(ABC):
         runner: DaoRunner,
         report_type=ReportType.Risk,
         report_frequency="Monthly",
-        aggregate_intervals=AggregateInterval.Daily,
-        stage=ReportStage.Active,
+        aggregate_intervals=None,
+        stage=None,
         report_vertical=ReportVertical.ARS,
-        report_substrategy=[ReportStrategy.All],
-        report_consumers=[RiskReportConsumer.Risk],
+        report_substrategy=None,
+        report_consumers=None,
         **kwargs
     ):
         self.data = data
