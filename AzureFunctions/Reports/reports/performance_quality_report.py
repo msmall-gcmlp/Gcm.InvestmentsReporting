@@ -10,7 +10,7 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
-    AggregateInterval, ReportVertical,
+    ReportVertical,
 )
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,

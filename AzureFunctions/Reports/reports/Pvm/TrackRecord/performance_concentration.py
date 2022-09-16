@@ -8,9 +8,9 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
 import datetime as dt
 from gcm.Dao.DaoRunner import DaoRunner
 from gcm.Dao.DaoSources import DaoSource
+from gcm.Scenario.scenario import AggregateInterval
 from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportType,
-    AggregateInterval,
 )
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
