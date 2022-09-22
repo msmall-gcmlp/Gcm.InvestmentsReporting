@@ -10,7 +10,8 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
-    AggregateInterval, ReportVertical,
+    AggregateInterval,
+    ReportVertical,
 )
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
@@ -191,9 +192,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._primary_peer_inputs_cache is None and self._primary_peer_group is not None:
             asofdate = self._as_of_date.strftime("%Y-%m-%d")
             file = self._primary_peer_group.replace("/", "") + "_peer_inputs_" + asofdate + ".json"
-            self._primary_peer_inputs_cache = self._download_inputs(
-                location=self._underlying_data_location, file_path=file
-            )
+            self._primary_peer_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
         return self._primary_peer_inputs_cache
 
     @property
@@ -201,9 +200,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._secondary_peer_inputs_cache is None and self._secondary_peer_group is not None:
             asofdate = self._as_of_date.strftime("%Y-%m-%d")
             file = self._secondary_peer_group.replace("/", "") + "_peer_inputs_" + asofdate + ".json"
-            self._secondary_peer_inputs_cache = self._download_inputs(
-                location=self._underlying_data_location, file_path=file
-            )
+            self._secondary_peer_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
         return self._secondary_peer_inputs_cache
 
     @property
@@ -261,9 +258,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._eurekahedge_inputs_cache is None and self._eurekahedge_benchmark is not None:
             asofdate = self._as_of_date.strftime("%Y-%m-%d")
             file = self._eurekahedge_benchmark.replace("/", "") + "_eurekahedge_inputs_" + asofdate + ".json"
-            self._eurekahedge_inputs_cache = self._download_inputs(
-                location=self._underlying_data_location, file_path=file
-            )
+            self._eurekahedge_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
         return self._eurekahedge_inputs_cache
 
     @property
@@ -271,9 +266,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._eurekahedge200_inputs_cache is None:
             asofdate = self._as_of_date.strftime("%Y-%m-%d")
             file = "Eurekahedge Institutional 200" + "_eurekahedge_inputs_" + asofdate + ".json"
-            self._eurekahedge200_inputs_cache = self._download_inputs(
-                location=self._underlying_data_location, file_path=file
-            )
+            self._eurekahedge200_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
         return self._eurekahedge200_inputs_cache
 
     @property
@@ -336,9 +329,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if self._market_factor_inputs_cache is None:
             asofdate = self._as_of_date.strftime("%Y-%m-%d")
             file = "market_factor_returns_" + asofdate + ".json"
-            self._market_factor_inputs_cache = self._download_inputs(
-                location=self._underlying_data_location, file_path=file
-            )
+            self._market_factor_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
         return self._market_factor_inputs_cache
 
     @property
@@ -854,29 +845,26 @@ class PerformanceQualityReport(ReportingRunnerBase):
         eureka = _summarize_counts(returns=self._eurekahedge_constituent_returns)
         ehi200 = _summarize_counts(returns=self._ehi200_constituent_returns)
 
-        summary = pd.DataFrame({'primary': primary,
-                                'secondary': secondary,
-                                'eureka': eureka,
-                                'ehi200': ehi200})
+        summary = pd.DataFrame({"primary": primary, "secondary": secondary, "eureka": eureka, "ehi200": ehi200})
         return summary
 
     @staticmethod
     def _get_exposure_summary(exposure):
-        strategies = ['Equities', 'Credit', 'Macro']
-        exposures = [x + 'Notional' for x in ['Long', 'Short', 'Gross', 'Net']]
-        column_index = pd.MultiIndex.from_product([strategies, exposures], names=['ExposureStrategy', 'ExposureType'])
+        strategies = ["Equities", "Credit", "Macro"]
+        exposures = [x + "Notional" for x in ["Long", "Short", "Gross", "Net"]]
+        column_index = pd.MultiIndex.from_product([strategies, exposures], names=["ExposureStrategy", "ExposureType"])
         periods = ["Latest", "3Y", "5Y", "10Y"]
 
-        exposure_summary = exposure.drop(columns={'InvestmentGroupName', 'InvestmentGroupId', 'Date'})
+        exposure_summary = exposure.drop(columns={"InvestmentGroupName", "InvestmentGroupId", "Date"})
 
         if all(exposure_summary.isna().all()):
             return pd.DataFrame(index=periods, columns=column_index)
 
-        macro_strat = ~exposure_summary['ExposureStrategy'].isin(['Equities', 'Credit'])
-        exposure_summary.loc[macro_strat, 'ExposureStrategy'] = 'Macro'
-        exposure_summary = exposure_summary.groupby(['Period', 'ExposureStrategy']).sum()
-        exposure_summary = exposure_summary.reset_index().set_index('Period')
-        exposure_summary = exposure_summary.pivot(columns=['ExposureStrategy'])
+        macro_strat = ~exposure_summary["ExposureStrategy"].isin(["Equities", "Credit"])
+        exposure_summary.loc[macro_strat, "ExposureStrategy"] = "Macro"
+        exposure_summary = exposure_summary.groupby(["Period", "ExposureStrategy"]).sum()
+        exposure_summary = exposure_summary.reset_index().set_index("Period")
+        exposure_summary = exposure_summary.pivot(columns=["ExposureStrategy"])
         exposure_summary.columns = exposure_summary.columns.reorder_levels([1, 0])
 
         exposure_summary = exposure_summary.reindex(column_index, axis=1)
@@ -1071,16 +1059,16 @@ class PerformanceQualityReport(ReportingRunnerBase):
         length_of_track = self._fund_returns.shape[0]
 
         if length_of_track < 12:
-            summary.loc['1Y'] = np.nan
+            summary.loc["1Y"] = np.nan
 
         if length_of_track < 36:
-            summary.loc['3Y'] = np.nan
+            summary.loc["3Y"] = np.nan
 
         if length_of_track < 60:
-            summary.loc['5Y'] = np.nan
+            summary.loc["5Y"] = np.nan
 
         if length_of_track < 120:
-            summary.loc['10Y'] = np.nan
+            summary.loc["10Y"] = np.nan
 
         return summary
 
@@ -1593,29 +1581,29 @@ class PerformanceQualityReport(ReportingRunnerBase):
         months = [x for x in range(1, 13)]
 
         if self._fund_returns.shape[0] == 0:
-            return pd.DataFrame(columns=['Month', 'Year'] + months + ['YTD'], index=years)
+            return pd.DataFrame(columns=["Month", "Year"] + months + ["YTD"], index=years)
 
         returns = self._fund_returns.copy()
-        returns['Month'] = returns.index.month
-        returns['Year'] = returns.index.year
+        returns["Month"] = returns.index.month
+        returns["Year"] = returns.index.year
 
         # pivot long to wide
-        monthly_returns = returns.pivot(index=['Year'], columns=['Month'])
+        monthly_returns = returns.pivot(index=["Year"], columns=["Month"])
         monthly_returns = monthly_returns.reindex(years, axis=0)
         monthly_returns.columns = monthly_returns.columns.droplevel(0)
         monthly_returns = monthly_returns.reindex(months, axis=1)
-        monthly_returns = monthly_returns.sort_values('Year', ascending=False)
+        monthly_returns = monthly_returns.sort_values("Year", ascending=False)
 
         # append ytd returns
         ytd_returns = monthly_returns.apply(lambda x: np.prod(1 + x) - 1, axis=1)
         ytd_index = ~monthly_returns.isna().all(axis=1)
-        monthly_returns['YTD'] = None
-        monthly_returns.loc[ytd_index, 'YTD'] = ytd_returns[ytd_index]
+        monthly_returns["YTD"] = None
+        monthly_returns.loc[ytd_index, "YTD"] = ytd_returns[ytd_index]
 
         monthly_returns = 100 * monthly_returns.astype(float).round(3)
         monthly_returns = monthly_returns.reset_index()
 
-        monthly_returns.loc[~ytd_index.values, 'Year'] = None
+        monthly_returns.loc[~ytd_index.values, "Year"] = None
 
         return monthly_returns
 
@@ -1658,7 +1646,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         monthly_performance_summary = self.build_monthly_performance_summary()
 
-        logging.info('Report summary data generated for: ' + self._fund_name)
+        logging.info("Report summary data generated for: " + self._fund_name)
 
         input_data = {
             "header_info": header_info,
@@ -1684,26 +1672,26 @@ class PerformanceQualityReport(ReportingRunnerBase):
         }
 
         input_data_json = {
-            "header_info": header_info.to_json(orient='index'),
-            "benchmark_summary": return_summary.to_json(orient='index'),
-            "constituent_count_summary": constituent_count_summary.to_json(orient='index'),
-            "absolute_return_benchmark": absolute_return_benchmark.to_json(orient='index'),
-            "peer_group_heading": peer_group_heading.to_json(orient='index'),
-            "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading.to_json(orient='index'),
-            "peer_ptile_1_heading": peer_ptile_1_heading.to_json(orient='index'),
-            "peer_ptile_2_heading": peer_ptile_2_heading.to_json(orient='index'),
-            "performance_stability_fund_summary": performance_stability_fund_summary.to_json(orient='index'),
-            "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient='index'),
-            "rba_summary": rba_summary.to_json(orient='index'),
-            "adj_r2": adj_r2.to_json(orient='index'),
-            "pba_mtd": pba_mtd.to_json(orient='index'),
-            "pba_qtd": pba_qtd.to_json(orient='index'),
-            "pba_ytd": pba_ytd.to_json(orient='index'),
-            "shortfall_summary": shortfall_summary.to_json(orient='index'),
-            "risk_model_expectations": risk_model_expectations.to_json(orient='index'),
-            "exposure_summary": exposure_summary.to_json(orient='index'),
-            "latest_exposure_heading": latest_exposure_heading.to_json(orient='index'),
-            "monthly_performance_summary": monthly_performance_summary.to_json(orient='index')
+            "header_info": header_info.to_json(orient="index"),
+            "benchmark_summary": return_summary.to_json(orient="index"),
+            "constituent_count_summary": constituent_count_summary.to_json(orient="index"),
+            "absolute_return_benchmark": absolute_return_benchmark.to_json(orient="index"),
+            "peer_group_heading": peer_group_heading.to_json(orient="index"),
+            "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading.to_json(orient="index"),
+            "peer_ptile_1_heading": peer_ptile_1_heading.to_json(orient="index"),
+            "peer_ptile_2_heading": peer_ptile_2_heading.to_json(orient="index"),
+            "performance_stability_fund_summary": performance_stability_fund_summary.to_json(orient="index"),
+            "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient="index"),
+            "rba_summary": rba_summary.to_json(orient="index"),
+            "adj_r2": adj_r2.to_json(orient="index"),
+            "pba_mtd": pba_mtd.to_json(orient="index"),
+            "pba_qtd": pba_qtd.to_json(orient="index"),
+            "pba_ytd": pba_ytd.to_json(orient="index"),
+            "shortfall_summary": shortfall_summary.to_json(orient="index"),
+            "risk_model_expectations": risk_model_expectations.to_json(orient="index"),
+            "exposure_summary": exposure_summary.to_json(orient="index"),
+            "latest_exposure_heading": latest_exposure_heading.to_json(orient="index"),
+            "monthly_performance_summary": monthly_performance_summary.to_json(orient="index"),
         }
 
         data_to_write = json.dumps(input_data_json)

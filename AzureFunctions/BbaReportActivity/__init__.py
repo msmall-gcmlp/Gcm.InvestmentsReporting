@@ -4,7 +4,6 @@ from gcm.Dao.DaoRunner import DaoRunner
 from gcm.inv.quantlib.enum_source import PeriodicROR
 from Reports.reports.eof_rba_report import EofReturnBasedAttributionReport
 
-
 def main(requestBody) -> str:
     params = requestBody["params"]
     run = params["run"]
@@ -18,7 +17,7 @@ def main(requestBody) -> str:
     elif periodicity == 'YTD':
         periodicity = PeriodicROR.YTD
 
-    if run == "EofRbaReport":
+    if run == "BbaReport":
         with Scenario(runner=runner, as_of_date=as_of_date, periodicity=periodicity).context():
             eof_rba = EofReturnBasedAttributionReport()
             return eof_rba.execute()

@@ -236,7 +236,7 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
 
         index = ["min", "25%", "75%", "max"]
         if len(rolling_data) == trailing_months:
-            quantiles = np.quantile(rolling_data, q=[0, .25, .75, 1], axis=0).round(2)
+            quantiles = np.quantile(rolling_data, q=[0, 0.25, 0.75, 1], axis=0).round(2)
             summary = pd.DataFrame(quantiles, index=index, columns=rolling_data.columns)
         else:
             summary = pd.DataFrame({"Fund": [""] * len(index)}, index=index)

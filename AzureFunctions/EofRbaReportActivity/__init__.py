@@ -9,13 +9,13 @@ def main(requestBody) -> str:
     params = requestBody["params"]
     run = params["run"]
     asofdate = params["asofdate"]
-    periodicity = params['periodicity']
+    periodicity = params["periodicity"]
     as_of_date = datetime.strptime(asofdate, "%Y-%m-%d").date()
     runner = DaoRunner()
 
-    if periodicity == 'ITD':
+    if periodicity == "ITD":
         periodicity = PeriodicROR.ITD
-    elif periodicity == 'YTD':
+    elif periodicity == "YTD":
         periodicity = PeriodicROR.YTD
 
     if run == "EofRbaReport":

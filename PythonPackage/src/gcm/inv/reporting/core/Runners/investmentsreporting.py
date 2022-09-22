@@ -41,17 +41,11 @@ class InvestmentsReportRunner(ProgramRunner):
                     df: pd.DataFrame = df
                 final_data[i] = df
         runner: DaoRunner = kwargs["runner"]
-        current_date: dt.datetime = (
-            Scenario.current_scenario().get_attribute("asofdate")
-        )
+        current_date: dt.datetime = Scenario.current_scenario().get_attribute("asofdate")
         if "report_name" in kwargs:
-            report = ReportStructure(
-                asofdate=current_date, **kwargs
-            )
+            report = ReportStructure(asofdate=current_date, **kwargs)
             if "template" in kwargs:
-                template_dir = kwargs.get(
-                    "template_dir", template_location
-                )
+                template_dir = kwargs.get("template_dir", template_location)
                 report.load_template(
                     ReportTemplate(
                         kwargs["template"],
@@ -71,9 +65,7 @@ class InvestmentsReportRunner(ProgramRunner):
                 entity_type: ReportingEntityTypes = kwargs["entity_type"]
                 # must be a list of ints
                 entity_ids = kwargs.get("entity_ids", None)
-                entity_display_name = kwargs.get(
-                    "entity_display_name", entity_name
-                )
+                entity_display_name = kwargs.get("entity_display_name", entity_name)
                 reporting_entity = ReportingEntityTag(
                     entity_type,
                     entity_name,
@@ -83,9 +75,7 @@ class InvestmentsReportRunner(ProgramRunner):
                 report.load_reporting_entity(reporting_entity)
             if "save" in kwargs:
                 output_dir = kwargs.get("output_dir", base_output_location)
-                output_source = kwargs.get(
-                    "report_output_source", DaoSource.ReportingStorage
-                )
+                output_source = kwargs.get("report_output_source", DaoSource.ReportingStorage)
                 report.print_report(
                     output_source=output_source,
                     output_dir=output_dir,

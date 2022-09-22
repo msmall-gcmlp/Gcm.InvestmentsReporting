@@ -114,18 +114,14 @@ class ReportingEntityTag(object):
                     # simply set and forget.
                     self._entity_id = self._entity_id_holder
                 else:
-                    raise NotImplementedError(
-                        "You must have passed in Entity Id Holder"
-                    )
+                    raise NotImplementedError("You must have passed in Entity Id Holder")
         return self._entity_id
 
 
 # seperate class in case we want to load once
 # and pass to multiple report structures
 class ReportTemplate(object):
-    def __init__(
-        self, filename, runner, template_location=template_location
-    ):
+    def __init__(self, filename, runner, template_location=template_location):
         self.filename = filename
         self._excel = None
         self.runner: DaoRunner = runner
@@ -178,7 +174,7 @@ class ReportStructure(ABC):
         report_vertical=ReportVertical.ARS,
         report_substrategy=None,
         report_consumers=None,
-        **kwargs
+        **kwargs,
     ):
         self.data = data
 
@@ -255,9 +251,7 @@ class ReportStructure(ABC):
                     for sheetname, cell_address in address:
                         cell_address = cell_address.replace("$", "")
                         # override wb:
-                        wb = excel_io.write_dataframe_to_xl(
-                            wb, self.data[k], sheetname, cell_address
-                        )
+                        wb = excel_io.write_dataframe_to_xl(wb, self.data[k], sheetname, cell_address)
             elif self._workbook is not None:
                 # we are in the case where
                 #   data is present already
@@ -271,9 +265,7 @@ class ReportStructure(ABC):
                 excel_io = ExcelIO()
                 for k in self.data:
                     wb.create_sheet(title=k)
-                    wb = excel_io.write_dataframe_to_xl(
-                        wb, self.data[k], k, cell_address
-                    )
+                    wb = excel_io.write_dataframe_to_xl(wb, self.data[k], k, cell_address)
             b = save_virtual_workbook(wb)
         params = AzureDataLakeDao.create_get_data_params(
             output_dir,
@@ -284,9 +276,7 @@ class ReportStructure(ABC):
         if kwargs.get("save", False):
             self._runner.execute(
                 params=params,
-                source=kwargs.get(
-                    "output_source", DaoSource.ReportingStorage
-                ),
+                source=kwargs.get("output_source", DaoSource.ReportingStorage),
                 operation=lambda d, v: d.post_data(v, b),
             )
         if kwargs.get("save_as_pdf", True):
@@ -301,9 +291,7 @@ class ReportStructure(ABC):
         s = f"{self.gcm_report_name}_"
         if self._report_entity is not None:
             s += f"{self._report_entity.display_name}_"
-            entity_type_display = ReportStructure._display_mapping_dict[
-                self._report_entity.entity_type
-            ]
+            entity_type_display = ReportStructure._display_mapping_dict[self._report_entity.entity_type]
             s += f"{entity_type_display}_"
         s += f"{self.gcm_report_type.name}_"
         s += f'{self.gcm_as_of_date.strftime("%Y-%m-%d")}.xlsx'
@@ -320,9 +308,7 @@ class ReportStructure(ABC):
             elif type(val) == list:
                 if len(val) > 0:
                     if all(issubclass(type(f), Enum) for f in val):
-                        metadata = json.dumps(
-                            list(map(lambda x: x.name, val))
-                        )
+                        metadata = json.dumps(list(map(lambda x: x.name, val)))
                     else:
                         metadata = json.dumps(list(map(lambda x: x, val)))
             elif issubclass(type(val), ExtendedEnum):

@@ -9,17 +9,13 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     first_retry_interval_in_milliseconds = 600000
     max_number_of_attempts = 1
 
-    retry_options = df.RetryOptions(
-        first_retry_interval_in_milliseconds, max_number_of_attempts
-    )
+    retry_options = df.RetryOptions(first_retry_interval_in_milliseconds, max_number_of_attempts)
 
     data_params = params.copy()
     data_params.update({"run": "PerformanceQualityReportData"})
     data_params = {"params": data_params, "data": {}}
 
-    funds_and_peers = yield context.call_activity_with_retry(
-        "PerformanceQualityReportActivity", retry_options, data_params
-    )
+    funds_and_peers = yield context.call_activity_with_retry("PerformanceQualityReportActivity", retry_options, data_params)
 
     funds_and_peers = json.loads(funds_and_peers)
     fund_names = funds_and_peers.get("fund_names")

@@ -46,9 +46,7 @@ def copy_metadata(
     runner.execute(
         params=target_params,
         source=target_dao_type,
-        operation=lambda dao, params: dao.post_data(
-            params, target_file.content
-        ),
+        operation=lambda dao, params: dao.post_data(params, target_file.content),
     )
 
 
@@ -59,11 +57,7 @@ def merge_metadata_to_target_file(
     target_dao_type: DaoSource,
 ) -> None:
 
-    ordered_values = [
-        v
-        for d in itertools.chain(metadata_list)
-        for _, v in sorted(d.items())
-    ]
+    ordered_values = [v for d in itertools.chain(metadata_list) for _, v in sorted(d.items())]
     result = dict(zip(metadata_list.count(1), ordered_values))
     copy_metadata(
         target_file_location=target_file_location,

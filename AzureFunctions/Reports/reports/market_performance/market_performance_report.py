@@ -209,9 +209,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         maping = self._ticker_mapping
         tickers_subset = maping[maping["Category"] == category]
         daily_price_change = self._daily_price_change.copy()
-        daily_price_change = daily_price_change[
-            daily_price_change.columns.intersection(tickers_subset.Ticker.values.tolist())
-        ]
+        daily_price_change = daily_price_change[daily_price_change.columns.intersection(tickers_subset.Ticker.values.tolist())]
 
         return daily_price_change
 
@@ -280,13 +278,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
             # to change the unit
 
             if unit_mult100[0]:
-                function = (
-                    lambda x: 100 * x
-                    if (x.name in columns_transform)
-                    else 100 * x
-                    if (x.name in ["MTD", "DTD", "WTD"])
-                    else x
-                )
+                function = lambda x: 100 * x if (x.name in columns_transform) else 100 * x if (x.name in ["MTD", "DTD", "WTD"]) else x
                 agg_stat = agg_stat.apply(function)
             else:
                 function = lambda x: x

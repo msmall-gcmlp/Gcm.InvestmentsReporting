@@ -21,9 +21,7 @@ class ExcelIO(object):
         start_col = first_cell[0]
 
         numerics = dataframe.select_dtypes(include=[np.number])
-        dataframe[numerics.columns] = np.round(
-            dataframe[numerics.columns], 6
-        )
+        dataframe[numerics.columns] = np.round(dataframe[numerics.columns], 6)
 
         rows = dataframe_to_rows(dataframe, index=False, header=False)
         for r_idx, row in enumerate(rows, 0):
@@ -45,9 +43,7 @@ class ExcelIO(object):
                     ).font = font
         return wb
 
-    def write_series_to_xl_long(
-        self, wb, series, template_sheet_name, first_cell
-    ):
+    def write_series_to_xl_long(self, wb, series, template_sheet_name, first_cell):
         # TODO refactor name to xl_long
         ws = wb[template_sheet_name]
         first_cell = re.split("(\d+)", first_cell)
@@ -66,9 +62,7 @@ class ExcelIO(object):
 
         return wb
 
-    def write_series_to_xl_wide(
-        self, wb, series, template_sheet_name, first_cell
-    ):
+    def write_series_to_xl_wide(self, wb, series, template_sheet_name, first_cell):
         ws = wb[template_sheet_name]
         first_cell = re.split("(\d+)", first_cell)
         row_index = first_cell[1]
@@ -78,8 +72,6 @@ class ExcelIO(object):
         series = series.round(6) if series.dtype == "float64" else series
 
         for c_idx, value in enumerate(series):
-            ws.cell(
-                row=int(row_index), column=start_col + c_idx, value=value
-            )
+            ws.cell(row=int(row_index), column=start_col + c_idx, value=value)
 
         return wb
