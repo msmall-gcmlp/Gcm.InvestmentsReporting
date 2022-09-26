@@ -1410,98 +1410,62 @@ class BbaReport():
 
         # get_ror
         rtn_df = self.get_returns_rpt(port_rtn, bmark_rtn)
-        self._excel_io.write_dataframe_to_xl(self._wb, rtn_df, ws, 'C8')
-
         #get_beta
         beta_df = self.get_betas_rpt(port_rtn=port_rtn, bmark_rtn=bmark_rtn, assets=[acronym, 'EHI200'], benchmarks=['SPXT'])
-        self._excel_io.write_dataframe_to_xl(self._wb, beta_df, ws, 'F8')
-
         #get_downside
         downside_df = self.get_downside_rpt(port_rtn=port_rtn, bmark_rtn=bmark_rtn, assets=[acronym, 'EHI200'], benchmarks=['SPXT'])
-        self._excel_io.write_dataframe_to_xl(self._wb, downside_df, ws, 'H8')
-
         #get_correlation
         correl_df = self.get_correlation_rpt(port_rtn=port_rtn, bmark_rtn=bmark_rtn, assets=[acronym, 'EHI200'],
                                                     benchmarks=['SPXT'])
-        self._excel_io.write_dataframe_to_xl(self._wb, correl_df, ws, 'J8')
-
         #get_vol
         vol_df = self.get_vol_rpt(port_rtn=port_rtn, bmark_rtn=bmark_rtn)
-        self._excel_io.write_dataframe_to_xl(self._wb, vol_df, ws, 'L8')
-
         #get_sharpe
         sharpe_df = self.get_sharpe_rpt(port_rtn=port_rtn, bmark_rtn=bmark_rtn)
-        self._excel_io.write_dataframe_to_xl(self._wb, sharpe_df, ws, 'N8')
-
         #################################### ytd section #########################################
         ytd_start_date = dt.date(self._report_date.year, 1, 1)
         # allocations
         ytd_allocs = self.get_allocation_rpt(gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date)
-        self._excel_io.write_dataframe_to_xl(self._wb, ytd_allocs, ws, 'C19')
-
         # get_standalone_return
         ytd_standalone_rtn = self.get_standalone_rtn_rpt(gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month)
-        self._excel_io.write_dataframe_to_xl(self._wb, ytd_standalone_rtn, ws, 'G19')
-
         # get_ctr
         ytd_ctr = self.get_ctr_rpt(gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month)
-        self._excel_io.write_dataframe_to_xl(self._wb, ytd_ctr, ws, 'J19')
-
         # get_attribution
         ytd_attrib = self.get_attribution_rpt(gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month)
-        self._excel_io.write_dataframe_to_xl(self._wb, ytd_attrib, ws, 'L19')
-
         #################################### ttm section #########################################
         ttm_start_date = self._report_date - relativedelta(years=1) + relativedelta(months=1)
         # allocations
         ttm_allocs = self.get_allocation_rpt(gcm=df, bmark=self._eh, start_date=ttm_start_date,
                                                      end_date=self._report_date)
-        self._excel_io.write_dataframe_to_xl(self._wb, ttm_allocs, ws, 'C30')
-
         # get_standalone_return
         ttm_standalone_rtn = self.get_standalone_rtn_rpt(gcm=df, bmark=self._eh, start_date=ttm_start_date,
                                                                  end_date=self._report_date,
                                                                  trailing_period=12)
-        self._excel_io.write_dataframe_to_xl(self._wb, ttm_standalone_rtn, ws, 'G30')
-
         # get_ctr
         ttm_ctr = self.get_ctr_rpt(gcm=df, bmark=self._eh, start_date=ttm_start_date,
                                            end_date=self._report_date, trailing_period=12)
-        self._excel_io.write_dataframe_to_xl(self._wb, ttm_ctr, ws, 'J30')
-
         # get_attribution
         ttm_attrib = self.get_attribution_rpt(gcm=df, bmark=self._eh, start_date=ttm_start_date,
                                                       end_date=self._report_date,
                                                       trailing_period=12)
-        self._excel_io.write_dataframe_to_xl(self._wb, ttm_attrib, ws, 'L30')
-
         #################################### 3y section #########################################
         three_y_start_date = self._report_date - relativedelta(years=3) + relativedelta(months=1)
         # allocations
         three_y_allocs = self.get_allocation_rpt(gcm=df, bmark=self._eh, start_date=three_y_start_date,
                                                      end_date=self._report_date)
-        self._excel_io.write_dataframe_to_xl(self._wb, three_y_allocs, ws, 'C41')
-
         # get_standalone_return
         three_y_standalone_rtn = self.get_standalone_rtn_rpt(gcm=df, bmark=self._eh, start_date=three_y_start_date,
                                                                  end_date=self._report_date,
                                                                  trailing_period=36)
-        self._excel_io.write_dataframe_to_xl(self._wb, three_y_standalone_rtn, ws, 'G41')
-
         # get_ctr
         three_y_ctr = self.get_ctr_rpt(gcm=df, bmark=self._eh, start_date=three_y_start_date,
                                            end_date=self._report_date, trailing_period=36)
-        self._excel_io.write_dataframe_to_xl(self._wb, three_y_ctr, ws, 'J41')
-
         # get_attribution
         three_y_attrib = self.get_attribution_rpt(gcm=df, bmark=self._eh, start_date=three_y_start_date,
                                                       end_date=self._report_date,
                                                       trailing_period=36)
-        self._excel_io.write_dataframe_to_xl(self._wb, three_y_attrib, ws, 'L41')
 
         # get excess table
         excess_return_total = self.get_excess_return_rpt(port_rtn=df, bmark_rtn=bmark_rtn)
-        self._excel_io.write_dataframe_to_xl(self._wb, excess_return_total, ws, 'G51')
 
         input_data = {
             "rtn_df": rtn_df,
