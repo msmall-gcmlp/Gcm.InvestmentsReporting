@@ -8,6 +8,7 @@ import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
+from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from pandas._libs.tslibs.offsets import relativedelta
 from gcm.inv.quantlib.enum_source import Periodicity
@@ -83,8 +84,26 @@ class PeerRankingReport(ReportingRunnerBase):
     def _validate_inputs(self):
         pass
 
+    def _get_altsoft_investment_names(self, entities):
+        alt_soft_entities = entities[entities['SourceName'].str.contains('AltSoft.')]
+        alt_soft_entities = alt_soft_entities[alt_soft_entities['IsReportingInvestment']]
+        alt_soft_entities = alt_soft_entities[['InvestmentName', 'InvestmentGroupName']]
+        return alt_soft_entities
+
     def _get_peer_constituents(self):
-        return self._strategy_benchmark.get_altsoft_peer_constituents(peer_names=self._peer_group)
+        constituents = self._strategy_benchmark.get_altsoft_peer_constituents(peer_names=self._peer_group)
+        ids = constituents['InvestmentGroupId']
+        investment_group = InvestmentGroup(investment_group_ids=ids)
+        dimensions = investment_group.get_dimensions()
+        dimensions = dimensions[['InvestmentGroupId', 'InvestmentGroupName', 'InvestmentStatus']]
+
+        constituents = constituents.merge(dimensions, on=['InvestmentGroupId'], how='left')
+
+        entities = EntityMaster().get_investment_entities()
+        reporting_inv_names = self._get_altsoft_investment_names(entities)
+        constituents = constituents.merge(reporting_inv_names, on=['InvestmentGroupName'], how='left')
+
+        return constituents
 
     def _get_constituent_returns(self, investment_group_ids):
         investment_group = InvestmentGroup(investment_group_ids=investment_group_ids)
@@ -170,9 +189,11 @@ class PeerRankingReport(ReportingRunnerBase):
         rankings = rankings.dropna()
         rankings = rankings.rank(axis=0, ascending=True)
         rankings = rankings.mean(axis=1).sort_values(ascending=True)
-        rankings = pd.qcut(x=rankings, q=[0, 0.25, 0.50, 0.75, 1], labels=[4, 3, 2, 1])
-        rankings = rankings.reset_index().rename(columns={'index': 'InvestmentGroupName', 0: 'Quartile'})
-        rankings = rankings.sort_values(['Quartile', 'InvestmentGroupName'], ascending=[False, True])
+        rankings = rankings.reset_index().rename(columns={'index': 'InvestmentGroupName', 0: 'Points'})
+        rankings['Quartile'] = pd.qcut(x=rankings['Points'], q=[0, 0.25, 0.50, 0.75, 1], labels=[4, 3, 2, 1])
+        rankings['Rank'] = rankings['Points'].rank(pct=False, ascending=False)
+        rankings = rankings.sort_values(['Rank', 'InvestmentGroupName'], ascending=[True, True])
+        rankings = rankings[['Rank', 'InvestmentGroupName', 'Quartile']]
         return rankings
 
     def get_header_info(self):
@@ -260,6 +281,10 @@ class PeerRankingReport(ReportingRunnerBase):
         excess_return = self._get_arb_excess_return()
         r_squared = self._get_arb_r_squared()
         summary = excess_return.merge(r_squared, how='left', left_index=True, right_index=True)
+
+        summary['ExcessQtile'] = pd.qcut(x=summary['Excess'], q=[0, 0.25, 0.50, 0.75, 1], labels=[4, 3, 2, 1])
+        summary['ExcessQtile'] = summary['ExcessQtile'].astype(float)
+        summary = summary[['Excess', 'ExcessQtile', 'R2']]
         return summary
 
     def build_rba_excess_return_summary(self):
@@ -305,16 +330,29 @@ class PeerRankingReport(ReportingRunnerBase):
         rba_risk_decomp = rba_risk_decomp.fillna(0)
         return rba_risk_decomp
 
-    @staticmethod
-    def build_qtile_summary(rankings, summary, qtile):
-        fund_names = rankings[rankings['Quartile'] == qtile]
-        fund_names = pd.DataFrame(index=fund_names['InvestmentGroupName'].values)
+    def build_summary_table(self, rankings, stats):
+        qtile_headings = pd.DataFrame({'Rank': [-100] * 4,
+                                       'InvestmentGroupName': ['Quartile ' + str(x) for x in [1, 2, 3, 4]],
+                                       'Quartile': [1, 2, 3, 4]})
+        rankings = pd.concat([rankings, qtile_headings])
+        rows_to_pad = 2000 - len(stats)
 
-        summary = fund_names.merge(summary, left_index=True, right_index=True)
-        rows_to_pad = 75 - len(summary)
+        summary = rankings.merge(stats, left_on=['InvestmentGroupName'], right_index=True, how='left')
+
+        summary = summary.set_index('InvestmentGroupName')
         summary = summary.reindex(summary.index.tolist() + [''] * rows_to_pad)
-        summary_table = summary.reset_index()
-        return summary_table
+        summary = summary.reset_index()
+
+        column_order = ['Rank', 'InvestmentGroupName'] + summary.columns[3:].tolist()
+
+        summary = summary.sort_values(['Quartile', 'Rank'])
+        summary = summary[column_order]
+        summary['Rank'] = [round(x, 0) if x != -100 else np.NAN for x in summary['Rank']]
+
+        name_overrides = dict(zip(self._constituents['InvestmentGroupName'], self._constituents['InvestmentName']))
+        summary["InvestmentGroupName"] = summary["InvestmentGroupName"].replace(name_overrides)
+        summary["InvestmentGroupName"] = summary["InvestmentGroupName"].str.slice(0, 27)
+        return summary
 
     def build_omitted_fund_summary(self):
         short_track_index = self._constituent_returns.count(axis=0) < 36
@@ -365,11 +403,7 @@ class PeerRankingReport(ReportingRunnerBase):
         summary = summary.merge(rba_excess_return_summary, how='left', left_index=True, right_index=True)
         summary = summary.merge(rba_risk_decomposition_summary, how='left', left_index=True, right_index=True)
 
-        first_qtile = self.build_qtile_summary(rankings=rankings, summary=summary, qtile=1)
-        second_qtile = self.build_qtile_summary(rankings=rankings, summary=summary, qtile=2)
-        third_qtile = self.build_qtile_summary(rankings=rankings, summary=summary, qtile=3)
-        fourth_qtile = self.build_qtile_summary(rankings=rankings, summary=summary, qtile=4)
-
+        summary_table = self.build_summary_table(rankings=rankings, stats=summary)
         omitted_funds = self.build_omitted_fund_summary()
 
         logging.info('Report summary data generated for: ' + self._peer_group)
@@ -377,37 +411,18 @@ class PeerRankingReport(ReportingRunnerBase):
         input_data = {
             "header_info1": header_info,
             "header_info2": header_info,
-            "header_info3": header_info,
-            "header_info4": header_info,
-            "header_info5": header_info,
-            "first_qtile": first_qtile,
-            "second_qtile": second_qtile,
-            "third_qtile": third_qtile,
-            "fourth_qtile": fourth_qtile,
+            "summary_table": summary_table,
             "omitted_funds": omitted_funds,
             "constituents1": constituent_counts,
             "constituents2": constituent_counts,
-            "constituents3": constituent_counts,
-            "constituents4": constituent_counts,
-            "constituents5": constituent_counts,
         }
 
         input_data_json = {
             "header_info1": header_info.to_json(orient='index'),
             "header_info2": header_info.to_json(orient='index'),
-            "header_info3": header_info.to_json(orient='index'),
-            "header_info4": header_info.to_json(orient='index'),
-            "header_info5": header_info.to_json(orient='index'),
-            "first_qtile": first_qtile.to_json(orient='index'),
-            "second_qtile": second_qtile.to_json(orient='index'),
-            "third_qtile": third_qtile.to_json(orient='index'),
-            "fourth_qtile": fourth_qtile.to_json(orient='index'),
+            "summary_table": summary_table.to_json(orient='index'),
             "omitted_funds": omitted_funds.to_json(orient='index'),
             "constituents1": constituent_counts.to_json(orient='index'),
-            "constituents2": constituent_counts.to_json(orient='index'),
-            "constituents3": constituent_counts.to_json(orient='index'),
-            "constituents4": constituent_counts.to_json(orient='index'),
-            "constituents5": constituent_counts.to_json(orient='index'),
         }
 
         data_to_write = json.dumps(input_data_json)
@@ -442,8 +457,8 @@ class PeerRankingReport(ReportingRunnerBase):
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
                 aggregate_intervals=AggregateInterval.MTD,
-                # output_dir="cleansed/investmentsreporting/printedexcels/",
-                # report_output_source=DaoSource.DataLake,
+                output_dir="cleansed/investmentsreporting/printedexcels/",
+                report_output_source=DaoSource.DataLake,
             )
 
         logging.info("Excel stored to DataLake for: " + self._peer_group)
