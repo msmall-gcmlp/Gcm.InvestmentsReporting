@@ -1,0 +1,30 @@
+ReportingPeerGroup,Strategy
+GCM Long Only Equity,Long/Short Equity
+GCM Fundamental Credit,Credit
+GCM Macro,Macro
+GCM Relative Value,Relative Value
+GCM Multi-PM,Multi-Strategy
+GCM DS Multi-Strategy,Multi-Strategy
+GCM Cross Cap,Long/Short Equity
+GCM Generalist Long/Short Equity,Long/Short Equity
+GCM TMT,Long/Short Equity
+GCM Quant,Quantitative
+GCM Healthcare,Long/Short Equity
+GCM Structured Credit,Credit
+GCM Diversifying Strategies,Multi-Strategy
+GCM Long/Short Credit,Credit
+GCM Equities,Long/Short Equity
+GCM Europe Equity,Long/Short Equity
+GCM Credit,Credit
+GCM Multi-Strategy,Multi-Strategy
+GCM Emerging Market Credit,Credit
+GCM Europe Credit,Credit
+GCM Energy,Long/Short Equity
+GCM Asia Equity,Long/Short Equity
+GCM Consumer,Long/Short Equity
+GCM Asia Credit,Credit
+GCM Activism Peer Group,Long/Short Equity
+GCM Financials,Long/Short Equity
+GCM Asia Macro,Macro
+GCM Utilities,Long/Short Equity
+GCM Industrials,Long/Short Equity
