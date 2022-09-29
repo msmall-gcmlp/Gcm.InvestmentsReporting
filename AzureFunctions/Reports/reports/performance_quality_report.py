@@ -1660,27 +1660,30 @@ class PerformanceQualityReport(ReportingRunnerBase):
         logging.info("JSON stored to DataLake for: " + self._fund_name)
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-        with Scenario(asofdate=as_of_date).context():
-            InvestmentsReportRunner().execute(
-                data=input_data,
-                template="PFUND_PerformanceQuality_Template.xlsx",
-                save=True,
-                runner=self._runner,
-                entity_type=ReportingEntityTypes.manager_fund_group,
-                entity_name=self._fund_name,
-                entity_display_name=self._fund_name.replace("/", ""),
-                entity_ids=[self._pub_investment_group_id.item()],
-                entity_source=DaoSource.PubDwh,
-                report_name="Performance Quality",
-                report_type=ReportType.Performance,
-                report_vertical=ReportVertical.ARS,
-                report_frequency="Monthly",
-                aggregate_intervals=AggregateInterval.MTD,
-                # output_dir="cleansed/investmentsreporting/printedexcels/",
-                # report_output_source=DaoSource.DataLake,
-            )
 
-        logging.info("Excel stored to DataLake for: " + self._fund_name)
+        entity_id = self._pub_investment_group_id.item()
+        if str(entity_id) != 'nan':
+            with Scenario(asofdate=as_of_date).context():
+                InvestmentsReportRunner().execute(
+                    data=input_data,
+                    template="PFUND_PerformanceQuality_Template.xlsx",
+                    save=True,
+                    runner=self._runner,
+                    entity_type=ReportingEntityTypes.manager_fund_group,
+                    entity_name=self._fund_name,
+                    entity_display_name=self._fund_name.replace("/", ""),
+                    entity_ids=[self._pub_investment_group_id.item()],
+                    entity_source=DaoSource.PubDwh,
+                    report_name="Performance Quality",
+                    report_type=ReportType.Performance,
+                    report_vertical=ReportVertical.ARS,
+                    report_frequency="Monthly",
+                    aggregate_intervals=AggregateInterval.MTD,
+                    # output_dir="cleansed/investmentsreporting/printedexcels/",
+                    # report_output_source=DaoSource.DataLake,
+                )
+
+            logging.info("Excel stored to DataLake for: " + self._fund_name)
 
     def run(self, **kwargs):
         self.generate_performance_quality_report()
