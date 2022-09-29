@@ -277,6 +277,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             eurekahedge_inputs = self._download_inputs(
                 location=self._underlying_data_location, file_path=file
             )
+        else:
+            eurekahedge_inputs = None
         return eurekahedge_inputs
 
     @cached_property
