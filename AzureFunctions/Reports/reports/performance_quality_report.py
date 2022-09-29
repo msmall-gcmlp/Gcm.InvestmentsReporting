@@ -212,6 +212,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             primary_peer_inputs = self._download_inputs(
                 location=self._underlying_data_location, file_path=file
             )
+        else:
+            primary_peer_inputs = None
         return primary_peer_inputs
 
     @cached_property
@@ -222,6 +224,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             secondary_peer_inputs = self._download_inputs(
                 location=self._underlying_data_location, file_path=file
             )
+        else:
+            secondary_peer_inputs = None
         return secondary_peer_inputs
 
     @cached_property
