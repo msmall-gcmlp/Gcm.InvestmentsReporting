@@ -16,9 +16,7 @@ def package_files(directory):
     paths = []
     for (path, directories, filenames) in os.walk(directory):
         if "pycache" not in path and "egg-info" not in path:
-            paths.append(
-                path.replace(f"{base_src}/", "").replace("\\", ".")
-            )
+            paths.append(path.replace(f"{base_src}/", "").replace("\\", "."))
     return paths
 
 

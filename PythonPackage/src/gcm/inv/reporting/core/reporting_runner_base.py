@@ -3,13 +3,9 @@ from gcm.Dao.DaoRunner import DaoRunner
 
 
 class ReportingRunnerBase(ProgramRunner):
-    def __init__(
-        self, runner: DaoRunner, config_params=None, container_lambda=None
-    ):
+    def __init__(self, runner: DaoRunner, config_params=None, container_lambda=None):
         self._runner = runner
-        super().__init__(
-            config_params=config_params, container_lambda=container_lambda
-        )
+        super().__init__(config_params=config_params, container_lambda=container_lambda)
 
     def global_preconditions(self, **kwargs):
         return super().global_preconditions(**kwargs)

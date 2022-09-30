@@ -1,0 +1,53 @@
+InvestmentSubStrategy,ReportingPeerGroupOverride
+Multi-Manager,Other
+Diversified Commodities,GCM Macro
+Specialist Commodities,GCM Macro
+Distressed,GCM Credit
+Emerging Market Credit,GCM Credit
+Fundamental Credit,GCM Credit
+Long/Short Credit,GCM Credit
+Specialist Credit,GCM Credit
+Structured Credit,GCM Credit
+Activism,GCM Equities
+Emerging Market Equity,GCM Equities
+Event Driven,GCM Equities
+Long-Biased Equity,GCM Equities
+Low Net Equity,GCM Equities
+Specialist Equity,GCM Equities
+Diversified Macro,GCM Macro
+Emerging Market Macro,GCM Macro
+Specialist Macro,GCM Macro
+Diversified Multi-Strategy,GCM Multi-Strategy
+Co-Investment,Other
+Direct Investment,Other
+Other Investments,Other
+Secondaries,Other
+Seed or Revenue Share,Other
+Dedicated Short Credit,Other
+Dedicated Short Equity,Other
+Opportunistic Hedging,Other
+Volatility Protection,Other
+Directional Quantitative,GCM Quant
+Non-Directional Quantitative,GCM Quant
+Convertible Arbitrage,GCM Relative Value
+Diversified Relative Value,GCM Relative Value
+Fixed Income Arbitrage,GCM Relative Value
+Fundamental Market Neutral Equity,GCM Equities
+Option Volatility Arbitrage,GCM Relative Value
+Bank Loans,Other
+Cash,Other
+Currency P&L,Other
+Expenses,Other
+FX Manager,Other
+Incentive Fees,Other
+Management Fees,Other
+Net Rec/(Pay),Other
+VRN\Deferred Comp,Other
+Arbitrage,GCM Relative Value
+CTA/Managed Futures,GCM Quant
+Long Short Equities,GCM Equities
+Fixed Income,GCM Credit
+Relative Value,GCM Relative Value
+Macro,GCM Macro
+Multi-Strategy,GCM Multi-Strategy
+Distressed Debt,GCM Credit

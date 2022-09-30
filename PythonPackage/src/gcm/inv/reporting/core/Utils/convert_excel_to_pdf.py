@@ -51,9 +51,7 @@ def convert(
     logging.info("Exporting PDF")
     loadOptions = LoadOptions()
     workbook = Workbook()
-    wb = workbook.createWorkbookFromBytes(
-        file.read(), loadOptions=loadOptions
-    )
+    wb = workbook.createWorkbookFromBytes(file.read(), loadOptions=loadOptions)
     v = wb.saveToBytes(SaveFormat.PDF)
     runner.execute(
         params=params,

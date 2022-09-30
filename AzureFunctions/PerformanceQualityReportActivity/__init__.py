@@ -25,9 +25,7 @@ def main(requestBody) -> str:
         if params.get("investment_group_ids") is None:
             investment_group_ids = None
         else:
-            investment_group_ids = ast.literal_eval(
-                params.get("investment_group_ids")
-            )
+            investment_group_ids = ast.literal_eval(params.get("investment_group_ids"))
 
         with Scenario(runner=runner, as_of_date=as_of_date).context():
             perf_quality_data = PerformanceQualityReportData(
@@ -40,13 +38,9 @@ def main(requestBody) -> str:
     elif run == "PerformanceQualityPeerSummaryReport":
         peer_group = params["peer_group"]
 
-        return PerformanceQualityPeerSummaryReport(
-            runner=runner, as_of_date=as_of_date, peer_group=peer_group
-        ).execute()
+        return PerformanceQualityPeerSummaryReport(runner=runner, as_of_date=as_of_date, peer_group=peer_group).execute()
 
     elif run == "PerformanceQualityReport":
         fund_name = params["fund_name"]
 
-        return PerformanceQualityReport(
-            runner=runner, as_of_date=as_of_date, fund_name=fund_name
-        ).execute()
+        return PerformanceQualityReport(runner=runner, as_of_date=as_of_date, fund_name=fund_name).execute()
