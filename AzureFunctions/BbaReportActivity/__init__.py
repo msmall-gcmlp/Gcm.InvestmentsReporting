@@ -1,10 +1,8 @@
 from datetime import datetime
 from gcm.Scenario.scenario import Scenario
 from gcm.Dao.DaoRunner import DaoRunner
-from gcm.inv.quantlib.enum_source import PeriodicROR
-
 from Reports.reports.brinson_based_attribution.bba_report import BbaReport
-from Reports.reports.eof_rba_report import EofReturnBasedAttributionReport
+
 
 def main(requestBody) -> str:
     params = requestBody["params"]

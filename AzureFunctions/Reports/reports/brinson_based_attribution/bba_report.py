@@ -1,8 +1,7 @@
 import logging
 
+import os
 import pandas as pd
-from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
-from gcm.Dao.DaoSources import DaoSource
 from gcm.Scenario.scenario_enums import AggregateInterval
 from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.inv.dataprovider.factor import Factor
@@ -17,7 +16,6 @@ import statsmodels.api as sm
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.inv.dataprovider.portfolio import Portfolio
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
-
 
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
@@ -42,7 +40,7 @@ class BbaReport(ReportingRunnerBase):
         self._entity_master = EntityMaster()
         self._factor_returns = AggregateFromDaily().transform(
             data=Factor(tickers=["SPXT Index", "SBMMTB1 Index"]).get_returns(
-                start_date=dt.date(2010, 1, 1), end_date=report_date + MonthEnd(1), fill_na=True
+                start_date=dt.date(2010, 1, 1), end_date=self._report_date + MonthEnd(1), fill_na=True
             ),
             method="geometric",
             period=Periodicity.Monthly,
@@ -138,6 +136,7 @@ class BbaReport(ReportingRunnerBase):
         port_rtn = port_rtn[(port_rtn.Date >= start_date) & (port_rtn.Date <= self._report_date)]
         # port_rtn.Date = port_rtn.Date + MonthEnd(1)
         port_rtn.Date = pd.to_datetime(port_rtn.Date)
+        bmark_rtn.Date = pd.to_datetime(bmark_rtn.Date)
         return_df = (
             port_rtn[["Date", "InvestmentGroupName", "InvestmentGroupId", "OpeningBalance", "pct_investment_of_portfolio_total", "Ror"]]
             .merge(bmark_rtn, how="left", left_on=["Date", "InvestmentGroupId"], right_on=["Date", "InvestmentGroupId"])
@@ -245,7 +244,8 @@ class BbaReport(ReportingRunnerBase):
         #     port_stats = pd.concat([port_stats, self.ann_return(
         #         return_df[[i]], trailing_periods=trailing_periods, freq=12, return_NoObs=True)])
         #
-        # stats_merged = port_stats[['InvestmentGroupName', 'AnnRor', 'NoObs']].rename(columns={'AnnRor': 'GcmRor'}).merge(bmark_stats.rename(columns={'AnnRor': 'BmarkRor'}), how='left', left_on='NoObs', right_on='NoObs').merge(
+        # stats_merged = port_stats[['InvestmentGroupName', 'AnnRor', 'NoObs']].rename(columns={'AnnRor': 'GcmRor'}).
+        # merge(bmark_stats.rename(columns={'AnnRor': 'BmarkRor'}), how='left', left_on='NoObs', right_on='NoObs').merge(
         #     self._trailing_period_df, how='left', left_on='NoObs',
         #     right_on='TrailingPeriod').drop_duplicates()[['InvestmentGroupName', 'GcmRor', 'BmarkRor', 'Period']]
         # stats_merged['Type'] = np.where(stats_merged.GcmRor > stats_merged.BmarkRor, 'Outperformer', 'Underperformer')
@@ -496,10 +496,10 @@ class BbaReport(ReportingRunnerBase):
 
     def get_top_n_portfolios(self, df, col_name, n, asc):
         result = df.sort_values(col_name, ascending=asc).head(n)
-        if asc:
-            result = result[result[col_name] < 0]
-        else:
-            result = result[result[col_name] > 0]
+        # if asc:
+        #     result = result[result[col_name] < 0]
+        # else:
+        #     result = result[result[col_name] > 0]
         return result[["Acronym", col_name]]
 
     def get_strategy_sizing_outliers(self, acronyms, gcm, bmark, start_date, end_date, trailing_period):
@@ -515,9 +515,13 @@ class BbaReport(ReportingRunnerBase):
             .mean()
             .reset_index()
         )
-        remove_acronyms_not_multistrat = remove_acronyms_not_multistrat_df[
-            remove_acronyms_not_multistrat_df.pct_strategy_of_portfolio_total < 2
-        ].Acronym.to_list()
+
+        remove_acronyms_not_multistrat = (
+            remove_acronyms_not_multistrat_df[remove_acronyms_not_multistrat_df.pct_strategy_of_portfolio_total < 3]
+            .sort_values("Acronym")
+            .Acronym.drop_duplicates()
+            .to_list()
+        )
         remove_tickers_aum_df = gcm[gcm.Date == end_date][["Acronym", "TotalDollarPortfolio"]].drop_duplicates()
         remove_tickers_aum = remove_tickers_aum_df[remove_tickers_aum_df.TotalDollarPortfolio < 100000000].Acronym.to_list()
         hard_code_exclude = ["IFCD", "PIKEPLACE", "ANCHOR4B"]
@@ -766,9 +770,9 @@ class BbaReport(ReportingRunnerBase):
             .set_index("Strategy")
             .reindex(self._strategy_order)
         )
-        # TODO: change to report date - 1 month
         bmark_alloc_end = (
-            bmark[bmark.Date == dt.date(2022, 7, 1)][["Strategy", "pct_strategy_of_total"]]
+            bmark[bmark.Date == dt.date(self._report_date.year, self._report_date.month -1, 1)]
+            [["Strategy", "pct_strategy_of_total"]]
             .rename(columns={"pct_strategy_of_total": "EhAllocationEnd"})
             .drop_duplicates()
             .set_index("Strategy")
@@ -981,11 +985,11 @@ class BbaReport(ReportingRunnerBase):
         default_peer = self._strategy_benchmark.get_default_peer_benchmarks(investment_group_names=None)[
             ["InvestmentGroupName", "ReportingPeerGroup"]
         ]
-        substrat_map = pd.read_csv("./input_data/SubStrategyPeerMap.csv")
+        substrat_map = pd.read_csv(os.path.dirname(__file__) + "/input_data/" + "SubStrategyPeerMap.csv")
         substrat_map.ReportingPeerGroupOverride = np.where(
             substrat_map.InvestmentSubStrategy == "Event Driven", "GCM Multi-Strategy", substrat_map.ReportingPeerGroupOverride
         )
-        peer_to_strat_map = pd.read_csv("./input_data/PeerToStrategyMap.csv")
+        peer_to_strat_map = pd.read_csv(os.path.dirname(__file__) + "/input_data/" + "PeerToStrategyMap.csv")
 
         eh_default_peer = eh_allocs.merge(default_peer, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
 
@@ -1020,7 +1024,7 @@ class BbaReport(ReportingRunnerBase):
 
         eh_result.Strategy = np.where(eh_result.Strategy.isnull(), eh_result.TopDogOverride, eh_result.Strategy)
 
-        name_overrides = pd.read_csv("./input_data/EurekahedgeStrategyOverrides.csv")
+        name_overrides = pd.read_csv(os.path.dirname(__file__) + "/input_data/" + "EurekahedgeStrategyOverrides.csv")
         eh_result = eh_result.merge(name_overrides, how="left", left_on="InvestmentName", right_on="Fund")
 
         eh_result.Strategy = np.where(~eh_result.StrategyOverride.isnull(), eh_result.StrategyOverride, eh_result.Strategy)
@@ -1044,7 +1048,7 @@ class BbaReport(ReportingRunnerBase):
         # eh_groups = self.get_eh_inv_groups()
         eh_groups = self._entity_master.get_investment_entities(source_names=["AltSoft.Eurekahedge"])[
             ["SourceInvestmentId", "InvestmentGroupName"]
-        ].drop_duplicates()
+        ].drop_duplicates("SourceInvestmentId")
 
         eh.SourceInvestmentId = "EH" + eh.SourceInvestmentId.astype(str)
 
@@ -1061,7 +1065,8 @@ class BbaReport(ReportingRunnerBase):
         gcm_balances = self.get_ars_firmwide_balances_with_peer_group()
         # gcm_ror = self.get_ars_portfolio_investment_returns()
 
-        # gcm_joined = gcm_balances.merge(gcm_ror, how='left', left_on=['Date', 'Acronym', 'InvestmentGroupName'], right_on=['Date', 'Acronym', 'InvestmentGroupName'])
+        # gcm_joined = gcm_balances.merge(gcm_ror, how='left', left_on=['Date', 'Acronym', 'InvestmentGroupName'],
+        # right_on=['Date', 'Acronym', 'InvestmentGroupName'])
 
         # where multiple ROR for investment group/date/acronym; takes ROR from largest balance
         result = gcm_balances.sort_values("OpeningBalance", ascending=False).drop_duplicates(
@@ -1082,7 +1087,9 @@ class BbaReport(ReportingRunnerBase):
         gcm_balances = self.get_ars_portfolio_balances_with_peer_group()
         # gcm_ror = self.get_ars_portfolio_investment_returns()
 
-        # gcm_joined = gcm_balances.merge(gcm_ror, how='left', left_on=['Date', 'Acronym', 'InvestmentGroupName'], right_on=['Date', 'Acronym', 'InvestmentGroupName'])
+        # gcm_joined = gcm_balances.merge(gcm_ror, how='left',
+        # left_on=['Date', 'Acronym', 'InvestmentGroupName'],
+        # right_on=['Date', 'Acronym', 'InvestmentGroupName'])
 
         # where multiple ROR for investment group/date/acronym; takes ROR from largest balance
         result = gcm_balances.sort_values("OpeningBalance", ascending=False).drop_duplicates(
@@ -1106,7 +1113,7 @@ class BbaReport(ReportingRunnerBase):
         default_peer = self._strategy_benchmark.get_default_peer_benchmarks(investment_group_names=None)[
             ["InvestmentGroupName", "ReportingPeerGroup"]
         ]
-        substrat_map = pd.read_csv("./input_data/SubStrategyPeerMap.csv")
+        substrat_map = pd.read_csv(os.path.dirname(__file__) + "/input_data/" + "SubStrategyPeerMap.csv")
 
         gcm_default_peer = gcm_allocs.merge(default_peer, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName").merge(
             substrat_map, how="left", left_on="SubStrategy", right_on="InvestmentSubStrategy"
@@ -1163,7 +1170,7 @@ class BbaReport(ReportingRunnerBase):
             gcm_default_peer.InvestmentGroupName == "Davidson Kempner", "GCM Multi-Strategy", gcm_default_peer.ReportingPeerGroup
         )
 
-        peer_to_strat_map = pd.read_csv("./input_data/PeerToStrategyMap.csv")
+        peer_to_strat_map = pd.read_csv(os.path.dirname(__file__) + "/input_data/" + "PeerToStrategyMap.csv")
 
         gcm_strategy_balance = gcm_default_peer.merge(
             peer_to_strat_map, how="left", left_on="ReportingPeerGroup", right_on="ReportingPeerGroup"
@@ -1226,7 +1233,7 @@ class BbaReport(ReportingRunnerBase):
             inplace=True,
         )
 
-        #################################### ytd section #########################################
+        # ytd section
         ytd_start_date = dt.date(self._report_date.year, 1, 1)
         # allocations
 
@@ -1246,7 +1253,7 @@ class BbaReport(ReportingRunnerBase):
             gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month
         )
         ytd_attrib = self._append_total_row(ytd_attrib)
-        #################################### ttm section #########################################
+        # ttm section
         ttm_start_date = self._report_date - relativedelta(years=1) + relativedelta(months=1)
         # allocations
         ttm_allocs = self.get_allocation_rpt(gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date)
@@ -1263,7 +1270,7 @@ class BbaReport(ReportingRunnerBase):
             gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12
         )
         ttm_attrib = self._append_total_row(ttm_attrib)
-        #################################### 3y section #########################################
+        # 3y section
         three_y_start_date = self._report_date - relativedelta(years=3) + relativedelta(months=1)
         # allocations
         three_y_allocs = self.get_allocation_rpt(gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date)
@@ -1283,7 +1290,7 @@ class BbaReport(ReportingRunnerBase):
         )
         three_y_attrib = self._append_total_row(three_y_attrib)
 
-        ########### outliers attribution #################
+        # outliers attribution
 
         (
             top_10_strategy_sizing,
@@ -1313,8 +1320,28 @@ class BbaReport(ReportingRunnerBase):
         monthly_arb_returns = AggregateFromDaily().transform(
             data=daily_arb_returns, method="geometric", period=Periodicity.Monthly, first_of_day=True
         )
-        bmark_rtn = monthly_arb_returns.reset_index().melt(var_name="InvestmentGroupId", value_name="BmarkRor", id_vars=["Date"])
-        excess_return_total = self.get_excess_return_rpt(port_rtn=df, bmark_rtn=bmark_rtn, dollar_size=True)
+        arb_bmark_rtn = monthly_arb_returns.reset_index().melt(var_name="InvestmentGroupId", value_name="BmarkRor", id_vars=["Date"])
+        excess_return_total_arb = self.get_excess_return_rpt(port_rtn=df, bmark_rtn=arb_bmark_rtn, dollar_size=True)
+
+        eh_benchmark = self._strategy_benchmark.get_default_peer_benchmarks(
+            investment_group_names=df.InvestmentGroupName.drop_duplicates().to_list()
+        )[["InvestmentGroupName", "EurekahedgeBenchmark"]]
+        eh_benchmark = (
+            df[["InvestmentGroupName", "InvestmentGroupId"]]
+            .drop_duplicates()
+            .merge(eh_benchmark, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
+            .fillna("Eurekahedge Institutional 200")
+        )
+        eh_index_returns = self._strategy_benchmark.get_eurekahedge_returns(
+            start_date=dt.date(2010, 1, 1),
+            end_date=self._report_date,
+            benchmarks_names=eh_benchmark.EurekahedgeBenchmark.drop_duplicates().to_list(),
+        )
+        eh_bmark_rtn = eh_index_returns.reset_index().melt(var_name="EurekahedgeBenchmark", value_name="BmarkRor", id_vars=["Date"])
+        eh_bmark_rtn = eh_bmark_rtn.merge(eh_benchmark, how="left", left_on="EurekahedgeBenchmark", right_on="EurekahedgeBenchmark")
+        excess_return_total_eh = self.get_excess_return_rpt(
+            port_rtn=df, bmark_rtn=eh_bmark_rtn[["Date", "EurekahedgeBenchmark", "InvestmentGroupId", "BmarkRor"]], dollar_size=True
+        )
 
         input_data = {
             "date": pd.DataFrame(
@@ -1348,7 +1375,8 @@ class BbaReport(ReportingRunnerBase):
             "positive_strategy_selection_values": top_10_strategy_selection[["StrategySelection"]],
             "bottom_10_strategy_selection": bottom_10_strategy_selection[["Acronym"]],
             "negative_strategy_selection_values": bottom_10_strategy_selection[["StrategySelection"]],
-            "excess_return_total": excess_return_total,
+            "excess_return_total_arb": excess_return_total_arb,
+            "excess_return_total_eh": excess_return_total_eh,
         }
 
         as_of_date = dt.datetime.combine(self._report_date + MonthEnd(1), dt.datetime.min.time())
@@ -1402,7 +1430,7 @@ class BbaReport(ReportingRunnerBase):
         vol_df = self.get_vol_rpt(port_rtn=port_rtn, bmark_rtn=bmark_rtn)
         # get_sharpe
         sharpe_df = self.get_sharpe_rpt(port_rtn=port_rtn, bmark_rtn=bmark_rtn)
-        #################################### ytd section #########################################
+        # ytd section
         ytd_start_date = dt.date(self._report_date.year, 1, 1)
         # allocations
         ytd_allocs = self.get_allocation_rpt(gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date)
@@ -1421,7 +1449,7 @@ class BbaReport(ReportingRunnerBase):
             gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month
         )
         ytd_attrib = self._append_total_row(ytd_attrib)
-        #################################### ttm section #########################################
+        # ttm section
         ttm_start_date = self._report_date - relativedelta(years=1) + relativedelta(months=1)
         # allocations
         ttm_allocs = self.get_allocation_rpt(gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date)
@@ -1438,7 +1466,7 @@ class BbaReport(ReportingRunnerBase):
             gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12
         )
         ttm_attrib = self._append_total_row(ttm_attrib)
-        #################################### 3y section #########################################
+        # 3y section
         three_y_start_date = self._report_date - relativedelta(years=3) + relativedelta(months=1)
         # allocations
         three_y_allocs = self.get_allocation_rpt(gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date)
@@ -1465,8 +1493,29 @@ class BbaReport(ReportingRunnerBase):
         monthly_arb_returns = AggregateFromDaily().transform(
             data=daily_arb_returns, method="geometric", period=Periodicity.Monthly, first_of_day=True
         )
-        bmark_rtn = monthly_arb_returns.reset_index().melt(var_name="InvestmentGroupId", value_name="BmarkRor", id_vars=["Date"])
-        excess_return_total = self.get_excess_return_rpt(port_rtn=df, bmark_rtn=bmark_rtn, dollar_size=True)
+
+        arb_bmark_rtn = monthly_arb_returns.reset_index().melt(var_name="InvestmentGroupId", value_name="BmarkRor", id_vars=["Date"])
+        excess_return_total_arb = self.get_excess_return_rpt(port_rtn=df, bmark_rtn=arb_bmark_rtn, dollar_size=True)
+
+        eh_benchmark = self._strategy_benchmark.get_default_peer_benchmarks(
+            investment_group_names=df.InvestmentGroupName.drop_duplicates().to_list()
+        )[["InvestmentGroupName", "EurekahedgeBenchmark"]]
+        eh_benchmark = (
+            df[["InvestmentGroupName", "InvestmentGroupId"]]
+            .drop_duplicates()
+            .merge(eh_benchmark, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
+            .fillna("Eurekahedge Institutional 200")
+        )
+        eh_index_returns = self._strategy_benchmark.get_eurekahedge_returns(
+            start_date=dt.date(2010, 1, 1),
+            end_date=self._report_date,
+            benchmarks_names=eh_benchmark.EurekahedgeBenchmark.drop_duplicates().to_list(),
+        )
+        eh_bmark_rtn = eh_index_returns.reset_index().melt(var_name="EurekahedgeBenchmark", value_name="BmarkRor", id_vars=["Date"])
+        eh_bmark_rtn = eh_bmark_rtn.merge(eh_benchmark, how="left", left_on="EurekahedgeBenchmark", right_on="EurekahedgeBenchmark")
+        excess_return_total_eh = self.get_excess_return_rpt(
+            port_rtn=df, bmark_rtn=eh_bmark_rtn[["Date", "EurekahedgeBenchmark", "InvestmentGroupId", "BmarkRor"]], dollar_size=True
+        )
 
         input_data = {
             "acronym_date": pd.DataFrame(
@@ -1490,7 +1539,8 @@ class BbaReport(ReportingRunnerBase):
             "three_y_standalone_rtn": three_y_standalone_rtn,
             "three_y_ctr": three_y_ctr,
             "three_y_attrib": three_y_attrib,
-            "excess_return_total": excess_return_total,
+            "excess_return_total_arb": excess_return_total_arb,
+            "excess_return_total_eh": excess_return_total_eh,
         }
         as_of_date = dt.datetime.combine(self._report_date + MonthEnd(1), dt.datetime.min.time())
         with Scenario(asofdate=as_of_date).context():
@@ -1502,8 +1552,9 @@ class BbaReport(ReportingRunnerBase):
                 entity_type=ReportingEntityTypes.portfolio,
                 entity_name=acronym,
                 entity_display_name=acronym,
-                entity_ids=[self._portfolio_dimn[self._portfolio_dimn.Acronym == acronym].MasterId.squeeze()],
-                entity_source=DaoSource.PubDwh,
+                entity_ids=[0000],
+                # entity_ids=self._portfolio_dimn[self._portfolio_dimn.Acronym == acronym].MasterId.squeeze(),
+                # entity_source=DaoSource.PubDwh,
                 report_name="Brinson Based Attribution",
                 report_type=ReportType.Performance,
                 report_vertical=ReportVertical.ARS,
@@ -1523,7 +1574,7 @@ class BbaReport(ReportingRunnerBase):
             error_df = pd.DataFrame()
             for acronym in self._selected_acronyms:
                 try:
-                    svc.generate_portfolio_report(acronym=acronym)
+                    self.generate_portfolio_report(acronym=acronym)
 
                 except Exception as e:
                     error_msg = getattr(e, "message", repr(e))
@@ -1533,7 +1584,7 @@ class BbaReport(ReportingRunnerBase):
                             pd.DataFrame(
                                 {
                                     "Portfolio": [acronym],
-                                    "Date": [svc._report_date],
+                                    "Date": [self._report_date],
                                     "ErrorMessage": [error_msg],
                                 }
                             ),
@@ -1541,32 +1592,3 @@ class BbaReport(ReportingRunnerBase):
                         ]
                     )
         return True
-
-
-if __name__ == "__main__":
-    report_date = dt.date(2022, 8, 1)
-    runner = DaoRunner(
-        container_lambda=lambda b, i: b.config.from_dict(i),
-        config_params={
-            DaoRunnerConfigArgs.dao_global_envs.name: {
-                DaoSource.DataLake.name: {
-                    "Environment": "nonprd",
-                    "Subscription": "nonprd",
-                },
-                DaoSource.PubDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
-                },
-                DaoSource.InvestmentsDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
-                },
-            }
-        },
-    )
-    with Scenario(runner=runner, as_of_date=report_date).context():
-        svc = BbaReport(report_date=report_date)
-
-        acronyms = svc._gcm[svc._gcm.Date == svc._report_date].Acronym.unique()
-
-        df = svc.execute(acronyms=acronyms)
