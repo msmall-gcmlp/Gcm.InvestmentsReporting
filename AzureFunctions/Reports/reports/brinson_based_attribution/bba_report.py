@@ -2,6 +2,7 @@ import logging
 
 import os
 import pandas as pd
+from gcm.Dao.DaoSources import DaoSource
 from gcm.Scenario.scenario_enums import AggregateInterval
 from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.inv.dataprovider.factor import Factor
@@ -506,6 +507,9 @@ class BbaReport(ReportingRunnerBase):
         error_df = pd.DataFrame()
         attribution_by_portfolio = pd.DataFrame()
 
+        mandate_filter = self._portfolio_dimn[
+            ~self._portfolio_dimn.StrategyMandate.isin(["Multi-Strategy", "Opportunistic", "Global Long / Short - Low Beta"])
+        ].Acronym.to_list()
         remove_acronyms_not_multistrat_df = (
             gcm[["Date", "Acronym", "pct_strategy_of_portfolio_total"]][(gcm.Date >= start_date) & (gcm.Date <= end_date)]
             .drop_duplicates()
@@ -527,7 +531,11 @@ class BbaReport(ReportingRunnerBase):
         hard_code_exclude = ["IFCD", "PIKEPLACE", "ANCHOR4B"]
         acronyms_to_run = list(
             filter(
-                lambda x: x not in remove_acronyms_not_multistrat and x not in remove_tickers_aum and x not in hard_code_exclude, acronyms
+                lambda x: x not in remove_acronyms_not_multistrat
+                and x not in remove_tickers_aum
+                and x not in hard_code_exclude
+                and x not in mandate_filter,
+                acronyms,
             )
         )
 
@@ -535,7 +543,7 @@ class BbaReport(ReportingRunnerBase):
             print(acronym)
             try:
                 gcm_df = gcm[gcm.Acronym == acronym]
-                portfolio_attrib = self.get_attribution_rpt(gcm_df, bmark, start_date, end_date, trailing_period)
+                portfolio_attrib = self.get_attribution_rpt(gcm_df, bmark, start_date, end_date, trailing_period, None)
                 portfolio_attrib["Acronym"] = acronym
 
                 # by strat, will be summed to total portfolio
@@ -569,7 +577,7 @@ class BbaReport(ReportingRunnerBase):
     def get_ars_portfolio_return(self):
         pass
 
-    def get_attribution_rpt(self, gcm, bmark, start_date, end_date, trailing_period):
+    def get_attribution_rpt(self, gcm, bmark, start_date, end_date, trailing_period, ctr):
         gcm_alloc = (
             gcm[["Date", "Strategy", "pct_strategy_of_portfolio_total"]]
             .rename(columns={"pct_strategy_of_portfolio_total": "GcmAllocation"})
@@ -595,6 +603,10 @@ class BbaReport(ReportingRunnerBase):
 
         result = strategy_sizing.merge(manager_sizing, left_index=True, right_index=True)
         result[result.columns] = np.where(result[result.columns] == 0, None, result[result.columns])
+        if ctr is not None:
+            scale = (ctr.tail(1).CTR_x - ctr.tail(1).CTR_y) / result.sum().sum()
+            result = result * scale.squeeze()
+
         return result
 
     def get_strategy_selection(self, gcm_alloc, gcm_cap_ror, bmark_eq_ror, start_date, end_date):
@@ -771,8 +783,7 @@ class BbaReport(ReportingRunnerBase):
             .reindex(self._strategy_order)
         )
         bmark_alloc_end = (
-            bmark[bmark.Date == dt.date(self._report_date.year, self._report_date.month -1, 1)]
-            [["Strategy", "pct_strategy_of_total"]]
+            bmark[bmark.Date == dt.date(self._report_date.year, self._report_date.month - 1, 1)][["Strategy", "pct_strategy_of_total"]]
             .rename(columns={"pct_strategy_of_total": "EhAllocationEnd"})
             .drop_duplicates()
             .set_index("Strategy")
@@ -1250,7 +1261,12 @@ class BbaReport(ReportingRunnerBase):
         ytd_ctr = self._append_total_row(ytd_ctr)
         # get_attribution
         ytd_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month
+            gcm=df,
+            bmark=self._eh,
+            start_date=ytd_start_date,
+            end_date=self._report_date,
+            trailing_period=self._report_date.month,
+            ctr=ytd_ctr,
         )
         ytd_attrib = self._append_total_row(ytd_attrib)
         # ttm section
@@ -1267,7 +1283,7 @@ class BbaReport(ReportingRunnerBase):
         ttm_ctr = self._append_total_row(ttm_ctr)
         # get_attribution
         ttm_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12
+            gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12, ctr=ttm_ctr
         )
         ttm_attrib = self._append_total_row(ttm_attrib)
         # 3y section
@@ -1286,7 +1302,7 @@ class BbaReport(ReportingRunnerBase):
         three_y_ctr = self._append_total_row(three_y_ctr)
         # get_attribution
         three_y_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36
+            gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36, ctr=three_y_ctr
         )
         three_y_attrib = self._append_total_row(three_y_attrib)
 
@@ -1446,7 +1462,12 @@ class BbaReport(ReportingRunnerBase):
         ytd_ctr = self._append_total_row(ytd_ctr)
         # get_attribution
         ytd_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month
+            gcm=df,
+            bmark=self._eh,
+            start_date=ytd_start_date,
+            end_date=self._report_date,
+            trailing_period=self._report_date.month,
+            ctr=ytd_ctr,
         )
         ytd_attrib = self._append_total_row(ytd_attrib)
         # ttm section
@@ -1463,7 +1484,7 @@ class BbaReport(ReportingRunnerBase):
         ttm_ctr = self._append_total_row(ttm_ctr)
         # get_attribution
         ttm_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12
+            gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12, ctr=ttm_ctr
         )
         ttm_attrib = self._append_total_row(ttm_attrib)
         # 3y section
@@ -1482,7 +1503,7 @@ class BbaReport(ReportingRunnerBase):
         three_y_ctr = self._append_total_row(three_y_ctr)
         # get_attribution
         three_y_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36
+            gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36, ctr=three_y_ctr
         )
         three_y_attrib = self._append_total_row(three_y_attrib)
 
@@ -1552,9 +1573,8 @@ class BbaReport(ReportingRunnerBase):
                 entity_type=ReportingEntityTypes.portfolio,
                 entity_name=acronym,
                 entity_display_name=acronym,
-                entity_ids=[0000],
-                # entity_ids=self._portfolio_dimn[self._portfolio_dimn.Acronym == acronym].MasterId.squeeze(),
-                # entity_source=DaoSource.PubDwh,
+                entity_ids=[self._portfolio_dimn[self._portfolio_dimn.Acronym == acronym].MasterId.item()],
+                entity_source=DaoSource.PubDwh,
                 report_name="Brinson Based Attribution",
                 report_type=ReportType.Performance,
                 report_vertical=ReportVertical.ARS,

@@ -82,7 +82,7 @@ class TestPerformanceQualityReport:
         gcm_peer_columns = [ast.literal_eval(x) for x in gcm_peer_constituent_returns.columns]
         gcm_peer_columns = pd.MultiIndex.from_tuples(gcm_peer_columns, names=["PeerGroupName", "SourceInvestmentId"])
         gcm_peer_constituent_returns.columns = gcm_peer_columns
-        
+
         eh_inputs = report_inputs['eurekahedge_inputs']['EHI100 Long/Short Equity']
         eurekahedge_returns = pd.read_json(eh_inputs['eurekahedge_returns'], orient='index')
         eurekahedge_constituent_returns = pd.read_json(eh_inputs['eurekahedge_constituent_returns'], orient='index')
