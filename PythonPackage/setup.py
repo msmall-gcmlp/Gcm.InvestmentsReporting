@@ -41,7 +41,7 @@ setup(
     install_requires=[
         "blessings ~= 1.7",
         "gcm-programrunner",
-        "gcm-dao",
+        "gcm-dao>=0.66.0",
         "pandas",
         "datetime",
         "openpyxl",

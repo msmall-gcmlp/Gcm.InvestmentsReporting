@@ -49,7 +49,6 @@ class TestPerformanceQualityReport:
         perf_quality_peer._market_factor_inputs_cache = market_factor_inputs
         return perf_quality_peer
 
-    @pytest.mark.skip(reason="slow")
     def test_performance_quality_report_data(self, runner):
         with Scenario(runner=runner, as_of_date=dt.date(2022, 3, 31)).context():
             perf_quality = PerformanceQualityReportData(
@@ -83,10 +82,10 @@ class TestPerformanceQualityReport:
         gcm_peer_columns = [ast.literal_eval(x) for x in gcm_peer_constituent_returns.columns]
         gcm_peer_columns = pd.MultiIndex.from_tuples(gcm_peer_columns, names=["PeerGroupName", "SourceInvestmentId"])
         gcm_peer_constituent_returns.columns = gcm_peer_columns
-
-        eh_inputs = report_inputs["eurekahedge_inputs"]["EHI50 Equities"]
-        eurekahedge_returns = pd.read_json(eh_inputs["eurekahedge_returns"], orient="index")
-        eurekahedge_constituent_returns = pd.read_json(eh_inputs["eurekahedge_constituent_returns"], orient="index")
+        
+        eh_inputs = report_inputs['eurekahedge_inputs']['EHI100 Long/Short Equity']
+        eurekahedge_returns = pd.read_json(eh_inputs['eurekahedge_returns'], orient='index')
+        eurekahedge_constituent_returns = pd.read_json(eh_inputs['eurekahedge_constituent_returns'], orient='index')
         eh_columns = [ast.literal_eval(x) for x in eurekahedge_constituent_returns.columns]
         eh_columns = pd.MultiIndex.from_tuples(eh_columns, names=["EurekahedgeBenchmark", "SourceInvestmentId"])
         eurekahedge_constituent_returns.columns = eh_columns

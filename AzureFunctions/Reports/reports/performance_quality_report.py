@@ -4,7 +4,7 @@ import pandas as pd
 import ast
 import numpy as np
 import datetime as dt
-from functools import partial
+from functools import partial, cached_property
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.reporting.core.ReportStructure.report_structure import (
@@ -33,22 +33,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         self._as_of_date = as_of_date
         self._analytics = Analytics()
         self._fund_name = fund_name
-        self._fund_inputs_cache = None
-        self._fund_dimn_cache = None
-        self._fund_returns_cache = None
-        self._abs_bmrk_returns_cache = None
-        self._exposure_cache = None
-        self._rba_cache = None
-        self._rba_risk_decomp_cache = None
-        self._rba_adj_r2_cache = None
-        self._pba_publics_cache = None
-        self._pba_privates_cache = None
-        self._primary_peer_inputs_cache = None
-        self._secondary_peer_inputs_cache = None
-        self._eurekahedge_inputs_cache = None
-        self._eurekahedge200_inputs_cache = None
-        self._market_factor_inputs_cache = None
-        self._market_factor_returns_cache = None
         self._underlying_data_location = "raw/investmentsreporting/underlyingdata/performancequality"
         self._summary_data_location = "raw/investmentsreporting/summarydata/performancequality"
 
@@ -66,69 +50,145 @@ class PerformanceQualityReport(ReportingRunnerBase):
         inputs = json.loads(file.content)
         return inputs
 
-    @property
+    @cached_property
     def _fund_inputs(self):
-        if self._fund_inputs_cache is None:
-            asofdate = self._as_of_date.strftime("%Y-%m-%d")
-            file = self._fund_name.replace("/", "") + "_fund_inputs_" + asofdate + ".json"
-            self._fund_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
-        return self._fund_inputs_cache
+        asofdate = self._as_of_date.strftime("%Y-%m-%d")
+        file = self._fund_name.replace("/", "") + "_fund_inputs_" + asofdate + ".json"
+        inputs = self._download_inputs(location=self._underlying_data_location, file_path=file)
+        return inputs
 
-    @property
+    @cached_property
     def _fund_dimn(self):
-        if self._fund_dimn_cache is None:
-            self._fund_dimn_cache = pd.read_json(self._fund_inputs["fund_dimn"], orient="index")
-        return self._fund_dimn_cache
+        fund_dimn = pd.read_json(self._fund_inputs["fund_dimn"], orient="index")
+        return fund_dimn
 
-    @property
+    @cached_property
+    def _entity_type(self):
+        return "ARS PFUND"
+
+    @cached_property
+    def _fund_id(self):
+        return self._fund_dimn["InvestmentGroupId"]
+
+    @cached_property
+    def _pub_investment_group_id(self):
+        return self._fund_dimn["PubInvestmentGroupId"].squeeze()
+
+    @cached_property
+    def _substrategy(self):
+        return self._fund_dimn["SubStrategy"].squeeze()
+
+    @cached_property
+    def _primary_peer_group(self):
+        group = self._fund_dimn["ReportingPeerGroup"].squeeze()
+        if not isinstance(group, str):
+            group = None
+        return group
+
+    @cached_property
+    def _secondary_peer_group(self):
+        group = self._fund_dimn["StrategyPeerGroup"].squeeze()
+        if not isinstance(group, str):
+            group = None
+        return group
+
+    @cached_property
+    def _eurekahedge_benchmark(self):
+        group = self._fund_dimn["EurekahedgeBenchmark"].squeeze()
+        if not isinstance(group, str):
+            group = None
+        return group
+
+    @cached_property
+    def _abs_return_benchmark(self):
+        return self._fund_dimn["AbsoluteBenchmarkName"].squeeze()
+
+    @cached_property
+    def _fle_scl(self):
+        return self._fund_dimn["FleScl"].squeeze().round(2)
+
+    @cached_property
+    def _risk_model_expected_return(self):
+        return self._fund_dimn["RiskModelExpectedReturn"].squeeze().round(2)
+
+    @cached_property
+    def _risk_model_expected_vol(self):
+        return self._fund_dimn["RiskModelExpectedVol"].squeeze().round(2)
+
+    @cached_property
     def _fund_returns(self):
-        if self._fund_returns_cache is None:
-            self._fund_returns_cache = pd.read_json(self._fund_inputs["fund_returns"], orient="index")
-            self._fund_returns_cache = self._fund_returns_cache.sort_index()
+        fund_returns = pd.read_json(self._fund_inputs["fund_returns"], orient="index")
+        fund_returns = fund_returns.sort_index()
 
-        if any(self._fund_returns_cache.columns == self._fund_name):
-            return self._fund_returns_cache[self._fund_name].to_frame()
+        if any(fund_returns.columns == self._fund_name):
+            return fund_returns[self._fund_name].to_frame()
         else:
             return pd.DataFrame()
 
-    @property
+    @cached_property
     def _abs_bmrk_returns(self):
-        if self._abs_bmrk_returns_cache is None:
-            returns = pd.read_json(self._fund_inputs["abs_bmrk_returns"], orient="index")
-            if len(returns) > 1:
-                self._abs_bmrk_returns_cache = AggregateFromDaily().transform(
-                    data=returns,
-                    method="geometric",
-                    period=Periodicity.Monthly,
-                )
-            else:
-                self._abs_bmrk_returns_cache = pd.DataFrame()
+        returns = pd.read_json(self._fund_inputs["abs_bmrk_returns"], orient="index")
+        if len(returns) > 1:
+            _abs_bmrk_returns = AggregateFromDaily().transform(
+                data=returns,
+                method="geometric",
+                period=Periodicity.Monthly,
+            )
+        else:
+            _abs_bmrk_returns = pd.DataFrame()
 
-        if any(self._fund_id.squeeze() == list(self._abs_bmrk_returns_cache.columns)):
-            returns = self._abs_bmrk_returns_cache[self._fund_id].squeeze()
+        if any(self._fund_id.squeeze() == list(_abs_bmrk_returns.columns)):
+            returns = _abs_bmrk_returns[self._fund_id].squeeze()
         else:
             returns = pd.DataFrame()
         return returns
 
-    @property
-    def _all_exposure(self):
-        if self._exposure_cache is None:
-            latest = pd.read_json(self._fund_inputs["exposure_latest"], orient="index")
-            latest["Period"] = "Latest"
-            three = pd.read_json(self._fund_inputs["exposure_3y"], orient="index")
-            three["Period"] = "3Y"
-            five = pd.read_json(self._fund_inputs["exposure_5y"], orient="index")
-            five["Period"] = "5Y"
-            ten = pd.read_json(self._fund_inputs["exposure_10y"], orient="index")
-            ten["Period"] = "10Y"
-            all_exposure = pd.concat([latest, three, five, ten])
-            self._exposure_cache = all_exposure
-        return self._exposure_cache
+    @cached_property
+    def _market_factor_returns(self):
+        asofdate = self._as_of_date.strftime("%Y-%m-%d")
+        file = "market_factor_returns_" + asofdate + ".json"
+        market_factor_inputs = self._download_inputs(
+            location=self._underlying_data_location, file_path=file
+        )
 
-    @property
+        returns = pd.read_json(market_factor_inputs, orient="index")
+        if len(returns) > 0:
+            returns = AggregateFromDaily().transform(
+                data=returns,
+                method="geometric",
+                period=Periodicity.Monthly,
+            )
+            returns.index = [dt.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
+        else:
+            returns = pd.DataFrame()
+        return returns
+
+    @cached_property
+    def _sp500_return(self):
+        returns = self._market_factor_returns["SPXT Index"]
+        returns.name = "SP500"
+        return returns.to_frame()
+
+    @cached_property
+    def _rf_return(self):
+        returns = self._market_factor_returns["SBMMTB1 Index"]
+        returns.name = "1M_RiskFree"
+        return returns.to_frame()
+
+    @cached_property
     def _exposure(self):
-        if self._all_exposure.shape[0] > 0:
-            exposure = self._all_exposure[self._all_exposure["InvestmentGroupName"] == self._fund_name]
+        latest = pd.read_json(self._fund_inputs["exposure_latest"], orient="index")
+        latest["Period"] = "Latest"
+        three = pd.read_json(self._fund_inputs["exposure_3y"], orient="index")
+        three["Period"] = "3Y"
+        five = pd.read_json(self._fund_inputs["exposure_5y"], orient="index")
+        five["Period"] = "5Y"
+        ten = pd.read_json(self._fund_inputs["exposure_10y"], orient="index")
+        ten["Period"] = "10Y"
+        all_exposure = pd.concat([latest, three, five, ten])
+
+        if all_exposure.shape[0] > 0:
+            exposure = all_exposure[all_exposure["InvestmentGroupName"] == self._fund_name]
             exposure = exposure.set_index("Period")
             return exposure
         else:
@@ -145,87 +205,44 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 index=["Latest", "3Y", "5Y", "10Y"],
             )
 
-    @property
-    def _all_rba(self):
-        if self._rba_cache is None:
-            rba = pd.read_json(self._fund_inputs["rba"], orient="index")
-            rba_columns = [ast.literal_eval(x) for x in rba.columns]
-            rba_columns = pd.MultiIndex.from_tuples(rba_columns, names=["FactorGroup1", "AggLevel"])
-            rba.columns = rba_columns
-            self._rba_cache = rba
-        return self._rba_cache
-
-    @property
-    def _all_rba_risk_decomp(self):
-        if self._rba_risk_decomp_cache is None:
-            self._rba_risk_decomp_cache = pd.read_json(self._fund_inputs["rba_risk_decomp"], orient="index")
-        return self._rba_risk_decomp_cache
-
-    @property
-    def _all_rba_adj_r_squared(self):
-        if self._rba_adj_r2_cache is None:
-            self._rba_adj_r2_cache = pd.read_json(self._fund_inputs["rba_adj_r_squared"], orient="index")
-        return self._rba_adj_r2_cache
-
-    @property
-    def _all_pba_publics(self):
-        if self._pba_publics_cache is None:
-            pba = pd.read_json(self._fund_inputs["pba_publics"], orient="index")
-            pba_columns = [ast.literal_eval(x) for x in pba.columns]
-            pba_columns = pd.MultiIndex.from_tuples(pba_columns, names=["FactorGroup1", "InvestmentGroupId"])
-            pba.columns = pba_columns
-            self._pba_publics_cache = pba
-        return self._pba_publics_cache
-
-    @property
-    def _all_pba_privates(self):
-        if self._pba_privates_cache is None:
-            pba = pd.read_json(self._fund_inputs["pba_privates"], orient="index")
-            pba_columns = [ast.literal_eval(x) for x in pba.columns]
-            pba_columns = pd.MultiIndex.from_tuples(pba_columns, names=["FactorGroup1", "InvestmentGroupId"])
-            pba.columns = pba_columns
-            self._pba_privates_cache = pba
-        return self._pba_privates_cache
-
-    @property
+    @cached_property
     def _primary_peer_inputs(self):
-        if self._primary_peer_inputs_cache is None and self._primary_peer_group is not None:
+        if self._primary_peer_group is not None:
             asofdate = self._as_of_date.strftime("%Y-%m-%d")
             file = self._primary_peer_group.replace("/", "") + "_peer_inputs_" + asofdate + ".json"
-            self._primary_peer_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
-        return self._primary_peer_inputs_cache
+            primary_peer_inputs = self._download_inputs(
+                location=self._underlying_data_location, file_path=file
+            )
+        else:
+            primary_peer_inputs = None
+        return primary_peer_inputs
 
-    @property
+    @cached_property
     def _secondary_peer_inputs(self):
-        if self._secondary_peer_inputs_cache is None and self._secondary_peer_group is not None:
+        if self._secondary_peer_group is not None:
             asofdate = self._as_of_date.strftime("%Y-%m-%d")
             file = self._secondary_peer_group.replace("/", "") + "_peer_inputs_" + asofdate + ".json"
-            self._secondary_peer_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
-        return self._secondary_peer_inputs_cache
+            secondary_peer_inputs = self._download_inputs(
+                location=self._underlying_data_location, file_path=file
+            )
+        else:
+            secondary_peer_inputs = None
+        return secondary_peer_inputs
 
-    @property
+    @cached_property
     def _primary_peer_returns(self):
-        returns = self._primary_peer_inputs
-        if returns is not None:
-            returns = pd.read_json(returns["gcm_peer_returns"], orient="index")
+        inputs = self._primary_peer_inputs
+        if inputs is not None:
+            returns = pd.read_json(inputs["gcm_peer_returns"], orient="index")
             return returns.squeeze()
         else:
             return pd.Series()
 
-    @property
-    def _secondary_peer_returns(self):
-        returns = self._secondary_peer_inputs
-        if returns is not None:
-            returns = pd.read_json(returns["gcm_peer_returns"], orient="index")
-            return returns.squeeze()
-        else:
-            return pd.Series()
-
-    @property
+    @cached_property
     def _primary_peer_constituent_returns(self):
-        returns = self._primary_peer_inputs
-        if returns is not None:
-            returns = pd.read_json(returns["gcm_peer_constituent_returns"], orient="index")
+        inputs = self._primary_peer_inputs
+        if inputs is not None:
+            returns = pd.read_json(inputs["gcm_peer_constituent_returns"], orient="index")
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
             returns_columns = pd.MultiIndex.from_tuples(
                 returns_columns,
@@ -237,11 +254,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.DataFrame()
         return returns
 
-    @property
+    @cached_property
     def _secondary_peer_constituent_returns(self):
-        returns = self._secondary_peer_inputs
-        if returns is not None:
-            returns = pd.read_json(returns["gcm_peer_constituent_returns"], orient="index")
+        inputs = self._secondary_peer_inputs
+        if inputs is not None:
+            returns = pd.read_json(inputs["gcm_peer_constituent_returns"], orient="index")
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
             returns_columns = pd.MultiIndex.from_tuples(
                 returns_columns,
@@ -253,32 +270,37 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.DataFrame()
         return returns
 
-    @property
+    @cached_property
     def _eurekahedge_inputs(self):
-        if self._eurekahedge_inputs_cache is None and self._eurekahedge_benchmark is not None:
+        if self._eurekahedge_benchmark is not None:
             asofdate = self._as_of_date.strftime("%Y-%m-%d")
             file = self._eurekahedge_benchmark.replace("/", "") + "_eurekahedge_inputs_" + asofdate + ".json"
-            self._eurekahedge_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
-        return self._eurekahedge_inputs_cache
+            eurekahedge_inputs = self._download_inputs(
+                location=self._underlying_data_location, file_path=file
+            )
+        else:
+            eurekahedge_inputs = None
+        return eurekahedge_inputs
 
-    @property
+    @cached_property
     def _eurekahedge200_inputs(self):
-        if self._eurekahedge200_inputs_cache is None:
-            asofdate = self._as_of_date.strftime("%Y-%m-%d")
-            file = "Eurekahedge Institutional 200" + "_eurekahedge_inputs_" + asofdate + ".json"
-            self._eurekahedge200_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
-        return self._eurekahedge200_inputs_cache
+        asofdate = self._as_of_date.strftime("%Y-%m-%d")
+        file = "Eurekahedge Institutional 200" + "_eurekahedge_inputs_" + asofdate + ".json"
+        eurekahedge200_inputs = self._download_inputs(
+            location=self._underlying_data_location, file_path=file
+        )
+        return eurekahedge200_inputs
 
-    @property
+    @cached_property
     def _ehi50_returns(self):
-        returns = self._eurekahedge_inputs
-        if returns is not None:
-            returns = pd.read_json(returns["eurekahedge_returns"], orient="index")
+        inputs = self._eurekahedge_inputs
+        if inputs is not None:
+            returns = pd.read_json(inputs["eurekahedge_returns"], orient="index")
             return returns.squeeze()
         else:
             return pd.Series()
 
-    @property
+    @cached_property
     def _ehi200_returns(self):
         returns = pd.read_json(
             self._eurekahedge200_inputs["eurekahedge_returns"],
@@ -289,11 +311,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
         else:
             return pd.Series()
 
-    @property
+    @cached_property
     def _eurekahedge_constituent_returns(self):
-        returns = self._eurekahedge_inputs
-        if returns is not None:
-            returns = pd.read_json(returns["eurekahedge_constituent_returns"], orient="index")
+        inputs = self._eurekahedge_inputs
+        if inputs is not None:
+            returns = pd.read_json(inputs["eurekahedge_constituent_returns"], orient="index")
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
             returns_columns = pd.MultiIndex.from_tuples(
                 returns_columns,
@@ -304,7 +326,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         else:
             return pd.Series()
 
-    @property
+    @cached_property
     def _ehi200_constituent_returns(self):
         returns = pd.read_json(
             self._eurekahedge200_inputs["eurekahedge_constituent_returns"],
@@ -324,56 +346,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         return returns
 
-    @property
-    def _market_factor_inputs(self):
-        if self._market_factor_inputs_cache is None:
-            asofdate = self._as_of_date.strftime("%Y-%m-%d")
-            file = "market_factor_returns_" + asofdate + ".json"
-            self._market_factor_inputs_cache = self._download_inputs(location=self._underlying_data_location, file_path=file)
-        return self._market_factor_inputs_cache
-
-    @property
-    def _market_factor_returns(self):
-        if self._market_factor_returns_cache is None:
-            returns = pd.read_json(self._market_factor_inputs, orient="index")
-            if len(returns) > 0:
-                returns = AggregateFromDaily().transform(
-                    data=returns,
-                    method="geometric",
-                    period=Periodicity.Monthly,
-                )
-                returns.index = [dt.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
-                self._market_factor_returns_cache = returns
-            else:
-                self._market_factor_returns_cache = pd.DataFrame()
-        return self._market_factor_returns_cache
-
-    @property
-    def _entity_type(self):
-        return "ARS PFUND"
-
-    @property
-    def _fund_id(self):
-        return self._fund_dimn["InvestmentGroupId"]
-
-    @property
-    def _pub_investment_group_id(self):
-        return self._fund_dimn["PubInvestmentGroupId"].squeeze()
-
-    @property
-    def _substrategy(self):
-        return self._fund_dimn["SubStrategy"].squeeze()
-
-    @property
+    @cached_property
     def _fund_rba(self):
-        if self._all_rba is not None:
-            return self._all_rba.copy()
+        rba = pd.read_json(self._fund_inputs["rba"], orient="index")
+        rba_columns = [ast.literal_eval(x) for x in rba.columns]
+        rba_columns = pd.MultiIndex.from_tuples(rba_columns, names=["FactorGroup1", "AggLevel"])
+        rba.columns = rba_columns
+
+        if rba is not None:
+            return rba
         else:
             return pd.DataFrame()
 
-    @property
+    @cached_property
     def _fund_rba_risk_decomp(self):
-        decomp = self._all_rba_risk_decomp.copy()
+        decomp = pd.read_json(self._fund_inputs["rba_risk_decomp"], orient="index")
         decomp = decomp[decomp["InvestmentGroupName"] == self._fund_name]
         decomp = decomp[["FactorGroup1", "1Y", "3Y", "5Y"]]
         decomp.rename(columns={"1Y": "TTM"}, inplace=True)
@@ -409,9 +396,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         risk_decomp = risk_decomp.round(2)
         return risk_decomp
 
-    @property
+    @cached_property
     def _fund_rba_adj_r_squared(self):
-        r2 = self._all_rba_adj_r_squared.copy()
+        r2 = pd.read_json(self._fund_inputs["rba_adj_r_squared"], orient="index")
 
         if r2.shape[0] == 0:
             return pd.DataFrame(index=["TTM", "3Y", "5Y"], columns=["AdjR2"])
@@ -425,76 +412,37 @@ class PerformanceQualityReport(ReportingRunnerBase):
         r2 = r2.round(2)
         return r2
 
-    @property
+    @cached_property
     def _fund_pba_publics(self):
-        fund_index = self._all_pba_publics.columns.get_level_values(1) == self._fund_id.squeeze()
+        pba = pd.read_json(self._fund_inputs["pba_publics"], orient="index")
+        pba_columns = [ast.literal_eval(x) for x in pba.columns]
+        pba_columns = pd.MultiIndex.from_tuples(pba_columns, names=["FactorGroup1", "InvestmentGroupId"])
+        pba.columns = pba_columns
+
+        fund_index = pba.columns.get_level_values(1) == self._fund_id.squeeze()
         if any(fund_index):
-            fund_pba = self._all_pba_publics.iloc[:, fund_index]
+            fund_pba = pba.iloc[:, fund_index]
             fund_pba.columns = fund_pba.columns.droplevel(1)
             return fund_pba
         else:
             return pd.DataFrame()
 
-    @property
+    @cached_property
     def _fund_pba_privates(self):
-        fund_index = self._all_pba_privates.columns.get_level_values(1) == self._fund_id.squeeze()
+        pba = pd.read_json(self._fund_inputs["pba_privates"], orient="index")
+        pba_columns = [ast.literal_eval(x) for x in pba.columns]
+        pba_columns = pd.MultiIndex.from_tuples(pba_columns, names=["FactorGroup1", "InvestmentGroupId"])
+        pba.columns = pba_columns
+
+        fund_index = pba.columns.get_level_values(1) == self._fund_id.squeeze()
         if any(fund_index):
-            fund_pba = self._all_pba_privates.iloc[:, fund_index]
+            fund_pba = pba.iloc[:, fund_index]
             fund_pba.columns = fund_pba.columns.droplevel(1)
             return fund_pba
         else:
             return pd.DataFrame()
 
-    @property
-    def _primary_peer_group(self):
-        group = self._fund_dimn["ReportingPeerGroup"].squeeze()
-        if not isinstance(group, str):
-            group = None
-        return group
-
-    @property
-    def _secondary_peer_group(self):
-        group = self._fund_dimn["StrategyPeerGroup"].squeeze()
-        if not isinstance(group, str):
-            group = None
-        return group
-
-    @property
-    def _eurekahedge_benchmark(self):
-        group = self._fund_dimn["EurekahedgeBenchmark"].squeeze()
-        if not isinstance(group, str):
-            group = None
-        return group
-
-    @property
-    def _abs_return_benchmark(self):
-        return self._fund_dimn["AbsoluteBenchmarkName"].squeeze()
-
-    @property
-    def _sp500_return(self):
-        returns = self._market_factor_returns["SPXT Index"]
-        returns.name = "SP500"
-        return returns.to_frame()
-
-    @property
-    def _rf_return(self):
-        returns = self._market_factor_returns["SBMMTB1 Index"]
-        returns.name = "1M_RiskFree"
-        return returns.to_frame()
-
-    @property
-    def _fle_scl(self):
-        return self._fund_dimn["FleScl"].squeeze().round(2)
-
-    @property
-    def _risk_model_expected_return(self):
-        return self._fund_dimn["RiskModelExpectedReturn"].squeeze().round(2)
-
-    @property
-    def _risk_model_expected_vol(self):
-        return self._fund_dimn["RiskModelExpectedVol"].squeeze().round(2)
-
-    @property
+    @cached_property
     def _latest_exposure_date(self):
         latest = self._exposure.loc["Latest"]
         if isinstance(latest, pd.Series):
@@ -1710,27 +1658,30 @@ class PerformanceQualityReport(ReportingRunnerBase):
         logging.info("JSON stored to DataLake for: " + self._fund_name)
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-        with Scenario(asofdate=as_of_date).context():
-            InvestmentsReportRunner().execute(
-                data=input_data,
-                template="PFUND_PerformanceQuality_Template.xlsx",
-                save=True,
-                runner=self._runner,
-                entity_type=ReportingEntityTypes.manager_fund_group,
-                entity_name=self._fund_name,
-                entity_display_name=self._fund_name.replace("/", ""),
-                entity_ids=[self._pub_investment_group_id.item()],
-                entity_source=DaoSource.PubDwh,
-                report_name="Performance Quality",
-                report_type=ReportType.Performance,
-                report_vertical=ReportVertical.ARS,
-                report_frequency="Monthly",
-                aggregate_intervals=AggregateInterval.MTD,
-                # output_dir="cleansed/investmentsreporting/printedexcels/",
-                # report_output_source=DaoSource.DataLake,
-            )
 
-        logging.info("Excel stored to DataLake for: " + self._fund_name)
+        entity_id = self._pub_investment_group_id.item()
+        if str(entity_id) != 'nan':
+            with Scenario(asofdate=as_of_date).context():
+                InvestmentsReportRunner().execute(
+                    data=input_data,
+                    template="PFUND_PerformanceQuality_Template.xlsx",
+                    save=True,
+                    runner=self._runner,
+                    entity_type=ReportingEntityTypes.manager_fund_group,
+                    entity_name=self._fund_name,
+                    entity_display_name=self._fund_name.replace("/", ""),
+                    entity_ids=[self._pub_investment_group_id.item()],
+                    entity_source=DaoSource.PubDwh,
+                    report_name="Performance Quality",
+                    report_type=ReportType.Performance,
+                    report_vertical=ReportVertical.ARS,
+                    report_frequency="Monthly",
+                    aggregate_intervals=AggregateInterval.MTD,
+                    # output_dir="cleansed/investmentsreporting/printedexcels/",
+                    # report_output_source=DaoSource.DataLake,
+                )
+
+            logging.info("Excel stored to DataLake for: " + self._fund_name)
 
     def run(self, **kwargs):
         self.generate_performance_quality_report()
