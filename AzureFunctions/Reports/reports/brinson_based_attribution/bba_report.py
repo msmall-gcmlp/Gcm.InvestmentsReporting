@@ -1660,7 +1660,7 @@ class BbaReport(ReportingRunnerBase):
         logging.info("Excel stored to DataLake for: " + "Firm")
 
     def run(self, **kwargs):
-        self.generate_pfund_attributes()
+        # self.generate_pfund_attributes()
         self.generate_firmwide_report()
 
         if not kwargs["firm_only"]:
