@@ -6,7 +6,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     params = client_input["params"]
 
     parallel_period_tasks = []
-    for periodicity in ['ITD', 'YTD']:
+    for periodicity in ["ITD", "YTD"]:
         params.update({"run": "EofRbaReport"})
         params.update({"periodicity": periodicity})
         period_params = {"params": params, "data": {}}

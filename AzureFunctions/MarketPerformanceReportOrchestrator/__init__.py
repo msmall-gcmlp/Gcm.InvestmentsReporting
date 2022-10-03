@@ -12,9 +12,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
         },
     }
 
-    tables = yield context.call_activity(
-        "MarketPerformanceReportActivity", disct1
-    )
+    tables = yield context.call_activity("MarketPerformanceReportActivity", disct1)
 
     tables
 

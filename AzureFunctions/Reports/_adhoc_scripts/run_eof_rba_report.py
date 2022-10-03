@@ -7,7 +7,6 @@ from gcm.Dao.DaoSources import DaoSource
 
 
 class RunEofReturnBasedAttributionReport:
-
     def __init__(self, as_of_date):
         self._runner = DaoRunner(
             container_lambda=lambda b, i: b.config.from_dict(i),
@@ -20,9 +19,10 @@ class RunEofReturnBasedAttributionReport:
                     DaoSource.DataLake.name: {
                         "Environment": "prd",
                         "Subscription": "prd",
-                    }
+                    },
                 }
-            })
+            },
+        )
         self._as_of_date = as_of_date
 
     def generate_report(self, periodicity):

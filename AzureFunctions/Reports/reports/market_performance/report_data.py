@@ -31,9 +31,7 @@ class MarketPerformanceQualityReportData(ReportingRunnerBase):
             fill_na=True,
         )
         # extract factor prices
-        market_factor_data = self._factors.get_dimensions(
-            date_period=DatePeriod(start_date=self._start_date, end_date=self._as_of_date)
-        )
+        market_factor_data = self._factors.get_dimensions(date_period=DatePeriod(start_date=self._start_date, end_date=self._as_of_date))
 
         price = market_factor_data.pivot_table(index="Date", columns="Ticker", values="PxLast")
         # Calculate level change for yields

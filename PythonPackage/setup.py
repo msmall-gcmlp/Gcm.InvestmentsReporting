@@ -16,9 +16,7 @@ def package_files(directory):
     paths = []
     for (path, directories, filenames) in os.walk(directory):
         if "pycache" not in path and "egg-info" not in path:
-            paths.append(
-                path.replace(f"{base_src}/", "").replace("\\", ".")
-            )
+            paths.append(path.replace(f"{base_src}/", "").replace("\\", "."))
     return paths
 
 
@@ -43,7 +41,7 @@ setup(
     install_requires=[
         "blessings ~= 1.7",
         "gcm-programrunner",
-        "gcm-dao",
+        "gcm-dao>=0.66.0",
         "pandas",
         "datetime",
         "openpyxl",

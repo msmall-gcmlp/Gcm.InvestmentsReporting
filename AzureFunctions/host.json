@@ -1,7 +1,7 @@
 {
   "$schema": "https://github.com/Azure/azure-webjobs-sdk-script/blob/dev/schemas/json/host.json",
   "version": "2.0",
-  "functionTimeout": "03:10:00",
+  "functionTimeout": "00:10:00",
   "logging": {
     "logLevel": {
       "Gcm": "Information"
