@@ -68,7 +68,6 @@ class PeerRankingReport(ReportingRunnerBase):
         group_dimensions = inv_group.get_dimensions()
         id_name_map = dict(zip(group_dimensions['InvestmentGroupId'], group_dimensions['InvestmentGroupName']))
         abs_bmrk_returns.columns = [id_name_map.get(item, item) for item in abs_bmrk_returns.columns]
-        #TODO NEED TO REPLACE WITH ACTUAL
         return abs_bmrk_returns
 
     @cached_property
@@ -102,6 +101,9 @@ class PeerRankingReport(ReportingRunnerBase):
         entities = EntityMaster().get_investment_entities()
         reporting_inv_names = self._get_altsoft_investment_names(entities)
         constituents = constituents.merge(reporting_inv_names, on=['InvestmentGroupName'], how='left')
+
+        constituents = constituents[['InvestmentGroupId', 'InvestmentGroupName', 'InvestmentName', 'InvestmentStatus']]
+        constituents = constituents.drop_duplicates()
 
         return constituents
 
@@ -335,9 +337,11 @@ class PeerRankingReport(ReportingRunnerBase):
                                        'InvestmentGroupName': ['Quartile ' + str(x) for x in [1, 2, 3, 4]],
                                        'Quartile': [1, 2, 3, 4]})
         rankings = pd.concat([rankings, qtile_headings])
-        rows_to_pad = 2000 - len(stats)
+        rows_to_pad = 0 #3000 - len(stats)
 
         summary = rankings.merge(stats, left_on=['InvestmentGroupName'], right_index=True, how='left')
+        statuses = self._constituents[['InvestmentGroupName', 'InvestmentStatus']]
+        summary = summary.merge(statuses, on='InvestmentGroupName', how='left')
 
         summary = summary.set_index('InvestmentGroupName')
         summary = summary.reindex(summary.index.tolist() + [''] * rows_to_pad)
@@ -352,6 +356,7 @@ class PeerRankingReport(ReportingRunnerBase):
         name_overrides = dict(zip(self._constituents['InvestmentGroupName'], self._constituents['InvestmentName']))
         summary["InvestmentGroupName"] = summary["InvestmentGroupName"].replace(name_overrides)
         summary["InvestmentGroupName"] = summary["InvestmentGroupName"].str.slice(0, 27)
+
         return summary
 
     def build_omitted_fund_summary(self):
@@ -406,6 +411,9 @@ class PeerRankingReport(ReportingRunnerBase):
         summary_table = self.build_summary_table(rankings=rankings, stats=summary)
         omitted_funds = self.build_omitted_fund_summary()
 
+        max_row = 11 + summary_table.shape[0]
+        print_areas = {'Rankings': 'B1:Q' + str(max_row)}
+
         logging.info('Report summary data generated for: ' + self._peer_group)
 
         input_data = {
@@ -457,8 +465,9 @@ class PeerRankingReport(ReportingRunnerBase):
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
                 aggregate_intervals=AggregateInterval.MTD,
-                output_dir="cleansed/investmentsreporting/printedexcels/",
-                report_output_source=DaoSource.DataLake,
+                print_areas=print_areas,
+                # output_dir="cleansed/investmentsreporting/printedexcels/",
+                # report_output_source=DaoSource.DataLake,
             )
 
         logging.info("Excel stored to DataLake for: " + self._peer_group)

@@ -43,4 +43,4 @@ class RunPeerRankingReport:
 
 if __name__ == "__main__":
     report_runner = RunPeerRankingReport(as_of_date=dt.date(2022, 4, 30))
-    report_runner.run_peer_rankings(peer_groups=['GCM TMT'])
+    report_runner.run_peer_rankings(peer_groups=['GCM Multi-PM'])
