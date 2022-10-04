@@ -81,6 +81,7 @@ class InvestmentsReportRunner(ProgramRunner):
                     output_dir=output_dir,
                     save=kwargs["save"],
                     save_as_pdf=kwargs.get("save_as_pdf", True),
+                    print_areas=kwargs.get("print_areas", None),
                 )
             return True
         else:
