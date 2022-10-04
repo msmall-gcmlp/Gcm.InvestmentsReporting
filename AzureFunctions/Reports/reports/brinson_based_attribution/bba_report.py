@@ -2,6 +2,7 @@ import logging
 
 import os
 import pandas as pd
+from gcm.Dao.DaoSources import DaoSource
 from gcm.Scenario.scenario_enums import AggregateInterval
 from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.inv.dataprovider.factor import Factor
@@ -134,7 +135,27 @@ class BbaReport(ReportingRunnerBase):
 
     def get_excess_return_stats(self, start_date, port_rtn, bmark_rtn, dollar_size=False):
         port_rtn = port_rtn[(port_rtn.Date >= start_date) & (port_rtn.Date <= self._report_date)]
-        # port_rtn.Date = port_rtn.Date + MonthEnd(1)
+        if pd.to_datetime(start_date) != port_rtn.Date.min():
+            return pd.DataFrame(
+                {
+                    "Name": [
+                        "CtrTotal",
+                        "CtrContrib_Outperformer",
+                        "CtrContrib_Underperformer",
+                        "HitRate_Outperformer",
+                        "HitRate_Underperformer",
+                        "Blank1",
+                        "AvgExcessRatio",
+                        "AvgExcess_Outperformer",
+                        "AvgExcess_Underperformer",
+                        "Blank2",
+                        "AvgSizeRatio",
+                        "AvgSize_Outperformer",
+                        "AvgSize_Underperformer",
+                    ],
+                    "value": [None] * 13,
+                }
+            ).set_index("Name")
         port_rtn.Date = pd.to_datetime(port_rtn.Date)
         bmark_rtn.Date = pd.to_datetime(bmark_rtn.Date)
         return_df = (
@@ -267,7 +288,7 @@ class BbaReport(ReportingRunnerBase):
         return sharpe_df[["Period", "GCM", "EHI200"]].set_index("Period").reindex(self._period_order)
 
     def calc_sharpe(self, returns, trailing_periods):
-        rf = self._factor_returns[["SBMMTB1 Index"]].rename(columns={"SBMMTB1 Index": "SPXT"})
+        rf = self._factor_returns[["SBMMTB1 Index"]].rename(columns={"SBMMTB1 Index": "rf"})
         returns = returns.dropna()
 
         result = pd.DataFrame()
@@ -506,6 +527,9 @@ class BbaReport(ReportingRunnerBase):
         error_df = pd.DataFrame()
         attribution_by_portfolio = pd.DataFrame()
 
+        mandate_filter = self._portfolio_dimn[
+            ~self._portfolio_dimn.StrategyMandate.isin(["Multi-Strategy", "Opportunistic", "Global Long / Short - Low Beta"])
+        ].Acronym.to_list()
         remove_acronyms_not_multistrat_df = (
             gcm[["Date", "Acronym", "pct_strategy_of_portfolio_total"]][(gcm.Date >= start_date) & (gcm.Date <= end_date)]
             .drop_duplicates()
@@ -527,7 +551,11 @@ class BbaReport(ReportingRunnerBase):
         hard_code_exclude = ["IFCD", "PIKEPLACE", "ANCHOR4B"]
         acronyms_to_run = list(
             filter(
-                lambda x: x not in remove_acronyms_not_multistrat and x not in remove_tickers_aum and x not in hard_code_exclude, acronyms
+                lambda x: x not in remove_acronyms_not_multistrat
+                and x not in remove_tickers_aum
+                and x not in hard_code_exclude
+                and x not in mandate_filter,
+                acronyms,
             )
         )
 
@@ -535,7 +563,7 @@ class BbaReport(ReportingRunnerBase):
             print(acronym)
             try:
                 gcm_df = gcm[gcm.Acronym == acronym]
-                portfolio_attrib = self.get_attribution_rpt(gcm_df, bmark, start_date, end_date, trailing_period)
+                portfolio_attrib = self.get_attribution_rpt(gcm_df, bmark, start_date, end_date, trailing_period, None)
                 portfolio_attrib["Acronym"] = acronym
 
                 # by strat, will be summed to total portfolio
@@ -566,10 +594,7 @@ class BbaReport(ReportingRunnerBase):
         )
         return result
 
-    def get_ars_portfolio_return(self):
-        pass
-
-    def get_attribution_rpt(self, gcm, bmark, start_date, end_date, trailing_period):
+    def get_attribution_rpt(self, gcm, bmark, start_date, end_date, trailing_period, ctr):
         gcm_alloc = (
             gcm[["Date", "Strategy", "pct_strategy_of_portfolio_total"]]
             .rename(columns={"pct_strategy_of_portfolio_total": "GcmAllocation"})
@@ -595,6 +620,10 @@ class BbaReport(ReportingRunnerBase):
 
         result = strategy_sizing.merge(manager_sizing, left_index=True, right_index=True)
         result[result.columns] = np.where(result[result.columns] == 0, None, result[result.columns])
+        if ctr is not None:
+            scale = (ctr.tail(1).CTR_x - ctr.tail(1).CTR_y) / result.sum().sum()
+            result = result * scale.squeeze()
+
         return result
 
     def get_strategy_selection(self, gcm_alloc, gcm_cap_ror, bmark_eq_ror, start_date, end_date):
@@ -678,7 +707,7 @@ class BbaReport(ReportingRunnerBase):
 
         return ctr_df
 
-    def get_ctr_rpt(self, gcm, bmark, start_date, end_date, trailing_period):
+    def get_ctr_rpt(self, gcm, bmark, start_date, end_date):
         gcm_alloc = (
             gcm[["Date", "Strategy", "pct_strategy_of_portfolio_total"]]
             .drop_duplicates()
@@ -771,8 +800,7 @@ class BbaReport(ReportingRunnerBase):
             .reindex(self._strategy_order)
         )
         bmark_alloc_end = (
-            bmark[bmark.Date == dt.date(self._report_date.year, self._report_date.month -1, 1)]
-            [["Strategy", "pct_strategy_of_total"]]
+            bmark[bmark.Date == dt.date(self._report_date.year, self._report_date.month - 1, 1)][["Strategy", "pct_strategy_of_total"]]
             .rename(columns={"pct_strategy_of_total": "EhAllocationEnd"})
             .drop_duplicates()
             .set_index("Strategy")
@@ -1244,13 +1272,16 @@ class BbaReport(ReportingRunnerBase):
             gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month
         )
         # get_ctr
-        ytd_ctr = self.get_ctr_rpt(
-            gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month
-        )
+        ytd_ctr = self.get_ctr_rpt(gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date)
         ytd_ctr = self._append_total_row(ytd_ctr)
         # get_attribution
         ytd_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month
+            gcm=df,
+            bmark=self._eh,
+            start_date=ytd_start_date,
+            end_date=self._report_date,
+            trailing_period=self._report_date.month,
+            ctr=ytd_ctr,
         )
         ytd_attrib = self._append_total_row(ytd_attrib)
         # ttm section
@@ -1263,11 +1294,11 @@ class BbaReport(ReportingRunnerBase):
             gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12
         )
         # get_ctr
-        ttm_ctr = self.get_ctr_rpt(gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12)
+        ttm_ctr = self.get_ctr_rpt(gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date)
         ttm_ctr = self._append_total_row(ttm_ctr)
         # get_attribution
         ttm_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12
+            gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12, ctr=ttm_ctr
         )
         ttm_attrib = self._append_total_row(ttm_attrib)
         # 3y section
@@ -1280,13 +1311,11 @@ class BbaReport(ReportingRunnerBase):
             gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36
         )
         # get_ctr
-        three_y_ctr = self.get_ctr_rpt(
-            gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36
-        )
+        three_y_ctr = self.get_ctr_rpt(gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date)
         three_y_ctr = self._append_total_row(three_y_ctr)
         # get_attribution
         three_y_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36
+            gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36, ctr=three_y_ctr
         )
         three_y_attrib = self._append_total_row(three_y_attrib)
 
@@ -1440,13 +1469,16 @@ class BbaReport(ReportingRunnerBase):
             gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month
         )
         # get_ctr
-        ytd_ctr = self.get_ctr_rpt(
-            gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month
-        )
+        ytd_ctr = self.get_ctr_rpt(gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date)
         ytd_ctr = self._append_total_row(ytd_ctr)
         # get_attribution
         ytd_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=ytd_start_date, end_date=self._report_date, trailing_period=self._report_date.month
+            gcm=df,
+            bmark=self._eh,
+            start_date=ytd_start_date,
+            end_date=self._report_date,
+            trailing_period=self._report_date.month,
+            ctr=ytd_ctr,
         )
         ytd_attrib = self._append_total_row(ytd_attrib)
         # ttm section
@@ -1459,11 +1491,11 @@ class BbaReport(ReportingRunnerBase):
             gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12
         )
         # get_ctr
-        ttm_ctr = self.get_ctr_rpt(gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12)
+        ttm_ctr = self.get_ctr_rpt(gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date)
         ttm_ctr = self._append_total_row(ttm_ctr)
         # get_attribution
         ttm_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12
+            gcm=df, bmark=self._eh, start_date=ttm_start_date, end_date=self._report_date, trailing_period=12, ctr=ttm_ctr
         )
         ttm_attrib = self._append_total_row(ttm_attrib)
         # 3y section
@@ -1476,13 +1508,11 @@ class BbaReport(ReportingRunnerBase):
             gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36
         )
         # get_ctr
-        three_y_ctr = self.get_ctr_rpt(
-            gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36
-        )
+        three_y_ctr = self.get_ctr_rpt(gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date)
         three_y_ctr = self._append_total_row(three_y_ctr)
         # get_attribution
         three_y_attrib = self.get_attribution_rpt(
-            gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36
+            gcm=df, bmark=self._eh, start_date=three_y_start_date, end_date=self._report_date, trailing_period=36, ctr=three_y_ctr
         )
         three_y_attrib = self._append_total_row(three_y_attrib)
 
@@ -1552,9 +1582,8 @@ class BbaReport(ReportingRunnerBase):
                 entity_type=ReportingEntityTypes.portfolio,
                 entity_name=acronym,
                 entity_display_name=acronym,
-                entity_ids=[0000],
-                # entity_ids=self._portfolio_dimn[self._portfolio_dimn.Acronym == acronym].MasterId.squeeze(),
-                # entity_source=DaoSource.PubDwh,
+                entity_ids=[self._portfolio_dimn[self._portfolio_dimn.Acronym == acronym].MasterId.item()],
+                entity_source=DaoSource.PubDwh,
                 report_name="Brinson Based Attribution",
                 report_type=ReportType.Performance,
                 report_vertical=ReportVertical.ARS,
@@ -1566,8 +1595,72 @@ class BbaReport(ReportingRunnerBase):
 
         logging.info("Excel stored to DataLake for: " + acronym)
 
-    def run(self, **kwargs):
+    def generate_pfund_attributes(self):
+        df = self._gcm[self._gcm.Date == self._report_date][["InvestmentGroupName", "InvestmentGroupId", "Strategy"]].drop_duplicates()
+        gcm_strat = InvestmentGroup(investment_group_ids=df.InvestmentGroupId.astype("int").drop_duplicates().to_list()).get_strategies()
 
+        gcm_map = df.merge(gcm_strat, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
+
+        arbs = InvestmentGroup(
+            investment_group_ids=df.InvestmentGroupId.astype("int").drop_duplicates().to_list()
+        ).get_absolute_benchmarks()[["InvestmentGroupName", "BenchmarkName"]]
+
+        df_arb = gcm_map.merge(arbs, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
+
+        rpt_peer = self._strategy_benchmark.get_default_peer_benchmarks(
+            investment_group_names=df_arb.InvestmentGroupName.drop_duplicates().to_list()
+        )
+        df_arb_peer = (
+            df_arb[["InvestmentGroupName", "Strategy", "GcmStrategy", "GcmSubStrategy", "BenchmarkName"]]
+            .drop_duplicates()
+            .merge(rpt_peer, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
+        )
+
+        result = df_arb_peer[~df_arb_peer.BenchmarkName.isnull()].sort_values(["GcmStrategy", "InvestmentGroupName"])
+        # result.BenchmarkName = "'" + result.BenchmarkName.astype('str')
+        result = result[
+            [
+                "InvestmentGroupName",
+                "GcmStrategy",
+                "Strategy",
+                "EurekahedgeBenchmark",
+                "GcmSubStrategy",
+                "ReportingPeerGroup",
+                "BenchmarkName",
+            ]
+        ]
+        input_data = {
+            "attributes": result,
+            "asofdate": pd.DataFrame(
+                {"Date": [(self._report_date.replace(day=1) + dt.timedelta(days=31)).replace(day=1) - dt.timedelta(days=1)]}
+            ),
+        }
+
+        as_of_date = dt.datetime.combine(self._report_date + MonthEnd(1), dt.datetime.min.time())
+        with Scenario(asofdate=as_of_date).context():
+            InvestmentsReportRunner().execute(
+                data=input_data,
+                template="PFUND_Attributes_Template.xlsx",
+                save=True,
+                runner=self._runner,
+                entity_type=ReportingEntityTypes.cross_entity,
+                entity_name="Firm",
+                entity_display_name="Firm",
+                # entity_ids=[000000],
+                # entity_source=DaoSource.PubDwh,
+                report_name="PFUND Attributes",
+                report_type=ReportType.Performance,
+                report_vertical=ReportVertical.ARS,
+                report_frequency="Monthly",
+                aggregate_intervals=AggregateInterval.MTD,
+                # output_dir="cleansed/investmentsreporting/printedexcels/",
+                # report_output_source=DaoSource.DataLake,
+            )
+
+        logging.info("Excel stored to DataLake for: " + "Firm")
+
+    def run(self, **kwargs):
+        # self.generate_pfund_attributes()
         self.generate_firmwide_report()
 
         if not kwargs["firm_only"]:

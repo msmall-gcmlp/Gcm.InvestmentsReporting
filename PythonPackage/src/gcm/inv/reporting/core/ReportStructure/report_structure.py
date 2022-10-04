@@ -252,6 +252,10 @@ class ReportStructure(ABC):
                         cell_address = cell_address.replace("$", "")
                         # override wb:
                         wb = excel_io.write_dataframe_to_xl(wb, self.data[k], sheetname, cell_address)
+                print_areas = kwargs.get("print_areas", None)
+                if print_areas is not None:
+                    for k, v in print_areas.items():
+                        wb[k].print_area = v
             elif self._workbook is not None:
                 # we are in the case where
                 #   data is present already
