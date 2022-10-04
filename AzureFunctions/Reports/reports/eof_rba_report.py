@@ -239,9 +239,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
 
     @staticmethod
     def get_days_period_to_date(daily_returns, start_date, end_date):
-        returns_within_range = (pd.to_datetime(daily_returns.index).date >= start_date) & (
-            pd.to_datetime(daily_returns.index).date <= end_date
-        )
+        returns_within_range = (pd.to_datetime(daily_returns.index).date >= start_date) & (pd.to_datetime(daily_returns.index).date <= end_date)
         days_ptd = sum(returns_within_range)
         return days_ptd
 
@@ -272,9 +270,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
 
         annual_periods = _get_annual_periods(periodicity=periodicity)
         annualizing_factor = min(1, annual_periods / window)
-        rolling_returns = returns.rolling(window=window, min_periods=window).apply(
-            lambda x: np.nanprod(1 + x) ** (annualizing_factor) - 1
-        )
+        rolling_returns = returns.rolling(window=window, min_periods=window).apply(lambda x: np.nanprod(1 + x) ** (annualizing_factor) - 1)
         return rolling_returns
 
     def _get_factor_performance_tables(self):
@@ -302,9 +298,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             end_date=self._end_date,
         )
 
-        rolling_returns = self.calculate_rolling_geometric_returns(
-            returns=returns, window=days_ptd, periodicity=Periodicity.Daily
-        )
+        rolling_returns = self.calculate_rolling_geometric_returns(returns=returns, window=days_ptd, periodicity=Periodicity.Daily)
 
         current_ptd_return = rolling_returns.iloc[[-1]]
 
