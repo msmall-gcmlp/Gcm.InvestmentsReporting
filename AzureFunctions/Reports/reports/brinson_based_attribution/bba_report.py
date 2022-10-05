@@ -1041,6 +1041,11 @@ class BbaReport(ReportingRunnerBase):
         eh_default_peer.ReportingPeerGroup = np.where(
             eh_default_peer.ReportingPeerGroup.isnull(), eh_default_peer.EurekaGroupOverride, eh_default_peer.ReportingPeerGroup
         )
+        eh_default_peer.ReportingPeerGroup = np.where(
+            eh_default_peer.EurekaStrategy == 'CTA/Managed Futures',
+            'GCM Quant',
+            eh_default_peer.ReportingPeerGroup
+        )
 
         eh_result = eh_default_peer.merge(peer_to_strat_map, how="left", left_on="ReportingPeerGroup", right_on="ReportingPeerGroup")
         eh_result = eh_result.merge(
@@ -1660,7 +1665,7 @@ class BbaReport(ReportingRunnerBase):
         logging.info("Excel stored to DataLake for: " + "Firm")
 
     def run(self, **kwargs):
-        # self.generate_pfund_attributes()
+        self.generate_pfund_attributes()
         self.generate_firmwide_report()
 
         if not kwargs["firm_only"]:
