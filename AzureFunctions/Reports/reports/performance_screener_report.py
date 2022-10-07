@@ -11,7 +11,7 @@ from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from pandas._libs.tslibs.offsets import relativedelta
-from gcm.inv.quantlib.enum_source import Periodicity
+from gcm.inv.quantlib.enum_source import Periodicity, PeriodicROR
 from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
@@ -31,7 +31,7 @@ from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
 )
 
 
-class PeerRankingReport(ReportingRunnerBase):
+class PerformanceScreenerReport(ReportingRunnerBase):
     def __init__(self, peer_group, trailing_months=36):
         super().__init__(runner=Scenario.get_attribute("runner"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
@@ -41,17 +41,27 @@ class PeerRankingReport(ReportingRunnerBase):
         self._analytics = Analytics()
         self._strategy_benchmark = StrategyBenchmark()
         self._peer_group = peer_group
-        self._underlying_data_location = "raw/investmentsreporting/underlyingdata/xpfund_performance_quality"
-        self._summary_data_location = "raw/investmentsreporting/summarydata/xpfund_performance_quality"
+        self._underlying_data_location = "raw/investmentsreporting/underlyingdata/xpfund_performance_screener"
+        self._summary_data_location = "raw/investmentsreporting/summarydata/xpfund_performance_screener"
 
     @cached_property
     def _constituents(self):
         return self._get_peer_constituents()
 
     @cached_property
-    def _constituent_returns(self):
+    def _all_constituent_returns(self):
         inv_group_ids = self._constituents['InvestmentGroupId'].unique().tolist()
-        return self._get_constituent_returns(investment_group_ids=inv_group_ids)
+        returns = self._get_constituent_returns(investment_group_ids=inv_group_ids)
+        return returns
+
+    @cached_property
+    def _updated_constituent_returns(self, min_required_returns=18):
+        updated_funds = self._all_constituent_returns[-1:].dropna(axis=1).columns
+        returns = self._all_constituent_returns.loc[:, updated_funds]
+        sufficient_track = ~returns[-min_required_returns:].isna().any()
+        sufficient_track_funds = sufficient_track[sufficient_track].index.tolist()
+        returns = returns.loc[:, sufficient_track_funds]
+        return returns
 
     @cached_property
     def _absolute_benchmark_returns(self):
@@ -96,7 +106,7 @@ class PeerRankingReport(ReportingRunnerBase):
         dimensions = investment_group.get_dimensions()
         dimensions = dimensions[['InvestmentGroupId', 'InvestmentGroupName', 'InvestmentStatus']]
 
-        constituents = constituents.merge(dimensions, on=['InvestmentGroupId'], how='left')
+        constituents = constituents.merge(dimensions, on=['InvestmentGroupId'], how='inner')
 
         entities = EntityMaster().get_investment_entities()
         reporting_inv_names = self._get_altsoft_investment_names(entities)
@@ -132,51 +142,63 @@ class PeerRankingReport(ReportingRunnerBase):
         else:
             return pd.DataFrame()
 
-    def _get_annualized_return(self):
-        ror = self._analytics.compute_trailing_return(
-            ror=self._constituent_returns,
-            window=self._trailing_months,
+    def _calculate_annualized_return(self, returns):
+        ann_factor = np.minimum(1, 12 / returns.notna().sum())
+        cumulative_returns = self._analytics.compute_periodic_return(
+            ror=returns,
+            period=PeriodicROR.ITD,
             as_of_date=self._as_of_date,
             method="geometric",
-            periodicity=Periodicity.Monthly,
-            annualize=True,
         )
-        ror = ror.to_frame('Return')
+
+        annualized_returns = (1 + cumulative_returns) ** (ann_factor) - 1
+
+        ror = annualized_returns.to_frame('Return')
         return ror
 
+    def _get_annualized_return(self):
+        returns = self._calculate_annualized_return(returns=self._updated_constituent_returns)
+        return returns
+
     def _get_annualized_vol(self):
-        vol = self._analytics.compute_trailing_vol(
-            ror=self._constituent_returns,
-            window=self._trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-            annualize=True,
-        )
+        # vol = self._analytics.compute_trailing_vol(
+        #     ror=self._constituent_returns,
+        #     window=self._trailing_months,
+        #     as_of_date=self._as_of_date,
+        #     periodicity=Periodicity.Monthly,
+        #     annualize=True,
+        # )
+        vol = self._updated_constituent_returns.std() * np.sqrt(12)
         vol = vol.to_frame('Vol')
         return vol
 
     def _get_sharpe_ratio(self):
-        sharpe = self._analytics.compute_trailing_sharpe_ratio(
-            ror=self._constituent_returns,
-            rf_ror=self._rf_returns,
-            window=self._trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-        )
+        # sharpe = self._analytics.compute_trailing_sharpe_ratio(
+        #     ror=self._updated_constituent_returns,
+        #     rf_ror=self._rf_returns,
+        #     window=self._trailing_months,
+        #     as_of_date=self._as_of_date,
+        #     periodicity=Periodicity.Monthly,
+        # )
+        #
+        rf = (self._rf_returns.mean() * 12).squeeze()
+        excess_return = (self._get_annualized_return() - rf)
+        vol = self._get_annualized_vol()
+        sharpe = excess_return['Return'] / vol['Vol']
         sharpe = sharpe.to_frame('Sharpe')
         return sharpe
 
     def _get_return_in_peer_stress_months(self):
-        avg_peer_return = self._constituent_returns.median(axis=1)
+        avg_peer_return = self._updated_constituent_returns.median(axis=1)
         number_months = round(self._trailing_months * 0.10)
         worst_peer_months = avg_peer_return.sort_values()[0:number_months]
         worst_peer_dates = worst_peer_months.index.tolist()
-        peer_stress_ror = self._constituent_returns.loc[worst_peer_dates].mean(axis=0)
+        peer_stress_ror = self._updated_constituent_returns.loc[worst_peer_dates].mean(axis=0)
         peer_stress_ror = peer_stress_ror.to_frame('PeerStressRor')
         return peer_stress_ror
 
     def _get_max_1mo_return(self):
-        max_ror = self._constituent_returns.max(axis=0)
+        max_ror = self._updated_constituent_returns.max(axis=0)
         max_ror = max_ror.to_frame('MaxRor')
         return max_ror
 
@@ -184,11 +206,8 @@ class PeerRankingReport(ReportingRunnerBase):
     def _calculate_peer_rankings(standalone_metrics, relative_metrics):
         #TODO replace with Daivik ranking
         rankings = standalone_metrics.merge(relative_metrics, left_index=True, right_index=True)
-        rankings = rankings.reindex(['Sharpe', 'PeerStressRor', 'MaxRor', 'Excess', 'R2'], axis=1)
-        # low R2 is better
-        rankings['R2'] = -rankings['R2']
-        #rankings = rankings.apply(lambda x: (x - x.mean()) / x.std())
-        rankings = rankings.dropna()
+        rankings = rankings.reindex(['Sharpe', 'PeerStressRor', 'MaxRor', 'Excess'], axis=1)
+        # rankings = rankings.dropna()
         rankings = rankings.rank(axis=0, ascending=True)
         rankings = rankings.mean(axis=1).sort_values(ascending=True)
         rankings = rankings.reset_index().rename(columns={'index': 'InvestmentGroupName', 0: 'Points'})
@@ -211,21 +230,7 @@ class PeerRankingReport(ReportingRunnerBase):
         return header
 
     def build_constituent_count_summary(self):
-        def _get_peers_with_returns_in_ttm(returns):
-            return returns.notna()[-12:].any().sum()
-
-        def _get_peers_with_current_month_return(returns):
-            return returns.notna().sum(axis=1)[-1]
-
-        def _summarize_counts(returns):
-            if returns.shape[0] == 0:
-                return [np.nan, np.nan]
-
-            updated_constituents = _get_peers_with_current_month_return(returns)
-            active_constituents = _get_peers_with_returns_in_ttm(returns)
-            return [updated_constituents, active_constituents]
-
-        counts = _summarize_counts(returns=self._constituent_returns)
+        counts = [self._updated_constituent_returns.shape[1], self._constituents.shape[0]]
 
         counts = pd.DataFrame({'counts': counts})
         return counts
@@ -241,6 +246,7 @@ class PeerRankingReport(ReportingRunnerBase):
         summary = summary.merge(sharpe, how='left', left_index=True, right_index=True)
         summary = summary.merge(peer_stress_ror, how='left', left_index=True, right_index=True)
         summary = summary.merge(max_ror, how='left', left_index=True, right_index=True)
+        summary = summary.astype(float).round(2)
 
         return summary
 
@@ -248,32 +254,39 @@ class PeerRankingReport(ReportingRunnerBase):
         fund_return = self._get_annualized_return()
         fund_return.rename(columns={"Return": "Fund"}, inplace=True)
 
-        bmrk_return = self._analytics.compute_trailing_return(
-            ror=self._absolute_benchmark_returns,
-            window=self._trailing_months,
-            as_of_date=self._as_of_date,
-            method="geometric",
-            periodicity=Periodicity.Monthly,
-            annualize=True,
-        )
-        bmrk_return = bmrk_return.to_frame('Bmrk')
+        funds = self._updated_constituent_returns.columns
+        benchmark_returns = self._absolute_benchmark_returns.reindex(funds, axis=1)
+
+        benchmark_returns[self._updated_constituent_returns.isna()] = None
+
+        bmrk_return = self._calculate_annualized_return(returns=benchmark_returns)
+        bmrk_return.rename(columns={'Return': 'Bmrk'}, inplace=True)
+        # bmrk_return = self._analytics.compute_trailing_return(
+        #     ror=self._absolute_benchmark_returns,
+        #     window=self._trailing_months,
+        #     as_of_date=self._as_of_date,
+        #     method="geometric",
+        #     periodicity=Periodicity.Monthly,
+        #     annualize=True,
+        # )
+        # bmrk_return = bmrk_return.to_frame('Bmrk')
 
         fund_bmrk_return = fund_return.merge(bmrk_return, left_index=True, right_index=True)
         fund_bmrk_return['Excess'] = fund_bmrk_return['Fund'] - fund_bmrk_return['Bmrk']
         excess_return = fund_bmrk_return['Excess'].to_frame('Excess')
-        excess_return['Excess'] = excess_return['Excess'].round(2)
+        excess_return['Excess'] = excess_return['Excess'].astype(float).round(2)
         return excess_return
 
     def _get_arb_r_squared(self):
-        funds = self._constituent_returns.columns.tolist()
+        funds = self._updated_constituent_returns.columns.tolist()
         r2_summary = pd.DataFrame(index=funds)
         for fund in funds:
-            fund_return = self._constituent_returns[fund].to_frame('Fund')
+            fund_return = self._updated_constituent_returns[fund].to_frame('Fund')
             fund_return = fund_return.astype(float)
             if fund in self._absolute_benchmark_returns.columns:
                 bmrk_return = self._absolute_benchmark_returns[fund].to_frame('Bmrk')
                 data = fund_return.merge(bmrk_return, left_index=True, right_index=True)
-                correlation = data.corr(min_periods=self._trailing_months)
+                correlation = data.corr(min_periods=18)
                 r2 = correlation.loc['Fund', 'Bmrk'] ** 2
                 r2 = r2.round(2)
                 r2_summary.loc[fund, 'R2'] = r2
@@ -295,14 +308,7 @@ class PeerRankingReport(ReportingRunnerBase):
         rba = inv_group.get_rba_return_decomposition_by_date(
             start_date=self._start_date, end_date=self._end_date, frequency='M', window=36,
             factor_filter=['NON_FACTOR'])
-        excess = self._analytics.compute_trailing_return(
-            ror=rba,
-            window=self._trailing_months,
-            as_of_date=self._as_of_date,
-            method="geometric",
-            periodicity=Periodicity.Monthly,
-            annualize=True,
-        )
+        excess = self._calculate_annualized_return(returns=rba)
         excess = excess.reset_index()
         excess = excess[excess['AggLevel'] == 'NON_FACTOR']
         excess.columns = excess.columns[:-1].tolist() + ['Excess']
@@ -337,15 +343,10 @@ class PeerRankingReport(ReportingRunnerBase):
                                        'InvestmentGroupName': ['Quartile ' + str(x) for x in [1, 2, 3, 4]],
                                        'Quartile': [1, 2, 3, 4]})
         rankings = pd.concat([rankings, qtile_headings])
-        rows_to_pad = 0 #3000 - len(stats)
 
         summary = rankings.merge(stats, left_on=['InvestmentGroupName'], right_index=True, how='left')
         statuses = self._constituents[['InvestmentGroupName', 'InvestmentStatus']]
         summary = summary.merge(statuses, on='InvestmentGroupName', how='left')
-
-        summary = summary.set_index('InvestmentGroupName')
-        summary = summary.reindex(summary.index.tolist() + [''] * rows_to_pad)
-        summary = summary.reset_index()
 
         column_order = ['Rank', 'InvestmentGroupName'] + summary.columns[3:].tolist()
 
@@ -360,15 +361,13 @@ class PeerRankingReport(ReportingRunnerBase):
         return summary
 
     def build_omitted_fund_summary(self):
-        short_track_index = self._constituent_returns.count(axis=0) < 36
-        short_track_funds = short_track_index[short_track_index].index.tolist()
+        constituents = self._constituents['InvestmentGroupName']
+        modelled_constituents = self._updated_constituent_returns.columns.tolist()
+        omitted_constituents = constituents[~constituents.isin(modelled_constituents)].dropna().tolist()
+        omitted_constituents = sorted(omitted_constituents)
 
-        missing_mtd_index = self._constituent_returns.iloc[-1].isna()
-        missing_mtd_funds = missing_mtd_index[missing_mtd_index].index.tolist()
-
-        omitted_funds = sorted(list(set(short_track_funds) | set(missing_mtd_funds)))
-
-        omitted_fund_returns = self._constituent_returns.loc[:, omitted_funds]
+        returns = self._all_constituent_returns
+        omitted_fund_returns = returns.loc[:, returns.columns.isin(omitted_constituents)]
 
         last_return_date = omitted_fund_returns.apply(lambda x: x.last_valid_index())
         last_return_date = last_return_date.to_frame('LastReturnDate')
@@ -380,15 +379,16 @@ class PeerRankingReport(ReportingRunnerBase):
         partial_return = omitted_fund_returns.mean() * 12
         partial_return = partial_return.to_frame('PartialReturn')
 
-        summary = last_return_date.merge(return_count, left_index=True, right_index=True)
-        summary = summary.merge(partial_return, left_index=True, right_index=True)
+        summary = pd.DataFrame(index=omitted_constituents)
+        summary = summary.merge(last_return_date, left_index=True, right_index=True, how='left')
+        summary = summary.merge(return_count, left_index=True, right_index=True, how='left')
+        summary = summary.merge(partial_return, left_index=True, right_index=True, how='left')
 
-        rows_to_pad = 75 - len(summary)
-        summary = summary.reindex(summary.index.tolist() + [''] * rows_to_pad)
         summary = summary.reset_index()
+
         return summary
 
-    def generate_peer_ranking_report(self):
+    def generate_performance_screener_report(self):
         # if not self._validate_inputs():
         #     return 'Invalid inputs'
 
@@ -411,8 +411,10 @@ class PeerRankingReport(ReportingRunnerBase):
         summary_table = self.build_summary_table(rankings=rankings, stats=summary)
         omitted_funds = self.build_omitted_fund_summary()
 
-        max_row = 11 + summary_table.shape[0]
-        print_areas = {'Rankings': 'B1:Q' + str(max_row)}
+        rankings_max_row = 11 + summary_table.shape[0]
+        omitted_funds_max_row = 11 + omitted_funds.shape[0]
+        print_areas = {'Rankings': 'B1:Q' + str(rankings_max_row),
+                       'Omitted Funds': 'B1:E' + str(omitted_funds_max_row)}
 
         logging.info('Report summary data generated for: ' + self._peer_group)
 
@@ -452,7 +454,7 @@ class PeerRankingReport(ReportingRunnerBase):
         with Scenario(asofdate=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
-                template="XPFUND_PerformanceQuality_Template.xlsx",
+                template="XPFUND_Performance_Screener_Template.xlsx",
                 save=True,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.cross_entity,
@@ -460,7 +462,7 @@ class PeerRankingReport(ReportingRunnerBase):
                 entity_display_name=self._peer_group.replace("/", ""),
                 # entity_ids=[self._pub_investment_group_id.item()],
                 # entity_source=DaoSource.PubDwh,
-                report_name="XPFUND Performance Quality",
+                report_name="XPFUND Performance Screener",
                 report_type=ReportType.Performance,
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
@@ -473,5 +475,5 @@ class PeerRankingReport(ReportingRunnerBase):
         logging.info("Excel stored to DataLake for: " + self._peer_group)
 
     def run(self, **kwargs):
-        self.generate_peer_ranking_report()
+        self.generate_performance_screener_report()
         return True

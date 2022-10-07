@@ -1,10 +1,10 @@
 import datetime as dt
 from gcm.Scenario.scenario import Scenario
-from Reports.reports.peer_ranking_report import PeerRankingReport
+from Reports.reports.performance_screener_report import PerformanceScreenerReport
 from gcm.Dao.DaoRunner import DaoRunner
 
 
-class RunPeerRankingReport:
+class RunPerformanceScreenerReport:
 
     def __init__(self, as_of_date):
         self._runner = DaoRunner()
@@ -33,14 +33,19 @@ class RunPeerRankingReport:
         # )
         self._as_of_date = as_of_date
 
-    def run_peer_rankings(self, peer_groups):
+    def run_performance_screener(self, peer_groups):
         with Scenario(runner=self._runner, as_of_date=self._as_of_date).context():
             for peer_group in peer_groups:
-                peer_ranking = PeerRankingReport(peer_group=peer_group)
+                peer_ranking = PerformanceScreenerReport(peer_group=peer_group)
                 peer_ranking.execute()
         return True
 
 
 if __name__ == "__main__":
-    report_runner = RunPeerRankingReport(as_of_date=dt.date(2022, 4, 30))
-    report_runner.run_peer_rankings(peer_groups=['GCM Multi-PM'])
+    report_runner = RunPerformanceScreenerReport(as_of_date=dt.date(2022, 6, 30))
+    report_runner.run_performance_screener(peer_groups=['GCM Multi-PM',
+                                                        'GCM Equities',
+                                                        'GCM Credit',
+                                                        'GCM Diversifying Strategies',
+                                                        'GCM Macro',
+                                                        'GCM TMT'])
