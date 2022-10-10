@@ -469,7 +469,9 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         logging.info("JSON stored to DataLake for: " + self._peer_group)
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-        peer_display_name = self._peer_group.replace("/", "")
+
+        entity_name = self._peer_group.replace("/", "").replace("GCM ", "") + ' Peer'
+
         with Scenario(asofdate=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
@@ -477,10 +479,8 @@ class PerformanceScreenerReport(ReportingRunnerBase):
                 save=True,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.cross_entity,
-                entity_name=self._peer_group,
-                entity_display_name=peer_display_name,
-                # entity_ids=[self._pub_investment_group_id.item()],
-                # entity_source=DaoSource.PubDwh,
+                entity_name=entity_name,
+                entity_display_name=entity_name,
                 report_name="XPFUND Performance Screener",
                 report_type=ReportType.Performance,
                 report_vertical=ReportVertical.ARS,
@@ -499,7 +499,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
 
 if __name__ == "__main__":
-    peer_groups = ['GCM ESG Credit', "GCM Multi-PM", 'GCM Short Sellers', 'GCM Utilities']
+    peer_groups = ["GCM Multi-PM"]
     with Scenario(runner=DaoRunner(), as_of_date=dt.date(2022, 6, 30)).context():
         for peer_group in peer_groups:
             PerformanceScreenerReport(peer_group=peer_group).execute()
