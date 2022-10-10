@@ -469,7 +469,6 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         logging.info("JSON stored to DataLake for: " + self._peer_group)
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-
         entity_name = self._peer_group.replace("/", "").replace("GCM ", "") + ' Peer'
 
         with Scenario(asofdate=as_of_date).context():
