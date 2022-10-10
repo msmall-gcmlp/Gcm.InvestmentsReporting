@@ -102,9 +102,13 @@ class ReportingEntityTag(object):
     def to_metadata_tags(self):
         if self.get_entity_ids() is not None:
             list_of_ids = self.get_entity_ids()
-            if list_of_ids is not None:
+            list_of_ids = [x for x in list_of_ids if isinstance(x, int)]
+            if (list_of_ids is not None) and (len(list_of_ids) > 0):
                 metadata = json.dumps(list(map(lambda x: x, list_of_ids)))
                 return {f"gcm_{self.entity_type.name}_ids": metadata}
+
+        if self.entity_name is not None:
+            return {"gcm_entity_name": self.entity_name}
         return None
 
     def get_entity_ids(self):
