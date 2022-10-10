@@ -3,7 +3,7 @@ import logging
 import datetime as dt
 import numpy as np
 from functools import cached_property
-
+from gcm.Dao.DaoRunner import DaoRunner
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
@@ -41,7 +41,6 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         self._analytics = Analytics()
         self._strategy_benchmark = StrategyBenchmark()
         self._peer_group = peer_group
-        self._underlying_data_location = "raw/investmentsreporting/underlyingdata/xpfund_performance_screener"
         self._summary_data_location = "raw/investmentsreporting/summarydata/xpfund_performance_screener"
 
     @cached_property
@@ -451,6 +450,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         logging.info("JSON stored to DataLake for: " + self._peer_group)
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
+        peer_display_name = self._peer_group.replace("/", "")
         with Scenario(asofdate=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
@@ -459,7 +459,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.cross_entity,
                 entity_name=self._peer_group,
-                entity_display_name=self._peer_group.replace("/", ""),
+                entity_display_name=peer_display_name,
                 # entity_ids=[self._pub_investment_group_id.item()],
                 # entity_source=DaoSource.PubDwh,
                 report_name="XPFUND Performance Screener",
@@ -477,3 +477,10 @@ class PerformanceScreenerReport(ReportingRunnerBase):
     def run(self, **kwargs):
         self.generate_performance_screener_report()
         return True
+
+
+if __name__ == "__main__":
+    peer_groups = ['GCM Multi-PM', 'GCM Macro', 'GCM TMT']
+    with Scenario(runner=DaoRunner(), as_of_date=dt.date(2022, 6, 30)).context():
+        for peer_group in peer_groups:
+            PerformanceScreenerReport(peer_group=peer_group).execute()
