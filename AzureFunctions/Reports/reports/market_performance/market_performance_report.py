@@ -42,32 +42,33 @@ class MarketPerformanceReport(ReportingRunnerBase):
 
     def _get_return_summary(self, returns, column_name, method):
         returns = returns.copy()
+        asofdate = self._as_of_date
 
         mtd_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=PeriodicROR.MTD,
-            as_of_date=self._as_of_date,
+            as_of_date=asofdate,
             method=method,
         )
 
         qtd_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=PeriodicROR.QTD,
-            as_of_date=self._as_of_date,
+            as_of_date=asofdate,
             method=method,
         )
 
         ytd_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=PeriodicROR.YTD,
-            as_of_date=self._as_of_date,
+            as_of_date=asofdate,
             method=method,
         )
 
         trailing_1D_return = self._analytics.compute_trailing_return(
             ror=returns,
             window=1,
-            as_of_date=self._as_of_date,
+            as_of_date=asofdate,
             method=method,
             periodicity=Periodicity.Daily,
             annualize=False,
@@ -76,7 +77,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         trailing_week_return = self._analytics.compute_trailing_return(
             ror=returns,
             window=5,
-            as_of_date=self._as_of_date,
+            as_of_date=asofdate,
             method=method,
             periodicity=Periodicity.Daily,
             annualize=False,
@@ -85,7 +86,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         trailing_1y_return = self._analytics.compute_trailing_return(
             ror=returns,
             window=252,
-            as_of_date=self._as_of_date,
+            as_of_date=asofdate,
             method=method,
             periodicity=Periodicity.Daily,
             annualize=False,
@@ -108,29 +109,30 @@ class MarketPerformanceReport(ReportingRunnerBase):
         return summary
 
     def _getr_vol_adj_move(self, returns, column_name, method):
+        asofdate = self._as_of_date
 
         annualized_vol = self._analytics.compute_trailing_vol(
             ror=returns,
-            window=252,
-            as_of_date=self._as_of_date,
+            window=504,
+            as_of_date=asofdate,
             periodicity=Periodicity.Daily,
             annualize=True,
         )
         monthly_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=PeriodicROR.MTD,
-            as_of_date=self._as_of_date,
+            as_of_date=asofdate,
             method=method,
         )
 
         ytd_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=PeriodicROR.YTD,
-            as_of_date=self._as_of_date,
+            as_of_date=asofdate,
             method=method,
         )
         # Monthly Adju
-        mtd = monthly_return / (annualized_vol / math.sqrt(12))
+        mtd = monthly_return / ((annualized_vol * math.sqrt(asofdate.month)) / math.sqrt(12))
 
         ytd_vol = ytd_return / annualized_vol
 
@@ -144,22 +146,40 @@ class MarketPerformanceReport(ReportingRunnerBase):
         return summary
 
     def _max_ppt_ttm(self, returns, column, description, method):
+        asofdate = self._as_of_date
         if method == "arithmetic":
-            drawdown = self._analytics.compute_max_drawdown_on_price(
-                prices=self._daily_prices[column],
-                window=252,
-                as_of_date=self._as_of_date,
-                periodicity=Periodicity.Daily,
-            )
+            if 'Volatility' in description[0]:
+                drawdown = self._analytics.compute_max_troughtopeak_on_price(
+                    prices=self._daily_prices[column],
+                    window=252,
+                    as_of_date=asofdate,
+                    periodicity=Periodicity.Daily,
+                )
+            else:
+                drawdown = self._analytics.compute_max_drawdown_on_price(
+                    prices=self._daily_prices[column],
+                    window=252,
+                    as_of_date=asofdate,
+                    periodicity=Periodicity.Daily,
+                )
             drawdown = drawdown["Max PTT (TTM)"].values
-        else:
-            drawdown = self._analytics.compute_max_drawdown(
-                ror=returns,
-                window=252,
-                as_of_date=self._as_of_date,
-                periodicity=Periodicity.Daily,
-                drawdown_dates=False,
-            )
+        elif method == 'geometric':
+            if 'Volatility' in description[0]:
+                drawdown = self._analytics.compute_max_troughtopeak(
+                    ror=returns,
+                    window=252,
+                    as_of_date=asofdate,
+                    periodicity=Periodicity.Daily,
+                    drawdown_dates=False,
+                )
+            else:
+                drawdown = self._analytics.compute_max_drawdown(
+                    ror=returns,
+                    window=252,
+                    as_of_date=asofdate,
+                    periodicity=Periodicity.Daily,
+                    drawdown_dates=False,
+                )
         maxptt = pd.DataFrame(drawdown)
         maxptt.index = description
         maxptt.columns = ["Max PTT (TTM)"]
@@ -177,18 +197,19 @@ class MarketPerformanceReport(ReportingRunnerBase):
         method,
         period=PeriodicROR.MTD,
     ):
+        asofdate = self._as_of_date
 
         index_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=period,
-            as_of_date=self._as_of_date,
+            as_of_date=asofdate,
             method=method,
         )
 
         benchmark_return = self._analytics.compute_periodic_return(
             ror=benchmark_return,
             period=period,
-            as_of_date=self._as_of_date,
+            as_of_date=asofdate,
             method=method,
         )
         dif = np.around((index_return.values - benchmark_return.values), 3)
@@ -230,8 +251,8 @@ class MarketPerformanceReport(ReportingRunnerBase):
         tickers_subset = maping[maping["Category"] == category]
         mapping_dict = tickers_subset.set_index(["Ticker"])["description"].to_dict()
         price.rename(columns=mapping_dict, inplace=True)
+        price = price.fillna(method="ffill")
         last_price = price.tail(1).T
-        last_price = last_price.fillna(0).astype("float")
         last_price.columns = ["Last"]
         return last_price
 
@@ -239,8 +260,9 @@ class MarketPerformanceReport(ReportingRunnerBase):
 
         output_table = pd.DataFrame()
         returns_by_category = self._get_returns_by_category(category)
+        returns_by_category = returns_by_category.fillna(method="ffill")
         price_change_by_category = self._get_price_change_by_category(category)
-
+        price_change_by_category = price_change_by_category.fillna(method="ffill")
         combined_columns = set(returns_by_category.columns.append(price_change_by_category.columns))
         for column in combined_columns:
             transformation = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].Transformation.values
