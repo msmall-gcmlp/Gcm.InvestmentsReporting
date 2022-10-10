@@ -8,20 +8,7 @@ from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 class TestPeerRankingReport:
     @pytest.fixture
     def runner(self):
-        config_params = {
-            DaoRunnerConfigArgs.dao_global_envs.name: {
-                DaoSource.PubDwh.name: {
-                    "Environment": "dev",
-                    "Subscription": "nonprd",
-                },
-            }
-        }
-
-        runner = DaoRunner(
-            container_lambda=lambda b, i: b.config.from_dict(i),
-            config_params=config_params,
-        )
-        return runner
+        return DaoRunner()
 
     def test_peer_ranking_report(self, runner):
         with Scenario(runner=runner, as_of_date=dt.date(2022, 3, 31)).context():
@@ -35,11 +22,13 @@ class TestPeerRankingReport:
             rba_risk = peer_ranking_report.build_rba_risk_decomposition_summary()
 
         assert constituent_returns.shape[0] == 36
-        assert all(constituents.columns == ['PeerGroupName', 'SourceInvestmentId', 'SourceName',
-                                            'InvestmentGroupId', 'InvestmentGroupNodeId'])
+        assert all(constituents.columns == ['InvestmentGroupId',
+                                            'InvestmentGroupName',
+                                            'InvestmentName',
+                                            'InvestmentStatus'])
         assert all(standalone_metrics.columns == ['Return', 'Vol', 'Sharpe', 'PeerStressRor', 'MaxRor'])
         assert standalone_metrics.shape[0] > 0
-        assert all(relative_metrics.columns == ['Excess', 'R2'])
+        assert all(relative_metrics.columns == ['Excess', 'ExcessQtile', 'R2'])
         assert relative_metrics.shape[0] > 0
         assert all(rba_excess.columns == ['RbaAlpha', 'RbaAlphaQtile'])
         assert rba_excess.shape[0] > 0
