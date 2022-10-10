@@ -108,7 +108,7 @@ class ReportingEntityTag(object):
                 return {f"gcm_{self.entity_type.name}_ids": metadata}
 
         if self.entity_name is not None:
-            return {f"gcm_entity_name": self.entity_name}
+            return {"gcm_entity_name": self.entity_name}
         return None
 
     def get_entity_ids(self):
