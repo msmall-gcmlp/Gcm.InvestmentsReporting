@@ -174,6 +174,7 @@ class ReportStructure(ABC):
         report_vertical=ReportVertical.ARS,
         report_substrategy=None,
         report_consumers=None,
+        entity_name=None,
         **kwargs,
     ):
         self.data = data
@@ -183,6 +184,7 @@ class ReportStructure(ABC):
         self.gcm_report_type = report_type
 
         # gcm tags
+        self.gcm_entity_name = entity_name
         self.gcm_as_of_date = asofdate
         self.gcm_report_period = aggregate_intervals
         self.gcm_report_target_stage = stage
