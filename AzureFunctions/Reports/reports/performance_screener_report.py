@@ -55,7 +55,13 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
     @cached_property
     def _updated_constituent_returns(self, min_required_returns=18):
-        updated_funds = self._all_constituent_returns[-1:].dropna(axis=1).columns
+        as_of_month = dt.date(year=self._as_of_date.year, month=self._as_of_date.month, day=1)
+        as_of_month = pd.to_datetime(as_of_month)
+
+        if as_of_month not in self._all_constituent_returns.index:
+            return None
+
+        updated_funds = self._all_constituent_returns.loc[as_of_month].dropna().index
         returns = self._all_constituent_returns.loc[:, updated_funds]
         sufficient_track = ~returns[-min_required_returns:].isna().any()
         sufficient_track_funds = sufficient_track[sufficient_track].index.tolist()
@@ -209,6 +215,9 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         # rankings = rankings.dropna()
         rankings = rankings.rank(axis=0, ascending=True)
         rankings = rankings.mean(axis=1).sort_values(ascending=True)
+
+        # need to ensure no points are identical. randomly break ties
+        rankings = rankings + np.random.random(rankings.shape[0]) / 1e3
         rankings = rankings.reset_index().rename(columns={'index': 'InvestmentGroupName', 0: 'Points'})
         rankings['Quartile'] = pd.qcut(x=rankings['Points'], q=[0, 0.25, 0.50, 0.75, 1], labels=[4, 3, 2, 1])
         rankings['Rank'] = rankings['Points'].rank(pct=False, ascending=False)
@@ -296,6 +305,9 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         r_squared = self._get_arb_r_squared()
         summary = excess_return.merge(r_squared, how='left', left_index=True, right_index=True)
 
+        if summary.shape[1] == 1:
+            return pd.DataFrame(columns=['Excess', 'ExcessQtile', 'R2'], index=summary.index)
+
         summary['ExcessQtile'] = pd.qcut(x=summary['Excess'], q=[0, 0.25, 0.50, 0.75, 1], labels=[4, 3, 2, 1])
         summary['ExcessQtile'] = summary['ExcessQtile'].astype(float)
         summary = summary[['Excess', 'ExcessQtile', 'R2']]
@@ -315,6 +327,9 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         excess = excess[excess['AggLevel'] == 'NON_FACTOR'].drop(columns='AggLevel')
         excess = excess.set_index('InvestmentGroupName')
         excess.rename(columns={'Excess': 'RbaAlpha'}, inplace=True)
+
+        # need to ensure no points are identical. randomly break ties
+        excess['RbaAlpha'] = excess['RbaAlpha'] + np.random.random(excess.shape[0]) / 1e3
 
         quartiles = pd.qcut(x=excess['RbaAlpha'], q=[0, 0.25, 0.50, 0.75, 1], labels=[4, 3, 2, 1])
         quartiles.name = 'RbaAlphaQtile'
@@ -394,6 +409,10 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         logging.info("Generating report for: " + self._peer_group)
 
         header_info = self.get_header_info()
+
+        if self._updated_constituent_returns is None:
+            return "No peers have returns through as of date"
+
         constituent_counts = self.build_constituent_count_summary()
         standalone_metrics = self.build_standalone_metrics_summary()
         relative_metrics = self.build_absolute_return_benchmark_summary()
@@ -476,11 +495,11 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
     def run(self, **kwargs):
         self.generate_performance_screener_report()
-        return True
+        return self._peer_group + " Complete"
 
 
 if __name__ == "__main__":
-    peer_groups = ['GCM Multi-PM', 'GCM Macro', 'GCM TMT']
+    peer_groups = ['GCM ESG Credit', "GCM Multi-PM", 'GCM Short Sellers', 'GCM Utilities']
     with Scenario(runner=DaoRunner(), as_of_date=dt.date(2022, 6, 30)).context():
         for peer_group in peer_groups:
             PerformanceScreenerReport(peer_group=peer_group).execute()
