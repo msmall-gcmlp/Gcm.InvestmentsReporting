@@ -162,23 +162,20 @@ class MarketPerformanceReport(ReportingRunnerBase):
                     as_of_date=asofdate,
                     periodicity=Periodicity.Daily,
                 )
-            drawdown = drawdown["Max PTT (TTM)"].values
         elif method == 'geometric':
             if 'Volatility' in description[0]:
                 drawdown = self._analytics.compute_max_troughtopeak(
                     ror=returns,
                     window=252,
                     as_of_date=asofdate,
-                    periodicity=Periodicity.Daily,
-                    drawdown_dates=False,
+                    periodicity=Periodicity.Daily
                 )
             else:
                 drawdown = self._analytics.compute_max_drawdown(
                     ror=returns,
                     window=252,
                     as_of_date=asofdate,
-                    periodicity=Periodicity.Daily,
-                    drawdown_dates=False,
+                    periodicity=Periodicity.Daily
                 )
         maxptt = pd.DataFrame(drawdown)
         maxptt.index = description
