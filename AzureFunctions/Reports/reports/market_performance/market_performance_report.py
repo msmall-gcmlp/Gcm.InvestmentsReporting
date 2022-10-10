@@ -149,14 +149,14 @@ class MarketPerformanceReport(ReportingRunnerBase):
         asofdate = self._as_of_date
         if method == "arithmetic":
             if 'Volatility' in description[0]:
-                drawdown = self._analytics.compute_max_troughtopeak_on_price(
+                drawdown = self._analytics.compute_max_trough_to_peak_level_change(
                     prices=self._daily_prices[column],
                     window=252,
                     as_of_date=asofdate,
                     periodicity=Periodicity.Daily,
                 )
             else:
-                drawdown = self._analytics.compute_max_drawdown_on_price(
+                drawdown = self._analytics.compute_max_drawdown_level_change(
                     prices=self._daily_prices[column],
                     window=252,
                     as_of_date=asofdate,
@@ -164,7 +164,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 )
         elif method == 'geometric':
             if 'Volatility' in description[0]:
-                drawdown = self._analytics.compute_max_troughtopeak(
+                drawdown = self._analytics.compute_max_trough_to_peak(
                     ror=returns,
                     window=252,
                     as_of_date=asofdate,
