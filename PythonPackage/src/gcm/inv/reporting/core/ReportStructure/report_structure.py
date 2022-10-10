@@ -102,9 +102,13 @@ class ReportingEntityTag(object):
     def to_metadata_tags(self):
         if self.get_entity_ids() is not None:
             list_of_ids = self.get_entity_ids()
-            if list_of_ids is not None:
+            list_of_ids = [x for x in list_of_ids if isinstance(x, int)]
+            if (list_of_ids is not None) and (len(list_of_ids) > 0):
                 metadata = json.dumps(list(map(lambda x: x, list_of_ids)))
                 return {f"gcm_{self.entity_type.name}_ids": metadata}
+
+        if self.entity_name is not None:
+            return {f"gcm_entity_name": self.entity_name}
         return None
 
     def get_entity_ids(self):
@@ -174,7 +178,6 @@ class ReportStructure(ABC):
         report_vertical=ReportVertical.ARS,
         report_substrategy=None,
         report_consumers=None,
-        entity_name=None,
         **kwargs,
     ):
         self.data = data
@@ -184,7 +187,6 @@ class ReportStructure(ABC):
         self.gcm_report_type = report_type
 
         # gcm tags
-        self.gcm_entity_name = entity_name
         self.gcm_as_of_date = asofdate
         self.gcm_report_period = aggregate_intervals
         self.gcm_report_target_stage = stage
