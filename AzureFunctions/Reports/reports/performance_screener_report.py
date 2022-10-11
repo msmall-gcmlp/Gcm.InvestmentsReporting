@@ -454,10 +454,10 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         }
 
         data_to_write = json.dumps(input_data_json)
-        asofdate = self._as_of_date.strftime("%Y-%m-%d")
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
         write_params = AzureDataLakeDao.create_get_data_params(
             self._summary_data_location,
-            self._peer_group.replace("/", "") + asofdate + ".json",
+            self._peer_group.replace("/", "") + as_of_date + ".json",
             retry=False,
         )
         self._runner.execute(
@@ -471,7 +471,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         entity_name = self._peer_group.replace("/", "").replace("GCM ", "") + ' Peer'
 
-        with Scenario(asofdate=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="XPFUND_Performance_Screener_Template.xlsx",

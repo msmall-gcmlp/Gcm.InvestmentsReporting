@@ -35,7 +35,7 @@ class BaselReport(ReportingRunnerBase):
         return header
 
     def get_as_of_date(self):
-        header = pd.DataFrame({"asofdate": [self._as_of_date]})
+        header = pd.DataFrame({"as_of_date": [self._as_of_date]})
         return header
 
     def get_exposure_by_category(self):
@@ -167,11 +167,11 @@ class BaselReport(ReportingRunnerBase):
 
         input_data = dictfilt(input_data, wanted_keys)
         input_data["header_info"] = self.get_header_info()
-        input_data["asofdate"] = self.get_as_of_date()
+        input_data["as_of_date"] = self.get_as_of_date()
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         report_name = "Basel_Report_" + self._investment_name + "_" + self._as_of_date.strftime("%Y%m%d")
-        with Scenario(asofdate=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="Basel Template.xlsx",
