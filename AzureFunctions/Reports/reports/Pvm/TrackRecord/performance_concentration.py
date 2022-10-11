@@ -25,13 +25,13 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
     def __init__(
         self,
         runner: DaoRunner,
-        asofdate: dt.datetime,
+        as_of_date: dt.datetime,
         underwriting: str,
         managername: str,
         vertical: str,
     ):
         super().__init__(runner)
-        self.asofdate = asofdate
+        self.as_of_date = as_of_date
         self.underwriting = underwriting
         self.managername = managername
         self.vertical = vertical
@@ -148,7 +148,7 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
     def generate_performance_concentration_report(self, **kwargs):
         input_data = kwargs["data"]
         final = {
-            "AsOfDate": pd.DataFrame({"AsOfDate": [self.asofdate]}),
+            "AsOfDate": pd.DataFrame({"AsOfDate": [self.as_of_date]}),
             "ManagerName": pd.DataFrame({"ManagerName": [self.managername]}),
             "Vertical": pd.DataFrame({"Vertical": [self.vertical]}),
             "Underwriting": pd.DataFrame({"Underwriting": [self.underwriting]}),
@@ -158,7 +158,7 @@ class PerformanceConcentrationReport(ReportingRunnerBase):
             for k in temp:
                 final[k] = temp[k]
         assert final is not None
-        with Scenario(asofdate=self.asofdate).context():
+        with Scenario(as_of_date=self.as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=final,
                 template="Pvm.ReturnConcentration.xlsx",

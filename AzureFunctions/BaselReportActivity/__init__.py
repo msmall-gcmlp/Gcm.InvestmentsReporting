@@ -23,10 +23,10 @@ from gcm.Dao.Utils.tabular_data_util_outputs import (
 def main(requestBody) -> str:
     params = requestBody["params"]
     run = params["run"]
-    asofdate = params["asofdate"]
+    as_of_date = params["as_of_date"]
     balancedate = params["balancedate"]
     portfolio_name = params["portfolio_name"]
-    as_of_date = datetime.strptime(asofdate, "%Y-%m-%d").date()
+    as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
     balancedate = datetime.strptime(balancedate, "%Y-%m-%d").date()
     config_params = {
         DaoRunnerConfigArgs.dao_global_envs.name: {

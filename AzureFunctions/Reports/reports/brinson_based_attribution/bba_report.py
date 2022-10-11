@@ -1414,7 +1414,7 @@ class BbaReport(ReportingRunnerBase):
         }
 
         as_of_date = dt.datetime.combine(self._report_date + MonthEnd(1), dt.datetime.min.time())
-        with Scenario(asofdate=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="BBA_Template_Firm.xlsx",
@@ -1578,7 +1578,7 @@ class BbaReport(ReportingRunnerBase):
             "excess_return_total_eh": excess_return_total_eh,
         }
         as_of_date = dt.datetime.combine(self._report_date + MonthEnd(1), dt.datetime.min.time())
-        with Scenario(asofdate=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="BBA_Template_Portfolio.xlsx",
@@ -1636,13 +1636,13 @@ class BbaReport(ReportingRunnerBase):
         ]
         input_data = {
             "attributes": result,
-            "asofdate": pd.DataFrame(
+            "as_of_date": pd.DataFrame(
                 {"Date": [(self._report_date.replace(day=1) + dt.timedelta(days=31)).replace(day=1) - dt.timedelta(days=1)]}
             ),
         }
 
         as_of_date = dt.datetime.combine(self._report_date + MonthEnd(1), dt.datetime.min.time())
-        with Scenario(asofdate=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="PFUND_Attributes_Template.xlsx",

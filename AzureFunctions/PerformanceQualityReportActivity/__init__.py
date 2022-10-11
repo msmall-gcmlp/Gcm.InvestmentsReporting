@@ -17,8 +17,8 @@ from dateutil.relativedelta import relativedelta
 def main(requestBody) -> str:
     params = requestBody["params"]
     run = params["run"]
-    asofdate = params["asofdate"]
-    as_of_date = datetime.strptime(asofdate, "%Y-%m-%d").date()
+    as_of_date = params["as_of_date"]
+    as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
     runner = DaoRunner()
 
     if run == "PerformanceQualityReportData":

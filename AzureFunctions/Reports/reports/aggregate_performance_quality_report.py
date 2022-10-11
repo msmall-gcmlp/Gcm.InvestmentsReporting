@@ -182,7 +182,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
         }
 
         # as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-        # with Scenario(asofdate=as_of_date).context():
+        # with Scenario(as_of_date=as_of_date).context():
         #     InvestmentsReportRunner().execute(
         #         data=input_data,
         #         template="PFUND_PerformanceQuality_Template.xlsx",
@@ -199,7 +199,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
         #     )
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-        with Scenario(asofdate=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="PFUND_PerformanceQuality_Template.xlsx",
