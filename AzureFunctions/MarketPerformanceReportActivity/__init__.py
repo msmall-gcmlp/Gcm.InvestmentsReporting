@@ -26,7 +26,7 @@ def main(requestBody) -> str:
     run = params["run"]
     asofdate = params["asofdate"]
     as_of_date = datetime.strptime(asofdate, "%Y-%m-%d").date()
-    start_date = as_of_date - BDay(253)
+    start_date = as_of_date - BDay(505)
     runner = DaoRunner()
 
     if run == "RunMarketPerformanceQualityReportData":
