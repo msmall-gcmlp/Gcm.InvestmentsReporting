@@ -7,7 +7,7 @@ from Reports.reports.market_performance.market_performance_report import (
     MarketPerformanceReport,
 )
 from gcm.Dao.DaoRunner import DaoRunner
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeDao,
 )

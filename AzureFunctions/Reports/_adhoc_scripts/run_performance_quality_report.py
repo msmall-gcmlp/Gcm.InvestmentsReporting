@@ -1,7 +1,7 @@
 import datetime as dt
 import glob
 import json
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from pandas._libs.tslibs.offsets import relativedelta
 from gcm.inv.reporting.core.Utils.aggregate_file_utils import copy_metadata
 from Reports.reports.aggregate_performance_quality_report import AggregatePerformanceQualityReport

@@ -1,5 +1,5 @@
 from datetime import datetime
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from gcm.Dao.DaoRunner import DaoRunner
 from gcm.inv.quantlib.enum_source import PeriodicROR
 from Reports.reports.eof_rba_report import EofReturnBasedAttributionReport

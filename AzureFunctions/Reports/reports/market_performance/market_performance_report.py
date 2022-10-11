@@ -12,7 +12,7 @@ from gcm.inv.reporting.core.ReportStructure.report_structure import (
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.inv.reporting.core.reporting_runner_base import (

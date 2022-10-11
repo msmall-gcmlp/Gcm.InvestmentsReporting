@@ -1,4 +1,4 @@
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 import pytest
 import datetime as dt
 import pandas as pd

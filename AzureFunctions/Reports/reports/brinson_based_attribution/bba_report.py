@@ -24,7 +24,7 @@ from gcm.inv.reporting.core.Runners.investmentsreporting import (
 from gcm.inv.reporting.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 
 
 class BbaReport(ReportingRunnerBase):

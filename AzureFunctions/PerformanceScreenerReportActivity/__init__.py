@@ -1,5 +1,5 @@
 from datetime import datetime
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from gcm.Dao.DaoRunner import DaoRunner
 from Reports.reports.performance_screener_report import PerformanceScreenerReport
 

@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 import datetime as dt
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.dataprovider.investment_group import InvestmentGroup

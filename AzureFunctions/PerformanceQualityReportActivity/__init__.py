@@ -1,6 +1,6 @@
 import ast
 from datetime import datetime
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from Reports.reports.performance_quality_report_data import (
     PerformanceQualityReportData,
 )
