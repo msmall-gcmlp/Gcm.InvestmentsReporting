@@ -350,10 +350,10 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
 
     def _write_report_to_data_lake(self, input_data, input_data_json):
         data_to_write = json.dumps(input_data_json)
-        asofdate = self._as_of_date.strftime("%Y-%m-%d")
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
         write_params = AzureDataLakeDao.create_get_data_params(
             self._summary_data_location,
-            "EOF_" + self._periodicity.value + "_RBA_Report_" + asofdate + ".json",
+            "EOF_" + self._periodicity.value + "_RBA_Report_" + as_of_date + ".json",
             retry=False,
         )
         self._runner.execute(
@@ -365,7 +365,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         logging.info("JSON stored to DataLake for: " + "EOF_" + self._periodicity.value + "TD")
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-        with Scenario(asofdate=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="EOF RBA Template.xlsx",

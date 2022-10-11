@@ -8,7 +8,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     disct1 = {
         "params": {
             "run": "RunMarketPerformanceQualityReportData",
-            "asofdate": params["asofdate"],
+            "as_of_date": params["as_of_date"],
         },
     }
 

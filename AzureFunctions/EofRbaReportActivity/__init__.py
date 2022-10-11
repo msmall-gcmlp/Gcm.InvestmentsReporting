@@ -8,9 +8,9 @@ from Reports.reports.eof_rba_report import EofReturnBasedAttributionReport
 def main(requestBody) -> str:
     params = requestBody["params"]
     run = params["run"]
-    asofdate = params["asofdate"]
+    as_of_date = params["as_of_date"]
     periodicity = params["periodicity"]
-    as_of_date = datetime.strptime(asofdate, "%Y-%m-%d").date()
+    as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
     runner = DaoRunner()
 
     if periodicity == "ITD":

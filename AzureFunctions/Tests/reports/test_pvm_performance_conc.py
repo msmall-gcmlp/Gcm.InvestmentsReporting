@@ -40,7 +40,7 @@ class TestPerformanceQualityReport:
         data = {"all": file_all, "realized": file_realized}
         PerformanceConcentrationReport(
             runner,
-            asofdate=dt.datetime(2021, 9, 30),
+            as_of_date=dt.datetime(2021, 9, 30),
             managername="Ethos",
             vertical="Real Estate",
             underwriting="Fund IV",

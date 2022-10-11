@@ -46,16 +46,16 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
     @property
     def _peer_inputs(self):
         if self._peer_inputs_cache is None:
-            asofdate = self._as_of_date.strftime("%Y-%m-%d")
-            file = self._peer_group.replace("/", "") + "_peer_inputs_" + asofdate + ".json"
+            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+            file = self._peer_group.replace("/", "") + "_peer_inputs_" + as_of_date + ".json"
             self._peer_inputs_cache = self._download_inputs(file_name=file)
         return self._peer_inputs_cache
 
     @property
     def _market_factor_inputs(self):
         if self._market_factor_inputs_cache is None:
-            asofdate = self._as_of_date.strftime("%Y-%m-%d")
-            file = "market_factor_returns_" + asofdate + ".json"
+            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+            file = "market_factor_returns_" + as_of_date + ".json"
             self._market_factor_inputs_cache = self._download_inputs(file_name=file)
         return self._market_factor_inputs_cache
 
@@ -489,10 +489,10 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         }
 
         data_to_write = json.dumps(input_data_json)
-        asofdate = self._as_of_date.strftime("%Y-%m-%d")
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
         write_params = AzureDataLakeDao.create_get_data_params(
             self._summary_data_location,
-            self._peer_group.replace("/", "") + "_peer_" + asofdate + ".json",
+            self._peer_group.replace("/", "") + "_peer_" + as_of_date + ".json",
             retry=False,
         )
         self._runner.execute(
