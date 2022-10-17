@@ -1,5 +1,6 @@
 import pandas as pd
 import datetime as dt
+import calendar
 from gcm.Dao.DaoRunner import DaoRunner
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.dataprovider.entity_master import EntityMaster
@@ -11,8 +12,6 @@ from gcm.inv.quantlib.enum_source import Periodicity
 from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
 from gcm.inv.quantlib.peer_ranking.ranking import PeerRank
 from sklearn.preprocessing import MinMaxScaler
-from dateutil.relativedelta import relativedelta
-
 from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
 
 scaler = MinMaxScaler()
@@ -22,7 +21,8 @@ class PeerRankings(ReportingRunnerBase):
     def __init__(self):
         super().__init__(runner=Scenario.get_attribute("runner"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
-        self._end_date = self._as_of_date + relativedelta(months=1) - relativedelta(days=1)
+        self._end_date = dt.date(self._as_of_date.year, self._as_of_date.month,
+                                 calendar.monthrange(self._as_of_date.year, self._as_of_date.month)[1])
 
     def _get_pubdwh_benchmark_returns(self):
         def my_dao_operation(dao, params):
@@ -166,7 +166,7 @@ class PeerRankings(ReportingRunnerBase):
         config = {'equity_cols': [],
                   'macro_cols': [],
                   'signals': [],
-                  'end_month': as_of_date.strftime('%Y-%m-01'),
+                  'end_month': self._as_of_date.strftime('%Y-%m-01'),
                   'num_months': 36,
                   'min_months': 36,
                   'multi': True,

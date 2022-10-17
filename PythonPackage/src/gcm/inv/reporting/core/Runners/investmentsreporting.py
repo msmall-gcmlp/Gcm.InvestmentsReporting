@@ -1,4 +1,4 @@
-from gcm.ProgramRunner.programrunner import ProgramRunner, Scenario
+from gcm.ProgramRunner.programrunner import ProgramRunner
 from ..ReportStructure.report_structure import (
     ReportStructure,
     ReportTemplate,
@@ -14,11 +14,14 @@ from ..ReportStructure.report_structure import (
     ReportingEntityTypes,
 )
 from gcm.Dao.DaoSources import DaoSource
-
+from gcm.inv.scenario import Scenario
 
 class InvestmentsReportRunner(ProgramRunner):
     def __init__(self, config_params=None, container_lambda=None):
         super().__init__(config_params, container_lambda)
+
+    def _executing_in_scenario(self, **kwargs):
+        pass
 
     def base_container(self):
         return super().base_container()
@@ -41,7 +44,7 @@ class InvestmentsReportRunner(ProgramRunner):
                     df: pd.DataFrame = df
                 final_data[i] = df
         runner: DaoRunner = kwargs["runner"]
-        current_date: dt.datetime = Scenario.current_scenario().get_attribute("asofdate")
+        current_date: dt.datetime = Scenario.current_scenario().get_attribute("as_of_date")
         if "report_name" in kwargs:
             report = ReportStructure(asofdate=current_date, **kwargs)
             if "template" in kwargs:

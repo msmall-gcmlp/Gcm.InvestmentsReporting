@@ -12,6 +12,8 @@ from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from pandas._libs.tslibs.offsets import relativedelta
 from gcm.inv.quantlib.enum_source import Periodicity, PeriodicROR
+
+from Reports.reports.peer_rankings.peer_rankings import PeerRankings
 from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
@@ -207,20 +209,15 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         max_ror = max_ror.to_frame('MaxRor')
         return max_ror
 
-    @staticmethod
-    def _calculate_peer_rankings(standalone_metrics, relative_metrics):
-        #TODO replace with Daivik ranking
-        rankings = standalone_metrics.merge(relative_metrics, left_index=True, right_index=True)
-        rankings = rankings.reindex(['Sharpe', 'PeerStressRor', 'MaxRor', 'Excess'], axis=1)
-        # rankings = rankings.dropna()
-        rankings = rankings.rank(axis=0, ascending=True)
-        rankings = rankings.mean(axis=1).sort_values(ascending=True)
+    def _calculate_peer_rankings(self, standalone_metrics, relative_metrics):
+        rankings = PeerRankings().calculate_peer_rankings(peer_group_name=self._peer_group)
+        rankings.rename(columns={'rank': 'Rank'}, inplace=True)
+        inv_names = self._constituents[['InvestmentGroupName', 'InvestmentGroupId']].drop_duplicates()
+        rankings = rankings.merge(inv_names, how='left')
+        rankings = rankings[['InvestmentGroupId', 'InvestmentGroupName', 'Rank']]
 
-        # need to ensure no points are identical. randomly break ties
-        rankings = rankings + np.random.random(rankings.shape[0]) / 1e3
-        rankings = rankings.reset_index().rename(columns={'index': 'InvestmentGroupName', 0: 'Points'})
-        rankings['Quartile'] = pd.qcut(x=rankings['Points'], q=[0, 0.25, 0.50, 0.75, 1], labels=[4, 3, 2, 1])
-        rankings['Rank'] = rankings['Points'].rank(pct=False, ascending=False)
+        rankings['Quartile'] = pd.qcut(x=rankings['Rank'], q=[0, 0.25, 0.50, 0.75, 1], labels=[1, 2, 3, 4])
+        # rankings['Rank'] = rankings['Points'].rank(pct=False, ascending=False)
         rankings = rankings.sort_values(['Rank', 'InvestmentGroupName'], ascending=[True, True])
         rankings = rankings[['Rank', 'InvestmentGroupName', 'Quartile']]
         return rankings
@@ -471,7 +468,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         entity_name = self._peer_group.replace("/", "").replace("GCM ", "") + ' Peer'
 
-        with Scenario(as_of_date=as_of_date).context():
+        with Scenario(runner=DaoRunner(), as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="XPFUND_Performance_Screener_Template.xlsx",
@@ -499,6 +496,6 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
 if __name__ == "__main__":
     peer_groups = ["GCM Multi-PM"]
-    with Scenario(runner=DaoRunner(), as_of_date=dt.date(2022, 6, 30)).context():
+    with Scenario(runner=DaoRunner(), as_of_date=dt.date(2022, 5, 31)).context():
         for peer_group in peer_groups:
             PerformanceScreenerReport(peer_group=peer_group).execute()
