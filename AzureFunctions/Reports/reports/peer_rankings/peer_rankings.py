@@ -168,7 +168,7 @@ class PeerRankings(ReportingRunnerBase):
                   'signals': [],
                   'end_month': self._as_of_date.strftime('%Y-%m-01'),
                   'num_months': 36,
-                  'min_months': 36,
+                  'min_months': 18,
                   'multi': True,
                   'PGID': peer_group_name
                   }

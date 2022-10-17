@@ -209,13 +209,15 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         max_ror = max_ror.to_frame('MaxRor')
         return max_ror
 
-    def _calculate_peer_rankings(self, standalone_metrics, relative_metrics):
+    def _calculate_peer_rankings(self):
         rankings = PeerRankings().calculate_peer_rankings(peer_group_name=self._peer_group)
         rankings.rename(columns={'rank': 'Rank'}, inplace=True)
         inv_names = self._constituents[['InvestmentGroupName', 'InvestmentGroupId']].drop_duplicates()
         rankings = rankings.merge(inv_names, how='left')
         rankings = rankings[['InvestmentGroupId', 'InvestmentGroupName', 'Rank']]
 
+        # flip rankings
+        rankings['Rank'] = rankings['Rank'].rank(ascending=False)
         rankings['Quartile'] = pd.qcut(x=rankings['Rank'], q=[0, 0.25, 0.50, 0.75, 1], labels=[1, 2, 3, 4])
         # rankings['Rank'] = rankings['Points'].rank(pct=False, ascending=False)
         rankings = rankings.sort_values(['Rank', 'InvestmentGroupName'], ascending=[True, True])
@@ -413,8 +415,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         constituent_counts = self.build_constituent_count_summary()
         standalone_metrics = self.build_standalone_metrics_summary()
         relative_metrics = self.build_absolute_return_benchmark_summary()
-        rankings = self._calculate_peer_rankings(standalone_metrics=standalone_metrics,
-                                                 relative_metrics=relative_metrics)
+        rankings = self._calculate_peer_rankings()
 
         rba_excess_return_summary = self.build_rba_excess_return_summary()
         rba_risk_decomposition_summary = self.build_rba_risk_decomposition_summary()
@@ -495,7 +496,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
 
 if __name__ == "__main__":
-    peer_groups = ["GCM Multi-PM"]
+    peer_groups = ["GCM TMT"]
     with Scenario(runner=DaoRunner(), as_of_date=dt.date(2022, 5, 31)).context():
         for peer_group in peer_groups:
             PerformanceScreenerReport(peer_group=peer_group).execute()

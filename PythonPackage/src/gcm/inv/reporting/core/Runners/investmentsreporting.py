@@ -16,6 +16,7 @@ from ..ReportStructure.report_structure import (
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario
 
+
 class InvestmentsReportRunner(ProgramRunner):
     def __init__(self, config_params=None, container_lambda=None):
         super().__init__(config_params, container_lambda)
