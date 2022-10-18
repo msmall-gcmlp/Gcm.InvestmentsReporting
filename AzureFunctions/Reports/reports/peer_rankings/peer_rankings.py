@@ -49,6 +49,7 @@ class PeerRankings(ReportingRunnerBase):
                                         value_vars=peer_group_returns.columns,
                                         value_name='Return',
                                         var_name='InvestmentGroupId')
+        data_['PGID'] = peer_group_name
 
         benchmark_mapping = pd.read_csv(os.path.dirname(__file__) + "/peer_benchmark_mapping.csv")
         benchmark = benchmark_mapping[benchmark_mapping['GCM Peer Group'] == peer_group_name]['Benchmark 1'].squeeze()
