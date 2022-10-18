@@ -1,13 +1,13 @@
 import ast
 from datetime import datetime
 from gcm.inv.scenario import Scenario
-from Reports.reports.performance_quality_report_data import (
+from Reports.reports.performance_quality.performance_quality_report_data import (
     PerformanceQualityReportData,
 )
-from Reports.reports.performance_quality_peer_summary_report import (
+from Reports.reports.performance_quality.performance_quality_peer_summary_report import (
     PerformanceQualityPeerSummaryReport,
 )
-from Reports.reports.performance_quality_report import (
+from Reports.reports.performance_quality.performance_quality_report import (
     PerformanceQualityReport,
 )
 from gcm.Dao.DaoRunner import DaoRunner
