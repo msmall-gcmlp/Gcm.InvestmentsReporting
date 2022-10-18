@@ -16,7 +16,7 @@ from gcm.inv.reporting.core.ReportStructure.report_structure import (
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 
 
 class AggregatePerformanceQualityReport(ReportingRunnerBase):
@@ -182,7 +182,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
         }
 
         # as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-        # with Scenario(asofdate=as_of_date).context():
+        # with Scenario(as_of_date=as_of_date).context():
         #     InvestmentsReportRunner().execute(
         #         data=input_data,
         #         template="PFUND_PerformanceQuality_Template.xlsx",
@@ -199,7 +199,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
         #     )
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-        with Scenario(asofdate=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="PFUND_PerformanceQuality_Template.xlsx",

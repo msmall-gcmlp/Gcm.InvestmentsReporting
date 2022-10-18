@@ -3,7 +3,7 @@ import logging
 import datetime as dt
 import numpy as np
 from functools import cached_property
-from gcm.Dao.DaoRunner import DaoRunner
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
@@ -12,6 +12,8 @@ from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from pandas._libs.tslibs.offsets import relativedelta
 from gcm.inv.quantlib.enum_source import Periodicity, PeriodicROR
+
+from Reports.reports.peer_rankings.peer_rankings import PeerRankings
 from gcm.inv.reporting.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
@@ -20,7 +22,7 @@ from gcm.inv.reporting.core.ReportStructure.report_structure import (
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.inv.reporting.core.reporting_runner_base import (
     ReportingRunnerBase,
@@ -54,7 +56,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         return returns
 
     @cached_property
-    def _updated_constituent_returns(self, min_required_returns=18):
+    def _updated_constituent_returns(self, min_required_returns=24):
         as_of_month = dt.date(year=self._as_of_date.year, month=self._as_of_date.month, day=1)
         as_of_month = pd.to_datetime(as_of_month)
 
@@ -207,20 +209,18 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         max_ror = max_ror.to_frame('MaxRor')
         return max_ror
 
-    @staticmethod
-    def _calculate_peer_rankings(standalone_metrics, relative_metrics):
-        #TODO replace with Daivik ranking
-        rankings = standalone_metrics.merge(relative_metrics, left_index=True, right_index=True)
-        rankings = rankings.reindex(['Sharpe', 'PeerStressRor', 'MaxRor', 'Excess'], axis=1)
-        # rankings = rankings.dropna()
-        rankings = rankings.rank(axis=0, ascending=True)
-        rankings = rankings.mean(axis=1).sort_values(ascending=True)
+    def _calculate_peer_rankings(self):
+        rankings = PeerRankings().calculate_peer_rankings(peer_group_name=self._peer_group,
+                                                          peer_group_returns=self._updated_constituent_returns)
+        rankings.rename(columns={'rank': 'Rank', 'InvestmentGroupId': 'InvestmentGroupName'}, inplace=True)
+        inv_names = self._constituents[['InvestmentGroupName', 'InvestmentGroupId']].drop_duplicates()
+        rankings = rankings.merge(inv_names, how='left')
+        rankings = rankings[['InvestmentGroupId', 'InvestmentGroupName', 'Rank']]
 
-        # need to ensure no points are identical. randomly break ties
-        rankings = rankings + np.random.random(rankings.shape[0]) / 1e3
-        rankings = rankings.reset_index().rename(columns={'index': 'InvestmentGroupName', 0: 'Points'})
-        rankings['Quartile'] = pd.qcut(x=rankings['Points'], q=[0, 0.25, 0.50, 0.75, 1], labels=[4, 3, 2, 1])
-        rankings['Rank'] = rankings['Points'].rank(pct=False, ascending=False)
+        # flip rankings
+        rankings['Rank'] = rankings['Rank'].rank(ascending=False)
+        rankings['Quartile'] = pd.qcut(x=rankings['Rank'], q=[0, 0.25, 0.50, 0.75, 1], labels=[1, 2, 3, 4])
+        # rankings['Rank'] = rankings['Points'].rank(pct=False, ascending=False)
         rankings = rankings.sort_values(['Rank', 'InvestmentGroupName'], ascending=[True, True])
         rankings = rankings[['Rank', 'InvestmentGroupName', 'Quartile']]
         return rankings
@@ -294,7 +294,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
             if fund in self._absolute_benchmark_returns.columns:
                 bmrk_return = self._absolute_benchmark_returns[fund].to_frame('Bmrk')
                 data = fund_return.merge(bmrk_return, left_index=True, right_index=True)
-                correlation = data.corr(min_periods=18)
+                correlation = data.corr(min_periods=24)
                 r2 = correlation.loc['Fund', 'Bmrk'] ** 2
                 r2 = r2.round(2)
                 r2_summary.loc[fund, 'R2'] = r2
@@ -416,8 +416,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         constituent_counts = self.build_constituent_count_summary()
         standalone_metrics = self.build_standalone_metrics_summary()
         relative_metrics = self.build_absolute_return_benchmark_summary()
-        rankings = self._calculate_peer_rankings(standalone_metrics=standalone_metrics,
-                                                 relative_metrics=relative_metrics)
+        rankings = self._calculate_peer_rankings()
 
         rba_excess_return_summary = self.build_rba_excess_return_summary()
         rba_risk_decomposition_summary = self.build_rba_risk_decomposition_summary()
@@ -454,10 +453,10 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         }
 
         data_to_write = json.dumps(input_data_json)
-        asofdate = self._as_of_date.strftime("%Y-%m-%d")
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
         write_params = AzureDataLakeDao.create_get_data_params(
             self._summary_data_location,
-            self._peer_group.replace("/", "") + asofdate + ".json",
+            self._peer_group.replace("/", "") + as_of_date + ".json",
             retry=False,
         )
         self._runner.execute(
@@ -471,7 +470,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         entity_name = self._peer_group.replace("/", "").replace("GCM ", "") + ' Peer'
 
-        with Scenario(asofdate=as_of_date).context():
+        with Scenario(runner=DaoRunner(), as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="XPFUND_Performance_Screener_Template.xlsx",
@@ -498,7 +497,64 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
 
 if __name__ == "__main__":
+    peer_groups = ["GCM Asia",
+                   #"GCM Asia Credit",
+                   "GCM Asia Equity",
+                   #"GCM Asia Macro",
+                   "GCM China",
+                   #"GCM Commodities",
+                   "GCM Consumer",
+                   "GCM Credit",
+                   "GCM Cross Cap",
+                   "GCM Diverse",
+                   "GCM Diversifying Strategies",
+                   # "GCM DS Alternative Trend",
+                   # "GCM DS CTA",
+                   # "GCM DS Multi-Strategy",
+                   # "GCM DS Traditional CTA",
+                   "GCM Emerging Market Credit",
+                   "GCM Energy",
+                   # "GCM EOF Comps",
+                   "GCM Equities",
+                   # "GCM Equity plus MN Quant",
+                   # "GCM ESG",
+                   # "GCM ESG Credit",
+                   "GCM Europe Credit",
+                   "GCM Europe Equity",
+                   "GCM Financials",
+                   "GCM Fundamental Credit",
+                   "GCM Generalist Long/Short Equity",
+                   "GCM Healthcare",
+                   "GCM Illiquid Credit",
+                   # "GCM India",
+                   "GCM Industrials",
+                   "GCM Japan",
+                   "GCM Long Only Equity",
+                   "GCM Long/Short Credit",
+                   "GCM Macro",
+                   "GCM Merger Arbitrage",
+                   "GCM Multi-PM",
+                   "GCM Multi-Strategy",
+                   "GCM Quant",
+                   "GCM Real Estate",
+                   "GCM Relative Value",
+                   "GCM Short Sellers",
+                   "GCM Structured Credit",
+                   "GCM TMT",
+                   "GCM Utilities",
+                   ]
     peer_groups = ["GCM Multi-PM"]
-    with Scenario(runner=DaoRunner(), as_of_date=dt.date(2022, 6, 30)).context():
+    runner = DaoRunner(
+            container_lambda=lambda b, i: b.config.from_dict(i),
+            config_params={
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.InvestmentsDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                }
+            })
+
+    with Scenario(runner=runner, as_of_date=dt.date(2022, 6, 30)).context():
         for peer_group in peer_groups:
             PerformanceScreenerReport(peer_group=peer_group).execute()

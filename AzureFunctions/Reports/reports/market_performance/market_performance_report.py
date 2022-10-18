@@ -12,7 +12,7 @@ from gcm.inv.reporting.core.ReportStructure.report_structure import (
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.inv.reporting.core.reporting_runner_base import (
@@ -42,33 +42,33 @@ class MarketPerformanceReport(ReportingRunnerBase):
 
     def _get_return_summary(self, returns, column_name, method):
         returns = returns.copy()
-        asofdate = self._as_of_date
+        as_of_date = self._as_of_date
 
         mtd_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=PeriodicROR.MTD,
-            as_of_date=asofdate,
+            as_of_date=as_of_date,
             method=method,
         )
 
         qtd_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=PeriodicROR.QTD,
-            as_of_date=asofdate,
+            as_of_date=as_of_date,
             method=method,
         )
 
         ytd_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=PeriodicROR.YTD,
-            as_of_date=asofdate,
+            as_of_date=as_of_date,
             method=method,
         )
 
         trailing_1D_return = self._analytics.compute_trailing_return(
             ror=returns,
             window=1,
-            as_of_date=asofdate,
+            as_of_date=as_of_date,
             method=method,
             periodicity=Periodicity.Daily,
             annualize=False,
@@ -77,7 +77,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         trailing_week_return = self._analytics.compute_trailing_return(
             ror=returns,
             window=5,
-            as_of_date=asofdate,
+            as_of_date=as_of_date,
             method=method,
             periodicity=Periodicity.Daily,
             annualize=False,
@@ -86,7 +86,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         trailing_1y_return = self._analytics.compute_trailing_return(
             ror=returns,
             window=252,
-            as_of_date=asofdate,
+            as_of_date=as_of_date,
             method=method,
             periodicity=Periodicity.Daily,
             annualize=False,
@@ -109,30 +109,30 @@ class MarketPerformanceReport(ReportingRunnerBase):
         return summary
 
     def _getr_vol_adj_move(self, returns, column_name, method):
-        asofdate = self._as_of_date
+        as_of_date = self._as_of_date
 
         annualized_vol = self._analytics.compute_trailing_vol(
             ror=returns,
             window=504,
-            as_of_date=asofdate,
+            as_of_date=as_of_date,
             periodicity=Periodicity.Daily,
             annualize=True,
         )
         monthly_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=PeriodicROR.MTD,
-            as_of_date=asofdate,
+            as_of_date=as_of_date,
             method=method,
         )
 
         ytd_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=PeriodicROR.YTD,
-            as_of_date=asofdate,
+            as_of_date=as_of_date,
             method=method,
         )
         # Monthly Adju
-        mtd = monthly_return / ((annualized_vol * math.sqrt(asofdate.month)) / math.sqrt(12))
+        mtd = monthly_return / ((annualized_vol * math.sqrt(as_of_date.month)) / math.sqrt(12))
 
         ytd_vol = ytd_return / annualized_vol
 
@@ -146,20 +146,20 @@ class MarketPerformanceReport(ReportingRunnerBase):
         return summary
 
     def _max_ppt_ttm(self, returns, column, description, method):
-        asofdate = self._as_of_date
+        as_of_date = self._as_of_date
         if method == "arithmetic":
             if 'Volatility' in description[0]:
                 drawdown = self._analytics.compute_max_trough_to_peak_level_change(
                     prices=self._daily_prices[column],
                     window=252,
-                    as_of_date=asofdate,
+                    as_of_date=as_of_date,
                     periodicity=Periodicity.Daily,
                 )
             else:
                 drawdown = self._analytics.compute_max_drawdown_level_change(
                     prices=self._daily_prices[column],
                     window=252,
-                    as_of_date=asofdate,
+                    as_of_date=as_of_date,
                     periodicity=Periodicity.Daily,
                 )
         elif method == 'geometric':
@@ -167,14 +167,14 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 drawdown = self._analytics.compute_max_trough_to_peak(
                     ror=returns,
                     window=252,
-                    as_of_date=asofdate,
+                    as_of_date=as_of_date,
                     periodicity=Periodicity.Daily
                 )
             else:
                 drawdown = self._analytics.compute_max_drawdown(
                     ror=returns,
                     window=252,
-                    as_of_date=asofdate,
+                    as_of_date=as_of_date,
                     periodicity=Periodicity.Daily
                 )
         maxptt = pd.DataFrame(drawdown)
@@ -194,19 +194,19 @@ class MarketPerformanceReport(ReportingRunnerBase):
         method,
         period=PeriodicROR.MTD,
     ):
-        asofdate = self._as_of_date
+        as_of_date = self._as_of_date
 
         index_return = self._analytics.compute_periodic_return(
             ror=returns,
             period=period,
-            as_of_date=asofdate,
+            as_of_date=as_of_date,
             method=method,
         )
 
         benchmark_return = self._analytics.compute_periodic_return(
             ror=benchmark_return,
             period=period,
-            as_of_date=asofdate,
+            as_of_date=as_of_date,
             method=method,
         )
         dif = np.around((index_return.values - benchmark_return.values), 3)
@@ -441,7 +441,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
         }
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-        with Scenario(asofdate=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="Market Performance_Template.xlsx",

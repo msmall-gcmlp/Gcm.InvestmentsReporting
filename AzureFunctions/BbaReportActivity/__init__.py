@@ -1,5 +1,5 @@
 from datetime import datetime
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from gcm.Dao.DaoRunner import DaoRunner
 from Reports.reports.brinson_based_attribution.bba_report import BbaReport
 
@@ -10,10 +10,10 @@ def main(requestBody) -> str:
     if acronyms is not None:
         acronyms = acronyms.split(",")
 
-    asofdate = params["asofdate"]
+    as_of_date = params["as_of_date"]
     firm_only = params.get("firm_only", 0)
 
-    as_of_date = datetime.strptime(asofdate, "%Y-%m-%d").date()
+    as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
     runner = DaoRunner()
 
     with Scenario(runner=runner, as_of_date=as_of_date).context():

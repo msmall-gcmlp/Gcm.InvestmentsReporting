@@ -1,7 +1,7 @@
 import pytest
 import datetime as dt
-from gcm.Scenario.scenario import Scenario
-from Reports.reports.performance_screener_report import PerformanceScreenerReport
+from gcm.inv.scenario import Scenario
+from Reports.reports.peer_rankings.performance_screener_report import PerformanceScreenerReport
 from gcm.Dao.DaoRunner import DaoRunner
 
 

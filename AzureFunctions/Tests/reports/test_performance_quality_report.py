@@ -1,12 +1,12 @@
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 import pytest
 import datetime as dt
 import pandas as pd
 import ast
 
-from Reports.reports.performance_quality_peer_summary_report import PerformanceQualityPeerSummaryReport
-from Reports.reports.performance_quality_report import PerformanceQualityReport
-from Reports.reports.performance_quality_report_data import PerformanceQualityReportData
+from Reports.reports.performance_quality.performance_quality_peer_summary_report import PerformanceQualityPeerSummaryReport
+from Reports.reports.performance_quality.performance_quality_report import PerformanceQualityReport
+from Reports.reports.performance_quality.performance_quality_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 
 

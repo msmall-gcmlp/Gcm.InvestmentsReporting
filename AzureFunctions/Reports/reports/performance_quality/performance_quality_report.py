@@ -16,7 +16,7 @@ from gcm.inv.reporting.core.ReportStructure.report_structure import (
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
@@ -52,8 +52,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _fund_inputs(self):
-        asofdate = self._as_of_date.strftime("%Y-%m-%d")
-        file = self._fund_name.replace("/", "") + "_fund_inputs_" + asofdate + ".json"
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+        file = self._fund_name.replace("/", "") + "_fund_inputs_" + as_of_date + ".json"
         inputs = self._download_inputs(location=self._underlying_data_location, file_path=file)
         return inputs
 
@@ -145,8 +145,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _market_factor_returns(self):
-        asofdate = self._as_of_date.strftime("%Y-%m-%d")
-        file = "market_factor_returns_" + asofdate + ".json"
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+        file = "market_factor_returns_" + as_of_date + ".json"
         market_factor_inputs = self._download_inputs(
             location=self._underlying_data_location, file_path=file
         )
@@ -208,8 +208,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _primary_peer_inputs(self):
         if self._primary_peer_group is not None:
-            asofdate = self._as_of_date.strftime("%Y-%m-%d")
-            file = self._primary_peer_group.replace("/", "") + "_peer_inputs_" + asofdate + ".json"
+            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+            file = self._primary_peer_group.replace("/", "") + "_peer_inputs_" + as_of_date + ".json"
             primary_peer_inputs = self._download_inputs(
                 location=self._underlying_data_location, file_path=file
             )
@@ -220,8 +220,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _secondary_peer_inputs(self):
         if self._secondary_peer_group is not None:
-            asofdate = self._as_of_date.strftime("%Y-%m-%d")
-            file = self._secondary_peer_group.replace("/", "") + "_peer_inputs_" + asofdate + ".json"
+            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+            file = self._secondary_peer_group.replace("/", "") + "_peer_inputs_" + as_of_date + ".json"
             secondary_peer_inputs = self._download_inputs(
                 location=self._underlying_data_location, file_path=file
             )
@@ -273,8 +273,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _eurekahedge_inputs(self):
         if self._eurekahedge_benchmark is not None:
-            asofdate = self._as_of_date.strftime("%Y-%m-%d")
-            file = self._eurekahedge_benchmark.replace("/", "") + "_eurekahedge_inputs_" + asofdate + ".json"
+            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+            file = self._eurekahedge_benchmark.replace("/", "") + "_eurekahedge_inputs_" + as_of_date + ".json"
             eurekahedge_inputs = self._download_inputs(
                 location=self._underlying_data_location, file_path=file
             )
@@ -284,8 +284,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _eurekahedge200_inputs(self):
-        asofdate = self._as_of_date.strftime("%Y-%m-%d")
-        file = "Eurekahedge Institutional 200" + "_eurekahedge_inputs_" + asofdate + ".json"
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+        file = "Eurekahedge Institutional 200" + "_eurekahedge_inputs_" + as_of_date + ".json"
         eurekahedge200_inputs = self._download_inputs(
             location=self._underlying_data_location, file_path=file
         )
@@ -1446,8 +1446,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def build_performance_stability_peer_summary(self):
         if self._primary_peer_group is not None:
-            asofdate = self._as_of_date.strftime("%Y-%m-%d")
-            file = self._primary_peer_group.replace("/", "") + "_peer_" + asofdate + ".json"
+            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+            file = self._primary_peer_group.replace("/", "") + "_peer_" + as_of_date + ".json"
             summary = self._download_inputs(location=self._summary_data_location, file_path=file)
             summary = pd.read_json(
                 summary["performance_stability_peer_summary"],
@@ -1643,10 +1643,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         }
 
         data_to_write = json.dumps(input_data_json)
-        asofdate = self._as_of_date.strftime("%Y-%m-%d")
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
         write_params = AzureDataLakeDao.create_get_data_params(
             self._summary_data_location,
-            self._fund_name.replace("/", "") + "_fund_" + asofdate + ".json",
+            self._fund_name.replace("/", "") + "_fund_" + as_of_date + ".json",
             retry=False,
         )
         self._runner.execute(
@@ -1660,7 +1660,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         pub_id = self._pub_investment_group_id.item()
 
-        with Scenario(asofdate=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="PFUND_PerformanceQuality_Template.xlsx",

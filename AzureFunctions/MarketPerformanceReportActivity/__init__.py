@@ -7,7 +7,7 @@ from Reports.reports.market_performance.market_performance_report import (
     MarketPerformanceReport,
 )
 from gcm.Dao.DaoRunner import DaoRunner
-from gcm.Scenario.scenario import Scenario
+from gcm.inv.scenario import Scenario
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeDao,
 )
@@ -24,8 +24,8 @@ from gcm.Dao.Utils.tabular_data_util_outputs import (
 def main(requestBody) -> str:
     params = requestBody["params"]
     run = params["run"]
-    asofdate = params["asofdate"]
-    as_of_date = datetime.strptime(asofdate, "%Y-%m-%d").date()
+    as_of_date = params["as_of_date"]
+    as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
     start_date = as_of_date - BDay(505)
     runner = DaoRunner()
 
