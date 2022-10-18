@@ -210,8 +210,9 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         return max_ror
 
     def _calculate_peer_rankings(self):
-        rankings = PeerRankings().calculate_peer_rankings(peer_group_name=self._peer_group)
-        rankings.rename(columns={'rank': 'Rank'}, inplace=True)
+        rankings = PeerRankings().calculate_peer_rankings(peer_group_name=self._peer_group,
+                                                          peer_group_returns=self._updated_constituent_returns)
+        rankings.rename(columns={'rank': 'Rank', 'InvestmentGroupId': 'InvestmentGroupName'}, inplace=True)
         inv_names = self._constituents[['InvestmentGroupName', 'InvestmentGroupId']].drop_duplicates()
         rankings = rankings.merge(inv_names, how='left')
         rankings = rankings[['InvestmentGroupId', 'InvestmentGroupName', 'Rank']]

@@ -1,12 +1,8 @@
 import pandas as pd
 import datetime as dt
 import calendar
-from gcm.Dao.DaoRunner import DaoRunner
 from gcm.Dao.DaoSources import DaoSource
-from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.inv.dataprovider.factor import Factor
-from gcm.inv.dataprovider.investment_group import InvestmentGroup
-from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
 from gcm.inv.scenario import Scenario
 from gcm.inv.quantlib.enum_source import Periodicity
 from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
@@ -46,35 +42,12 @@ class PeerRankings(ReportingRunnerBase):
         )
         return df
 
-    def _get_peer_returns(self, peer_group_name):
-        constituents = StrategyBenchmark().get_altsoft_peer_constituents(peer_names=peer_group_name)
-        ids = constituents['InvestmentGroupId']
-        investment_group = InvestmentGroup(investment_group_ids=ids)
-        dimensions = investment_group.get_dimensions()
-        dimensions = dimensions[['InvestmentGroupId', 'InvestmentGroupName', 'InvestmentStatus']]
-
-        constituents = constituents.merge(dimensions, on=['InvestmentGroupId'], how='inner')
-
-        entities = EntityMaster().get_investment_entities()
-        alt_soft_entities = entities[entities['SourceName'].str.contains('AltSoft.')]
-        alt_soft_entities = alt_soft_entities[alt_soft_entities['IsReportingInvestment']]
-        reporting_inv_names = alt_soft_entities[['InvestmentName', 'InvestmentGroupName']]
-        constituents = constituents.merge(reporting_inv_names, on=['InvestmentGroupName'], how='left')
-
-        constituents = constituents[
-            ['InvestmentGroupId', 'InvestmentGroupName', 'InvestmentName', 'InvestmentStatus']]
-        constituents = constituents.drop_duplicates()
-        inv_group_ids = constituents['InvestmentGroupId'].unique().tolist()
-
-        investment_group = InvestmentGroup(investment_group_ids=inv_group_ids)
-        returns = investment_group.get_monthly_returns(start_date=dt.date(2015, 1, 1),
-                                                       end_date=self._end_date,
-                                                       wide=False)
-        returns = returns.rename(columns={'Ror': 'Return'})
-        return returns
-
-    def _build_data(self, peer_group_name):
-        data_ = self._get_peer_returns(peer_group_name=peer_group_name)
+    def _build_data(self, peer_group_name, peer_group_returns):
+        peer_group_returns = peer_group_returns.reset_index()
+        data_ = peer_group_returns.melt(id_vars=['Date'],
+                                        value_vars=peer_group_returns.columns,
+                                        value_name='Return',
+                                        var_name='InvestmentGroupId')
 
         benchmark_mapping = pd.read_csv('peer_benchmark_mapping.csv')
         benchmark = benchmark_mapping[benchmark_mapping['GCM Peer Group'] == peer_group_name]['Benchmark 1'].squeeze()
@@ -159,8 +132,9 @@ class PeerRankings(ReportingRunnerBase):
 
         return macro_factor_returns
 
-    def calculate_peer_rankings(self, peer_group_name):
-        data_ = self._build_data(peer_group_name=peer_group_name)
+    def calculate_peer_rankings(self, peer_group_name, peer_group_returns):
+        data_ = self._build_data(peer_group_name=peer_group_name,
+                                 peer_group_returns=peer_group_returns)
         equity_factor_returns = self._get_equity_factor_returns()
         macro_factor_returns = self._get_macro_factor_returns()
         config = {'equity_cols': [],
@@ -182,14 +156,4 @@ class PeerRankings(ReportingRunnerBase):
         return ranks
 
     def run(self, **kwargs):
-        self.calculate_peer_rankings(peer_group_name=peer_group_name)
-        return True
-
-
-if __name__ == '__main__':
-    peer_group_name = 'GCM Long/Short Credit'
-    as_of_date = dt.date(2022, 5, 1)
-    runner = DaoRunner()
-
-    with Scenario(runner=runner, as_of_date=as_of_date).context():
-        PeerRankings().execute(peer_group_name=peer_group_name)
+        return self.calculate_peer_rankings(**kwargs)
