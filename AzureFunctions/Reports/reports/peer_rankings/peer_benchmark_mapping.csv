@@ -4,11 +4,14 @@ GCM Asia,MSCI AC Asia
 GCM Asia Equity,MSCI AC Asia
 GCM China,MSCI China
 GCM Consumer,S&P 500 Cons Discr
-GCM Cross Cap,10Y FTSE Treasury
+GCM Cross Cap,S&P 500
+GCM Credit,HFRI Credit Index
 GCM Diverse,S&P 500
+GCM Diversifying Strategies,S&P 500
 GCM Emerging Market Credit,10Y FTSE Treasury
 GCM Emerging Markets,10Y FTSE Treasury
 GCM Energy,S&P 500 Energy
+GCM Equities,S&P 500
 GCM Europe Credit,CS High Yield
 GCM Europe Credit Dashboard,CS High Yield
 GCM Europe Equity,MSCI Europe
@@ -18,17 +21,19 @@ GCM Financials,S&P 500 Financials
 GCM Fundamental Credit,HFRI Credit Index
 GCM Generalist Long/Short Equity,S&P 500
 GCM Healthcare,S&P 500 Healthcare
+GCM Illiquid Credit,HFRI Credit Index
+GCM Industrials,S&P 500 Industrial
 GCM Japan,Nikkei 225 Avg P%C
-GCM Long Only Equity,10Y FTSE Treasury
+GCM Long Only Equity,S&P 500
 GCM Long/Short Credit,HFRI Credit Index
 GCM Macro,S&P 500
 GCM Merger Arbitrage,HFRI ED Merger Arb
 GCM Multi-PM,S&P 500
 GCM Multi-Strategy,S&P 500
-GCM Quant,10Y FTSE Treasury
+GCM Quant,S&P 500
 GCM Real Estate,S&P 500 Real Estate
 GCM Relative Value,HFRI Rel Val Total
-GCM Short Sellers,10Y FTSE Treasury
+GCM Short Sellers,S&P 500
 GCM Structured Credit,HFRI Rel Val FI ABS
 GCM TMT,NASDAQ Composite
 GCM Utilities,S&P 500 Utilities

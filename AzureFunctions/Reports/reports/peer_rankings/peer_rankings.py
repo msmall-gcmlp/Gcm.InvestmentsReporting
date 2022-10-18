@@ -151,7 +151,7 @@ class PeerRankings(ReportingRunnerBase):
                          config,
                          equity_factor_returns=equity_factor_returns,
                          macro_factor_returns=macro_factor_returns)
-        ranks = ranks.get_peer_ranks()
+        ranks = ranks.get_peer_ranks_zscore()
 
         return ranks
 
