@@ -1,6 +1,7 @@
 import pandas as pd
 import datetime as dt
 import calendar
+import os
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.scenario import Scenario
@@ -48,8 +49,9 @@ class PeerRankings(ReportingRunnerBase):
                                         value_vars=peer_group_returns.columns,
                                         value_name='Return',
                                         var_name='InvestmentGroupId')
+        data_['PGID'] = peer_group_name
 
-        benchmark_mapping = pd.read_csv('peer_benchmark_mapping.csv')
+        benchmark_mapping = pd.read_csv(os.path.dirname(__file__) + "/peer_benchmark_mapping.csv")
         benchmark = benchmark_mapping[benchmark_mapping['GCM Peer Group'] == peer_group_name]['Benchmark 1'].squeeze()
         data_['Benchmark'] = benchmark
 
@@ -137,6 +139,7 @@ class PeerRankings(ReportingRunnerBase):
                                  peer_group_returns=peer_group_returns)
         equity_factor_returns = self._get_equity_factor_returns()
         macro_factor_returns = self._get_macro_factor_returns()
+
         config = {'equity_cols': [],
                   'macro_cols': [],
                   'signals': [],
