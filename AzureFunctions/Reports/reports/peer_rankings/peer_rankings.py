@@ -137,6 +137,7 @@ class PeerRankings(ReportingRunnerBase):
                                  peer_group_returns=peer_group_returns)
         equity_factor_returns = self._get_equity_factor_returns()
         macro_factor_returns = self._get_macro_factor_returns()
+
         config = {'equity_cols': [],
                   'macro_cols': [],
                   'signals': [],
