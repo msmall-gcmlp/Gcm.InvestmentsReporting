@@ -45,7 +45,7 @@ class InvestmentsReportRunner(ProgramRunner):
                     df: pd.DataFrame = df
                 final_data[i] = df
         runner: DaoRunner = kwargs["runner"]
-        current_date: dt.datetime = Scenario.current_scenario().get_attribute("as_of_date")
+        current_date: dt.datetime = Scenario.get_attribute("as_of_date")
         if "report_name" in kwargs:
             report = ReportStructure(asofdate=current_date, **kwargs)
             if "template" in kwargs:
