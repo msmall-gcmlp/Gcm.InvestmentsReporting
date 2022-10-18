@@ -217,8 +217,6 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         rankings = rankings.merge(inv_names, how='left')
         rankings = rankings[['InvestmentGroupId', 'InvestmentGroupName', 'Rank']]
 
-        # flip rankings
-        rankings['Rank'] = rankings['Rank'].rank(ascending=False)
         rankings['Quartile'] = pd.qcut(x=rankings['Rank'], q=[0, 0.25, 0.50, 0.75, 1], labels=[1, 2, 3, 4])
         # rankings['Rank'] = rankings['Points'].rank(pct=False, ascending=False)
         rankings = rankings.sort_values(['Rank', 'InvestmentGroupName'], ascending=[True, True])
