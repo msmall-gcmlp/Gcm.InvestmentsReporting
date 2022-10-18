@@ -1,7 +1,7 @@
 from datetime import datetime
 from gcm.inv.scenario import Scenario
 from gcm.Dao.DaoRunner import DaoRunner
-from Reports.reports.performance_screener_report import PerformanceScreenerReport
+from Reports.reports.peer_rankings.performance_screener_report import PerformanceScreenerReport
 
 
 def main(requestBody) -> str:
