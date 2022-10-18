@@ -3,7 +3,7 @@ import logging
 import datetime as dt
 import numpy as np
 from functools import cached_property
-from gcm.Dao.DaoRunner import DaoRunner
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
@@ -56,7 +56,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         return returns
 
     @cached_property
-    def _updated_constituent_returns(self, min_required_returns=18):
+    def _updated_constituent_returns(self, min_required_returns=24):
         as_of_month = dt.date(year=self._as_of_date.year, month=self._as_of_date.month, day=1)
         as_of_month = pd.to_datetime(as_of_month)
 
@@ -293,7 +293,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
             if fund in self._absolute_benchmark_returns.columns:
                 bmrk_return = self._absolute_benchmark_returns[fund].to_frame('Bmrk')
                 data = fund_return.merge(bmrk_return, left_index=True, right_index=True)
-                correlation = data.corr(min_periods=18)
+                correlation = data.corr(min_periods=24)
                 r2 = correlation.loc['Fund', 'Bmrk'] ** 2
                 r2 = r2.round(2)
                 r2_summary.loc[fund, 'R2'] = r2
@@ -496,7 +496,18 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
 
 if __name__ == "__main__":
-    peer_groups = ["GCM TMT"]
-    with Scenario(runner=DaoRunner(), as_of_date=dt.date(2022, 5, 31)).context():
+    peer_groups = ["GCM Multi-PM"]
+    runner = DaoRunner(
+            container_lambda=lambda b, i: b.config.from_dict(i),
+            config_params={
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.InvestmentsDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                }
+            })
+
+    with Scenario(runner=runner, as_of_date=dt.date(2022, 6, 30)).context():
         for peer_group in peer_groups:
             PerformanceScreenerReport(peer_group=peer_group).execute()
