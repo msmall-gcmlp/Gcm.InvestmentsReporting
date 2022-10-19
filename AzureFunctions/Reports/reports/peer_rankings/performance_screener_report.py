@@ -477,7 +477,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
                 entity_type=ReportingEntityTypes.cross_entity,
                 entity_name=entity_name,
                 entity_display_name=entity_name,
-                report_name="XPFUND Performance Screener",
+                report_name="XPortfolioFund Performance Screener",
                 report_type=ReportType.Performance,
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
