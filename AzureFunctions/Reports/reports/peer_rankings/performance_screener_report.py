@@ -477,7 +477,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
                 entity_type=ReportingEntityTypes.cross_entity,
                 entity_name=entity_name,
                 entity_display_name=entity_name,
-                report_name="XPFUND Performance Screener",
+                report_name="XPortfolioFund Performance Screener",
                 report_type=ReportType.Performance,
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
@@ -505,7 +505,7 @@ if __name__ == "__main__":
                    "GCM Credit",
                    "GCM Cross Cap",
                    "GCM Diverse",
-                   "GCM Diversifying Strategies",
+                   # "GCM Diversifying Strategies",
                    # "GCM DS Alternative Trend",
                    # "GCM DS CTA",
                    # "GCM DS Multi-Strategy",
@@ -513,7 +513,7 @@ if __name__ == "__main__":
                    "GCM Emerging Market Credit",
                    "GCM Energy",
                    # "GCM EOF Comps",
-                   "GCM Equities",
+                   # "GCM Equities",
                    # "GCM Equity plus MN Quant",
                    # "GCM ESG",
                    # "GCM ESG Credit",
@@ -542,6 +542,7 @@ if __name__ == "__main__":
                    "GCM Utilities",
                    ]
     peer_groups = ["GCM Multi-PM"]
+
     runner = DaoRunner(
             container_lambda=lambda b, i: b.config.from_dict(i),
             config_params={
