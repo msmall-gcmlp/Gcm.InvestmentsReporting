@@ -4,6 +4,9 @@ import pandas as pd
 from datetime import timedelta
 from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.scenario import Scenario
+from gcm.Scenario.scenario import AggregateInterval
+from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, ReportVertical
+from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
 from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
@@ -135,7 +138,21 @@ class HkmaDailyMarketUpdate(ReportingRunnerBase):
             period_return.rename(columns={"Return": period_name}, inplace=True)
             result = result.merge(period_return, left_index=True, right_index=True)
 
-        return result
+        InvestmentsReportRunner().execute(
+            data={'returns': result.reset_index(),
+                  'as_of_date': pd.DataFrame({self._as_of_date})},
+            template="HKMA_Daily_Market_Update_Template.xlsx",
+            save=True,
+            runner=self._runner,
+            entity_type=ReportingEntityTypes.cross_entity,
+            entity_source=DaoSource.InvestmentsDwh,
+            report_name="HKMA Daily Market Update",
+            report_type=ReportType.Market,
+            report_frequency="Daily",
+            report_vertical=ReportVertical.ARS,
+            aggregate_intervals=AggregateInterval.Daily,
+        )
+        return 'Success'
 
     def run(self, **kwargs):
         return self.generate_report(**kwargs)
