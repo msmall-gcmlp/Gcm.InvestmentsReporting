@@ -15,7 +15,7 @@ from pandas.tseries.offsets import BDay
 from dateutil.relativedelta import relativedelta
 
 
-class HkmaDailyMarketUpdate(ReportingRunnerBase):
+class HkmaMarketPerformanceReport(ReportingRunnerBase):
     def __init__(self):
         super().__init__(runner=Scenario.get_attribute("runner"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
@@ -49,7 +49,7 @@ class HkmaDailyMarketUpdate(ReportingRunnerBase):
         self._total_return_tickers = {'SPX Index': 'SPXT Index',
                                       'CCMP Index': 'XCMP Index',
                                       'RTY Index': 'RU20INTR Index',
-                                      'SXXP Index': 'SXXP Index',
+                                      'SXXP Index': 'SXXGR Index',
                                       'TPX Index': 'TPXDDVD Index'}
 
         self._day_start = self._previous_day(self._as_of_date)
@@ -57,7 +57,7 @@ class HkmaDailyMarketUpdate(ReportingRunnerBase):
         self._month_start = self._previous_month(self._as_of_date)
         self._quarter_start = self._previous_quarter(self._as_of_date)
         self._year_start = self._previous_year(self._as_of_date)
-        self._ttm_start = self._as_of_date - relativedelta(years=1)
+        self._ttm_start = self._trailing_year(self._as_of_date)
 
     @staticmethod
     def _previous_day(ref):
@@ -84,6 +84,10 @@ class HkmaDailyMarketUpdate(ReportingRunnerBase):
     @staticmethod
     def _previous_year(ref):
         return dt.date(year=ref.year, month=1, day=1) - timedelta(days=1)
+
+    @staticmethod
+    def _trailing_year(ref):
+        return ref - relativedelta(years=1) + BDay(1)
 
     def _get_current_level(self):
         factor = Factor(tickers=self._tickers)
@@ -138,20 +142,25 @@ class HkmaDailyMarketUpdate(ReportingRunnerBase):
             period_return.rename(columns={"Return": period_name}, inplace=True)
             result = result.merge(period_return, left_index=True, right_index=True)
 
-        InvestmentsReportRunner().execute(
-            data={'returns': result.reset_index(),
-                  'as_of_date': pd.DataFrame({self._as_of_date})},
-            template="HKMA_Daily_Market_Update_Template.xlsx",
-            save=True,
-            runner=self._runner,
-            entity_type=ReportingEntityTypes.cross_entity,
-            entity_source=DaoSource.InvestmentsDwh,
-            report_name="HKMA Daily Market Update",
-            report_type=ReportType.Market,
-            report_frequency="Daily",
-            report_vertical=ReportVertical.ARS,
-            aggregate_intervals=AggregateInterval.Daily,
-        )
+        as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
+        with Scenario(as_of_date=as_of_date).context():
+            InvestmentsReportRunner().execute(
+                data={'returns': result.reset_index(),
+                      'as_of_date': pd.DataFrame({self._as_of_date})},
+                template="HKMA_Market_Performance_Template.xlsx",
+                save=True,
+                runner=self._runner,
+                entity_type=ReportingEntityTypes.cross_entity,
+                entity_name='IFC-x',
+                entity_display_name='IFC-x',
+                entity_source=DaoSource.PubDwh,
+                # entity_id=[158],
+                report_name="HKMA Market Performance",
+                report_type=ReportType.Market,
+                report_frequency="Daily",
+                report_vertical=ReportVertical.ARS,
+                aggregate_intervals=AggregateInterval.Daily,
+            )
         return 'Success'
 
     def run(self, **kwargs):
@@ -171,4 +180,4 @@ if __name__ == "__main__":
             })
 
     with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 28)).context():
-        HkmaDailyMarketUpdate().execute()
+        HkmaMarketPerformanceReport().execute()
