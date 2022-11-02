@@ -23,13 +23,13 @@ class EofStressTestingData(ReportingRunnerBase):
             as_of_date=self._as_of_date
         )
 
-        exposure_factor = Factor(tickers = factors_exposure['SourceTicker'].to_list())
+        exposure_factor = Factor(tickers=factors_exposure['SourceTicker'].to_list())
         factors_shock = exposure_factor.get_factor_shock(
             scenario=self._scenario,
             as_of_date=self._as_of_date
         )
         # extract exposure by factors
-        factor_exposure = pd.merge(factors_exposure[['PortfolioExposure', 'SourceTicker']], factors_shock, how='left', on ='SourceTicker')
+        factor_exposure = pd.merge(factors_exposure[['PortfolioExposure', 'SourceTicker']], factors_shock, how='left', on='SourceTicker')
         return factor_exposure
 
     def run(self, **kwargs):
