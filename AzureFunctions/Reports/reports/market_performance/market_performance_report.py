@@ -12,7 +12,7 @@ from gcm.inv.reporting.core.ReportStructure.report_structure import (
 from gcm.inv.reporting.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
-from gcm.inv.scenario import Scenario
+from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.inv.reporting.core.reporting_runner_base import (
@@ -452,7 +452,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 report_name="Market Performance",
                 report_type=ReportType.Market,
                 report_frequency="Daily",
-                report_vertical=ReportVertical.FirmWide,
+                report_vertical=ReportVertical.FIRM,
                 aggregate_intervals=AggregateInterval.Daily,
             )
 
