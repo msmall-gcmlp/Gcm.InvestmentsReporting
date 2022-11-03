@@ -452,7 +452,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                 report_name="Market Performance",
                 report_type=ReportType.Market,
                 report_frequency="Daily",
-                report_vertical=ReportVertical.FirmWide,
+                report_vertical=ReportVertical.FIRM,
                 aggregate_intervals=AggregateInterval.Daily,
             )
 
