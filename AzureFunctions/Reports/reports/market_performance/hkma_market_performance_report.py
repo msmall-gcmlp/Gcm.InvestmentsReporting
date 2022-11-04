@@ -91,12 +91,15 @@ class HkmaMarketPerformanceReport(ReportingRunnerBase):
 
     def _get_current_level(self):
         factor = Factor(tickers=self._tickers)
-        start_date = self._as_of_date
-        end_date = self._as_of_date
-        date_period = DatePeriod(start_date=start_date, end_date=end_date)
-        data = factor.get_dimensions(date_period)
-        data = data[['Ticker', 'PxLast']]
-        data = data.set_index('Ticker').reindex(self._tickers)
+        date_period_padded = DatePeriod(start_date=self._as_of_date - timedelta(days=5),
+                                        end_date=self._as_of_date)
+        data = factor.get_dimensions(date_period_padded)
+        data = data[['Ticker', 'Date', 'PxLast']].set_index('Ticker')
+        end_dates = data.groupby('Ticker')['Date'].max()
+        data = data.merge(end_dates, left_index=True, right_index=True)
+        data = data[data['Date_x'] == data['Date_y']]
+        data = data[['PxLast']]
+        data = data.reindex(self._tickers)
         return data
 
     def _get_trailing_return(self, start_date):
@@ -107,10 +110,13 @@ class HkmaMarketPerformanceReport(ReportingRunnerBase):
         levels = levels[['Date', 'Ticker', 'PxLast']].sort_values('Date')
 
         start_dates = levels.groupby('Ticker').apply(lambda x: x['Date'][x['Date'] <= start_date].max())
+        end_date = pd.to_datetime(self._as_of_date)
+        end_dates = levels.groupby('Ticker').apply(lambda x: x['Date'][x['Date'] <= end_date].max())
 
         levels = levels.merge(start_dates.to_frame('StartDate'), left_on='Ticker', right_index=True)
+        levels = levels.merge(end_dates.to_frame('EndDate'), left_on='Ticker', right_index=True)
 
-        end_level = levels[levels['Date'] == pd.to_datetime(self._as_of_date)]
+        end_level = levels[levels['Date'] == levels['EndDate']]
         end_level = end_level[['Ticker', 'PxLast']].rename(columns={'PxLast': 'EndLevel'})
 
         start_level = levels[levels['Date'] == levels['StartDate']]
@@ -179,5 +185,5 @@ if __name__ == "__main__":
                 }
             })
 
-    with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 28)).context():
+    with Scenario(runner=runner, as_of_date=dt.date(2022, 11, 3)).context():
         HkmaMarketPerformanceReport().execute()
