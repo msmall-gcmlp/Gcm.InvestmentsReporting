@@ -3,7 +3,7 @@ import logging
 import os
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
-from gcm.inv.scenario.scenario_enums import AggregateInterval
+from gcm.inv.reporting.core.ReportStructure.report_structure import AggregateInterval
 from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.quantlib.enum_source import Periodicity

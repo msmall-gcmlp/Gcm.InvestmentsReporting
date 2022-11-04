@@ -182,7 +182,7 @@ class BaselReport(ReportingRunnerBase):
                 report_name=report_name,
                 report_type=ReportType.Market,
                 report_frequency="Daily",
-                report_vertical=ReportVertical.FirmWide,
+                report_vertical=ReportVertical.FIRM,
             )
 
     def run(self, **kwargs):
