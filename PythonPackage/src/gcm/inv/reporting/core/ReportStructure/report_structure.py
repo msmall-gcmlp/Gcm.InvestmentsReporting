@@ -2,7 +2,7 @@ from abc import ABC
 from ..Utils.convert_excel_to_pdf import convert
 from gcm.inv.utils.misc.extended_enum import Enum, ExtendedEnum
 import logging
-from gcm.Scenario.scenario import AggregateInterval
+from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
     AzureDataLakeFile,
@@ -55,7 +55,7 @@ class ReportVertical(Enum):
     PEREI = 0
     ARS = 1
     SIG = 2
-    FirmWide = 3
+    FIRM = 3
 
 
 class ReportStrategy(Enum):
