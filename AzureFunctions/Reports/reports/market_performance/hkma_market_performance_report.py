@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import timedelta
 from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.scenario import Scenario
-from gcm.inv.scenario.scenario_enums import AggregateInterval
+from gcm.inv.reporting.core.ReportStructure.report_structure import AggregateInterval
 from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, ReportVertical
 from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
 from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase

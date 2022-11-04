@@ -2,7 +2,7 @@ from abc import ABC
 from ..Utils.convert_excel_to_pdf import convert
 from gcm.inv.utils.misc.extended_enum import Enum, ExtendedEnum
 import logging
-from gcm.inv.utils.date.AggregateInterval import AggregateInterval
+from gcm.inv.reporting.core.ReportStructure.report_structure import AggregateInterval
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
     AzureDataLakeFile,
@@ -319,7 +319,7 @@ class ReportStructure(ABC):
                         metadata = json.dumps(list(map(lambda x: x.name, val)))
                     else:
                         metadata = json.dumps(list(map(lambda x: x, val)))
-            elif issubclass(type(val), ExtendedEnum):
+            elif issubclass(type(val), ReportType):
                 metadata = val.value
             elif issubclass(type(val), Enum):
                 metadata = val.name
