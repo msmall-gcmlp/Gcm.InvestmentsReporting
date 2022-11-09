@@ -55,7 +55,7 @@ class ReportVertical(Enum):
     PEREI = 0
     ARS = 1
     SIG = 2
-    FirmWide = 3
+    FIRM = 3
 
 
 class ReportStrategy(Enum):
