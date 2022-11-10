@@ -31,6 +31,7 @@ from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
     AggregateFromDaily,
 )
+from gcm.inv.quantlib.timeseries.transformer.beta import Beta
 
 
 class PerformanceScreenerReport(ReportingRunnerBase):
@@ -90,6 +91,11 @@ class PerformanceScreenerReport(ReportingRunnerBase):
     @cached_property
     def _rf_returns(self):
         returns = self._get_monthly_factor_returns(ticker="SBMMTB1 Index")
+        return returns
+
+    @cached_property
+    def _spx_returns(self):
+        returns = self._get_monthly_factor_returns(ticker="SPX Index")
         return returns
 
     @cached_property
@@ -195,6 +201,14 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         sharpe = sharpe.to_frame('Sharpe')
         return sharpe
 
+    def _get_max_drawdown(self):
+        wealth_index = 1000 * (1 + self._updated_constituent_returns).cumprod()
+        previous_peaks = wealth_index.cummax()
+        drawdowns = (wealth_index - previous_peaks) / previous_peaks
+        max_drawdown = drawdowns.min()
+        max_drawdown = max_drawdown.to_frame('MaxPttDdown')
+        return max_drawdown
+
     def _get_return_in_peer_stress_months(self):
         avg_peer_return = self._updated_constituent_returns.median(axis=1)
         number_months = round(self._trailing_months * 0.10)
@@ -204,23 +218,52 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         peer_stress_ror = peer_stress_ror.to_frame('PeerStressRor')
         return peer_stress_ror
 
+    def _get_beta_to_spx(self):
+        trailing_betas = Beta().transform(data=self._updated_constituent_returns,
+                                          benchmark=self._spx_returns,
+                                          period=Periodicity.Monthly,
+                                          window=36)
+        trailing_betas = trailing_betas.iloc[-1, :]
+        trailing_betas = trailing_betas.to_frame('BetaToSpx')
+        return trailing_betas
+
     def _get_max_1mo_return(self):
         max_ror = self._updated_constituent_returns.max(axis=0)
         max_ror = max_ror.to_frame('MaxRor')
         return max_ror
 
+    def _get_calendar_returns(self):
+        returns = self._updated_constituent_returns.copy()
+        returns = returns + 1
+        cumulative_returns = returns.groupby(returns.index.year).prod()
+        returns = cumulative_returns - 1
+        returns = returns.T
+        returns.rename(columns={returns.columns[0]: str(returns.columns[0]) + ' (Partial)'}, inplace=True)
+        returns.rename(columns={returns.columns[-1]: str(returns.columns[-1]) + ' YTD'}, inplace=True)
+        returns = returns.iloc[:, ::-1]
+
+        if returns.shape[1] == 3:
+            returns = pd.concat([returns, pd.DataFrame(columns=['-'], index=returns.index)], axis=1)
+
+        return returns
+
     def _calculate_peer_rankings(self):
         rankings = PeerRankings().calculate_peer_rankings(peer_group_name=self._peer_group,
                                                           peer_group_returns=self._updated_constituent_returns)
-        rankings.rename(columns={'rank': 'Rank', 'InvestmentGroupId': 'InvestmentGroupName'}, inplace=True)
+        rankings.rename(columns={'rank': 'Rank', 'InvestmentGroupId': 'InvestmentGroupName',
+                                 'confidence': 'Confidence'}, inplace=True)
         inv_names = self._constituents[['InvestmentGroupName', 'InvestmentGroupId']].drop_duplicates()
         rankings = rankings.merge(inv_names, how='left')
-        rankings = rankings[['InvestmentGroupId', 'InvestmentGroupName', 'Rank']]
+        rankings = rankings[['InvestmentGroupId', 'InvestmentGroupName', 'Rank', 'Confidence']]
 
-        rankings['Quartile'] = pd.qcut(x=rankings['Rank'], q=[0, 0.25, 0.50, 0.75, 1], labels=[1, 2, 3, 4])
+        rankings['Confidence'] = rankings['Confidence'].astype(str) + '/5'
+        rankings['Quartile'] = pd.qcut(x=rankings['Rank'], q=[x / 100 for x in range(0, 110, 25)],
+                                       labels=[x for x in range(1, 5)])
+        rankings['Decile'] = pd.qcut(x=rankings['Rank'], q=[x / 100 for x in range(0, 110, 10)],
+                                     labels=[x / 10 for x in range(10, 110, 10)])
         # rankings['Rank'] = rankings['Points'].rank(pct=False, ascending=False)
         rankings = rankings.sort_values(['Rank', 'InvestmentGroupName'], ascending=[True, True])
-        rankings = rankings[['Rank', 'InvestmentGroupName', 'Quartile']]
+        rankings = rankings[['Rank', 'Decile', 'Confidence', 'InvestmentGroupName', 'Quartile']]
         return rankings
 
     def get_header_info(self):
@@ -245,13 +288,15 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         ror = self._get_annualized_return()
         vol = self._get_annualized_vol()
         sharpe = self._get_sharpe_ratio()
-        peer_stress_ror = self._get_return_in_peer_stress_months()
-        max_ror = self._get_max_1mo_return()
+        max_ptt_ddown = self._get_max_drawdown()
+        beta = self._get_beta_to_spx()
+        calendar_returns = self._get_calendar_returns()
 
         summary = ror.merge(vol, how='left', left_index=True, right_index=True)
         summary = summary.merge(sharpe, how='left', left_index=True, right_index=True)
-        summary = summary.merge(peer_stress_ror, how='left', left_index=True, right_index=True)
-        summary = summary.merge(max_ror, how='left', left_index=True, right_index=True)
+        summary = summary.merge(max_ptt_ddown, how='left', left_index=True, right_index=True)
+        summary = summary.merge(beta, how='left', left_index=True, right_index=True)
+        summary = summary.merge(calendar_returns, how='left', left_index=True, right_index=True)
         summary = summary.astype(float).round(2)
 
         return summary
@@ -299,16 +344,19 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         return r2_summary
 
     def build_absolute_return_benchmark_summary(self):
-        excess_return = self._get_arb_excess_return()
-        r_squared = self._get_arb_r_squared()
-        summary = excess_return.merge(r_squared, how='left', left_index=True, right_index=True)
+        summary = self._get_arb_excess_return()
+        # r_squared = self._get_arb_r_squared()
+        # summary = excess_return.merge(r_squared, how='left', left_index=True, right_index=True)
 
-        if summary.shape[1] == 1:
-            return pd.DataFrame(columns=['Excess', 'ExcessQtile', 'R2'], index=summary.index)
+        if summary.shape[1] == 0:
+            return pd.DataFrame(columns=['Excess', 'ExcessQtile'], index=summary.index)
 
-        summary['ExcessQtile'] = pd.qcut(x=summary['Excess'], q=[0, 0.25, 0.50, 0.75, 1], labels=[4, 3, 2, 1])
+        summary['ExcessQtile'] = pd.qcut(x=summary['Excess'],
+                                         q=[x / 100 for x in range(0, 110, 10)],
+                                         labels=[x / 10 for x in range(10, 110, 10)][::-1])
+
         summary['ExcessQtile'] = summary['ExcessQtile'].astype(float)
-        summary = summary[['Excess', 'ExcessQtile', 'R2']]
+        summary = summary[['Excess', 'ExcessQtile']]
         return summary
 
     def build_rba_excess_return_summary(self):
@@ -329,7 +377,8 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         # need to ensure no points are identical. randomly break ties
         excess['RbaAlpha'] = excess['RbaAlpha'] + np.random.random(excess.shape[0]) / 1e3
 
-        quartiles = pd.qcut(x=excess['RbaAlpha'], q=[0, 0.25, 0.50, 0.75, 1], labels=[4, 3, 2, 1])
+        quartiles = pd.qcut(x=excess['RbaAlpha'], q=[x / 100 for x in range(0, 110, 10)],
+                            labels=[x / 10 for x in range(10, 110, 10)][::-1])
         quartiles.name = 'RbaAlphaQtile'
 
         summary = excess.merge(quartiles, left_index=True, right_index=True)
@@ -348,10 +397,16 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         rba_risk_decomp.columns = rba_risk_decomp.columns.droplevel(0)
         rba_risk_decomp = rba_risk_decomp.reindex(['SYSTEMATIC', 'X_ASSET_CLASS', 'PUBLIC_LS', 'NON_FACTOR'], axis=1)
         rba_risk_decomp = rba_risk_decomp.fillna(0)
+
+        rba_risk_decomp['PctIdioDecile'] = pd.qcut(x=rba_risk_decomp['NON_FACTOR'],
+                                                   q=[x / 100 for x in range(0, 110, 10)],
+                                                   labels=[x / 10 for x in range(10, 110, 10)][::-1]).astype(float)
         return rba_risk_decomp
 
     def build_summary_table(self, rankings, stats):
         qtile_headings = pd.DataFrame({'Rank': [-100] * 4,
+                                       'Decile': [''] * 4,
+                                       'Confidence': [''] * 4,
                                        'InvestmentGroupName': ['Quartile ' + str(x) for x in [1, 2, 3, 4]],
                                        'Quartile': [1, 2, 3, 4]})
         rankings = pd.concat([rankings, qtile_headings])
@@ -360,7 +415,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         statuses = self._constituents[['InvestmentGroupName', 'InvestmentStatus']]
         summary = summary.merge(statuses, on='InvestmentGroupName', how='left')
 
-        column_order = ['Rank', 'InvestmentGroupName'] + summary.columns[3:].tolist()
+        column_order = ['Rank', 'Decile', 'Confidence', 'InvestmentGroupName'] + summary.columns[5:].tolist()
 
         summary = summary.sort_values(['Quartile', 'Rank'])
         summary = summary[column_order]
@@ -428,7 +483,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
         rankings_max_row = 11 + summary_table.shape[0]
         omitted_funds_max_row = 11 + omitted_funds.shape[0]
-        print_areas = {'Rankings': 'B1:Q' + str(rankings_max_row),
+        print_areas = {'Rankings': 'B1:W' + str(rankings_max_row),
                        'Omitted Funds': 'B1:E' + str(omitted_funds_max_row)}
 
         logging.info('Report summary data generated for: ' + self._peer_group)
@@ -541,7 +596,7 @@ if __name__ == "__main__":
                    "GCM TMT",
                    "GCM Utilities",
                    ]
-    peer_groups = ["GCM Multi-PM"]
+    peer_groups = ["GCM TMT"]
 
     runner = DaoRunner(
             container_lambda=lambda b, i: b.config.from_dict(i),
