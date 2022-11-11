@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.reporting.core.ReportStructure.report_structure import AggregateInterval
+from gcm.notreal import testingerror
 from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.quantlib.enum_source import Periodicity
@@ -49,7 +50,6 @@ class BbaReport(ReportingRunnerBase):
         )
         self._gcm, self._eh = self.get_allocation_data_portfolio(end_date=self._report_date)
         self._gcm_firmwide, self._eh = self.get_allocation_data_firmwide()
-        self._output_dir = "C:\Code\Gcm.RiskScripts\Analyses\GCM_ARS_vs_Market_Analysis\Output\\"
         self._summary_data_location = "raw/investmentsreporting/summarydata/bba"
         self._trailing_periods = [
             1,
@@ -682,6 +682,7 @@ class BbaReport(ReportingRunnerBase):
         return ctr_rslt
 
     def get_strategy_sizing(self, gcm_alloc, bmark_alloc, bmark_eq_ror, bmark_ror, start_date, end_date):
+        # assumes bmark alloc is non-zero for each date/strategy combo
         allocs = bmark_alloc.merge(gcm_alloc, how="left", left_on=["Date", "Strategy"], right_on=["Date", "Strategy"]).fillna(0)
         allocs["Allocation"] = allocs.GcmAllocation - allocs.BmarkAllocation
         allocs["GcmMissing"] = np.where(allocs.GcmAllocation == 0, "Selection", "Sizing")
@@ -1172,7 +1173,7 @@ class BbaReport(ReportingRunnerBase):
             gcm_default_peer.ReportingPeerGroupOverride,
             gcm_default_peer.ReportingPeerGroup,
         )
-        # move to csv: overriding some standout managers
+        # NO LONGER NEEDED? move to csv: overriding some standout managers
         gcm_default_peer["ReportingPeerGroup"] = np.where(
             gcm_default_peer.InvestmentGroupName == "Elliott",
             gcm_default_peer.ReportingPeerGroupOverride,
@@ -1202,6 +1203,7 @@ class BbaReport(ReportingRunnerBase):
         gcm_default_peer["ReportingPeerGroup"] = np.where(
             gcm_default_peer.InvestmentGroupName == "Davidson Kempner", "GCM Multi-Strategy", gcm_default_peer.ReportingPeerGroup
         )
+        ### above no longer needed?
 
         peer_to_strat_map = pd.read_csv(os.path.dirname(__file__) + "/input_data/" + "PeerToStrategyMap.csv")
 
@@ -1653,9 +1655,9 @@ class BbaReport(ReportingRunnerBase):
                 entity_display_name="Firm",
                 # entity_ids=[000000],
                 # entity_source=DaoSource.PubDwh,
-                report_name="PFUND Attributes",
+                report_name="ARS Portfolio Fund Attributes",
                 report_type=ReportType.Performance,
-                report_vertical=ReportVertical.ARS,
+                report_vertical=ReportVertical.FirmWide,
                 report_frequency="Monthly",
                 aggregate_intervals=AggregateInterval.MTD,
                 # output_dir="cleansed/investmentsreporting/printedexcels/",
