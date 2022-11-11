@@ -55,16 +55,16 @@ class EofLiquidityReport(ReportingRunnerBase):
         # takes all shocks that will drive portfolio up (ShockDirection ==Up for the short position and ShockDirection ==Dn for the long)
         factor_inventory_by_category_up = factor_inventory_by_category[
                                                                        (factor_inventory_by_category['ShockSign'] *
-                                                                       factor_inventory_by_category['PortfolioExposure'] > 0)]
+                                                                        factor_inventory_by_category['PortfolioExposure'] > 0)]
         factor_inventory_by_category_dn = factor_inventory_by_category[
                                                                        (factor_inventory_by_category['ShockSign'] *
-                                                                       factor_inventory_by_category['PortfolioExposure'] <= 0)]
-        cum_shock_up = self._get_shocks_by_coverage(factor_inventory_by_category_up, coverage_ratio=0.5, sock_dn = False)
-        cum_shock_dn = self._get_shocks_by_coverage(factor_inventory_by_category_dn, coverage_ratio=0.5, sock_dn = True)
+                                                                        factor_inventory_by_category['PortfolioExposure'] <= 0)]
+        cum_shock_up = self._get_shocks_by_coverage(factor_inventory_by_category_up, coverage_ratio=0.5, sock_dn=False)
+        cum_shock_dn = self._get_shocks_by_coverage(factor_inventory_by_category_dn, coverage_ratio=0.5, sock_dn=True)
 
         return cum_shock_dn, cum_shock_up
 
-    def _get_shocks_by_coverage(self, factor_shocks, coverage_ratio=0.5, sock_dn = True):
+    def _get_shocks_by_coverage(self, factor_shocks, coverage_ratio=0.5, sock_dn=True):
         factor_shocks.sort_values(by='Directional_shock', ascending=sock_dn, inplace=True, ignore_index=True)
         factor_shocks['cum_shock'] = factor_shocks['Directional_shock'].cumsum()
         factor_shocks['pct_total'] = factor_shocks['cum_shock'] / factor_shocks['Directional_shock'].sum()
@@ -100,7 +100,7 @@ class EofLiquidityReport(ReportingRunnerBase):
 
         beta_shock_dn = beta_shock[
                                    (beta_shock['ShockSign'] *
-                                   beta_shock['PortfolioExposure'] <= 0)]
+                                    beta_shock['PortfolioExposure'] <= 0)]
         beta_cum_shock_dn = pd.DataFrame((beta_shock_dn['ShockSign'] *
                                           beta_shock_dn['ShockMagnitude'] *
                                           beta_shock_dn['PortfolioExposure']) / 100, columns=['beta_shock_dn'])

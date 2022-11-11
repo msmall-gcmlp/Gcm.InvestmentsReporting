@@ -132,9 +132,9 @@ class MarketPerformanceReport(ReportingRunnerBase):
             method=method,
         )
         # Monthly Adju
-        mtd = monthly_return / ((annualized_vol * math.sqrt(as_of_date.month)) / math.sqrt(12))
+        mtd = monthly_return / ((annualized_vol) / math.sqrt(12))
 
-        ytd_vol = ytd_return / annualized_vol
+        ytd_vol = ytd_return / ((annualized_vol * math.sqrt(as_of_date.month)) / math.sqrt(12))
 
         # rounding to 2 so that Excess Return matches optically
         stats = [mtd, annualized_vol, ytd_vol]
