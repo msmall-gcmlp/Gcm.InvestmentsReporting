@@ -255,9 +255,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
 
         output_table = pd.DataFrame()
         returns_by_category = self._get_returns_by_category(category)
-        returns_by_category = returns_by_category.fillna(method="ffill")
         price_change_by_category = self._get_price_change_by_category(category)
-        price_change_by_category = price_change_by_category.fillna(method="ffill")
         combined_columns = set(returns_by_category.columns.append(price_change_by_category.columns))
         for column in combined_columns:
             transformation = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].Transformation.values
@@ -265,9 +263,13 @@ class MarketPerformanceReport(ReportingRunnerBase):
 
             if transformation[0] == "arithmetic":
                 input_returns = price_change_by_category[column]
+                last_valid_asof = price_change_by_category[column].last_valid_index()
             else:
                 input_returns = returns_by_category[column]
+                last_valid_asof = returns_by_category[column].last_valid_index()
 
+            last_valid_asof = pd.DataFrame([last_valid_asof], columns = ['As_of_date'], index = description)
+            input_returns = input_returns.fillna(method="ffill")
             agg_returns = self._get_return_summary(input_returns, description, transformation[0])
             agg_vol = self._getr_vol_adj_move(input_returns, description, transformation[0])
             max_dd = self._max_ppt_ttm(input_returns, column, description, transformation[0])
@@ -279,9 +281,9 @@ class MarketPerformanceReport(ReportingRunnerBase):
                     benchmark_returns,
                     method=transformation[0],
                 )
-                agg_stat = pd.concat([out_under, agg_returns.T, agg_vol.T, max_dd], axis=1)
+                agg_stat = pd.concat([out_under, agg_returns.T, agg_vol.T, max_dd, last_valid_asof], axis=1)
             else:
-                agg_stat = pd.concat([agg_returns.T, agg_vol.T, max_dd], axis=1)
+                agg_stat = pd.concat([agg_returns.T, agg_vol.T, max_dd, last_valid_asof], axis=1)
             # Change the unit, multiply by 100
 
             unit_mult100 = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].Unit_Mul100.values
@@ -309,6 +311,8 @@ class MarketPerformanceReport(ReportingRunnerBase):
                     function = (
                         lambda x: x.astype("int").astype("str") + "%"
                         if (x.name in columns_transform)
+                        else x
+                        if (x.name in ['As_of_date'])
                         else round(x, 1).astype("str") + "%"
                         if (x.name in ["MTD", "DTD", "WTD"])
                         else round(x, 1)
@@ -318,6 +322,8 @@ class MarketPerformanceReport(ReportingRunnerBase):
                     function = (
                         lambda x: x.astype("int").astype("str")
                         if (x.name in columns_transform)
+                        else x
+                        if (x.name in ['As_of_date'])
                         else round(x, 1).astype("str")
                         if (x.name in ["MTD", "DTD", "WTD"])
                         else round(x, 1)
@@ -350,6 +356,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                     "YTD1",
                     "TTM",
                     "Max PTT (TTM)",
+                    "As_of_date"
                 ]
             )
 
@@ -386,6 +393,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                     "YTD1",
                     "TTM",
                     "Max PTT (TTM)",
+                    "As_of_date"
                 ]
             )
 
@@ -409,6 +417,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                     "YTD1",
                     "TTM",
                     "Max PTT (TTM)",
+                    "As_of_date"
                 ]
             )
         base_summary = base_summary.sort_values(by=["MTD1"], ascending=False)
