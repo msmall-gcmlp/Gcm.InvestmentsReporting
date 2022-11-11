@@ -496,11 +496,11 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
 if __name__ == "__main__":
     peer_groups = ["GCM Asia",
-                   #"GCM Asia Credit",
+                   # "GCM Asia Credit",
                    "GCM Asia Equity",
-                   #"GCM Asia Macro",
+                   # "GCM Asia Macro",
                    "GCM China",
-                   #"GCM Commodities",
+                   # "GCM Commodities",
                    "GCM Consumer",
                    "GCM Credit",
                    "GCM Cross Cap",
