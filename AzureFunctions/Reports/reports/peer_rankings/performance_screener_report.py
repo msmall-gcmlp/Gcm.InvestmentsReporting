@@ -410,7 +410,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         excess['RbaAlpha'] = excess['RbaAlpha'] + np.random.random(excess.shape[0]) / 1e3
 
         deciles = pd.qcut(x=excess['RbaAlpha'], q=[x / 100 for x in range(0, 110, 10)],
-                            labels=[x / 10 for x in range(10, 110, 10)][::-1])
+                          labels=[x / 10 for x in range(10, 110, 10)][::-1])
         deciles.name = 'RbaAlphaDecile'
 
         summary = excess.merge(deciles, left_index=True, right_index=True)
