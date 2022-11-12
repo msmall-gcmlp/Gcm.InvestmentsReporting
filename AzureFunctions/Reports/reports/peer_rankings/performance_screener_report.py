@@ -32,6 +32,7 @@ from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
     AggregateFromDaily,
 )
 from gcm.inv.quantlib.timeseries.transformer.beta import Beta
+from openpyxl.utils.cell import get_column_letter
 
 
 class PerformanceScreenerReport(ReportingRunnerBase):
@@ -40,11 +41,11 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         self._as_of_date = Scenario.get_attribute("as_of_date")
         self._end_date = self._as_of_date
         self._trailing_months = trailing_months
-        self._start_date = self._as_of_date - relativedelta(years=self._trailing_months / 12)
+        self._start_date = self._as_of_date - relativedelta(years=self._trailing_months / 12) + relativedelta(days=1)
         self._analytics = Analytics()
         self._strategy_benchmark = StrategyBenchmark()
         self._peer_group = peer_group
-        self._summary_data_location = "raw/investmentsreporting/summarydata/xpfund_performance_screener"
+        self._summary_data_location = "raw/investmentsreporting/summarydata/ars_performance_screener"
 
     @cached_property
     def _constituents(self):
@@ -102,6 +103,33 @@ class PerformanceScreenerReport(ReportingRunnerBase):
     def _peer_benchmark_return(self):
         returns = self._get_monthly_factor_returns(ticker=self._peer_benchmark_ticker)
         return returns
+
+    def _get_json_file_name(self, as_of_date):
+        as_of_date = as_of_date.strftime("%Y-%m-%d")
+        file_name = self._peer_group.replace("/", "") + as_of_date + ".json"
+        return file_name
+
+    def _download_prior_rankings(self, location, as_of_date) -> dict:
+        file_path = self._get_json_file_name(as_of_date=as_of_date)
+        read_params = AzureDataLakeDao.create_get_data_params(
+            location,
+            file_path,
+            retry=False,
+        )
+        try:
+            file = self._runner.execute(
+                params=read_params,
+                source=DaoSource.DataLake,
+                operation=lambda dao, params: dao.get_data(read_params),
+            )
+        except:
+            return None
+
+        inputs = json.loads(file.content)
+        inputs = pd.read_json(inputs['summary_table'], orient="index")[['InvestmentGroupName', 'Decile']]
+        inputs = inputs.iloc[inputs['Decile'].values != '', ]
+        inputs.rename(columns={'Decile': as_of_date}, inplace=True)
+        return inputs
 
     def _validate_inputs(self):
         pass
@@ -264,6 +292,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         # rankings['Rank'] = rankings['Points'].rank(pct=False, ascending=False)
         rankings = rankings.sort_values(['Rank', 'InvestmentGroupName'], ascending=[True, True])
         rankings = rankings[['Rank', 'Decile', 'Confidence', 'InvestmentGroupName', 'Quartile']]
+
         return rankings
 
     def get_header_info(self):
@@ -299,7 +328,9 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         summary = summary.merge(calendar_returns, how='left', left_index=True, right_index=True)
         summary = summary.astype(float).round(2)
 
-        return summary
+        calendar_return_headings = calendar_returns.columns.to_frame().T
+
+        return summary, calendar_return_headings
 
     def _get_arb_excess_return(self):
         fund_return = self._get_annualized_return()
@@ -349,14 +380,15 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         # summary = excess_return.merge(r_squared, how='left', left_index=True, right_index=True)
 
         if summary.shape[1] == 0:
-            return pd.DataFrame(columns=['Excess', 'ExcessQtile'], index=summary.index)
+            return pd.DataFrame(columns=['Excess', 'ExcessDecile'], index=summary.index)
 
-        summary['ExcessQtile'] = pd.qcut(x=summary['Excess'],
-                                         q=[x / 100 for x in range(0, 110, 10)],
-                                         labels=[x / 10 for x in range(10, 110, 10)][::-1])
+        summary['Excess'] = summary['Excess'] + np.random.random(summary.shape[0]) / 1e3
+        summary['ExcessDecile'] = pd.qcut(x=summary['Excess'],
+                                          q=[x / 100 for x in range(0, 110, 10)],
+                                          labels=[x / 10 for x in range(10, 110, 10)][::-1])
 
-        summary['ExcessQtile'] = summary['ExcessQtile'].astype(float)
-        summary = summary[['Excess', 'ExcessQtile']]
+        summary['ExcessDecile'] = summary['ExcessDecile'].astype(float)
+        summary = summary[['Excess', 'ExcessDecile']]
         return summary
 
     def build_rba_excess_return_summary(self):
@@ -377,12 +409,12 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         # need to ensure no points are identical. randomly break ties
         excess['RbaAlpha'] = excess['RbaAlpha'] + np.random.random(excess.shape[0]) / 1e3
 
-        quartiles = pd.qcut(x=excess['RbaAlpha'], q=[x / 100 for x in range(0, 110, 10)],
+        deciles = pd.qcut(x=excess['RbaAlpha'], q=[x / 100 for x in range(0, 110, 10)],
                             labels=[x / 10 for x in range(10, 110, 10)][::-1])
-        quartiles.name = 'RbaAlphaQtile'
+        deciles.name = 'RbaAlphaDecile'
 
-        summary = excess.merge(quartiles, left_index=True, right_index=True)
-        summary['RbaAlphaQtile'] = summary['RbaAlphaQtile'].astype(float)
+        summary = excess.merge(deciles, left_index=True, right_index=True)
+        summary['RbaAlphaDecile'] = summary['RbaAlphaDecile'].astype(float)
 
         return summary
 
@@ -398,33 +430,46 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         rba_risk_decomp = rba_risk_decomp.reindex(['SYSTEMATIC', 'X_ASSET_CLASS', 'PUBLIC_LS', 'NON_FACTOR'], axis=1)
         rba_risk_decomp = rba_risk_decomp.fillna(0)
 
+        rba_risk_decomp['NON_FACTOR'] = rba_risk_decomp['NON_FACTOR'] + np.random.random(rba_risk_decomp.shape[0]) / 1e3
         rba_risk_decomp['PctIdioDecile'] = pd.qcut(x=rba_risk_decomp['NON_FACTOR'],
                                                    q=[x / 100 for x in range(0, 110, 10)],
                                                    labels=[x / 10 for x in range(10, 110, 10)][::-1]).astype(float)
         return rba_risk_decomp
 
     def build_summary_table(self, rankings, stats):
-        qtile_headings = pd.DataFrame({'Rank': [-100] * 4,
+        quartile_headings = pd.DataFrame({'Rank': [-100] * 4,
                                        'Decile': [''] * 4,
                                        'Confidence': [''] * 4,
                                        'InvestmentGroupName': ['Quartile ' + str(x) for x in [1, 2, 3, 4]],
                                        'Quartile': [1, 2, 3, 4]})
-        rankings = pd.concat([rankings, qtile_headings])
+        rankings = pd.concat([rankings, quartile_headings])
 
         summary = rankings.merge(stats, left_on=['InvestmentGroupName'], right_index=True, how='left')
         statuses = self._constituents[['InvestmentGroupName', 'InvestmentStatus']]
         summary = summary.merge(statuses, on='InvestmentGroupName', how='left')
-
-        column_order = ['Rank', 'Decile', 'Confidence', 'InvestmentGroupName'] + summary.columns[5:].tolist()
-
         summary = summary.sort_values(['Quartile', 'Rank'])
-        summary = summary[column_order]
+
         summary['Rank'] = [round(x, 0) if x != -100 else np.NAN for x in summary['Rank']]
 
         name_overrides = dict(zip(self._constituents['InvestmentGroupName'], self._constituents['InvestmentName']))
         summary["InvestmentGroupName"] = summary["InvestmentGroupName"].replace(name_overrides)
         summary["InvestmentGroupName"] = summary["InvestmentGroupName"].str.slice(0, 27)
 
+        # test persistence over quarter ends
+        as_of_dates = pd.date_range(dt.date(2019, 12, 31), self._as_of_date - relativedelta(days=1), freq='Q').tolist()
+        as_of_dates = pd.to_datetime(as_of_dates).date.tolist()
+
+        if len(as_of_dates) == 0:
+            summary['Persistence'] = None
+        else:
+            current_rankings = summary[['InvestmentGroupName', 'Decile']]
+            summary['Persistence'] = self._calculate_ranking_persistence(current_rankings=current_rankings,
+                                                                         dates=as_of_dates)
+
+        front_columns = ['Rank', 'Decile', 'Confidence', 'Persistence', 'InvestmentGroupName']
+
+        col_order = front_columns + [x for x in summary.columns.tolist() if x not in set(front_columns + ['Quartile'])]
+        summary = summary[col_order]
         return summary
 
     def build_omitted_fund_summary(self):
@@ -455,6 +500,24 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
         return summary
 
+    def _calculate_ranking_persistence(self, current_rankings, dates):
+        rankings = current_rankings
+        rankings.rename(columns={'Decile': self._as_of_date}, inplace=True)
+        for date in dates:
+            ranking = self._download_prior_rankings(location=self._summary_data_location,
+                                                    as_of_date=date)
+            if ranking is not None:
+                rankings = rankings.merge(ranking, how='left')
+
+        rankings.iloc[:, 1:] = rankings.iloc[:, 1:].transform(pd.to_numeric, errors='ignore')
+        num_above = rankings.iloc[:, 1:].lt(6).sum(axis=1)
+        num_obs = rankings.iloc[:, 1:].notna().sum(axis=1)
+        current_above = rankings.iloc[:, 1].lt(6)
+        pct_above = (num_above / num_obs).round(2)
+        persistence = ([pct_above if current_above else 1 - pct_above for pct_above, num_obs, current_above
+                        in zip(pct_above, num_obs, current_above)])
+        return persistence
+
     def generate_performance_screener_report(self):
         # if not self._validate_inputs():
         #     return 'Invalid inputs'
@@ -467,7 +530,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
             return "No peers have returns through as of date"
 
         constituent_counts = self.build_constituent_count_summary()
-        standalone_metrics = self.build_standalone_metrics_summary()
+        standalone_metrics, calendar_return_headings = self.build_standalone_metrics_summary()
         relative_metrics = self.build_absolute_return_benchmark_summary()
         rankings = self._calculate_peer_rankings()
 
@@ -482,9 +545,11 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         omitted_funds = self.build_omitted_fund_summary()
 
         rankings_max_row = 11 + summary_table.shape[0]
+        rankings_max_column = get_column_letter(summary_table.shape[1] + 1)
         omitted_funds_max_row = 11 + omitted_funds.shape[0]
-        print_areas = {'Rankings': 'B1:W' + str(rankings_max_row),
-                       'Omitted Funds': 'B1:E' + str(omitted_funds_max_row)}
+        omitted_funds_max_column = get_column_letter(omitted_funds.shape[1] + 1)
+        print_areas = {'Rankings': 'B1:' + rankings_max_column + str(rankings_max_row),
+                       'Omitted Funds': 'B1:' + omitted_funds_max_column + str(omitted_funds_max_row)}
 
         logging.info('Report summary data generated for: ' + self._peer_group)
 
@@ -492,6 +557,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
             "header_info1": header_info,
             "header_info2": header_info,
             "summary_table": summary_table,
+            "calendar_return_headings": calendar_return_headings,
             "omitted_funds": omitted_funds,
             "constituents1": constituent_counts,
             "constituents2": constituent_counts,
@@ -501,15 +567,15 @@ class PerformanceScreenerReport(ReportingRunnerBase):
             "header_info1": header_info.to_json(orient='index'),
             "header_info2": header_info.to_json(orient='index'),
             "summary_table": summary_table.to_json(orient='index'),
+            "calendar_return_headings": calendar_return_headings.to_json(orient='index'),
             "omitted_funds": omitted_funds.to_json(orient='index'),
             "constituents1": constituent_counts.to_json(orient='index'),
         }
 
         data_to_write = json.dumps(input_data_json)
-        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
         write_params = AzureDataLakeDao.create_get_data_params(
             self._summary_data_location,
-            self._peer_group.replace("/", "") + as_of_date + ".json",
+            self._get_json_file_name(as_of_date=self._as_of_date),
             retry=False,
         )
         self._runner.execute(
@@ -526,13 +592,13 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         with Scenario(runner=DaoRunner(), as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
-                template="XPFUND_Performance_Screener_Template.xlsx",
+                template="ARS_Performance_Screener_Template.xlsx",
                 save=True,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.cross_entity,
                 entity_name=entity_name,
                 entity_display_name=entity_name,
-                report_name="XPortfolioFund Performance Screener",
+                report_name="ARS Performance Screener",
                 report_type=ReportType.Performance,
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
@@ -551,27 +617,14 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
 if __name__ == "__main__":
     peer_groups = ["GCM Asia",
-                   #"GCM Asia Credit",
                    "GCM Asia Equity",
-                   #"GCM Asia Macro",
                    "GCM China",
-                   #"GCM Commodities",
                    "GCM Consumer",
                    "GCM Credit",
                    "GCM Cross Cap",
                    "GCM Diverse",
-                   # "GCM Diversifying Strategies",
-                   # "GCM DS Alternative Trend",
-                   # "GCM DS CTA",
-                   # "GCM DS Multi-Strategy",
-                   # "GCM DS Traditional CTA",
                    "GCM Emerging Market Credit",
                    "GCM Energy",
-                   # "GCM EOF Comps",
-                   # "GCM Equities",
-                   # "GCM Equity plus MN Quant",
-                   # "GCM ESG",
-                   # "GCM ESG Credit",
                    "GCM Europe Credit",
                    "GCM Europe Equity",
                    "GCM Financials",
@@ -579,7 +632,6 @@ if __name__ == "__main__":
                    "GCM Generalist Long/Short Equity",
                    "GCM Healthcare",
                    "GCM Illiquid Credit",
-                   # "GCM India",
                    "GCM Industrials",
                    "GCM Japan",
                    "GCM Long Only Equity",
@@ -596,6 +648,7 @@ if __name__ == "__main__":
                    "GCM TMT",
                    "GCM Utilities",
                    ]
+
     peer_groups = ["GCM TMT"]
 
     runner = DaoRunner(
@@ -609,6 +662,10 @@ if __name__ == "__main__":
                 }
             })
 
-    with Scenario(runner=runner, as_of_date=dt.date(2022, 6, 30)).context():
-        for peer_group in peer_groups:
-            PerformanceScreenerReport(peer_group=peer_group).execute()
+    as_of_dates = pd.date_range(dt.date(2019, 12, 31), dt.date(2022, 9, 30), freq='Q').tolist()
+    as_of_dates = pd.to_datetime(as_of_dates).date.tolist()
+
+    for peer_group in peer_groups:
+        for as_of_date in as_of_dates:
+            with Scenario(runner=runner, as_of_date=as_of_date).context():
+                PerformanceScreenerReport(peer_group=peer_group).execute()
