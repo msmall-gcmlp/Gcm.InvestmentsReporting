@@ -1202,7 +1202,7 @@ class BbaReport(ReportingRunnerBase):
         gcm_default_peer["ReportingPeerGroup"] = np.where(
             gcm_default_peer.InvestmentGroupName == "Davidson Kempner", "GCM Multi-Strategy", gcm_default_peer.ReportingPeerGroup
         )
-        ### above no longer needed?
+        # above no longer needed?
 
         peer_to_strat_map = pd.read_csv(os.path.dirname(__file__) + "/input_data/" + "PeerToStrategyMap.csv")
 
