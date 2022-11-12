@@ -15,7 +15,7 @@ class TestPeerRankingReport:
             peer_ranking_report = PerformanceScreenerReport(peer_group=['GCM Multi-PM'])
             constituent_returns = peer_ranking_report._updated_constituent_returns
             constituents = peer_ranking_report._constituents
-            standalone_metrics = peer_ranking_report.build_standalone_metrics_summary()
+            standalone_metrics, _ = peer_ranking_report.build_standalone_metrics_summary()
             relative_metrics = peer_ranking_report.build_absolute_return_benchmark_summary()
             rba_excess = peer_ranking_report.build_rba_excess_return_summary()
             peer_ranking_report = PerformanceScreenerReport(peer_group=['GCM Multi-PM'])
@@ -26,11 +26,11 @@ class TestPeerRankingReport:
                                             'InvestmentGroupName',
                                             'InvestmentName',
                                             'InvestmentStatus'])
-        assert all(standalone_metrics.columns == ['Return', 'Vol', 'Sharpe', 'PeerStressRor', 'MaxRor'])
+        assert all(standalone_metrics.columns[0:5] == ['Return', 'Vol', 'Sharpe', 'MaxPttDdown', 'BetaToSpx'])
         assert standalone_metrics.shape[0] > 0
-        assert all(relative_metrics.columns == ['Excess', 'ExcessQtile', 'R2'])
+        assert all(relative_metrics.columns == ['Excess', 'ExcessDecile'])
         assert relative_metrics.shape[0] > 0
-        assert all(rba_excess.columns == ['RbaAlpha', 'RbaAlphaQtile'])
+        assert all(rba_excess.columns == ['RbaAlpha', 'RbaAlphaDecile'])
         assert rba_excess.shape[0] > 0
-        assert all(rba_risk.columns == ['SYSTEMATIC', 'X_ASSET_CLASS', 'PUBLIC_LS', 'NON_FACTOR'])
+        assert all(rba_risk.columns == ['SYSTEMATIC', 'X_ASSET_CLASS', 'PUBLIC_LS', 'NON_FACTOR', 'PctIdioDecile'])
         assert rba_risk.shape[0] > 0
