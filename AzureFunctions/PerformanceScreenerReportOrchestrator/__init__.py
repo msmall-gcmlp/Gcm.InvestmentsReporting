@@ -46,7 +46,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
                    "GCM Quant",
                    "GCM Real Estate",
                    "GCM Relative Value",
-                   "GCM Short Sellers",
+                   # "GCM Short Sellers",
                    "GCM Structured Credit",
                    "GCM TMT",
                    "GCM Utilities",
