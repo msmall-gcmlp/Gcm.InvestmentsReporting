@@ -510,8 +510,8 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         for date in dates:
             ranking = self._download_prior_rankings(location=self._summary_data_location,
                                                     as_of_date=date)
-            ranking = ranking.drop_duplicates().groupby('InvestmentGroupName').head(1)
             if ranking is not None:
+                ranking = ranking.drop_duplicates().groupby('InvestmentGroupName').head(1)
                 rankings = rankings.merge(ranking, how='left')
 
         rankings.iloc[:, 1:] = rankings.iloc[:, 1:].transform(pd.to_numeric, errors='ignore')
