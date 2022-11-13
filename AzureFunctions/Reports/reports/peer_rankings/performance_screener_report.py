@@ -70,6 +70,10 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         sufficient_track = ~returns[-min_required_returns:].isna().any()
         sufficient_track_funds = sufficient_track[sufficient_track].index.tolist()
         returns = returns.loc[:, sufficient_track_funds]
+
+        not_all_zeros = ~(returns == 0).all()
+        returns = returns.loc[:, not_all_zeros]
+
         return returns
 
     @cached_property
@@ -506,6 +510,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         for date in dates:
             ranking = self._download_prior_rankings(location=self._summary_data_location,
                                                     as_of_date=date)
+            ranking = ranking.drop_duplicates().groupby('InvestmentGroupName').head(1)
             if ranking is not None:
                 rankings = rankings.merge(ranking, how='left')
 
@@ -586,27 +591,27 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
         logging.info("JSON stored to DataLake for: " + self._peer_group)
 
-        as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-        entity_name = self._peer_group.replace("/", "").replace("GCM ", "") + ' Peer'
-
-        with Scenario(runner=DaoRunner(), as_of_date=as_of_date).context():
-            InvestmentsReportRunner().execute(
-                data=input_data,
-                template="ARS_Performance_Screener_Template.xlsx",
-                save=True,
-                runner=self._runner,
-                entity_type=ReportingEntityTypes.cross_entity,
-                entity_name=entity_name,
-                entity_display_name=entity_name,
-                report_name="ARS Performance Screener",
-                report_type=ReportType.Performance,
-                report_vertical=ReportVertical.ARS,
-                report_frequency="Monthly",
-                aggregate_intervals=AggregateInterval.MTD,
-                print_areas=print_areas,
-                # output_dir="cleansed/investmentsreporting/printedexcels/",
-                # report_output_source=DaoSource.DataLake,
-            )
+        # as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
+        # entity_name = self._peer_group.replace("/", "").replace("GCM ", "") + ' Peer'
+        #
+        # with Scenario(runner=DaoRunner(), as_of_date=as_of_date).context():
+        #     InvestmentsReportRunner().execute(
+        #         data=input_data,
+        #         template="ARS_Performance_Screener_Template.xlsx",
+        #         save=True,
+        #         runner=self._runner,
+        #         entity_type=ReportingEntityTypes.cross_entity,
+        #         entity_name=entity_name,
+        #         entity_display_name=entity_name,
+        #         report_name="ARS Performance Screener",
+        #         report_type=ReportType.Performance,
+        #         report_vertical=ReportVertical.ARS,
+        #         report_frequency="Monthly",
+        #         aggregate_intervals=AggregateInterval.MTD,
+        #         print_areas=print_areas,
+        #         # output_dir="cleansed/investmentsreporting/printedexcels/",
+        #         # report_output_source=DaoSource.DataLake,
+        #     )
 
         logging.info("Excel stored to DataLake for: " + self._peer_group)
 
@@ -616,12 +621,12 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
 
 if __name__ == "__main__":
-    peer_groups = ["GCM Asia",
-                   "GCM Asia Equity",
-                   "GCM China",
-                   "GCM Consumer",
-                   "GCM Credit",
-                   "GCM Cross Cap",
+    peer_groups = [# "GCM Asia",
+                   # "GCM Asia Equity",
+                   # "GCM China",
+                   # "GCM Consumer",
+                   # "GCM Credit",
+                   # "GCM Cross Cap",
                    "GCM Diverse",
                    "GCM Emerging Market Credit",
                    "GCM Energy",
@@ -649,13 +654,17 @@ if __name__ == "__main__":
                    "GCM Utilities",
                    ]
 
-    peer_groups = ["GCM TMT"]
+    # peer_groups = ["GCM Credit"]
 
     runner = DaoRunner(
             container_lambda=lambda b, i: b.config.from_dict(i),
             config_params={
                 DaoRunnerConfigArgs.dao_global_envs.name: {
                     DaoSource.InvestmentsDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.DataLake.name: {
                         "Environment": "prd",
                         "Subscription": "prd",
                     },
@@ -667,5 +676,6 @@ if __name__ == "__main__":
 
     for peer_group in peer_groups:
         for as_of_date in as_of_dates:
+            #as_of_date = dt.date(2020, 3, 31)
             with Scenario(runner=runner, as_of_date=as_of_date).context():
                 PerformanceScreenerReport(peer_group=peer_group).execute()
