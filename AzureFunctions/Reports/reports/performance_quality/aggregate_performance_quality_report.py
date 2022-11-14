@@ -210,7 +210,7 @@ class AggregatePerformanceQualityReport(ReportingRunnerBase):
                 entity_display_name=self._portfolio_acronym.replace("/", ""),
                 entity_ids=[self._pub_portfolio_id.item()],
                 entity_source=DaoSource.PubDwh,
-                report_name="Performance Quality",
+                report_name="ARS Performance Quality",
                 report_type=ReportType.Risk,
                 aggregate_intervals=AggregateInterval.MTD,
                 output_dir="cleansed/investmentsreporting/printedexcels/",

@@ -1671,7 +1671,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                 entity_display_name=self._fund_name.replace("/", ""),
                 entity_ids=[pub_id],
                 entity_source=DaoSource.PubDwh,
-                report_name="Performance Quality",
+                report_name="ARS Performance Quality",
                 report_type=ReportType.Performance,
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
