@@ -161,7 +161,7 @@ class HkmaMarketPerformanceReport(ReportingRunnerBase):
                 entity_display_name='IFC',
                 entity_source=DaoSource.PubDwh,
                 # entity_id=[158],
-                report_name="HKMA Market Performance",
+                report_name="Market Performance - HKMA",
                 report_type=ReportType.Market,
                 report_frequency="Daily",
                 report_vertical=ReportVertical.ARS,
