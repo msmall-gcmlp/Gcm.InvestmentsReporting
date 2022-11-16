@@ -1,11 +1,15 @@
 import azure.durable_functions as df
-from ..legacy_tasks import LegacyTasks
+from ..legacy_tasks import LegacyTasks, ActivitySet, ActivityParams
+from ...legacy_report_orch_parsed_args import LegacyReportingOrchParsedArgs
 
 
 def orchestrator_function(
     context: df.DurableOrchestrationContext,
 ) -> LegacyTasks:
-    client_input: dict = context.get_input()
+    # get factor Returns
+    client_input = LegacyReportingOrchParsedArgs.parse_client_inputs(
+        context
+    )
     params = client_input["params"]
 
     peer_groups = [
@@ -61,17 +65,13 @@ def orchestrator_function(
         params.update({"run": "PerformanceScreenerReport"})
         params.update({"peer_group": peer_group})
         peer_params = {"params": params, "data": {}}
-
         parallel_period_tasks.append(
-            context.call_activity(
-                "PerformanceScreenerReportActivity",
-                peer_params,
+            ActivityParams(
+                "PerformanceScreenerReportActivity", peer_params
             )
         )
 
-    yield context.task_all(parallel_period_tasks)
-
-    return True
+    return LegacyTasks([ActivitySet(parallel_period_tasks)])
 
 
 main = df.Orchestrator.create(orchestrator_function)

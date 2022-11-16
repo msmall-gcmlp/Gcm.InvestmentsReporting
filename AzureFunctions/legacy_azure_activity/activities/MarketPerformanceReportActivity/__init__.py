@@ -34,14 +34,18 @@ def main(requestBody) -> str:
         folder = "marketperformance"
         loc = "raw/investmentsreporting/underlyingdata/"
         location = f"{loc}/{folder}/"
-        params = AzureDataLakeDao.create_get_data_params(location, file_name, True)
+        params = AzureDataLakeDao.create_get_data_params(
+            location, file_name, True
+        )
 
         file: AzureDataLakeFile = runner.execute(
             params=params,
             source=DaoSource.DataLake,
             operation=lambda dao, params: dao.get_data(params),
         )
-        df = file.to_tabular_data(TabularDataOutputTypes.PandasDataFrame, params)
+        df = file.to_tabular_data(
+            TabularDataOutputTypes.PandasDataFrame, params
+        )
         with Scenario(runner=runner, as_of_date=as_of_date).context():
             input_data = MarketPerformanceQualityReportData(
                 start_date=start_date,

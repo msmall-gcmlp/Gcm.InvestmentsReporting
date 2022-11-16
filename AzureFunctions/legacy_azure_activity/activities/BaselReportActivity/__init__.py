@@ -47,21 +47,31 @@ def main(requestBody) -> str:
         folder = "basel"
         loc = "raw/investmentsreporting/underlyingdata/"
         location = f"{loc}/{folder}/"
-        params = AzureDataLakeDao.create_get_data_params(location, file_name, True)
-        params_mapping = AzureDataLakeDao.create_get_data_params(location, mapping_file_name, True)
+        params = AzureDataLakeDao.create_get_data_params(
+            location, file_name, True
+        )
+        params_mapping = AzureDataLakeDao.create_get_data_params(
+            location, mapping_file_name, True
+        )
         file: AzureDataLakeFile = runner.execute(
             params=params,
             source=DaoSource.DataLake,
             operation=lambda dao, params: dao.get_data(params),
         )
-        df = file.to_tabular_data(TabularDataOutputTypes.PandasDataFrame, params)
+        df = file.to_tabular_data(
+            TabularDataOutputTypes.PandasDataFrame, params
+        )
 
         mapping_file: AzureDataLakeFile = runner.execute(
             params=params_mapping,
             source=DaoSource.DataLake,
-            operation=lambda dao, params_mapping: dao.get_data(params_mapping),
+            operation=lambda dao, params_mapping: dao.get_data(
+                params_mapping
+            ),
         )
-        df_mapping = mapping_file.to_tabular_data(TabularDataOutputTypes.PandasDataFrame, params_mapping)
+        df_mapping = mapping_file.to_tabular_data(
+            TabularDataOutputTypes.PandasDataFrame, params_mapping
+        )
         runner2 = DaoRunner(
             container_lambda=lambda b, i: b.config.from_dict(i),
             config_params=config_params,
@@ -72,8 +82,12 @@ def main(requestBody) -> str:
             funds_exposure=df,
             portfolio=portfolio_name,
         ).execute()
-        for investment_name in portfolio_allocation["InvestmentName"].unique():
-            data_per_investment = portfolio_allocation[portfolio_allocation["InvestmentName"] == investment_name]
+        for investment_name in portfolio_allocation[
+            "InvestmentName"
+        ].unique():
+            data_per_investment = portfolio_allocation[
+                portfolio_allocation["InvestmentName"] == investment_name
+            ]
             BaselReport(
                 runner=runner2,
                 as_of_date=as_of_date,

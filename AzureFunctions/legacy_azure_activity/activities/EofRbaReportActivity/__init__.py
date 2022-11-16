@@ -2,7 +2,9 @@ from datetime import datetime
 from gcm.inv.scenario import Scenario
 from gcm.Dao.DaoRunner import DaoRunner
 from gcm.inv.quantlib.enum_source import PeriodicROR
-from _legacy.Reports.reports.eof_rba.eof_rba_report import EofReturnBasedAttributionReport
+from _legacy.Reports.reports.eof_rba.eof_rba_report import (
+    EofReturnBasedAttributionReport,
+)
 
 
 def main(requestBody) -> str:
@@ -19,6 +21,8 @@ def main(requestBody) -> str:
         periodicity = PeriodicROR.YTD
 
     if run == "EofRbaReport":
-        with Scenario(runner=runner, as_of_date=as_of_date, periodicity=periodicity).context():
+        with Scenario(
+            runner=runner, as_of_date=as_of_date, periodicity=periodicity
+        ).context():
             eof_rba = EofReturnBasedAttributionReport()
             return eof_rba.execute()

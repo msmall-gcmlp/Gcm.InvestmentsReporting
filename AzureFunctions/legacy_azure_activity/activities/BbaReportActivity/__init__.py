@@ -1,7 +1,9 @@
 from datetime import datetime
 from gcm.inv.scenario import Scenario
 from gcm.Dao.DaoRunner import DaoRunner
-from _legacy.Reports.reports.brinson_based_attribution.bba_report import BbaReport
+from _legacy.Reports.reports.brinson_based_attribution.bba_report import (
+    BbaReport,
+)
 
 
 def main(requestBody) -> str:

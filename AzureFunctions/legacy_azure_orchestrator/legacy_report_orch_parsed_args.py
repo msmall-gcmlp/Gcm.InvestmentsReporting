@@ -1,8 +1,10 @@
 from gcm.inv.entityhierarchy.az_func.entity_extract_activity_base import (
     EntityParsedArgs,
 )
+import azure.durable_functions as df
 from .legacy_orchestrations import LegacyOrchestrations
 import azure.functions as func
+import json
 
 
 class LegacyReportingOrchParsedArgs(EntityParsedArgs):
@@ -11,7 +13,7 @@ class LegacyReportingOrchParsedArgs(EntityParsedArgs):
 
     @classmethod
     def from_http(cls, req: func.HttpRequest):
-        d = req.params
+        d = dict(req.params)
         d["LegacyOrchestrations"] = req.route_params["functionName"]
         pargs = LegacyReportingOrchParsedArgs.from_dict(d)
         return pargs
@@ -30,3 +32,11 @@ class LegacyReportingOrchParsedArgs(EntityParsedArgs):
         else:
             raise NotImplementedError()
         return pargs
+
+    @staticmethod
+    def parse_client_inputs(
+        context: df.DurableOrchestrationContext,
+    ):
+        client_input: str = context.get_input()
+        client_input = json.loads(client_input)["d"]
+        return client_input

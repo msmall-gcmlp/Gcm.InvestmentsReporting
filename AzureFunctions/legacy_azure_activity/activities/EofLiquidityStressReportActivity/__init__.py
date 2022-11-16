@@ -18,30 +18,34 @@ def main(requestBody) -> str:
     config_params = {
         DaoRunnerConfigArgs.dao_global_envs.name: {
             DaoSource.InvestmentsDwh.name: {
-                "Environment": 'prd',
-                'Subscription': 'prd'
+                "Environment": "prd",
+                "Subscription": "prd",
             }
         }
     }
 
-    runner = DaoRunner(container_lambda=lambda b, i: b.config.from_dict(i),
-                       config_params=config_params)
+    runner = DaoRunner(
+        container_lambda=lambda b, i: b.config.from_dict(i),
+        config_params=config_params,
+    )
 
     if run == "RunEofLiquidityStress":
         with Scenario(runner=runner, as_of_date=as_of_date).context():
             input_data = EofStressTestingData(
                 runner=runner,
-                as_of_date= params["as_of_date"],
-                scenario=['Liquidity Stress']
+                as_of_date=params["as_of_date"],
+                scenario=["Liquidity Stress"],
             ).execute()
-            runner2 = DaoRunner(container_lambda=lambda b, i: b.config.from_dict(i),
-                       config_params=config_params)
+            runner2 = DaoRunner(
+                container_lambda=lambda b, i: b.config.from_dict(i),
+                config_params=config_params,
+            )
 
             eof_liquidity = EofLiquidityReport(
                 runner=runner2,
                 as_of_date=as_of_date,
                 factor_inventory=input_data,
-                manager_exposure=input_data
+                manager_exposure=input_data,
             )
 
         return eof_liquidity.execute()
