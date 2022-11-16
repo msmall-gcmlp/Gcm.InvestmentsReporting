@@ -1,5 +1,5 @@
 from gcm.inv.dataprovider.factor import Factor
-from gcm.inv.reporting.core.reporting_runner_base import (
+from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 import pandas as pd

@@ -6,18 +6,18 @@ import datetime as dt
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from gcm.inv.reporting.core.ReportStructure.report_structure import (
+from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
     AggregateInterval,
 )
-from gcm.inv.reporting.core.Runners.investmentsreporting import (
+from _legacy.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
 from gcm.inv.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from gcm.inv.reporting.core.reporting_runner_base import (
+from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 from gcm.inv.dataprovider.factor import Factor

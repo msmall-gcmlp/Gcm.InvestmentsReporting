@@ -11,7 +11,7 @@ from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
     AggregateFromDaily,
 )
-from gcm.inv.reporting.core.reporting_runner_base import (
+from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 

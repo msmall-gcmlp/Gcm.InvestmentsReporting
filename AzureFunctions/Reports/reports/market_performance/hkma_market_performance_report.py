@@ -4,10 +4,10 @@ import pandas as pd
 from datetime import timedelta
 from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.scenario import Scenario
-from gcm.inv.reporting.core.ReportStructure.report_structure import AggregateInterval
-from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, ReportVertical
-from gcm.inv.reporting.core.Runners.investmentsreporting import InvestmentsReportRunner
-from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
+from _legacy.core.ReportStructure.report_structure import AggregateInterval
+from _legacy.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, ReportVertical
+from _legacy.core.Runners.investmentsreporting import InvestmentsReportRunner
+from _legacy.core.reporting_runner_base import ReportingRunnerBase
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.utils.date import DatePeriod

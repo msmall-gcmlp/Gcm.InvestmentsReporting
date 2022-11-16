@@ -14,17 +14,17 @@ from pandas._libs.tslibs.offsets import relativedelta
 from gcm.inv.quantlib.enum_source import Periodicity, PeriodicROR
 
 from Reports.reports.peer_rankings.peer_rankings import PeerRankings
-from gcm.inv.reporting.core.ReportStructure.report_structure import (
+from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
     AggregateInterval, ReportVertical,
 )
-from gcm.inv.reporting.core.Runners.investmentsreporting import (
+from _legacy.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
 from gcm.inv.scenario import Scenario
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from gcm.inv.reporting.core.reporting_runner_base import (
+from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 from gcm.inv.dataprovider.factor import Factor

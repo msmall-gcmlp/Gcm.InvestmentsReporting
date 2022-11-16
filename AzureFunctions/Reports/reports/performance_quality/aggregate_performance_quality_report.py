@@ -4,16 +4,16 @@ import pandas as pd
 import datetime as dt
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from gcm.inv.reporting.core.reporting_runner_base import (
+from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 from gcm.inv.dataprovider.portfolio import Portfolio
-from gcm.inv.reporting.core.ReportStructure.report_structure import (
+from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
     AggregateInterval,
 )
-from gcm.inv.reporting.core.Runners.investmentsreporting import (
+from _legacy.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
 from gcm.inv.scenario import Scenario

@@ -3,19 +3,19 @@ import pandas as pd
 import datetime as dt
 import numpy as np
 from gcm.Dao.DaoSources import DaoSource
-from gcm.inv.reporting.core.ReportStructure.report_structure import (
+from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
     ReportVertical,
     AggregateInterval,
 )
-from gcm.inv.reporting.core.Runners.investmentsreporting import (
+from _legacy.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
 from gcm.inv.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from gcm.inv.reporting.core.reporting_runner_base import (
+from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 

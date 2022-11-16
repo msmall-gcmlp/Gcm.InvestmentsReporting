@@ -9,7 +9,7 @@ from gcm.inv.quantlib.enum_source import Periodicity
 from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
 from gcm.inv.quantlib.peer_ranking.ranking import PeerRank
 from sklearn.preprocessing import MinMaxScaler
-from gcm.inv.reporting.core.reporting_runner_base import ReportingRunnerBase
+from _legacy.core.reporting_runner_base import ReportingRunnerBase
 
 scaler = MinMaxScaler()
 

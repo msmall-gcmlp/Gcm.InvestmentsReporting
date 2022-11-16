@@ -3,12 +3,12 @@ import logging
 import os
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
-from gcm.inv.reporting.core.ReportStructure.report_structure import AggregateInterval
+from _legacy.core.ReportStructure.report_structure import AggregateInterval
 from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.quantlib.enum_source import Periodicity
 from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
-from gcm.inv.reporting.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, ReportVertical
+from _legacy.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, ReportVertical
 import datetime as dt
 import numpy as np
 from dateutil.relativedelta import relativedelta
@@ -18,10 +18,10 @@ from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.inv.dataprovider.portfolio import Portfolio
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
 
-from gcm.inv.reporting.core.Runners.investmentsreporting import (
+from _legacy.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
-from gcm.inv.reporting.core.reporting_runner_base import (
+from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 from gcm.inv.scenario import Scenario

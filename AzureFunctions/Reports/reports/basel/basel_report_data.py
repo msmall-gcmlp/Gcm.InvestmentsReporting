@@ -1,7 +1,7 @@
 from gcm.inv.dataprovider.pub_dwh.allocation_query import (
     get_pub_dwh_portfolio_holdings,
 )
-from gcm.inv.reporting.core.reporting_runner_base import (
+from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 

@@ -1,5 +1,5 @@
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
-from gcm.inv.reporting.core.ReportStructure.report_structure import (
+from _legacy.core.ReportStructure.report_structure import (
     base_output_location,
 )
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
