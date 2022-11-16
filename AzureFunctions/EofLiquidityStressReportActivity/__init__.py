@@ -1,8 +1,8 @@
 from datetime import datetime
-from Reports.reports.eof_liquidity_stress.report_data import (
+from _legacy.Reports.reports.eof_liquidity_stress.report_data import (
     EofStressTestingData,
 )
-from Reports.reports.eof_liquidity_stress.eof_liquidity_stress_report import (
+from _legacy.Reports.reports.eof_liquidity_stress.eof_liquidity_stress_report import (
     EofLiquidityReport,
 )
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs

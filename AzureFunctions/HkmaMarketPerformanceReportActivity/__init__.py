@@ -1,5 +1,5 @@
 from datetime import datetime
-from Reports.reports.market_performance.hkma_market_performance_report import HkmaMarketPerformanceReport
+from _legacy.Reports.reports.market_performance.hkma_market_performance_report import HkmaMarketPerformanceReport
 from gcm.Dao.DaoRunner import DaoRunner
 from gcm.inv.scenario import Scenario
 

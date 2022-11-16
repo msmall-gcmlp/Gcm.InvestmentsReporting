@@ -13,7 +13,7 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from pandas._libs.tslibs.offsets import relativedelta
 from gcm.inv.quantlib.enum_source import Periodicity, PeriodicROR
 
-from Reports.reports.peer_rankings.peer_rankings import PeerRankings
+from _legacy.Reports.reports.peer_rankings.peer_rankings import PeerRankings
 from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,

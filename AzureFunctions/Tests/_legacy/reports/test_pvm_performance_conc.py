@@ -1,7 +1,7 @@
 import pytest
 
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource
-from Reports.reports.Pvm.TrackRecord.performance_concentration import (
+from _legacy.Reports.reports.Pvm.TrackRecord.performance_concentration import (
     PerformanceConcentrationReport,
 )
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (

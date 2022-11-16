@@ -1,8 +1,8 @@
 from datetime import datetime
-from Reports.reports.basel.basel_report import (
+from _legacy.Reports.reports.basel.basel_report import (
     BaselReport,
 )
-from Reports.reports.basel.basel_report_data import (
+from _legacy.Reports.reports.basel.basel_report_data import (
     BaselReportData,
 )
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs

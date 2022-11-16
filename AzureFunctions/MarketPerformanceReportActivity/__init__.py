@@ -1,9 +1,9 @@
 from pandas.tseries.offsets import BDay
 from datetime import datetime
-from Reports.reports.market_performance.report_data import (
+from _legacy.Reports.reports.market_performance.report_data import (
     MarketPerformanceQualityReportData,
 )
-from Reports.reports.market_performance.market_performance_report import (
+from _legacy.Reports.reports.market_performance.market_performance_report import (
     MarketPerformanceReport,
 )
 from gcm.Dao.DaoRunner import DaoRunner
