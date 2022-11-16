@@ -663,28 +663,28 @@ if __name__ == "__main__":
 
     peer_groups = ["GCM Multi-PM"]
 
-    # runner = DaoRunner(
-    #         container_lambda=lambda b, i: b.config.from_dict(i),
-    #         config_params={
-    #             DaoRunnerConfigArgs.dao_global_envs.name: {
-    #                 DaoSource.InvestmentsDwh.name: {
-    #                     "Environment": "prd",
-    #                     "Subscription": "prd",
-    #                 },
-    #                 DaoSource.DataLake.name: {
-    #                     "Environment": "prd",
-    #                     "Subscription": "prd",
-    #                 },
-    #             }
-    #         })
+    runner = DaoRunner(
+            container_lambda=lambda b, i: b.config.from_dict(i),
+            config_params={
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.InvestmentsDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.DataLake.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                }
+            })
 
-    runner = DaoRunner()
+    # runner = DaoRunner()
 
     as_of_dates = pd.date_range(dt.date(2019, 12, 31), dt.date(2022, 9, 30), freq='Q').tolist()
     as_of_dates = pd.to_datetime(as_of_dates).date.tolist()
 
     for peer_group in peer_groups:
-        as_of_dates = [dt.date(2022, 9, 30)]
+        as_of_dates = [dt.date(2022, 6, 30)]
         for as_of_date in as_of_dates:
             with Scenario(runner=runner, as_of_date=as_of_date).context():
                 PerformanceScreenerReport(peer_group=peer_group).execute()
