@@ -10,12 +10,18 @@ def orchestrator_function(
     params = client_input["params"]
     disct1 = {
         "params": {
-            "run": "RunBaselReport",
+            "run": "RunEofLiquidityStress",
             "as_of_date": params["as_of_date"],
-            "balancedate": params["balancedate"],
-            "portfolio_name": params["portfolio_name"],
         },
     }
     return LegacyTasks(
-        [ActivitySet([ActivityParams("BaselReportActivity", disct1)])]
+        [
+            ActivitySet(
+                [
+                    ActivityParams(
+                        "EofLiquidityStressReportActivity", disct1
+                    )
+                ]
+            )
+        ]
     )
