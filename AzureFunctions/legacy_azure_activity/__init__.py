@@ -47,26 +47,26 @@ class LegacyReportConstructorActivity(BaseActivity):
         assert data is not None
         if activity_name == LegacyActivities.BaselReportActivity:
             d = basel_report_main(activity_params)
-        if activity_name == LegacyActivities.BbaReportActivity:
+        elif activity_name == LegacyActivities.BbaReportActivity:
             d = bba_report_main(activity_params)
-        if (
+        elif (
             activity_name
             == LegacyActivities.EofLiquidityStressReportActivity
         ):
             d = eof_liq_report_main(activity_params)
-        if activity_name == LegacyActivities.EofRbaReportActivity:
+        elif activity_name == LegacyActivities.EofRbaReportActivity:
             d = eof_rba_report_main(activity_params)
-        if (
+        elif (
             activity_name
             == LegacyActivities.HkmaMarketPerformanceReportActivity
         ):
             d = hkma_report_main(activity_params)
-        if (
+        elif (
             activity_name
             == LegacyActivities.MarketPerformanceReportActivity
         ):
             d = market_report_main(activity_params)
-        if (
+        elif (
             activity_name
             == LegacyActivities.PerformanceScreenerReportActivity
         ):
