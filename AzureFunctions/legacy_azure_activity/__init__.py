@@ -42,36 +42,19 @@ class LegacyReportConstructorActivity(BaseActivity):
 
     def activity(self, **kwargs):
         assert self.pargs is not None
+        activity_map = {
+            LegacyActivities.BaselReportActivity: basel_report_main,
+            LegacyActivities.BbaReportActivity: bba_report_main,
+            LegacyActivities.EofLiquidityStressReportActivity: eof_liq_report_main,
+            LegacyActivities.EofRbaReportActivity: eof_rba_report_main,
+            LegacyActivities.HkmaMarketPerformanceReportActivity: hkma_report_main,
+            LegacyActivities.MarketPerformanceReportActivity: market_report_main,
+            LegacyActivities.PerformanceScreenerReportActivity: perf_screener_main,
+        }
         d = None
         [data, activity_name, activity_params] = self.get_activity_info()
         assert data is not None
-        if activity_name == LegacyActivities.BaselReportActivity:
-            d = basel_report_main(activity_params)
-        elif activity_name == LegacyActivities.BbaReportActivity:
-            d = bba_report_main(activity_params)
-        elif (
-            activity_name
-            == LegacyActivities.EofLiquidityStressReportActivity
-        ):
-            d = eof_liq_report_main(activity_params)
-        elif activity_name == LegacyActivities.EofRbaReportActivity:
-            d = eof_rba_report_main(activity_params)
-        elif (
-            activity_name
-            == LegacyActivities.HkmaMarketPerformanceReportActivity
-        ):
-            d = hkma_report_main(activity_params)
-        elif (
-            activity_name
-            == LegacyActivities.MarketPerformanceReportActivity
-        ):
-            d = market_report_main(activity_params)
-        elif (
-            activity_name
-            == LegacyActivities.PerformanceScreenerReportActivity
-        ):
-            d = perf_screener_main(activity_params)
-
+        d = activity_map[activity_name](activity_params)
         return d
 
 
