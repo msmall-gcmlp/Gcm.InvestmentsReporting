@@ -4,6 +4,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.1.32328.378
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("FAE04EC0-301F-11D3-BF4B-00C04F79EFBC") = "AzureFunctions", "AzureFunctions\AzureFunctions.pytproj", "{1C84693D-9667-450F-86A5-09E956B58D59}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
