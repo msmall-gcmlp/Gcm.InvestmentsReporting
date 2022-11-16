@@ -7,6 +7,7 @@ class LegacyOrchestrations(ExtendedEnum):
     BbaReportOrchestrator = auto()
     EofLiquidityStressReportOrchestrator = auto()
     EofRbaReportOrchestrator = auto()
+    MarketPerformanceReportOrchestrator = auto()
     HkmaMarketPerformanceReportOrchestrator = auto()
 
     PerformanceScreenerReportOrchestrator = auto()

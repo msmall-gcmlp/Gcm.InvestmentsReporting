@@ -24,6 +24,9 @@ from .orchestrators.HkmaMarketPerformanceReportOrchestrator import (
 from .orchestrators.PerformanceScreenerReportOrchestrator import (
     orchestrator_function as perf_screener_orchestrator_function,
 )
+from .orchestrators.MarketPerformanceReportOrchestrator import (
+    orchestrator_function as market_performance_orchestrator_function,
+)
 from .orchestrators.legacy_tasks import LegacyTasks
 from gcm.inv.utils.azure.durable_functions.parg_serialization import (
     serialize_pargs,
@@ -85,6 +88,11 @@ class LegacyReportOrchestrator(BaseOrchestrator):
             == LegacyOrchestrations.EofRbaReportOrchestrator
         ):
             d = eof_rba_orchestrator_function(context=context)
+        elif (
+            legacy_orchestrator
+            == LegacyOrchestrations.MarketPerformanceReportOrchestrator
+        ):
+            d = market_performance_orchestrator_function(context=context)
         elif (
             legacy_orchestrator
             == LegacyOrchestrations.HkmaMarketPerformanceReportOrchestrator
