@@ -37,7 +37,7 @@ class MarketPerformanceReport(ReportStructure):
         )
 
     def assign_components(self):
-        dao : DaoRunner = Scenario.get_attribute("dao")
+        dao: DaoRunner = Scenario.get_attribute("dao")
         assert dao is not None
         return [
             ReportTable(

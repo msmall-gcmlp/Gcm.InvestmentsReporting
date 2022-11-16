@@ -17,5 +17,6 @@ class LegacyReportConstructorActivity(BaseActivity):
     def activity(self, **kwargs):
         return True
 
+
 def main(context):
     return LegacyReportConstructorActivity().execute(context=context)

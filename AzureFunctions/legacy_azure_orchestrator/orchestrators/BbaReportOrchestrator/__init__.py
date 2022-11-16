@@ -2,7 +2,9 @@ import azure.durable_functions as df
 from ..legacy_tasks import LegacyTasks, ActivitySet, ActivityParams
 
 
-def orchestrator_function(context: df.DurableOrchestrationContext) -> LegacyTasks:
+def orchestrator_function(
+    context: df.DurableOrchestrationContext,
+) -> LegacyTasks:
     orchestrator_input: dict = context.get_input()
     return LegacyTasks(
         [

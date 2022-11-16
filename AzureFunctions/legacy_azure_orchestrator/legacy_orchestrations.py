@@ -1,13 +1,14 @@
-from enum import Enum, auto
+from enum import auto
+from gcm.inv.utils.misc.extended_enum import ExtendedEnum
 
 
-class LegacyOrchestrations(Enum):
+class LegacyOrchestrations(ExtendedEnum):
     BaselReportOrchestrator = auto()
     BbaReportOrchestrator = auto()
     EofLiquidityStressReportOrchestrator = auto()
     EofRbaReportOrchestrator = auto()
     HkmaMarketPerformanceReportOrchestrator = auto()
-  
+
     PerformanceScreenerReportOrchestrator = auto()
     # TODO: refactor below to be scenario compliant
     # ReportCopyOrchestrator = auto()

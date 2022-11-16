@@ -1,4 +1,6 @@
-from .._legacy_azure_orchestrator.legacy_report_orch_parsed_args import LegacyReportingOrchParsedArgs
+from ..legacy_azure_orchestrator.legacy_report_orch_parsed_args import (
+    LegacyReportingOrchParsedArgs,
+)
 
 
 class LegacyReportingActivityParsedArgs(LegacyReportingOrchParsedArgs):

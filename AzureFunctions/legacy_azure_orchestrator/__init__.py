@@ -29,6 +29,7 @@ class LegacyReportOrchestrator(BaseOrchestrator):
             == LegacyOrchestrations.BaselReportOrchestrator
         ):
             d = base_orchestrator_function(context=context)
+        assert d is not None
 
 
 main = df.Orchestrator.create(LegacyReportOrchestrator.main)
