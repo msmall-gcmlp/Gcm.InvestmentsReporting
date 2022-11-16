@@ -9,8 +9,8 @@ class LegacyOrchestrations(ExtendedEnum):
     EofRbaReportOrchestrator = auto()
     MarketPerformanceReportOrchestrator = auto()
     HkmaMarketPerformanceReportOrchestrator = auto()
-
     PerformanceScreenerReportOrchestrator = auto()
+
     # TODO: refactor below to be scenario compliant
     # ReportCopyOrchestrator = auto()
 
