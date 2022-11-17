@@ -8,3 +8,4 @@ class ReportNames(ExtendedEnum):
     BrinsonAttributionReport = auto()
     MarketDataDashboard_Credit = auto()
     PeerRankingReport = auto()
+    ESG_ScoreCard = auto()
