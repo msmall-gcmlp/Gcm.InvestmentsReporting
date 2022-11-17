@@ -1,6 +1,7 @@
 import azure.durable_functions as df
 from ..legacy_tasks import LegacyTasks, ActivitySet, ActivityParams
 from ...legacy_report_orch_parsed_args import LegacyReportingOrchParsedArgs
+import copy
 
 
 def orchestrator_function(
@@ -62,9 +63,10 @@ def orchestrator_function(
 
     parallel_period_tasks = []
     for peer_group in peer_groups:
-        params.update({"run": "PerformanceScreenerReport"})
-        params.update({"peer_group": peer_group})
-        peer_params = {"params": params, "data": {}}
+        p = copy.deepcopy(params)
+        p.update({"run": "PerformanceScreenerReport"})
+        p.update({"peer_group": peer_group})
+        peer_params = {"params": p, "data": {}}
         parallel_period_tasks.append(
             ActivityParams(
                 "PerformanceScreenerReportActivity", peer_params
