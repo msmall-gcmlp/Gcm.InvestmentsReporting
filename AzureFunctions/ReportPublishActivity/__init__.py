@@ -82,7 +82,9 @@ class ReportPublishActivity(BaseActivity):
         copied = copy.deepcopy(wb)
         for k in [x for x in struct.components if type(x) == ReportTable]:
             if k.component_name in copied.defined_names:
-                address = list(copied.defined_names[k].destinations)
+                address = list(
+                    copied.defined_names[k.component_name].destinations
+                )
                 for sheetname, cell_address in address:
                     cell_address = cell_address.replace("$", "")
                     # override wb:
