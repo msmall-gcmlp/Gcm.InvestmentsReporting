@@ -25,7 +25,7 @@ class ReportOrchestrator(BaseOrchestrator):
             "EntityExtractActivity",
             serialize_pargs(self.pargs),
         )
-        if entities != "" or entities is not None:
+        if entities != "" and entities is not None:
             df = pd.read_json(entities)
             assert df is not None
             provisioning_tasks = []
@@ -38,11 +38,11 @@ class ReportOrchestrator(BaseOrchestrator):
                 provisioning_tasks.append(provision_task)
             data_location = yield context.task_all(provisioning_tasks)
         else:
-            provision_task = context.call_sub_orchestrator(
+            provision_task = [context.call_sub_orchestrator(
                 "ReportRunnerOrchestrator",
                 serialize_pargs(self.pargs),
-            )
-            data_location = yield context.task_all(provisioning_tasks)
+            )]
+            data_location = yield context.task_all(provision_task)
         publish_location = yield context.call_activity(
             "ReportPublishActivity",
             serialize_pargs(self.pargs, {"data": data_location}),
