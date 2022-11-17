@@ -64,46 +64,19 @@ class LegacyReportOrchestrator(BaseOrchestrator):
         return "Done"
 
     def orchestrate(self, context: df.DurableOrchestrationContext):
-        d: LegacyTasks = None
         legacy_orchestrator: LegacyOrchestrations = (
             self.pargs.LegacyOrchestrations
         )
-        if (
-            legacy_orchestrator
-            == LegacyOrchestrations.BaselReportOrchestrator
-        ):
-            d = basel_orchestrator_function(context=context)
-        elif (
-            legacy_orchestrator
-            == LegacyOrchestrations.BbaReportOrchestrator
-        ):
-            d = bba_orchestrator_function(context=context)
-        elif (
-            legacy_orchestrator
-            == LegacyOrchestrations.EofLiquidityStressReportOrchestrator
-        ):
-            d = eof_liq_stress_orchestrator_function(context=context)
-        elif (
-            legacy_orchestrator
-            == LegacyOrchestrations.EofRbaReportOrchestrator
-        ):
-            d = eof_rba_orchestrator_function(context=context)
-        elif (
-            legacy_orchestrator
-            == LegacyOrchestrations.MarketPerformanceReportOrchestrator
-        ):
-            d = market_performance_orchestrator_function(context=context)
-        elif (
-            legacy_orchestrator
-            == LegacyOrchestrations.HkmaMarketPerformanceReportOrchestrator
-        ):
-            d = hkma_mkt_orchestrator_function(context=context)
-        elif (
-            legacy_orchestrator
-            == LegacyOrchestrations.PerformanceScreenerReportOrchestrator
-        ):
-            d = perf_screener_orchestrator_function(context=context)
-
+        orchestrator_map = {
+            LegacyOrchestrations.BaselReportOrchestrator: basel_orchestrator_function,
+            LegacyOrchestrations.BbaReportOrchestrator: bba_orchestrator_function,
+            LegacyOrchestrations.EofLiquidityStressReportOrchestrator: eof_liq_stress_orchestrator_function,
+            LegacyOrchestrations.EofRbaReportOrchestrator: eof_rba_orchestrator_function,
+            LegacyOrchestrations.MarketPerformanceReportOrchestrator: market_performance_orchestrator_function,
+            LegacyOrchestrations.HkmaMarketPerformanceReportOrchestrator: hkma_mkt_orchestrator_function,
+            LegacyOrchestrations.PerformanceScreenerReportOrchestrator: perf_screener_orchestrator_function,
+        }
+        d: LegacyTasks = orchestrator_map[legacy_orchestrator](context)
         assert d is not None
         return self.execute_legacy_tasks(d, context)
 
