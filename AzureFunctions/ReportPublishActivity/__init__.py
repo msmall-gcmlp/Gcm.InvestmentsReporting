@@ -81,7 +81,7 @@ class ReportPublishActivity(BaseActivity):
     def print_report_to_template(wb: Workbook, struct: ReportStructure):
         copied = copy.deepcopy(wb)
         for k in [x for x in struct.components if type(x) == ReportTable]:
-            if k in copied.defined_names:
+            if k.component_name in copied.defined_names:
                 address = list(copied.defined_names[k].destinations)
                 for sheetname, cell_address in address:
                     cell_address = cell_address.replace("$", "")

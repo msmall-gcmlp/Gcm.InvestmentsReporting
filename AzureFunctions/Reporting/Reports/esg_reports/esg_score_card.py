@@ -3,7 +3,7 @@ from ...core.report_structure import (
     ReportMeta,
     AvailableMetas,
 )
-from gcm.Dao.DaoRunner import DaoRunner, DaoSource
+from gcm.Dao.DaoRunner import DaoRunner, DaoSource, AzureDataLakeDao
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from ...core.report_structure import (
     ReportType,
@@ -21,18 +21,19 @@ class ESG_ScoreCard(ReportStructure):
         "/".join(["raw", "investmentsreporting", "exceltemplates"]) + "/"
     )
     _output_directory = (
-        "/".join(["cleansed", "investmentsreporting", "printedexcels"])
-        + "/"
+        "/".join(["cleansed", "reporting21", "contributions"]) + "/"
     )
 
     def __init__(self, report_meta: ReportMeta):
-        super().__init__(ReportNames.MarketPerformanceReport, report_meta)
-        self.excel_template = "Market Performance_Template.xlsx"
+        super().__init__(ReportNames.ESG_ScoreCard, report_meta)
+        self.excel_template = (
+            "Primaries_Initial_InternalReporting_vGS.xlsx"
+        )
 
     @classmethod
     def available_metas(cls):
         return AvailableMetas(
-            report_type=ReportType.Market,
+            report_type=ReportType.Other,
             frequencies=[
                 Frequency(FrequencyType.Daily, Calendar.US_Business_GCM),
             ],
@@ -43,15 +44,26 @@ class ESG_ScoreCard(ReportStructure):
             ),
         )
 
+    @property
+    def save_params(self) -> tuple[dict, DaoSource]:
+        return (
+            AzureDataLakeDao.create_get_data_params(
+                f"{ESG_ScoreCard._output_directory}/",
+                "testing.xlsx",
+                metadata=self.metadata(),
+            ),
+            DaoSource.DataLake,
+        )
+
     def assign_components(self):
         dao: DaoRunner = Scenario.get_attribute("dao")
         assert dao is not None
         df: pd.DataFrame = dao.execute(
             params={
                 "schema": "reporting21",
-                "tables": "vContributions",
+                "table": "vContributions",
                 "operation": lambda query, item: query.filter(
-                    item.EntityId._in(911, 923)
+                    item.EntityId.in_([911, 923])
                 ),
             },
             source=DaoSource.InvestmentsDwh,
@@ -59,7 +71,7 @@ class ESG_ScoreCard(ReportStructure):
         )
         return [
             ReportTable(
-                "MyComponent",
+                "OutputDataFrame",
                 df,
             ),
         ]
