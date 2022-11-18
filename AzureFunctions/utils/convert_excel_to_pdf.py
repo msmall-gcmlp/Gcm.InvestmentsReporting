@@ -52,6 +52,8 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
     wb = workbook.createWorkbookFromBytes(
         file.read(), loadOptions=loadOptions
     )
+    wb.calculateFormula(True)
+
     v = wb.saveToBytes(SaveFormat.PDF)
     dao.execute(
         params=params,

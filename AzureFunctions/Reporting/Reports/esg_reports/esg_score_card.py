@@ -26,9 +26,7 @@ class ESG_ScoreCard(ReportStructure):
 
     def __init__(self, report_meta: ReportMeta):
         super().__init__(ReportNames.ESG_ScoreCard, report_meta)
-        self.excel_template = (
-            "Primaries_Initial_InternalReporting_vGS.xlsx"
-        )
+        self.excel_template = "Primaries_Initial_InternalReporting.xlsx"
 
     @classmethod
     def available_metas(cls):
@@ -46,10 +44,11 @@ class ESG_ScoreCard(ReportStructure):
 
     @property
     def save_params(self) -> tuple[dict, DaoSource]:
+        dt_name = Scenario.get_attribute("as_of_date").strftime("%Y-%m-%d")
         return (
             AzureDataLakeDao.create_get_data_params(
                 f"{ESG_ScoreCard._output_directory}/",
-                "ESG_Report_Test.xlsx",
+                f"ESG_Report_Test_{dt_name}.xlsx",
                 metadata=self.metadata(),
             ),
             DaoSource.DataLake,
