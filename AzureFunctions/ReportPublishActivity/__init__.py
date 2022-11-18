@@ -17,7 +17,6 @@ from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
 from ..utils.excel_io import ExcelIO
 from ..Reporting.core.components.report_table import ReportTable
-import copy
 from ..utils.convert_excel_to_pdf import convert
 
 # from joblib import Parallel, delayed
@@ -79,19 +78,18 @@ class ReportPublishActivity(BaseActivity):
 
     @staticmethod
     def print_report_to_template(wb: Workbook, struct: ReportStructure):
-        copied = copy.deepcopy(wb)
         for k in [x for x in struct.components if type(x) == ReportTable]:
-            if k.component_name in copied.defined_names:
+            if k.component_name in wb.defined_names:
                 address = list(
-                    copied.defined_names[k.component_name].destinations
+                    wb.defined_names[k.component_name].destinations
                 )
                 for sheetname, cell_address in address:
                     cell_address = cell_address.replace("$", "")
                     # override wb:
-                    copied = ExcelIO.write_dataframe_to_xl(
-                        copied, k.df, sheetname, cell_address
+                    wb = ExcelIO.write_dataframe_to_xl(
+                        wb, k.df, sheetname, cell_address
                     )
-        return copied
+        return wb
 
     def activity(self, **kwargs):
         data = json.loads(kwargs["context"])["d"]["data"]

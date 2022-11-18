@@ -49,7 +49,7 @@ class ESG_ScoreCard(ReportStructure):
         return (
             AzureDataLakeDao.create_get_data_params(
                 f"{ESG_ScoreCard._output_directory}/",
-                "testing.xlsx",
+                "ESG_Report_Test.xlsx",
                 metadata=self.metadata(),
             ),
             DaoSource.DataLake,
