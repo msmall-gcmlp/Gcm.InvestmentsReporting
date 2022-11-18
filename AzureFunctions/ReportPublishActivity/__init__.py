@@ -18,9 +18,6 @@ from openpyxl.writer.excel import save_virtual_workbook
 from ..utils.excel_io import ExcelIO
 from ..Reporting.core.components.report_table import ReportTable
 from ..utils.convert_excel_to_pdf import convert
-
-# from joblib import Parallel, delayed
-# import multiprocessing
 import io
 
 
@@ -35,46 +32,25 @@ class ReportPublishActivity(BaseActivity):
     def parg_type(self):
         return ReportingParsedArgs
 
-    # def applyParallel(self, dfGrouped, uploaded_source, func):
-    #     retLst = Parallel(n_jobs=multiprocessing.cpu_count())(
-    #         delayed(func)(name, group, uploaded_source)
-    #         for name, group in dfGrouped
-    #     )
-    #     return pd.concat(retLst)
-
     def get_template(self, report_structure: ReportStructure):
         assert report_structure is not None
-        if (
-            report_structure.excel_template
-            not in self.excel_template_cache
-            or self.excel_template_cache[report_structure.excel_template]
-            is not None
-        ):
-
-            dao: DaoRunner = Scenario.get_attribute("dao")
-            try:
-                params = AzureDataLakeDao.create_get_data_params(
-                    ReportStructure._excel_template_folder,
-                    report_structure.excel_template,
-                )
-                file: AzureDataLakeFile = dao.execute(
-                    params=params,
-                    source=DaoSource.DataLake,
-                    operation=lambda d, p: d.get_data(p),
-                )
-                excel = file.to_tabular_data(
-                    TabularDataOutputTypes.ExcelWorkBook, params
-                )
-                self.excel_template_cache[
-                    report_structure.excel_template
-                ] = excel
-            # if the resource was not found
-            except ResourceNotFoundError:
-                self.excel_template_cache[
-                    report_structure.excel_template
-                ] = None
-
-        return self.excel_template_cache[report_structure.excel_template]
+        dao: DaoRunner = Scenario.get_attribute("dao")
+        try:
+            params = AzureDataLakeDao.create_get_data_params(
+                ReportStructure._excel_template_folder,
+                report_structure.excel_template,
+            )
+            file: AzureDataLakeFile = dao.execute(
+                params=params,
+                source=DaoSource.DataLake,
+                operation=lambda d, p: d.get_data(p),
+            )
+            excel = file.to_tabular_data(
+                TabularDataOutputTypes.ExcelWorkBook, params
+            )
+            return excel
+        except ResourceNotFoundError:
+            return None
 
     @staticmethod
     def print_report_to_template(wb: Workbook, struct: ReportStructure):
