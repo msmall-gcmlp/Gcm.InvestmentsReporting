@@ -10,6 +10,7 @@ from ..Reporting.core.report_structure import (
     List,
     ReportStructure,
     ReportMeta,
+    EntityDomainTypes,
 )
 from typing import Tuple
 from gcm.inv.utils.date.Frequency import FrequencyType
@@ -58,6 +59,15 @@ class ReportConstructorActivity(BaseActivity):
                 final_freq = Frequency(frequency_type, f.calendar)
                 break
         assert final_freq is not None
+        # now check entity tags:
+        domain: EntityDomainTypes = Scenario.get_attribute(
+            "EntityDomainTypes"
+        )
+        if available_metas.entity_groups is not None:
+            assert (
+                domain is not None
+                and domain in available_metas.entity_groups
+            )
         return (
             report,
             ReportMeta(
@@ -65,6 +75,8 @@ class ReportConstructorActivity(BaseActivity):
                 agg,
                 final_freq,
                 available_metas.consumer,
+                domain,
+                self._d,
             ),
         )
 

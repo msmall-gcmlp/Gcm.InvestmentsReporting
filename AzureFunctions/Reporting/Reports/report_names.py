@@ -9,3 +9,4 @@ class ReportNames(ExtendedEnum):
     MarketDataDashboard_Credit = auto()
     PeerRankingReport = auto()
     ESG_ScoreCard = auto()
+    Sample_Ars_Portfolio_Report = auto()

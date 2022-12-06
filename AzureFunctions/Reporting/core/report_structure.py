@@ -19,6 +19,7 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeDao,
 )
 from gcm.Dao.DaoRunner import DaoSource
+import pandas as pd
 
 
 class ReportType(ExtendedEnum):
@@ -75,11 +76,15 @@ class ReportMeta(SerializableBase):
         interval: AggregateInterval,
         frequency: Frequency,
         consumer: ReportConsumer,
+        entity_domain: EntityDomainTypes = None,
+        entity_info: pd.DataFrame = None
     ):
         self.type = type
         self.interval = interval
         self.frequency = frequency
         self.consumer = consumer
+        self.entity_domain = entity_domain
+        self.entity_info = entity_info
 
     @classmethod
     def from_dict(cls, d: dict) -> "ReportMeta":
@@ -87,15 +92,27 @@ class ReportMeta(SerializableBase):
         interval = AggregateInterval[d["interval"]]
         frequency = Frequency(FrequencyType[d["frequency"]])
         consumer: ReportConsumer = ReportConsumer.from_dict(d["consumer"])
-        return ReportMeta(report_type, interval, frequency, consumer)
+        e_domain = None
+        e_info = None
+        if "entity_domain" in d:
+            e_domain = EntityDomainTypes[d['entity_domain']]
+        if "entity_info" in d:
+            e_info = pd.read_json(d['entity_info'])
+        return ReportMeta(report_type, interval, frequency, consumer, e_domain, e_info)
 
     def to_dict(self):
-        return {
+        d = {
             "report_type": self.type.name,
             "interval": self.interval.name,
             "frequency": self.frequency.type.name,
             "consumer": self.consumer.to_dict(),
+            
         }
+        if self.entity_domain is not None:
+            d['entity_domain'] = self.entity_domain.name
+        if self.entity_info is not None:
+            d['entity_info'] = self.entity_info.to_json()
+        return d
 
 
 class AvailableMetas(object):
