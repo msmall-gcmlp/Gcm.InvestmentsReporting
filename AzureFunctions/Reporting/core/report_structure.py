@@ -77,7 +77,7 @@ class ReportMeta(SerializableBase):
         frequency: Frequency,
         consumer: ReportConsumer,
         entity_domain: EntityDomainTypes = None,
-        entity_info: pd.DataFrame = None
+        entity_info: pd.DataFrame = None,
     ):
         self.type = type
         self.interval = interval
@@ -95,10 +95,12 @@ class ReportMeta(SerializableBase):
         e_domain = None
         e_info = None
         if "entity_domain" in d:
-            e_domain = EntityDomainTypes[d['entity_domain']]
+            e_domain = EntityDomainTypes[d["entity_domain"]]
         if "entity_info" in d:
-            e_info = pd.read_json(d['entity_info'])
-        return ReportMeta(report_type, interval, frequency, consumer, e_domain, e_info)
+            e_info = pd.read_json(d["entity_info"])
+        return ReportMeta(
+            report_type, interval, frequency, consumer, e_domain, e_info
+        )
 
     def to_dict(self):
         d = {
@@ -106,12 +108,11 @@ class ReportMeta(SerializableBase):
             "interval": self.interval.name,
             "frequency": self.frequency.type.name,
             "consumer": self.consumer.to_dict(),
-            
         }
         if self.entity_domain is not None:
-            d['entity_domain'] = self.entity_domain.name
+            d["entity_domain"] = self.entity_domain.name
         if self.entity_info is not None:
-            d['entity_info'] = self.entity_info.to_json()
+            d["entity_info"] = self.entity_info.to_json()
         return d
 
 
