@@ -15,7 +15,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
                    "GCM Credit",
                    "GCM Cross Cap",
                    "GCM Diverse",
-                   # "GCM Diversifying Strategies",
+                   "GCM Diversifying Strategies",
                    # "GCM DS Alternative Trend",
                    # "GCM DS CTA",
                    # "GCM DS Multi-Strategy",
