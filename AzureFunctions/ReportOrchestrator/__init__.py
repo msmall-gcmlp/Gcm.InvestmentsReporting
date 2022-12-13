@@ -2,6 +2,7 @@ import azure.durable_functions as df
 from gcm.inv.utils.azure.durable_functions.base_orchestrator import (
     BaseOrchestrator,
 )
+from gcm.inv.entityhierarchy.EntityDomain.entity_domain import Standards
 from gcm.inv.utils.azure.durable_functions.parg_serialization import (
     serialize_pargs,
 )
@@ -9,6 +10,7 @@ from ..utils.reporting_parsed_args import (
     ReportingParsedArgs,
 )
 import pandas as pd
+import json
 
 
 class ReportOrchestrator(BaseOrchestrator):
@@ -29,11 +31,12 @@ class ReportOrchestrator(BaseOrchestrator):
             df = pd.read_json(entities)
             assert df is not None
             provisioning_tasks = []
-            for index, row in df.iterrows():
-                row_json = row.to_json()
+            grouped = df.groupby(Standards.NodeId)
+            for n, group in grouped:
+                node_json = group.to_json()
                 provision_task = context.call_sub_orchestrator(
                     "ReportRunnerOrchestrator",
-                    serialize_pargs(self.pargs, row_json),
+                    serialize_pargs(self.pargs, json.dumps({"entity": node_json})),
                 )
                 provisioning_tasks.append(provision_task)
             data_location = yield context.task_all(provisioning_tasks)

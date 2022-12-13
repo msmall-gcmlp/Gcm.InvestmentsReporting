@@ -21,6 +21,7 @@ from gcm.inv.scenario import Scenario
 from gcm.inv.utils.date.business_calendar import BusinessCalendar
 from gcm.Dao.DaoRunner import DaoRunner, AzureDataLakeDao, DaoSource
 import json
+import pandas as pd
 
 
 class ReportConstructorActivity(BaseActivity):
@@ -63,11 +64,13 @@ class ReportConstructorActivity(BaseActivity):
         domain: EntityDomainTypes = Scenario.get_attribute(
             "EntityDomainTypes"
         )
+        entity_info: pd.DataFrame = None
         if available_metas.entity_groups is not None:
             assert (
                 domain is not None
                 and domain in available_metas.entity_groups
             )
+            entity_info = pd.read_json(json.loads(self._d)["entity"])
         return (
             report,
             ReportMeta(
@@ -76,7 +79,7 @@ class ReportConstructorActivity(BaseActivity):
                 final_freq,
                 available_metas.consumer,
                 domain,
-                self._d,
+                entity_info,
             ),
         )
 
