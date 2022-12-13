@@ -82,6 +82,7 @@ class ESG_ScoreCard(ReportStructure):
         )
 
     def assign_components(self):
+        # ALL COMPLICATED LOGIC IS CALLED HERE
         dao: DaoRunner = Scenario.get_attribute("dao")
         assert dao is not None
         df: pd.DataFrame = dao.execute(

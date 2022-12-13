@@ -1,5 +1,6 @@
 from ..legacy_azure_orchestrator.legacy_report_orch_parsed_args import (
     LegacyReportingOrchParsedArgs,
+    LegacyParsedArgs,
 )
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
 from enum import auto
@@ -19,7 +20,5 @@ class LegacyReportingActivityParsedArgs(LegacyReportingOrchParsedArgs):
     def __init__(self):
         super().__init__()
 
-    @classmethod
-    def from_dict(cls, d: dict):
-        pargs = super().from_dict(d)
-        return pargs
+    Activity_EnumType = LegacyActivities
+    PargType = LegacyParsedArgs.LegacyPargType.Legacy_Activity
