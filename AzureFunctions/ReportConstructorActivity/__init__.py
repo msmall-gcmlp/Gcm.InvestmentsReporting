@@ -22,11 +22,15 @@ from gcm.inv.utils.date.business_calendar import BusinessCalendar
 from gcm.Dao.DaoRunner import DaoRunner, AzureDataLakeDao, DaoSource
 import json
 import pandas as pd
+import copy
 
 
 class ReportConstructorActivity(BaseActivity):
-    __json_location = (
-        "/".join(["cleansed", "investmentsreporting", "jsonoutputs"]) + "/"
+    __json_location = AzureDataLakeDao.BlobFileStructure(
+        zone=AzureDataLakeDao.BlobFileStructure.Zone.cleansed,
+        sources="investmentsreporting",
+        entity="jsonoutputs",
+        path=[],
     )
 
     def __init__(self):
@@ -88,10 +92,12 @@ class ReportConstructorActivity(BaseActivity):
         report: ReportStructure = report_structure(meta)
         j = report.to_json()
         dao: DaoRunner = Scenario.get_attribute("dao")
-        dl_location = AzureDataLakeDao.create_get_data_params(
-            ReportConstructorActivity.__json_location,
-            report.base_json_name,
+
+        dl_location = copy.deepcopy(
+            ReportConstructorActivity.__json_location
         )
+        dl_location.path.append(report.base_json_name)
+        dl_location = AzureDataLakeDao.create_blob_params(dl_location)
         dl_location = {
             key: value
             for key, value in dl_location.items()

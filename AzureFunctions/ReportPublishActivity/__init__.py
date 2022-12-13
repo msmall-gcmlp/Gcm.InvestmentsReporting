@@ -36,8 +36,7 @@ class ReportPublishActivity(BaseActivity):
         assert report_structure is not None
         dao: DaoRunner = Scenario.get_attribute("dao")
         try:
-            params = AzureDataLakeDao.create_get_data_params(
-                ReportStructure._excel_template_folder,
+            params = AzureDataLakeDao.create_blob_params(
                 report_structure.excel_template,
             )
             file: AzureDataLakeFile = dao.execute(

@@ -1,4 +1,4 @@
-from abc import abstractclassmethod, abstractmethod
+from abc import abstractclassmethod, abstractmethod, abstractproperty
 
 from .components.report_component_base import (
     ReportComponentBase,
@@ -20,6 +20,7 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
 )
 from gcm.Dao.DaoRunner import DaoSource
 import pandas as pd
+import copy
 
 
 class ReportType(ExtendedEnum):
@@ -133,12 +134,11 @@ class AvailableMetas(object):
 
 
 class ReportStructure(SerializableBase):
-    _excel_template_folder = (
-        "/".join(["raw", "investmentsreporting", "exceltemplates"]) + "/"
-    )
-    _output_directory = (
-        "/".join(["cleansed", "investmentsreporting", "printedexcels"])
-        + "/"
+    _output_directory = AzureDataLakeDao.BlobFileStructure(
+        zone=AzureDataLakeDao.BlobFileStructure.Zone.cleansed,
+        sources="investmentsreporting",
+        entity="printedexcel",
+        path=[],
     )
 
     def __init__(self, report_name, report_meta: ReportMeta):
@@ -146,17 +146,6 @@ class ReportStructure(SerializableBase):
         self.report_meta = report_meta
         # this is to be set via overriding
         self._components = None
-        self._excel_template = None
-
-    @property
-    def excel_template(self) -> str:
-        if self._excel_template is None:
-            self._excel_template = ""
-        return self._excel_template
-
-    @excel_template.setter
-    def excel_template(self, excel_template):
-        self._excel_template = excel_template
 
     @abstractclassmethod
     def available_metas(cls) -> AvailableMetas:
@@ -166,7 +155,6 @@ class ReportStructure(SerializableBase):
         return {
             "report_name": self.report_name.name,
             "report_meta": self.report_meta.to_dict(),
-            "excel_template": self.excel_template,
             "report_components": [c.to_dict() for c in self.components],
         }
 
@@ -180,25 +168,27 @@ class ReportStructure(SerializableBase):
         report_name = kwargs["report_name"]
         components: List[dict] = d["report_components"]
 
-        excel_template = d["excel_template"]
         report_meta: ReportMeta = ReportMeta.from_dict(d["report_meta"])
         c_list = []
         for i in components:
             c_list.append(convert_component_from_dict(i))
         p = cls.__new__(cls)
         p.components = c_list
-        p.excel_template = excel_template
         p.report_meta = report_meta
         p.report_name = report_name
         return p
 
+    @abstractproperty
+    def report_file_name(self):
+        raise NotImplementedError()
+
     @property
     def save_params(self) -> tuple[dict, DaoSource]:
+        location = copy.deepcopy(self._output_directory)
+        location.path = [self.report_meta.type.name, self.report_file_name]
         return (
-            AzureDataLakeDao.create_get_data_params(
-                f"{ReportStructure._output_directory}{self.report_meta.type.name}/",
-                "testing.xlsx",
-                metadata=self.metadata(),
+            AzureDataLakeDao.create_blob_params(
+                location, metadata=self.metadata()
             ),
             DaoSource.DataLake,
         )
@@ -222,7 +212,7 @@ class ReportStructure(SerializableBase):
         pass
 
     def metadata(self) -> dict:
-        # these are starting to become arbitray
+        # these are starting to become arbitrary
         val = {
             "gcm_report_name": self.report_name.name,
             "gcm_as_of_date": Scenario.get_attribute(

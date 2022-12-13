@@ -3,7 +3,7 @@ from ...core.report_structure import (
     ReportMeta,
     AvailableMetas,
 )
-from gcm.Dao.DaoRunner import DaoRunner
+from gcm.Dao.DaoRunner import DaoRunner, AzureDataLakeDao
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from ...core.report_structure import (
     ReportType,
@@ -19,7 +19,17 @@ from gcm.inv.scenario import Scenario
 class MarketPerformanceReport(ReportStructure):
     def __init__(self, report_meta: ReportMeta):
         super().__init__(ReportNames.MarketPerformanceReport, report_meta)
-        self.excel_template = "Market Performance_Template.xlsx"
+
+    excel_template = AzureDataLakeDao.BlobFileStructure(
+        zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+        sources="investmentsreporting",
+        entity="exceltemplates",
+        path=["Market Performance_Template.xlsx.xlsx"],
+    )
+
+    @property
+    def report_file_name(self):
+        return "Market Report.xlsx"
 
     @classmethod
     def available_metas(cls):

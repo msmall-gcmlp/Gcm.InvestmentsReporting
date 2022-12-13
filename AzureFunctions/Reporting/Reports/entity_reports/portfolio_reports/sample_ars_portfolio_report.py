@@ -3,7 +3,7 @@ from ....core.report_structure import (
     ReportMeta,
     AvailableMetas,
 )
-from gcm.Dao.DaoRunner import DaoRunner
+from gcm.Dao.DaoRunner import DaoRunner, AzureDataLakeDao
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from ....core.report_structure import (
     ReportType,
@@ -23,7 +23,13 @@ class SampleArsPortfolioReport(ReportStructure):
         super().__init__(
             ReportNames.Sample_Ars_Portfolio_Report, report_meta
         )
-        self.excel_template = "MyFancyTemplate.xlsx"
+
+    excel_template = AzureDataLakeDao.BlobFileStructure(
+        zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+        sources="investmentsreporting",
+        entity="exceltemplates",
+        path=["MyFancyTemplate.xlsx"],
+    )
 
     @classmethod
     def available_metas(cls):
@@ -42,6 +48,10 @@ class SampleArsPortfolioReport(ReportStructure):
                 EntityDomainTypes.InvestmentGroup,
             ],
         )
+
+    @property
+    def report_file_name(self):
+        return "Portfolio Report.xlsx"
 
     def assign_components(self):
         dao: DaoRunner = Scenario.get_attribute("dao")
