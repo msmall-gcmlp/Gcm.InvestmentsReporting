@@ -46,10 +46,10 @@ class SampleArsPortfolioReport(ReportStructure):
     def assign_components(self):
         dao: DaoRunner = Scenario.get_attribute("dao")
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
-        domain: EntityDomainTypes = Scenario.get_attribute(
-            "EntityDomainTypes"
-        )
         assert as_of_date is not None
+        domain = self.report_meta.entity_domain
+        entity_info = self.report_meta.entity_info
+        assert entity_info is not None
         if domain == EntityDomainTypes.InvestmentGroup:
             print("yay!")
         if domain == EntityDomainTypes.Portfolio:
