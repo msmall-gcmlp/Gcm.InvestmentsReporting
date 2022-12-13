@@ -22,7 +22,7 @@ class ReportRunnerOrchestrator(BaseOrchestrator):
         # get report type
         report_location = yield context.call_activity(
             "ReportConstructorActivity",
-            serialize_pargs(self.pargs),
+            serialize_pargs(self.pargs, self._d),
         )
         return report_location
 
