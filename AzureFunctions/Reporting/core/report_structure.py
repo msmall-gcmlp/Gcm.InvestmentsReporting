@@ -263,18 +263,29 @@ class ReportStructure(SerializableBase):
     def assign_components(self):
         pass
 
+    class gcm_metadata:
+        gcm_report_name = "gcm_report_name"
+        gcm_as_of_date = "gcm_as_of_date"
+        gcm_business_group = "gcm_business_group"
+        gcm_report_frequency = "gcm_report_frequency"
+        gcm_report_period = "gcm_report_period"
+        gcm_report_type = "gcm_report_type"
+        gcm_target_audience = "gcm_target_audience"
+        gcm_modified_date = "gcm_modified_date"
+
     def metadata(self) -> dict:
         # these are starting to become arbitrary
+        class_type = ReportStructure.gcm_metadata
         val = {
-            "gcm_report_name": self.report_name.name,
-            "gcm_as_of_date": Scenario.get_attribute(
+            class_type.gcm_report_name: self.report_name.name,
+            class_type.gcm_as_of_date: Scenario.get_attribute(
                 "as_of_date"
             ).strftime("%Y-%m-%d"),
-            "gcm_business_group": self.report_meta.consumer.vertical.name,
-            "gcm_report_frequency": self.report_meta.frequency.type.name,
-            "gcm_report_period": self.report_meta.interval.name,
-            "gcm_report_type": self.report_meta.type.value,
-            "gcm_target_audience": json.dumps(
+            class_type.gcm_business_group: self.report_meta.consumer.vertical.name,
+            class_type.gcm_report_frequency: self.report_meta.frequency.type.name,
+            class_type.gcm_report_period: self.report_meta.interval.name,
+            class_type.gcm_report_type: self.report_meta.type.value,
+            class_type.gcm_target_audience: json.dumps(
                 list(
                     map(
                         lambda x: x.name,
@@ -282,7 +293,9 @@ class ReportStructure(SerializableBase):
                     )
                 )
             ),
-            "gcm_modified_date": dt.date.today().strftime("%Y-%m-%d"),
+            class_type.gcm_modified_date: dt.date.today().strftime(
+                "%Y-%m-%d"
+            ),
         }
         return val
 
