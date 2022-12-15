@@ -1,18 +1,18 @@
-from ...core.report_structure import (
+from ....core.report_structure import (
     ReportStructure,
     ReportMeta,
     AvailableMetas,
 )
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, AzureDataLakeDao
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
-from ...core.report_structure import (
+from ....core.report_structure import (
     ReportType,
     ReportConsumer,
 )
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType, Calendar
-from ...core.components.report_table import ReportTable
+from ....core.components.report_table import ReportTable
 import pandas as pd
-from ..report_names import ReportNames
+from ...report_names import ReportNames
 from gcm.inv.scenario import Scenario
 
 
