@@ -24,11 +24,17 @@ class BrinsonAttributionReport(ReportStructure):
 
     @property
     def excel_template_location(self):
+        file = (
+            "PFUND_Attributes_Template.xlsx"
+            if self.report_meta.entity_domain
+            == EntityDomainTypes.Portfolio
+            else "BBA_Template_Portfolio.xlsx"
+        )
         return AzureDataLakeDao.BlobFileStructure(
             zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
             sources="investmentsreporting",
             entity="exceltemplates",
-            path=["PFUND_Attributes_Template.xlsx"],
+            path=[file],
         )
 
     @classmethod
