@@ -14,11 +14,11 @@ from ..Reporting.core.report_structure import ReportStructure
 from ..Reporting.Reports.controller import get_report_class_by_name
 from azure.core.exceptions import ResourceNotFoundError
 from openpyxl import Workbook
-from openpyxl.writer.excel import save_virtual_workbook
-from ..utils.excel_io import ExcelIO
-from ..Reporting.core.components.report_table import ReportTable
-from ..utils.convert_excel_to_pdf import convert
-import io
+from ..utils.report_structure_to_excel import (
+    print_report_to_template,
+    save_report_structure_to_excel_return_virtual_book,
+    save_pdf_from_workbook_and_structure,
+)
 
 
 class ReportPublishActivity(BaseActivity):
@@ -31,6 +31,22 @@ class ReportPublishActivity(BaseActivity):
     @property
     def parg_type(self):
         return ReportingParsedArgs
+
+    def load_report_structure(self, i):
+        dao: DaoRunner = Scenario.get_attribute("dao")
+        file: AzureDataLakeFile = dao.execute(
+            params=json.loads(i),
+            source=DaoSource.DataLake,
+            operation=lambda d, p: d.get_data(p),
+        )
+        assert file is not None
+        d = json.loads(file.content)
+        r = ReportNames[d["report_name"]]
+        report_structure_class = get_report_class_by_name(r)
+        report_structure: ReportStructure = (
+            report_structure_class.from_dict(d, report_name=r)
+        )
+        assert report_structure is not None
 
     def get_template(self, report_structure: ReportStructure):
         assert report_structure is not None
@@ -51,76 +67,35 @@ class ReportPublishActivity(BaseActivity):
         except ResourceNotFoundError:
             return None
 
-    @staticmethod
-    def print_report_to_template(wb: Workbook, struct: ReportStructure):
-        for k in [x for x in struct.components if type(x) == ReportTable]:
-            if k.component_name in wb.defined_names:
-                address = list(
-                    wb.defined_names[k.component_name].destinations
-                )
-                for sheetname, cell_address in address:
-                    cell_address = cell_address.replace("$", "")
-                    # override wb:
-                    wb = ExcelIO.write_dataframe_to_xl(
-                        wb, k.df, sheetname, cell_address
-                    )
-        return wb
-
     def activity(self, **kwargs):
         data = json.loads(kwargs["context"])["d"]["data"]
         params_vals = []
         # TODO: figure out if can parallelize the excel stuff
         for i in data:
             # get data from dao:
-            dao: DaoRunner = Scenario.get_attribute("dao")
-            file: AzureDataLakeFile = dao.execute(
-                params=json.loads(i),
-                source=DaoSource.DataLake,
-                operation=lambda d, p: d.get_data(p),
-            )
-            assert file is not None
-            d = json.loads(file.content)
-            r = ReportNames[d["report_name"]]
-            report_structure_class = get_report_class_by_name(r)
-            report_structure: ReportStructure = (
-                report_structure_class.from_dict(d, report_name=r)
-            )
-            assert report_structure is not None
+            report_structure = self.load_report_structure(i)
             template = self.get_template(report_structure)
             if template is None:
-                # no template, get standard template
-                print("reached")
+                raise NotImplementedError(
+                    "We do not support template-less reports yet"
+                )
             else:
                 template: Workbook = template
-                final_template = (
-                    ReportPublishActivity.print_report_to_template(
-                        template, report_structure
-                    )
+                printed_template = print_report_to_template(
+                    template, report_structure
                 )
-                b = save_virtual_workbook(final_template)
-                [params, source] = report_structure.save_params()
-                # TODO: Not sure why this happens with ReportingStorage
-
-                if (
-                    source == DaoSource.ReportingStorage
-                    and type(params) == dict
-                    and "filesystem_name" in params
-                ):
-                    params["filesystem_name"] = params[
-                        "filesystem_name"
-                    ].strip("/")
-
-                if self.pargs.save:
-                    dao.execute(
-                        params=params,
-                        source=source,
-                        operation=lambda d, v: d.post_data(v, b),
-                    )
-                    convert(
-                        io.BytesIO(b),
-                        base_params=params,
-                        source=source,
-                    )
+                [
+                    b,
+                    params,
+                    source,
+                ] = save_report_structure_to_excel_return_virtual_book(
+                    printed_template,
+                    report_structure,
+                    self.pargs.save,
+                )
+                save_pdf_from_workbook_and_structure(
+                    b, report_structure, source, params, self.pargs.save
+                )
                 params = {
                     key: value
                     for key, value in params.items()
