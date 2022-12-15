@@ -20,7 +20,7 @@ import datetime as dt
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=BrinsonAttributionReport&frequency=Monthly&save=True&EntityDomainTypes=Portfolio&EntityNames=[%22Bluebeech%20SPC%22]
 
 
-class BrinsonAttributionReport(ReportStructure):
+class AggregatedPortolioFundAttributeReport(ReportStructure):
     def __init__(self, report_meta: ReportMeta):
         super().__init__(ReportNames.BrinsonAttributionReport, report_meta)
 
@@ -37,7 +37,6 @@ class BrinsonAttributionReport(ReportStructure):
                 vertical=ReportConsumer.Vertical.ARS,
             ),
             entity_groups=[
-                EntityDomainTypes.Portfolio,
                 EntityDomainTypes.Vertical,
             ],
         )
@@ -47,10 +46,8 @@ class BrinsonAttributionReport(ReportStructure):
         file = None
         # TODO: Confirm with David
         current_domain: EntityDomainTypes = self.report_meta.entity_domain
-        if current_domain == EntityDomainTypes.Portfolio:
-            file = "BBA_Template_Portfolio.xlsx"
-        elif current_domain == EntityDomainTypes.Vertical:
-            file = "BBA_Template_Firm.xlsx"
+        if current_domain == EntityDomainTypes.Vertical:
+            file = "PFUND_Attributes_Template.xlsx"
         if file is not None:
             return AzureDataLakeDao.BlobFileStructure(
                 zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,

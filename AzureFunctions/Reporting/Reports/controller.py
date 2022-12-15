@@ -8,6 +8,9 @@ from .entity_reports.portfolio_reports.sample_ars_portfolio_report import (
 from .entity_reports.xentity_reports.ars_bba_report import (
     BrinsonAttributionReport,
 )
+from .entity_reports.vertical_reports.aggregated_pfund_attribute_report import (
+    AggregatedPortolioFundAttributeReport,
+)
 from .report_names import ReportNames
 
 
@@ -21,5 +24,7 @@ def get_report_class_by_name(name: ReportNames):
         return SampleArsPortfolioReport
     if name == ReportNames.BrinsonAttributionReport:
         return BrinsonAttributionReport
+    if name == ReportNames.AggregatedPortolioFundAttributeReport:
+        return AggregatedPortolioFundAttributeReport
     else:
         raise NotImplementedError()
