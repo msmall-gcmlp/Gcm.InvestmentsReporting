@@ -1,4 +1,4 @@
-from abc import abstractclassmethod, abstractmethod
+from abc import abstractmethod, abstractproperty, abstractclassmethod
 
 from .components.report_component_base import (
     ReportComponentBase,
@@ -10,6 +10,7 @@ from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain.entity_domain_types import (
     EntityDomainTypes,
 )
+from gcm.inv.entityhierarchy.EntityDomain.entity_domain import Standards
 import json
 from gcm.inv.scenario import Scenario
 from .serializable_base import SerializableBase
@@ -20,6 +21,13 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
 )
 from gcm.Dao.DaoRunner import DaoSource
 import pandas as pd
+
+
+class ReportingBlob(ExtendedEnum):
+    performance = "performance"
+    sharepoint = "sharepoint"
+    unfiled = "unfiled"
+    EOF = "EOF"
 
 
 class ReportType(ExtendedEnum):
@@ -133,75 +141,109 @@ class AvailableMetas(object):
 
 
 class ReportStructure(SerializableBase):
-    _excel_template_folder = (
-        "/".join(["raw", "investmentsreporting", "exceltemplates"]) + "/"
-    )
-    _output_directory = (
-        "/".join(["cleansed", "investmentsreporting", "printedexcels"])
-        + "/"
-    )
-
     def __init__(self, report_name, report_meta: ReportMeta):
         self.report_name = report_name
         self.report_meta = report_meta
         # this is to be set via overriding
         self._components = None
-        self._excel_template = None
 
-    @property
-    def excel_template(self) -> str:
-        if self._excel_template is None:
-            self._excel_template = ""
-        return self._excel_template
+    _display_mapping_dict = {
+        EntityDomainTypes.InvestmentGroup: "PFUND",
+        EntityDomainTypes.Investment: "PFUND",
+        EntityDomainTypes.Portfolio: "PORTFOLIO",
+        EntityDomainTypes.NONE: "XENTITY",
+    }
 
-    @excel_template.setter
-    def excel_template(self, excel_template):
-        self._excel_template = excel_template
+    def report_file_xlsx_name(self):
+        report_name = self.report_name.name
+        entity_name: str = None
+        entity_type_display: str = None
+        # no need to add "Other" to string
+        report_type = (
+            self.report_meta.type.name
+            if self.report_meta.type != ReportType.Other
+            else None
+        )
+        date: dt.date = Scenario.get_attribute("as_of_date")
+        date_str = date.strftime("%Y-%m-%d")
+        if (
+            self.report_meta.entity_domain is not None
+            and self.report_meta.entity_info is not None
+            and type(self.report_meta.entity_info) == pd.DataFrame
+        ):
+
+            df: pd.DataFrame = self.report_meta.entity_info
+            entity_names = list(df[Standards.EntityName].dropna().unique())
+            if len(entity_names) == 1:
+                entity_name = entity_names[0]
+                domain: EntityDomainTypes = self.report_meta.entity_domain
+
+                entity_type_display = (
+                    ReportStructure._display_mapping_dict[domain]
+                    if domain in ReportStructure._display_mapping_dict
+                    else domain.name.upper()
+                )
+            else:
+                raise RuntimeError(
+                    "More than one entity. Can't construct file name"
+                )
+
+        s = [
+            str(x)
+            for x in [
+                report_name,
+                entity_name,
+                entity_type_display,
+                report_type,
+                date_str,
+            ]
+            if x is not None
+        ]
+        file_name = f'{"_".join(s)}.xlsx'
+        return file_name
 
     @abstractclassmethod
-    def available_metas(cls) -> AvailableMetas:
-        pass
+    def available_metas(cls, **kwargs) -> AvailableMetas:
+        raise NotImplementedError()
 
-    def to_dict(self):
-        return {
-            "report_name": self.report_name.name,
-            "report_meta": self.report_meta.to_dict(),
-            "excel_template": self.excel_template,
-            "report_components": [c.to_dict() for c in self.components],
-        }
-
-    @staticmethod
-    def from_json(s: str) -> "ReportStructure":
-        d = json.loads(s)
-        return ReportStructure.from_dict(d)
-
-    @classmethod
-    def from_dict(cls, d: dict, **kwargs) -> "ReportStructure":
-        report_name = kwargs["report_name"]
-        components: List[dict] = d["report_components"]
-
-        excel_template = d["excel_template"]
-        report_meta: ReportMeta = ReportMeta.from_dict(d["report_meta"])
-        c_list = []
-        for i in components:
-            c_list.append(convert_component_from_dict(i))
-        p = cls.__new__(cls)
-        p.components = c_list
-        p.excel_template = excel_template
-        p.report_meta = report_meta
-        p.report_name = report_name
-        return p
-
-    @property
     def save_params(self) -> tuple[dict, DaoSource]:
-        return (
-            AzureDataLakeDao.create_get_data_params(
-                f"{ReportStructure._output_directory}{self.report_meta.type.name}/",
-                "testing.xlsx",
-                metadata=self.metadata(),
+        date: dt.date = Scenario.get_attribute("as_of_date")
+        date_str = date.strftime("%Y_%m_%d")
+        assert date_str is not None
+        [output_loc, source] = (
+            AzureDataLakeDao.BlobFileStructure(
+                # THE BELOW IS THE ARTIFACT OF BAD LEGACY DESIGN
+                # From Mark Woodall:
+                # Performance has become the default location
+                # just because that is how it evolved
+                # -- that wasn't the original intent.
+                # Also our understanding of needs has changed since we created Performance.
+                # So the Performance level controls access rights, so since we have it,
+                # let's stick with that as our standard place for reports that should be
+                # accessible to all of investments.
+                # zone=ReportingBlob.performance,
+                # sources="Risk",
+                # entity="Testing",
+                # path=[date_str, self.report_file_name],
+                zone=ReportingBlob.performance,
+                sources=self.report_meta.type.name,
+                entity=date_str,
+                path=[
+                    self.report_file_xlsx_name(),
+                ],
             ),
-            DaoSource.DataLake,
+            DaoSource.ReportingStorage,
         )
+        return (
+            AzureDataLakeDao.create_blob_params(
+                output_loc, metadata=self.metadata()
+            ),
+            source,
+        )
+
+    @abstractproperty
+    def excel_template_location(self):
+        pass
 
     @property
     def base_json_name(self) -> str:
@@ -221,18 +263,29 @@ class ReportStructure(SerializableBase):
     def assign_components(self):
         pass
 
+    class gcm_metadata:
+        gcm_report_name = "gcm_report_name"
+        gcm_as_of_date = "gcm_as_of_date"
+        gcm_business_group = "gcm_business_group"
+        gcm_report_frequency = "gcm_report_frequency"
+        gcm_report_period = "gcm_report_period"
+        gcm_report_type = "gcm_report_type"
+        gcm_target_audience = "gcm_target_audience"
+        gcm_modified_date = "gcm_modified_date"
+
     def metadata(self) -> dict:
-        # these are starting to become arbitray
+        # these are starting to become arbitrary
+        class_type = ReportStructure.gcm_metadata
         val = {
-            "gcm_report_name": self.report_name.name,
-            "gcm_as_of_date": Scenario.get_attribute(
+            class_type.gcm_report_name: self.report_name.name,
+            class_type.gcm_as_of_date: Scenario.get_attribute(
                 "as_of_date"
             ).strftime("%Y-%m-%d"),
-            "gcm_business_group": self.report_meta.consumer.vertical.name,
-            "gcm_report_frequency": self.report_meta.frequency.type.name,
-            "gcm_report_period": self.report_meta.interval.name,
-            "gcm_report_type": self.report_meta.type.value,
-            "gcm_target_audience": json.dumps(
+            class_type.gcm_business_group: self.report_meta.consumer.vertical.name,
+            class_type.gcm_report_frequency: self.report_meta.frequency.type.name,
+            class_type.gcm_report_period: self.report_meta.interval.name,
+            class_type.gcm_report_type: self.report_meta.type.value,
+            class_type.gcm_target_audience: json.dumps(
                 list(
                     map(
                         lambda x: x.name,
@@ -240,6 +293,36 @@ class ReportStructure(SerializableBase):
                     )
                 )
             ),
-            "gcm_modified_date": dt.date.today().strftime("%Y-%m-%d"),
+            class_type.gcm_modified_date: dt.date.today().strftime(
+                "%Y-%m-%d"
+            ),
         }
         return val
+
+    # serialization logic
+    def to_dict(self):
+        return {
+            "report_name": self.report_name.name,
+            "report_meta": self.report_meta.to_dict(),
+            "report_components": [c.to_dict() for c in self.components],
+        }
+
+    @staticmethod
+    def from_json(s: str) -> "ReportStructure":
+        d = json.loads(s)
+        return ReportStructure.from_dict(d)
+
+    @classmethod
+    def from_dict(cls, d: dict, **kwargs) -> "ReportStructure":
+        report_name = kwargs["report_name"]
+        components: List[dict] = d["report_components"]
+
+        report_meta: ReportMeta = ReportMeta.from_dict(d["report_meta"])
+        c_list = []
+        for i in components:
+            c_list.append(convert_component_from_dict(i))
+        p = cls.__new__(cls)
+        p.components = c_list
+        p.report_meta = report_meta
+        p.report_name = report_name
+        return p

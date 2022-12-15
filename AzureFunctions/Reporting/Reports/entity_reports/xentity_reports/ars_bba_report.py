@@ -17,21 +17,12 @@ from ...report_names import ReportNames
 from gcm.inv.scenario import Scenario
 import datetime as dt
 
+# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=BrinsonAttributionReport&frequency=Monthly&save=True&EntityDomainTypes=Portfolio&EntityNames=[%22Bluebeech%20SPC%22]
 
-class SampleArsPortfolioReport(ReportStructure):
+
+class BrinsonAttributionReport(ReportStructure):
     def __init__(self, report_meta: ReportMeta):
-        super().__init__(
-            ReportNames.Sample_Ars_Portfolio_Report, report_meta
-        )
-
-    @property
-    def excel_template_location(self):
-        return AzureDataLakeDao.BlobFileStructure(
-            zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
-            sources="investmentsreporting",
-            entity="exceltemplates",
-            path=["MyFancyTemplate.xlsx"],
-        )
+        super().__init__(ReportNames.BrinsonAttributionReport, report_meta)
 
     @classmethod
     def available_metas(cls):
@@ -40,16 +31,34 @@ class SampleArsPortfolioReport(ReportStructure):
             frequencies=[
                 Frequency(FrequencyType.Monthly),
             ],
-            aggregate_intervals=[AggregateInterval.MTD],
+            aggregate_intervals=[AggregateInterval.Multi],
             consumer=ReportConsumer(
-                horizontal=[ReportConsumer.Horizontal.Risk],
+                horizontal=[ReportConsumer.Horizontal.PM],
                 vertical=ReportConsumer.Vertical.ARS,
             ),
             entity_groups=[
                 EntityDomainTypes.Portfolio,
-                EntityDomainTypes.InvestmentGroup,
+                EntityDomainTypes.Vertical,
             ],
         )
+
+    @property
+    def excel_template_location(self):
+        file = None
+        # TODO: Confirm with David
+        current_domain: EntityDomainTypes = self.report_meta.entity_domain
+        if current_domain == EntityDomainTypes.Portfolio:
+            file = "PFUND_Attributes_Template.xlsx"
+        elif current_domain == EntityDomainTypes.Vertical:
+            file = "BBA_Template_Portfolio.xlsx"
+        if file is not None:
+            return AzureDataLakeDao.BlobFileStructure(
+                zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+                sources="investmentsreporting",
+                entity="exceltemplates",
+                path=[file],
+            )
+        raise NotImplementedError()
 
     def assign_components(self):
         dao: DaoRunner = Scenario.get_attribute("dao")
@@ -58,7 +67,7 @@ class SampleArsPortfolioReport(ReportStructure):
         domain = self.report_meta.entity_domain
         entity_info: pd.DataFrame = self.report_meta.entity_info
         assert entity_info is not None
-        if domain == EntityDomainTypes.InvestmentGroup:
+        if domain == EntityDomainTypes.Vertical:
             print("yay!")
         if domain == EntityDomainTypes.Portfolio:
             print("wooo!")
