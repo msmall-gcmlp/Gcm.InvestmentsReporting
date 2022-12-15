@@ -10,7 +10,7 @@ from ....core.report_structure import (
     ReportConsumer,
     EntityDomainTypes,
 )
-from gcm.inv.utils.date.Frequency import Frequency, FrequencyType, Calendar
+from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ....core.components.report_table import ReportTable
 import pandas as pd
 from ...report_names import ReportNames
@@ -24,19 +24,21 @@ class SampleArsPortfolioReport(ReportStructure):
             ReportNames.Sample_Ars_Portfolio_Report, report_meta
         )
 
-    excel_template = AzureDataLakeDao.BlobFileStructure(
-        zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
-        sources="investmentsreporting",
-        entity="exceltemplates",
-        path=["MyFancyTemplate.xlsx"],
-    )
+    @property
+    def excel_template_location(self):
+        return AzureDataLakeDao.BlobFileStructure(
+            zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+            sources="investmentsreporting",
+            entity="exceltemplates",
+            path=["MyFancyTemplate.xlsx"],
+        )
 
     @classmethod
     def available_metas(cls):
         return AvailableMetas(
             report_type=ReportType.Performance,
             frequencies=[
-                Frequency(FrequencyType.Monthly, Calendar.US_Business_GCM),
+                Frequency(FrequencyType.Monthly),
             ],
             aggregate_intervals=[AggregateInterval.MTD],
             consumer=ReportConsumer(
@@ -49,16 +51,12 @@ class SampleArsPortfolioReport(ReportStructure):
             ],
         )
 
-    @property
-    def report_file_name(self):
-        return "Portfolio Report.xlsx"
-
     def assign_components(self):
         dao: DaoRunner = Scenario.get_attribute("dao")
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
         assert as_of_date is not None
         domain = self.report_meta.entity_domain
-        entity_info = self.report_meta.entity_info
+        entity_info: pd.DataFrame = self.report_meta.entity_info
         assert entity_info is not None
         if domain == EntityDomainTypes.InvestmentGroup:
             print("yay!")

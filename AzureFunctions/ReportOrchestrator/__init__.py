@@ -36,15 +36,19 @@ class ReportOrchestrator(BaseOrchestrator):
                 node_json = group.to_json()
                 provision_task = context.call_sub_orchestrator(
                     "ReportRunnerOrchestrator",
-                    serialize_pargs(self.pargs, json.dumps({"entity": node_json})),
+                    serialize_pargs(
+                        self.pargs, json.dumps({"entity": node_json})
+                    ),
                 )
                 provisioning_tasks.append(provision_task)
             data_location = yield context.task_all(provisioning_tasks)
         else:
-            provision_task = [context.call_sub_orchestrator(
-                "ReportRunnerOrchestrator",
-                serialize_pargs(self.pargs),
-            )]
+            provision_task = [
+                context.call_sub_orchestrator(
+                    "ReportRunnerOrchestrator",
+                    serialize_pargs(self.pargs),
+                )
+            ]
             data_location = yield context.task_all(provision_task)
         publish_location = yield context.call_activity(
             "ReportPublishActivity",

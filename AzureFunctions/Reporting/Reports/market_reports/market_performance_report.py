@@ -20,16 +20,14 @@ class MarketPerformanceReport(ReportStructure):
     def __init__(self, report_meta: ReportMeta):
         super().__init__(ReportNames.MarketPerformanceReport, report_meta)
 
-    excel_template = AzureDataLakeDao.BlobFileStructure(
-        zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
-        sources="investmentsreporting",
-        entity="exceltemplates",
-        path=["Market Performance_Template.xlsx.xlsx"],
-    )
-
     @property
-    def report_file_name(self):
-        return "Market Report.xlsx"
+    def excel_template_location(self):
+        return AzureDataLakeDao.BlobFileStructure(
+            zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+            sources="investmentsreporting",
+            entity="exceltemplates",
+            path=["Market Performance_Template.xlsx.xlsx"],
+        )
 
     @classmethod
     def available_metas(cls):

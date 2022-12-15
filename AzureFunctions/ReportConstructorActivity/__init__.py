@@ -46,6 +46,7 @@ class ReportConstructorActivity(BaseActivity):
             self.pargs.ReportName
         )
         available_metas: AvailableMetas = report.available_metas()
+        assert available_metas is not None
         agg: AggregateInterval = Scenario.get_attribute(
             "aggregate_interval"
         )

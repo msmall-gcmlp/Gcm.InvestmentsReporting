@@ -37,7 +37,7 @@ class ReportPublishActivity(BaseActivity):
         dao: DaoRunner = Scenario.get_attribute("dao")
         try:
             params = AzureDataLakeDao.create_blob_params(
-                report_structure.excel_template,
+                report_structure.excel_template_location,
             )
             file: AzureDataLakeFile = dao.execute(
                 params=params,
@@ -98,7 +98,18 @@ class ReportPublishActivity(BaseActivity):
                     )
                 )
                 b = save_virtual_workbook(final_template)
-                [params, source] = report_structure.save_params
+                [params, source] = report_structure.save_params()
+                # TODO: Not sure why this happens with ReportingStorage
+
+                if (
+                    source == DaoSource.ReportingStorage
+                    and type(params) == dict
+                    and "filesystem_name" in params
+                ):
+                    params["filesystem_name"] = params[
+                        "filesystem_name"
+                    ].strip("/")
+
                 if self.pargs.save:
                     dao.execute(
                         params=params,
