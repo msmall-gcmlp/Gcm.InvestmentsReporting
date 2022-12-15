@@ -17,6 +17,8 @@ from ...report_names import ReportNames
 from gcm.inv.scenario import Scenario
 import datetime as dt
 
+# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=BrinsonAttributionReport&frequency=Monthly&save=True&EntityDomainTypes=Portfolio&EntityNames=[%22Bluebeech%20SPC%22]
+
 
 class BrinsonAttributionReport(ReportStructure):
     def __init__(self, report_meta: ReportMeta):
