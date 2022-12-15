@@ -67,7 +67,7 @@ class BrinsonAttributionReport(ReportStructure):
         domain = self.report_meta.entity_domain
         entity_info: pd.DataFrame = self.report_meta.entity_info
         assert entity_info is not None
-        if domain == EntityDomainTypes.InvestmentGroup:
+        if domain == EntityDomainTypes.Vertical:
             print("yay!")
         if domain == EntityDomainTypes.Portfolio:
             print("wooo!")
