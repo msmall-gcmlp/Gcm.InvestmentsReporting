@@ -22,21 +22,6 @@ class BrinsonAttributionReport(ReportStructure):
     def __init__(self, report_meta: ReportMeta):
         super().__init__(ReportNames.BrinsonAttributionReport, report_meta)
 
-    @property
-    def excel_template_location(self):
-        file = (
-            "PFUND_Attributes_Template.xlsx"
-            if self.report_meta.entity_domain
-            == EntityDomainTypes.Portfolio
-            else "BBA_Template_Portfolio.xlsx"
-        )
-        return AzureDataLakeDao.BlobFileStructure(
-            zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
-            sources="investmentsreporting",
-            entity="exceltemplates",
-            path=[file],
-        )
-
     @classmethod
     def available_metas(cls):
         return AvailableMetas(
@@ -54,6 +39,24 @@ class BrinsonAttributionReport(ReportStructure):
                 EntityDomainTypes.Vertical,
             ],
         )
+
+    @property
+    def excel_template_location(self):
+        file = None
+        # TODO: Confirm with David
+        current_domain: EntityDomainTypes = self.report_meta.entity_domain
+        if current_domain == EntityDomainTypes.Portfolio:
+            file = "PFUND_Attributes_Template.xlsx"
+        elif current_domain == EntityDomainTypes.Vertical:
+            file = "BBA_Template_Portfolio.xlsx"
+        if file is not None:
+            return AzureDataLakeDao.BlobFileStructure(
+                zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+                sources="investmentsreporting",
+                entity="exceltemplates",
+                path=[file],
+            )
+        raise NotImplementedError()
 
     def assign_components(self):
         dao: DaoRunner = Scenario.get_attribute("dao")
