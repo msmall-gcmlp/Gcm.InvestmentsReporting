@@ -36,8 +36,8 @@ class TestPFundAttReport(object):
             entity_info: pd.DataFrame = EntityDomain.merge_ref_and_sources(
                 r, s
             )
-            structure = AggregatedPortolioFundAttributeReport
-            available_metas = structure.available_metas()
+            class_structure = AggregatedPortolioFundAttributeReport
+            available_metas = class_structure.available_metas()
             this_meta = ReportMeta(
                 type=available_metas.report_type,
                 interval=Scenario.get_attribute("aggregate_interval"),
@@ -49,12 +49,12 @@ class TestPFundAttReport(object):
                 entity_domain=domain,
                 entity_info=entity_info,
             )
-            validate_meta(structure, this_meta)
-            report = AggregatedPortolioFundAttributeReport(this_meta)
-            template = report.get_template()
+            validate_meta(class_structure, this_meta)
+            this_report = class_structure(this_meta)
+            template = this_report.get_template()
             virtual_workbook = (
                 save_report_structure_to_excel_return_virtual_book(
-                    template, report, Scenario.get_attribute("save")
+                    template, this_report, Scenario.get_attribute("save")
                 )
             )
-            assert report is not None and virtual_workbook is not None
+            assert this_report is not None and virtual_workbook is not None
