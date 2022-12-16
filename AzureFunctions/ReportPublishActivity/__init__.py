@@ -14,7 +14,7 @@ from ..Reporting.core.report_structure import ReportStructure
 from ..Reporting.Reports.controller import get_report_class_by_name
 from azure.core.exceptions import ResourceNotFoundError
 from openpyxl import Workbook
-from ..utils.report_structure_to_excel import (
+from ..utils.conversion_tools.report_structure_to_excel import (
     print_report_to_template,
     save_report_structure_to_excel_return_virtual_book,
     save_pdf_from_workbook_and_structure,
