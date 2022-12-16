@@ -3,6 +3,7 @@ from abc import abstractmethod, abstractproperty, abstractclassmethod
 from .components.report_component_base import (
     ReportComponentBase,
 )
+from openpyxl import Workbook
 from typing import List
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
@@ -19,8 +20,13 @@ import datetime as dt
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeDao,
 )
-from gcm.Dao.DaoRunner import DaoSource
+from gcm.Dao.DaoRunner import DaoSource, DaoRunner
+from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
+    AzureDataLakeFile,
+    TabularDataOutputTypes,
+)
 import pandas as pd
+from azure.core.exceptions import ResourceNotFoundError
 
 
 class ReportingBlob(ExtendedEnum):
@@ -240,6 +246,24 @@ class ReportStructure(SerializableBase):
             ),
             source,
         )
+
+    def get_template(self) -> Workbook:
+        dao: DaoRunner = Scenario.get_attribute("dao")
+        try:
+            params = AzureDataLakeDao.create_blob_params(
+                self.excel_template_location,
+            )
+            file: AzureDataLakeFile = dao.execute(
+                params=params,
+                source=DaoSource.DataLake,
+                operation=lambda d, p: d.get_data(p),
+            )
+            excel = file.to_tabular_data(
+                TabularDataOutputTypes.ExcelWorkBook, params
+            )
+            return excel
+        except ResourceNotFoundError:
+            return None
 
     @abstractproperty
     def excel_template_location(self):

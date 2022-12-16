@@ -1,8 +1,8 @@
 from .excel_io import ExcelIO
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
-from ..Reporting.core.components.report_table import ReportTable
-from ..Reporting.core.report_structure import ReportStructure
+from Reporting.core.components.report_table import ReportTable
+from Reporting.core.report_structure import ReportStructure
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource
 from .convert_excel_to_pdf import convert
 import io

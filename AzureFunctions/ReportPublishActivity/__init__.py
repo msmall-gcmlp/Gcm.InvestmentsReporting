@@ -6,13 +6,10 @@ import json
 from gcm.inv.scenario import Scenario, DaoRunner
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeFile,
-    AzureDataLakeDao,
-    TabularDataOutputTypes,
 )
 from gcm.Dao.DaoRunner import DaoSource
 from ..Reporting.core.report_structure import ReportStructure
 from ..Reporting.Reports.controller import get_report_class_by_name
-from azure.core.exceptions import ResourceNotFoundError
 from openpyxl import Workbook
 from ..utils.conversion_tools.report_structure_to_excel import (
     print_report_to_template,
@@ -32,7 +29,7 @@ class ReportPublishActivity(BaseActivity):
     def parg_type(self):
         return ReportingParsedArgs
 
-    def load_report_structure(self, i):
+    def load_report_structure(self, i) -> ReportStructure:
         dao: DaoRunner = Scenario.get_attribute("dao")
         file: AzureDataLakeFile = dao.execute(
             params=json.loads(i),
@@ -47,25 +44,7 @@ class ReportPublishActivity(BaseActivity):
             report_structure_class.from_dict(d, report_name=r)
         )
         assert report_structure is not None
-
-    def get_template(self, report_structure: ReportStructure):
-        assert report_structure is not None
-        dao: DaoRunner = Scenario.get_attribute("dao")
-        try:
-            params = AzureDataLakeDao.create_blob_params(
-                report_structure.excel_template_location,
-            )
-            file: AzureDataLakeFile = dao.execute(
-                params=params,
-                source=DaoSource.DataLake,
-                operation=lambda d, p: d.get_data(p),
-            )
-            excel = file.to_tabular_data(
-                TabularDataOutputTypes.ExcelWorkBook, params
-            )
-            return excel
-        except ResourceNotFoundError:
-            return None
+        return report_structure
 
     def activity(self, **kwargs):
         data = json.loads(kwargs["context"])["d"]["data"]
@@ -74,7 +53,7 @@ class ReportPublishActivity(BaseActivity):
         for i in data:
             # get data from dao:
             report_structure = self.load_report_structure(i)
-            template = self.get_template(report_structure)
+            template: Workbook = report_structure.get_template()
             if template is None:
                 raise NotImplementedError(
                     "We do not support template-less reports yet"

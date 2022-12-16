@@ -2,7 +2,10 @@ from gcm.inv.utils.azure.durable_functions.base_activity import (
     BaseActivity,
 )
 import datetime as dt
-from ..Reporting.Reports.controller import get_report_class_by_name
+from ..Reporting.Reports.controller import (
+    get_report_class_by_name,
+    validate_meta,
+)
 from ..Reporting.core.report_structure import (
     AggregateInterval,
     AvailableMetas,
@@ -40,42 +43,36 @@ class ReportConstructorActivity(BaseActivity):
     def parg_type(self):
         return ReportingParsedArgs
 
-    def validate(self, **kwargs) -> Tuple[ReportStructure, ReportMeta]:
+    def construct_meta(
+        self, **kwargs
+    ) -> Tuple[ReportStructure, ReportMeta]:
         # below will fail if something went wrong in the parser
         report: ReportStructure = get_report_class_by_name(
             self.pargs.ReportName
         )
         available_metas: AvailableMetas = report.available_metas()
-        assert available_metas is not None
         agg: AggregateInterval = Scenario.get_attribute(
             "aggregate_interval"
         )
         agg = agg if (agg is not None) else AggregateInterval.Multi
-        assert agg in available_metas.aggregate_intervals
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
+        # TODO: speed this up and make better
         frequency_type: FrequencyType = Scenario.get_attribute("frequency")
-
-        # we MUST run on today
-        assert as_of_date is not None
         frequencies: List[Frequency] = available_metas.frequencies
-        # check if we're running on the right date?
-        final_freq: Frequency = None
         for f in frequencies:
             if BusinessCalendar().is_business_day(as_of_date, f.calendar):
                 final_freq = Frequency(frequency_type, f.calendar)
                 break
-        assert final_freq is not None
-        # now check entity tags:
         domain: EntityDomainTypes = Scenario.get_attribute(
             "EntityDomainTypes"
         )
         entity_info: pd.DataFrame = None
-        if available_metas.entity_groups is not None:
-            assert (
-                domain is not None
-                and domain in available_metas.entity_groups
-            )
-            entity_info = pd.read_json(json.loads(self._d)["entity"])
+        if self._d is not None:
+            dict_of_pargs = json.loads(self._d)
+            if "entity" in dict_of_pargs:
+                entity_info: pd.DataFrame = pd.read_json(
+                    dict_of_pargs["entity"]
+                )
         return (
             report,
             ReportMeta(
@@ -89,11 +86,11 @@ class ReportConstructorActivity(BaseActivity):
         )
 
     def activity(self, **kwargs):
-        [report_structure, meta] = self.validate(**kwargs)
+        [report_structure, meta] = self.construct_meta(**kwargs)
+        validate_meta(report_meta=meta, report_structure=report_structure)
         report: ReportStructure = report_structure(meta)
         j = report.to_json()
         dao: DaoRunner = Scenario.get_attribute("dao")
-
         dl_location = copy.deepcopy(
             ReportConstructorActivity.__json_location
         )
