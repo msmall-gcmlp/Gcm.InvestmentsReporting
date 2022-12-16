@@ -8,7 +8,7 @@ from .entity_reports.portfolio_reports.sample_ars_portfolio_report import (
 from .entity_reports.xentity_reports.ars_bba_report import (
     BrinsonAttributionReport,
 )
-from .entity_reports.vertical_reports.aggregated_pfund_attribute_report import (
+from .entity_reports.vertical_reports.ars_pfund_attributes.aggregated_pfund_attribute_report import (
     AggregatedPortolioFundAttributeReport,
 )
 from .report_names import ReportNames
