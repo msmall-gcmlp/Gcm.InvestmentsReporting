@@ -297,6 +297,16 @@ class ReportStructure(SerializableBase):
         gcm_target_audience = "gcm_target_audience"
         gcm_modified_date = "gcm_modified_date"
 
+    def entity_metadata(self) -> dict:
+        if self.report_meta.entity_domain is not None:
+            if (
+                self.report_meta.entity_info is not None
+                and type(self.report_meta.entity_info) == pd.DataFrame
+            ):
+                # TODO: figure this out with team
+                return None
+        return None
+
     def metadata(self) -> dict:
         # these are starting to become arbitrary
         class_type = ReportStructure.gcm_metadata
@@ -321,6 +331,10 @@ class ReportStructure(SerializableBase):
                 "%Y-%m-%d"
             ),
         }
+        entity_metadata = self.entity_metadata()
+        val: dict = (
+            val if entity_metadata is None else (val | entity_metadata)
+        )
         return val
 
     # serialization logic
