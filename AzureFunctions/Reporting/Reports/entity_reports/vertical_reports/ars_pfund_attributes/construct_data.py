@@ -1,5 +1,9 @@
 import os
 import pandas as pd
+from gcm.Dao.DaoSources import DaoSource
+from gcm.Dao.Utils.tabular_data_util_outputs import TabularDataOutputTypes
+from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
+from gcm.Dao.daos.azure_datalake.azure_datalake_file import AzureDataLakeFile
 from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.quantlib.enum_source import Periodicity
@@ -1846,6 +1850,24 @@ class BbaReport(object):
         gcm_multistrat_rslt = self.calc_allocs(gcm_multistrat)
         return gcm_all_rslt, gcm_multistrat_rslt
 
+    def get_substrat_map(self):
+        blob_loc = AzureDataLakeDao.BlobFileStructure(
+            zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+            sources="investmentsreporting",
+            entity="underlyingdata",
+            path=['bba', 'SubStrategyPeerMap.csv'],
+        )
+        params = AzureDataLakeDao.create_blob_params(blob_loc)
+        file: AzureDataLakeFile = self._runner.execute(
+            params=params,
+            source=DaoSource.DataLake,
+            operation=lambda dao, params: dao.get_data(params),
+        )
+        sub_strat_map = excel = file.to_tabular_data(
+                TabularDataOutputTypes.PandasDataFrame, params
+            )
+        return sub_strat_map
+
     def get_eh_constituent_data(self):
         eh_allocs = self.get_eh_with_inv_group()
         default_peer = (
@@ -1867,12 +1889,12 @@ class BbaReport(object):
             left_on="InvestmentGroupName",
             right_on="InvestmentGroupName",
         )
-
-        substrat_map = pd.read_csv(
-            os.path.dirname(__file__)
-            + "/input_data/"
-            + "SubStrategyPeerMap.csv"
-        )
+        substrat_map = self.get_substrat_map()
+        # substrat_map = pd.read_csv(
+        #     os.path.dirname(__file__)
+        #     + "/input_data/"
+        #     + "SubStrategyPeerMap.csv"
+        # )
         eh_strategies = eh_default_peer.merge(
             substrat_map,
             how="left",
@@ -1940,12 +1962,12 @@ class BbaReport(object):
             left_on="SourceInvestmentId",
             right_on="SourceInvestmentId",
         )
-        # eh_joined.InvestmentGroupName = np.where(
-        #     eh_joined.InvestmentGroupName.isnull(), eh_joined.InvestmentName, eh_joined.InvestmentGroupName
-        # )
+        eh_joined.InvestmentGroupName = np.where(
+            eh_joined.InvestmentGroupName.isnull(), eh_joined.InvestmentName, eh_joined.InvestmentGroupName
+        )
 
         assert len(eh_joined) == len(eh)
-        assert len(eh_joined[eh_joined.InvestmentGroupName.isnull()]) == 0
+        # assert len(eh_joined[eh_joined.InvestmentGroupName.isnull()]) == 0
         return eh_joined
 
     def get_ars_constituent_data_firmwide(self, included_mandates=None):
@@ -2020,11 +2042,12 @@ class BbaReport(object):
                 ]
             ]
         )
-        substrat_map = pd.read_csv(
-            os.path.dirname(__file__)
-            + "/input_data/"
-            + "SubStrategyPeerMap.csv"
-        )
+        substrat_map = self.get_substrat_map()
+        # substrat_map = pd.read_csv(
+        #     os.path.dirname(__file__)
+        #     + "/input_data/"
+        #     + "SubStrategyPeerMap.csv"
+        # )
 
         gcm_default_peer = gcm_allocs.merge(
             default_peer,

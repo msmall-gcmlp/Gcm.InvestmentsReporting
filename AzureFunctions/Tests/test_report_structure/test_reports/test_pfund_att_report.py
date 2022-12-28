@@ -1,3 +1,8 @@
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.DaoSources import DaoSource
+from gcm.Dao.Utils.tabular_data_util_outputs import TabularDataOutputTypes
+from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
+from gcm.Dao.daos.azure_datalake.azure_datalake_file import AzureDataLakeFile
 from gcm.inv.scenario import Scenario
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 import datetime as dt
@@ -24,9 +29,17 @@ from utils.conversion_tools.report_structure_to_excel import (
 class TestPFundAttReport(object):
     def test_run_local(self):
         with Scenario(
-            as_of_date=dt.date(2022, 9, 30),
+            as_of_date=dt.date(2022, 9, 1),
             aggregate_interval=AggregateInterval.Multi,
             save=True,
+            dao_config={
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.PubDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                }
+            }
         ).context():
             domain = EntityDomainTypes.Vertical
             entity_domain_table: EntityDomain = get_domain(domain)
