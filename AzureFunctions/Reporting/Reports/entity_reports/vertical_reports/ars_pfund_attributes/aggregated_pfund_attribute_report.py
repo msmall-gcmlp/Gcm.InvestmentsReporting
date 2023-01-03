@@ -21,7 +21,7 @@ from .construct_data import BbaReport
 
 class AggregatedPortolioFundAttributeReport(ReportStructure):
     def __init__(self, report_meta: ReportMeta):
-        super().__init__(ReportNames.BrinsonAttributionReport, report_meta)
+        super().__init__(ReportNames.AggregatedPortolioFundAttributeReport, report_meta)
 
     @classmethod
     def available_metas(cls):
@@ -63,6 +63,6 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
             report = BbaReport()
             d = report.generate_pfund_attributes()
             final = []
-            for k, v in d:
+            for k, v in d.items():
                 final.append(ReportTable(k, v))
             return final
