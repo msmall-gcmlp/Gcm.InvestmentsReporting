@@ -42,19 +42,16 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
 
     @property
     def excel_template_location(self):
-        file = None
-        # TODO: Confirm with David
-        current_domain: EntityDomainTypes = self.report_meta.entity_domain
-        if current_domain == EntityDomainTypes.Vertical:
-            file = "PFUND_Attributes_Template.xlsx"
-        if file is not None:
-            return AzureDataLakeDao.BlobFileStructure(
-                zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
-                sources="investmentsreporting",
-                entity="exceltemplates",
-                path=[file],
-            )
-        raise NotImplementedError()
+        file = "PFUND_Attributes_Template.xlsx"
+        return AzureDataLakeDao.BlobFileStructure(
+            zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+            sources="investmentsreporting",
+            entity="exceltemplates",
+            path=[file],
+        )
+
+    def report_name_metadata(self):
+        return "ARS Portfolio Fund Attributes"
 
     def assign_components(self):
         with Scenario(

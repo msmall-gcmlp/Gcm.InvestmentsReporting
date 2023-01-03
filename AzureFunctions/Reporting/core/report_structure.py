@@ -307,11 +307,14 @@ class ReportStructure(SerializableBase):
                 return None
         return None
 
+    def report_name_metadata(self):
+        return self.report_name.name
+
     def metadata(self) -> dict:
         # these are starting to become arbitrary
         class_type = ReportStructure.gcm_metadata
         val = {
-            class_type.gcm_report_name: self.report_name.name,
+            class_type.gcm_report_name: self.report_name_metadata(),
             class_type.gcm_as_of_date: Scenario.get_attribute(
                 "as_of_date"
             ).strftime("%Y-%m-%d"),
