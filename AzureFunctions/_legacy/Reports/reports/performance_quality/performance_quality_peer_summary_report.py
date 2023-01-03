@@ -1,19 +1,15 @@
 import json
+from functools import cached_property
 
-import numpy as np
 import pandas as pd
 import ast
-import datetime as dt
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from gcm.inv.quantlib.enum_source import Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
-    AggregateFromDaily,
-)
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
+from _legacy.Reports.reports.performance_quality.performance_quality_helper import PerformanceQualityHelper
 
 
 class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
@@ -22,92 +18,34 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         self._as_of_date = as_of_date
         self._peer_group = peer_group
         self._analytics = Analytics()
-        self._peer_returns_cache = None
-        self._peer_constituent_returns_cache = None
-        self._peer_inputs_cache = None
-        self._market_factor_inputs_cache = None
-        self._market_factor_returns_cache = None
-        self._underlying_data_location = "raw/investmentsreporting/underlyingdata/performancequality"
         self._summary_data_location = "raw/investmentsreporting/summarydata/performancequality"
+        self._helper = PerformanceQualityHelper(runner=self._runner, as_of_date=self._as_of_date)
 
-    def _download_inputs(self, file_name) -> dict:
-        read_params = AzureDataLakeDao.create_get_data_params(
-            self._underlying_data_location,
-            file_name,
-            retry=False,
-        )
-        file = self._runner.execute(
-            params=read_params,
-            source=DaoSource.DataLake,
-            operation=lambda dao, params: dao.get_data(read_params),
-        )
-        return json.loads(file.content)
-
-    @property
+    @cached_property
     def _peer_inputs(self):
-        if self._peer_inputs_cache is None:
-            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
-            file = self._peer_group.replace("/", "") + "_peer_inputs_" + as_of_date + ".json"
-            self._peer_inputs_cache = self._download_inputs(file_name=file)
-        return self._peer_inputs_cache
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+        file = self._peer_group.replace("/", "") + "_peer_inputs_" + as_of_date + ".json"
+        inputs = self._helper.download_inputs(location=self._helper.underlying_data_location, file_path=file)
+        return inputs
 
-    @property
-    def _market_factor_inputs(self):
-        if self._market_factor_inputs_cache is None:
-            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
-            file = "market_factor_returns_" + as_of_date + ".json"
-            self._market_factor_inputs_cache = self._download_inputs(file_name=file)
-        return self._market_factor_inputs_cache
-
-    @property
+    @cached_property
     def _gcm_peer_returns(self):
-        if self._peer_returns_cache is None:
-            self._peer_returns_cache = pd.read_json(self._peer_inputs["gcm_peer_returns"], orient="index")
-        return self._peer_returns_cache
+        returns = pd.read_json(self._peer_inputs["gcm_peer_returns"], orient="index")
+        return returns
 
-    @property
+    @cached_property
     def _gcm_peer_constituent_returns(self):
-        if self._peer_constituent_returns_cache is None:
-            returns = pd.read_json(
-                self._peer_inputs["gcm_peer_constituent_returns"],
-                orient="index",
-            )
-            returns_columns = [ast.literal_eval(x) for x in returns.columns]
-            returns_columns = pd.MultiIndex.from_tuples(
-                returns_columns,
-                names=["PeerGroupName", "SourceInvestmentId"],
-            )
-            returns.columns = returns_columns
-            self._peer_constituent_returns_cache = returns
-        return self._peer_constituent_returns_cache
-
-    @property
-    def _market_factor_returns(self):
-        if self._market_factor_returns_cache is None:
-            returns = pd.read_json(self._market_factor_inputs, orient="index")
-            if len(returns) > 0:
-                returns = AggregateFromDaily().transform(
-                    data=returns,
-                    method="geometric",
-                    period=Periodicity.Monthly,
-                )
-                returns.index = [dt.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
-                self._market_factor_returns_cache = returns
-            else:
-                self._market_factor_returns_cache = pd.DataFrame()
-        return self._market_factor_returns_cache
-
-    @property
-    def _sp500_return(self):
-        returns = self._market_factor_returns["SPXT Index"]
-        returns.name = "SP500"
-        return returns.to_frame()
-
-    @property
-    def _rf_return(self):
-        returns = self._market_factor_returns["SBMMTB1 Index"]
-        returns.name = "1M_RiskFree"
-        return returns.to_frame()
+        returns = pd.read_json(
+            self._peer_inputs["gcm_peer_constituent_returns"],
+            orient="index",
+        )
+        returns_columns = [ast.literal_eval(x) for x in returns.columns]
+        returns_columns = pd.MultiIndex.from_tuples(
+            returns_columns,
+            names=["PeerGroupName", "SourceInvestmentId"],
+        )
+        returns.columns = returns_columns
+        return returns
 
     @property
     def _primary_peer_constituent_returns(self):
@@ -119,158 +57,17 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
             returns = pd.DataFrame()
         return returns
 
-    def _get_trailing_vol(self, returns, trailing_months):
-        return self._analytics.compute_trailing_vol(
-            ror=returns,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-            annualize=True,
-        )
-
-    def _get_trailing_beta(self, returns, trailing_months):
-        return self._analytics.compute_trailing_beta(
-            ror=returns,
-            benchmark_ror=self._sp500_return,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-        )
-
-    def _get_trailing_sharpe(self, returns, trailing_months):
-        return self._analytics.compute_trailing_sharpe_ratio(
-            ror=returns,
-            rf_ror=self._rf_return,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-        )
-
-    def _get_trailing_win_loss_ratio(self, returns, trailing_months):
-        return self._analytics.compute_trailing_win_loss_ratio(
-            ror=returns,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-        )
-
-    def _get_trailing_batting_avg(self, returns, trailing_months):
-        return self._analytics.compute_trailing_batting_average(
-            ror=returns,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-        )
-
-    def _get_rolling_return(self, returns, trailing_months):
-        return self._analytics.compute_trailing_return(
-            ror=returns,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            method="geometric",
-            periodicity=Periodicity.Monthly,
-            annualize=True,
-            include_history=True,
-        )
-
-    def _get_rolling_vol(self, returns, trailing_months):
-        return self._analytics.compute_trailing_vol(
-            ror=returns,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-            annualize=True,
-            include_history=True,
-        )
-
-    def _get_rolling_sharpe_ratio(self, returns, trailing_months):
-        rolling_sharpe = self._analytics.compute_trailing_sharpe_ratio(
-            ror=returns,
-            rf_ror=self._rf_return,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-            include_history=True,
-        )
-        # outlier removal
-        max_sharpe = min(10, rolling_sharpe.max().quantile(0.95))
-        min_sharpe = rolling_sharpe.min().quantile(0.05)
-        outlier_ind = (rolling_sharpe < min_sharpe) | (rolling_sharpe > max_sharpe)
-
-        rolling_sharpe[outlier_ind] = None
-        return rolling_sharpe
-
-    def _get_rolling_beta(self, returns, trailing_months):
-        return self._analytics.compute_trailing_beta(
-            ror=returns,
-            benchmark_ror=self._sp500_return,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-            include_history=True,
-        )
-
-    def _get_rolling_batting_avg(self, returns, trailing_months):
-        return self._analytics.compute_trailing_batting_average(
-            ror=returns,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-            include_history=True,
-        )
-
-    def _get_rolling_win_loss_ratio(self, returns, trailing_months):
-        return self._analytics.compute_trailing_win_loss_ratio(
-            ror=returns,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            periodicity=Periodicity.Monthly,
-            include_history=True,
-        )
-
-    def _summarize_rolling_data(self, rolling_data, trailing_months):
-        if rolling_data.index.max().date() < self._as_of_date.replace(day=1):
-            rolling_data = pd.DataFrame()
-
-        rolling_data = rolling_data.iloc[-trailing_months:]
-
-        index = ["min", "25%", "75%", "max"]
-        if len(rolling_data) == trailing_months:
-            quantiles = np.quantile(rolling_data, q=[0, 0.25, 0.75, 1], axis=0).round(2)
-            summary = pd.DataFrame(quantiles, index=index, columns=rolling_data.columns)
-        else:
-            summary = pd.DataFrame({"Fund": [""] * len(index)}, index=index)
-
-        return summary
-
-    def _summarize_rolling_median(self, rolling_data, trailing_months):
-        if len(rolling_data) == 0:
-            rolling_data = pd.DataFrame()
-        elif rolling_data.index.max().date() < self._as_of_date.replace(day=1):
-            rolling_data = pd.DataFrame()
-
-        rolling_data = rolling_data.iloc[-trailing_months:]
-
-        if len(rolling_data) > 1:
-            # rolling_median = rolling_data.median().round(2)
-            # summary = pd.DataFrame({'Fund': rolling_median.squeeze()}, index=['Median'])
-            summary = rolling_data.median().round(2).to_frame()
-        else:
-            summary = pd.DataFrame({"Fund": [""]}, index=["Median"])
-
-        return summary
-
     def _get_peer_rolling_return_summary(self):
         returns = self._primary_peer_constituent_returns.copy()
-        rolling_12m_returns = self._get_rolling_return(returns=returns, trailing_months=12)
+        rolling_12m_returns = self._helper.get_rolling_return(returns=returns, trailing_months=12)
 
-        rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=12)
+        rolling_1y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=12)
         rolling_1y_summary = rolling_1y_summary.median(axis=1)
 
-        rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=36)
+        rolling_3y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=36)
         rolling_3y_summary = rolling_3y_summary.median(axis=1)
 
-        rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
+        rolling_5y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
         rolling_5y_summary = rolling_5y_summary.median(axis=1)
 
         summary = pd.concat(
@@ -284,15 +81,16 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
 
     def _get_peer_rolling_sharpe_summary(self):
         returns = self._primary_peer_constituent_returns.copy()
-        rolling_12m_sharpes = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
+        rolling_12m_sharpes = self._helper.get_rolling_sharpe_ratio(returns=returns, trailing_months=12,
+                                                                    remove_outliers=True)
 
-        rolling_1y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=12)
+        rolling_1y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=12)
         rolling_1y_summary = rolling_1y_summary.median(axis=1)
 
-        rolling_3y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=36)
+        rolling_3y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=36)
         rolling_3y_summary = rolling_3y_summary.median(axis=1)
 
-        rolling_5y_summary = self._summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=60)
+        rolling_5y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_sharpes, trailing_months=60)
         rolling_5y_summary = rolling_5y_summary.median(axis=1)
 
         summary = pd.concat(
@@ -306,11 +104,11 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
 
     def _get_peer_trailing_vol_summary(self, returns):
         returns = returns.copy()
-        trailing_1y_vol = self._get_trailing_vol(returns=returns, trailing_months=12)
-        trailing_3y_vol = self._get_trailing_vol(returns=returns, trailing_months=36)
-        trailing_5y_vol = self._get_trailing_vol(returns=returns, trailing_months=60)
-        rolling_1_vol = self._get_rolling_vol(returns=returns, trailing_months=12)
-        trailing_5y_median_vol = self._summarize_rolling_median(rolling_1_vol, trailing_months=60)
+        trailing_1y_vol = self._helper.get_trailing_vol(returns=returns, trailing_months=12)
+        trailing_3y_vol = self._helper.get_trailing_vol(returns=returns, trailing_months=36)
+        trailing_5y_vol = self._helper.get_trailing_vol(returns=returns, trailing_months=60)
+        rolling_1_vol = self._helper.get_rolling_vol(returns=returns, trailing_months=12)
+        trailing_5y_median_vol = self._helper.summarize_rolling_median(rolling_1_vol, trailing_months=60)
 
         stats = [
             trailing_1y_vol.median(),
@@ -327,11 +125,11 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
 
     def _get_peer_trailing_beta_summary(self, returns):
         returns = returns.copy()
-        trailing_1y_beta = self._get_trailing_beta(returns=returns, trailing_months=12)
-        trailing_3y_beta = self._get_trailing_beta(returns=returns, trailing_months=36)
-        trailing_5y_beta = self._get_trailing_beta(returns=returns, trailing_months=60)
-        rolling_1_beta = self._get_rolling_beta(returns=returns, trailing_months=12)
-        trailing_5y_median_beta = self._summarize_rolling_median(rolling_1_beta, trailing_months=60)
+        trailing_1y_beta = self._helper.get_trailing_beta(returns=returns, trailing_months=12)
+        trailing_3y_beta = self._helper.get_trailing_beta(returns=returns, trailing_months=36)
+        trailing_5y_beta = self._helper.get_trailing_beta(returns=returns, trailing_months=60)
+        rolling_1_beta = self._helper.get_rolling_beta(returns=returns, trailing_months=12)
+        trailing_5y_median_beta = self._helper.summarize_rolling_median(rolling_1_beta, trailing_months=60)
 
         stats = [
             trailing_1y_beta.median(),
@@ -348,11 +146,12 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
 
     def _get_peer_trailing_sharpe_summary(self, returns):
         returns = returns.copy()
-        trailing_1y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=12)
-        trailing_3y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=36)
-        trailing_5y_sharpe = self._get_trailing_sharpe(returns=returns, trailing_months=60)
-        rolling_1_sharpe = self._get_rolling_sharpe_ratio(returns=returns, trailing_months=12)
-        trailing_5y_median_sharpe = self._summarize_rolling_median(rolling_1_sharpe, trailing_months=60)
+        trailing_1y_sharpe = self._helper.get_trailing_sharpe(returns=returns, trailing_months=12)
+        trailing_3y_sharpe = self._helper.get_trailing_sharpe(returns=returns, trailing_months=36)
+        trailing_5y_sharpe = self._helper.get_trailing_sharpe(returns=returns, trailing_months=60)
+        rolling_1_sharpe = self._helper.get_rolling_sharpe_ratio(returns=returns, trailing_months=12,
+                                                                 remove_outliers=True)
+        trailing_5y_median_sharpe = self._helper.summarize_rolling_median(rolling_1_sharpe, trailing_months=60)
 
         stats = [
             trailing_1y_sharpe.median(),
@@ -369,11 +168,11 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
 
     def _get_peer_trailing_batting_average_summary(self, returns):
         returns = returns.copy()
-        trailing_1y = self._get_trailing_batting_avg(returns=returns, trailing_months=12)
-        trailing_3y = self._get_trailing_batting_avg(returns=returns, trailing_months=36)
-        trailing_5y = self._get_trailing_batting_avg(returns=returns, trailing_months=60)
-        rolling_1_batting = self._get_rolling_batting_avg(returns=returns, trailing_months=12)
-        trailing_5y_median = self._summarize_rolling_median(rolling_1_batting, trailing_months=60)
+        trailing_1y = self._helper.get_trailing_batting_avg(returns=returns, trailing_months=12)
+        trailing_3y = self._helper.get_trailing_batting_avg(returns=returns, trailing_months=36)
+        trailing_5y = self._helper.get_trailing_batting_avg(returns=returns, trailing_months=60)
+        rolling_1_batting = self._helper.get_rolling_batting_avg(returns=returns, trailing_months=12)
+        trailing_5y_median = self._helper.summarize_rolling_median(rolling_1_batting, trailing_months=60)
 
         stats = [
             trailing_1y.median(),
@@ -390,11 +189,11 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
 
     def _get_peer_trailing_win_loss_ratio_summary(self, returns):
         returns = returns.copy()
-        trailing_1y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=12)
-        trailing_3y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=36)
-        trailing_5y = self._get_trailing_win_loss_ratio(returns=returns, trailing_months=60)
-        rolling_1y = self._get_rolling_win_loss_ratio(returns=returns, trailing_months=12)
-        trailing_5y_median = self._summarize_rolling_median(rolling_1y, trailing_months=60)
+        trailing_1y = self._helper.get_trailing_win_loss_ratio(returns=returns, trailing_months=12)
+        trailing_3y = self._helper.get_trailing_win_loss_ratio(returns=returns, trailing_months=36)
+        trailing_5y = self._helper.get_trailing_win_loss_ratio(returns=returns, trailing_months=60)
+        rolling_1y = self._helper.get_rolling_win_loss_ratio(returns=returns, trailing_months=12)
+        trailing_5y_median = self._helper.summarize_rolling_median(rolling_1y, trailing_months=60)
 
         stats = [
             trailing_1y.median(),
