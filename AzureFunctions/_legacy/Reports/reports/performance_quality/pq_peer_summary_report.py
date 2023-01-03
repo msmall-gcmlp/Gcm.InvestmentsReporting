@@ -9,7 +9,7 @@ from gcm.inv.quantlib.timeseries.analytics import Analytics
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
-from _legacy.Reports.reports.performance_quality.performance_quality_helper import PerformanceQualityHelper
+from _legacy.Reports.reports.performance_quality.pq_helper import PerformanceQualityHelper
 
 
 class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):

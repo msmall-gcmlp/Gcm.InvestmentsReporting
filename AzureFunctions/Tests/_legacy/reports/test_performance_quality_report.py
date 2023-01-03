@@ -4,9 +4,9 @@ import datetime as dt
 import pandas as pd
 import ast
 
-from _legacy.Reports.reports.performance_quality.performance_quality_peer_summary_report import PerformanceQualityPeerSummaryReport
-from _legacy.Reports.reports.performance_quality.performance_quality_report import PerformanceQualityReport
-from _legacy.Reports.reports.performance_quality.performance_quality_report_data import PerformanceQualityReportData
+from _legacy.Reports.reports.performance_quality.pq_peer_summary_report import PerformanceQualityPeerSummaryReport
+from _legacy.Reports.reports.performance_quality.pq_report import PerformanceQualityReport
+from _legacy.Reports.reports.performance_quality.pq_report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 
 

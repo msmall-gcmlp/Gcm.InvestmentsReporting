@@ -8,7 +8,7 @@ from functools import partial, cached_property
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 
-from _legacy.Reports.reports.performance_quality.performance_quality_helper import PerformanceQualityHelper
+from _legacy.Reports.reports.performance_quality.pq_helper import PerformanceQualityHelper
 from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
