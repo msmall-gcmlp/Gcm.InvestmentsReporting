@@ -3,7 +3,9 @@ import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.Utils.tabular_data_util_outputs import TabularDataOutputTypes
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from gcm.Dao.daos.azure_datalake.azure_datalake_file import AzureDataLakeFile
+from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
+    AzureDataLakeFile,
+)
 from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.inv.dataprovider.factor import Factor
 from gcm.inv.quantlib.enum_source import Periodicity
@@ -1855,7 +1857,7 @@ class BbaReport(object):
             zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
             sources="investmentsreporting",
             entity="underlyingdata",
-            path=['bba', 'SubStrategyPeerMap.csv'],
+            path=["bba", "SubStrategyPeerMap.csv"],
         )
         params = AzureDataLakeDao.create_blob_params(blob_loc)
         file: AzureDataLakeFile = self._runner.execute(
@@ -1864,8 +1866,8 @@ class BbaReport(object):
             operation=lambda dao, params: dao.get_data(params),
         )
         sub_strat_map = excel = file.to_tabular_data(
-                TabularDataOutputTypes.PandasDataFrame, params
-            )
+            TabularDataOutputTypes.PandasDataFrame, params
+        )
         return sub_strat_map
 
     def get_eh_constituent_data(self):
@@ -1963,7 +1965,9 @@ class BbaReport(object):
             right_on="SourceInvestmentId",
         )
         eh_joined.InvestmentGroupName = np.where(
-            eh_joined.InvestmentGroupName.isnull(), eh_joined.InvestmentName, eh_joined.InvestmentGroupName
+            eh_joined.InvestmentGroupName.isnull(),
+            eh_joined.InvestmentName,
+            eh_joined.InvestmentGroupName,
         )
 
         assert len(eh_joined) == len(eh)

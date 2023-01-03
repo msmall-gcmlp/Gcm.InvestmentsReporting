@@ -50,6 +50,9 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
             path=[file],
         )
 
+    def entity_metadata(self) -> dict:
+        return {"Entity": "ARS - FIRM"}
+
     def report_name_metadata(self):
         return "ARS Portfolio Fund Attributes"
 
