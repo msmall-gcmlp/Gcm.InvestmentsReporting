@@ -58,7 +58,7 @@ class RunPerformanceQualityReports:
 if __name__ == "__main__":
     report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2021, 12, 31))
     # prd_ids = [20016, 23441, 75614]
-    dev_ids = [19224] #, 23319, 74984]
+    dev_ids = [19224]  # [23319, 74984]
 
     funds_and_peers = report_runner.generate_report_data(investment_group_ids=dev_ids)
 
