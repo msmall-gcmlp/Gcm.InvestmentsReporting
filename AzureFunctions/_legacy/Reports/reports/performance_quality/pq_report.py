@@ -1420,7 +1420,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         logging.info("Report summary data generated for: " + self._fund_name)
 
         input_data = {
-            "header_info": header_info,
+            "header_info_1": header_info,
+            "header_info_2": header_info,
+            "header_info_3": header_info,
             "benchmark_summary": return_summary,
             "constituent_count_summary": constituent_count_summary,
             "absolute_return_benchmark": absolute_return_benchmark,
@@ -1443,7 +1445,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         }
 
         input_data_json = {
-            "header_info": header_info.to_json(orient="index"),
+            "header_info_1": header_info.to_json(orient="index"),
+            "header_info_2": header_info.to_json(orient="index"),
+            "header_info_3": header_info.to_json(orient="index"),
             "benchmark_summary": return_summary.to_json(orient="index"),
             "constituent_count_summary": constituent_count_summary.to_json(orient="index"),
             "absolute_return_benchmark": absolute_return_benchmark.to_json(orient="index"),

@@ -56,9 +56,9 @@ class RunPerformanceQualityReports:
 
 
 if __name__ == "__main__":
-    report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2022, 9, 30))
+    report_runner = RunPerformanceQualityReports(as_of_date=dt.date(2021, 12, 31))
     # prd_ids = [20016, 23441, 75614]
-    dev_ids = [19224, 23319, 74984]
+    dev_ids = [19224] #, 23319, 74984]
 
     funds_and_peers = report_runner.generate_report_data(investment_group_ids=dev_ids)
 
@@ -68,5 +68,6 @@ if __name__ == "__main__":
 
     # fund_names = ["Citadel", "D1 Capital", "Skye"]
     # peer_groups = ["GCM Multi-PM", "GCM TMT", "GCM Equities", "GCM Relative Value"]
+
     report_runner.generate_peer_summaries(peer_groups=peer_groups)
     report_runner.generate_fund_reports(fund_names=fund_names)
