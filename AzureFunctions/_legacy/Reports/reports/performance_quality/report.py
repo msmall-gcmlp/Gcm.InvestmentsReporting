@@ -5,10 +5,8 @@ import ast
 import numpy as np
 import datetime as dt
 from functools import partial, cached_property
-from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-
-from _legacy.Reports.reports.performance_quality.pq_helper import PerformanceQualityHelper
+from _legacy.Reports.reports.performance_quality.helper import PerformanceQualityHelper
 from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
@@ -18,25 +16,26 @@ from _legacy.core.ReportStructure.report_structure import (
 from _legacy.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
-from gcm.inv.scenario import Scenario
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
-from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
     AggregateFromDaily,
 )
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.DaoSources import DaoSource
+from gcm.inv.scenario import Scenario
 
 
 class PerformanceQualityReport(ReportingRunnerBase):
-    def __init__(self, runner, as_of_date, fund_name):
-        super().__init__(runner=runner)
-        self._as_of_date = as_of_date
-        self._analytics = Analytics()
+    def __init__(self, fund_name):
+        super().__init__(runner=Scenario.get_attribute("dao"))
+        self._as_of_date = Scenario.get_attribute("as_of_date")
         self._fund_name = fund_name
         self._summary_data_location = "raw/investmentsreporting/summarydata/performancequality"
-        self._helper = PerformanceQualityHelper(runner=self._runner, as_of_date=self._as_of_date)
+        self._helper = PerformanceQualityHelper()
+        self._analytics = self._helper.analytics
 
     @cached_property
     def _fund_inputs(self):
@@ -427,6 +426,57 @@ class PerformanceQualityReport(ReportingRunnerBase):
             }
         )
         return header
+
+    @cached_property
+    def _peer_level_analytics(self):
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+        file = self._primary_peer_group.replace("/", "") + "_peer_" + as_of_date + ".json"
+        analytics = self._helper.download_inputs(location=self._summary_data_location, file_path=file)
+        return analytics
+
+    @cached_property
+    def _condl_mkt_bmrk(self):
+        if self._primary_peer_group is not None:
+            bmrk = pd.read_json(self._peer_level_analytics["condl_mkt_bmrk"], orient="index")
+        else:
+            bmrk = pd.DataFrame()
+        return bmrk
+
+    @cached_property
+    def _condl_mkt_return(self):
+        if self._primary_peer_group is not None:
+            returns = pd.read_json(self._peer_level_analytics["condl_mkt_return"], orient="index")
+        else:
+            returns = pd.DataFrame(index=['< 10th', '10th - 25th', '25th - 50th',
+                                          '50th - 75th', '75th - 90th', '> 90th'],
+                                   columns=[0])
+        return returns
+
+    @cached_property
+    def _condl_peer_excess_returns(self):
+        if self._primary_peer_group is not None:
+            returns = pd.read_json(self._peer_level_analytics["condl_peer_excess_returns"], orient="index")
+        else:
+            returns = pd.DataFrame(index=['< 10th', '10th - 25th', '25th - 50th',
+                                          '50th - 75th', '75th - 90th', '> 90th'],
+                                   columns=[10, 25, 50, 75, 90])
+        return returns
+
+    @cached_property
+    def _condl_peer_heading(self):
+        if self._primary_peer_group is not None:
+            heading = pd.read_json(self._peer_level_analytics["condl_peer_heading"], orient="index")
+        else:
+            heading = pd.DataFrame()
+        return heading
+
+    @cached_property
+    def _market_scenarios(self):
+        if self._primary_peer_group is not None:
+            scenarios = pd.read_json(self._peer_level_analytics["market_scenarios"], orient="index")
+        else:
+            scenarios = None
+        return scenarios
 
     def get_peer_group_heading(self):
         if self._primary_peer_group is not None:
@@ -1269,11 +1319,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def build_performance_stability_peer_summary(self):
         if self._primary_peer_group is not None:
-            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
-            file = self._primary_peer_group.replace("/", "") + "_peer_" + as_of_date + ".json"
-            summary = self._helper.download_inputs(location=self._summary_data_location, file_path=file)
             summary = pd.read_json(
-                summary["performance_stability_peer_summary"],
+                self._peer_level_analytics["performance_stability_peer_summary"],
                 orient="index",
             )
         else:
@@ -1442,6 +1489,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "exposure_summary": exposure_summary,
             "latest_exposure_heading": latest_exposure_heading,
             "monthly_performance_summary": monthly_performance_summary,
+            "condl_mkt_bmrk": self._condl_mkt_bmrk,
+            "condl_mkt_return": self._condl_mkt_return,
+            "condl_peer_excess_returns": self._condl_peer_excess_returns,
+            "condl_peer_heading": self._condl_peer_heading,
         }
 
         input_data_json = {
@@ -1467,6 +1518,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "exposure_summary": exposure_summary.to_json(orient="index"),
             "latest_exposure_heading": latest_exposure_heading.to_json(orient="index"),
             "monthly_performance_summary": monthly_performance_summary.to_json(orient="index"),
+            "condl_mkt_bmrk": self._condl_mkt_bmrk.to_json(orient="index"),
+            "condl_mkt_return": self._condl_mkt_return.to_json(orient="index"),
+            "condl_peer_excess_returns": self._condl_peer_excess_returns.to_json(orient="index"),
+            "condl_peer_heading": self._condl_peer_heading.to_json(orient="index"),
         }
 
         data_to_write = json.dumps(input_data_json)
@@ -1512,3 +1567,24 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def run(self, **kwargs):
         self.generate_performance_quality_report()
         return True
+
+
+if __name__ == "__main__":
+    runner = DaoRunner(
+        container_lambda=lambda b, i: b.config.from_dict(i),
+        config_params={
+            DaoRunnerConfigArgs.dao_global_envs.name: {
+                DaoSource.InvestmentsDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.PubDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+            }
+        },
+    )
+
+    with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
+        analytics = PerformanceQualityReport(fund_name='Skye').execute()

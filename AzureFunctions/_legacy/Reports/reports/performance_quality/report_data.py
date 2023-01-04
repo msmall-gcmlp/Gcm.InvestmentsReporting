@@ -1,8 +1,8 @@
 import json
 import pandas as pd
 import datetime as dt
+import os
 from gcm.inv.scenario import Scenario
-from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.inv.dataprovider.factor import Factor
@@ -12,6 +12,8 @@ from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 from gcm.inv.quantlib.timeseries.analytics import Analytics
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.DaoSources import DaoSource
 
 
 class PerformanceQualityReportData(ReportingRunnerBase):
@@ -74,6 +76,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         )
 
         abs_bmrk_returns = inv_group.get_absolute_benchmark_returns(start_date=self._start_date, end_date=self._end_date)
+        abs_bmrk_betas = inv_group.get_absolute_benchmark_betas()
 
         benchmarks = StrategyBenchmark()
         eh_benchmark_names = fund_dimn["EurekahedgeBenchmark"].unique().tolist() + ["Eurekahedge Institutional 200"]
@@ -92,6 +95,9 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         eurekahedge_constituent_returns = benchmarks.get_eurekahedge_constituent_returns(
             start_date=self._start_date, end_date=self._end_date, benchmarks_names=eh_benchmark_names
         )
+
+        # TODO deprecate csv and point to centralized mapping used for ARBs when available
+        peer_arb_mapping = pd.read_csv(os.path.dirname(__file__) + "/peer_group_to_arb_mapping.csv")
 
         exposure_latest = inv_group.get_latest_exposure(as_of_date=self._as_of_date)
 
@@ -252,6 +258,14 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             privates_index = pba_privates.columns.get_level_values(1) == fund_id
             fund_inputs["pba_privates"] = pba_privates.iloc[:, privates_index].to_json(orient="index")
 
+            peer_group = dimn['ReportingPeerGroup'].squeeze()
+            peer_arb = peer_arb_mapping[peer_arb_mapping['ReportingPeerGroup'] == peer_group]
+            fund_inputs["peer_group_abs_return_bmrk"] = peer_arb.to_json(orient="index")
+
+            fund_arb_id = dimn['AbsoluteBenchmarkId'].squeeze()
+            fund_arb_betas = abs_bmrk_betas[fund_arb_id]
+            fund_inputs["abs_bmrk_betas"] = fund_arb_betas.to_json(orient="index")
+
             report_inputs["fund_inputs"][name] = fund_inputs
 
         for peer in gcm_peer_returns.columns:
@@ -260,6 +274,9 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             peer_index = gcm_peer_constituent_returns.columns.get_level_values(0) == peer
             constituents = gcm_peer_constituent_returns.iloc[:, peer_index]
             peer_inputs["gcm_peer_constituent_returns"] = constituents.to_json(orient="index")
+
+            peer_arb = peer_arb_mapping[peer_arb_mapping['ReportingPeerGroup'] == peer]
+            peer_inputs["peer_group_abs_return_bmrk"] = peer_arb.to_json(orient="index")
 
             report_inputs["peer_inputs"][peer] = peer_inputs
 
@@ -274,12 +291,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
         report_inputs["market_factor_returns"] = market_factor_returns.to_json(orient="index")
 
-        peers = pd.concat(
-            [
-                fund_dimn["ReportingPeerGroup"],
-                fund_dimn["StrategyPeerGroup"],
-            ]
-        ).tolist()
+        peers = pd.concat([fund_dimn["ReportingPeerGroup"], fund_dimn["StrategyPeerGroup"]]).tolist()
         report_inputs["filtered_peers"] = peers
 
         return report_inputs
@@ -350,3 +362,30 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
     def run(self, **kwargs):
         return self.generate_inputs_and_write_to_datalake()
+
+
+if __name__ == "__main__":
+    runner = DaoRunner(
+        container_lambda=lambda b, i: b.config.from_dict(i),
+        config_params={
+            DaoRunnerConfigArgs.dao_global_envs.name: {
+                DaoSource.InvestmentsDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.PubDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+            }
+        },
+    )
+
+    as_of_date = dt.date(2022, 10, 31)
+    with Scenario(runner=runner, as_of_date=as_of_date).context():
+        prd_ids = [20016, 23441, 75614]
+        # dev_ids = [19224, 23319, 74984]
+        start_date = as_of_date - relativedelta(years=10)
+        report_data = PerformanceQualityReportData(start_date=start_date, end_date=as_of_date,
+                                                   investment_group_ids=prd_ids)
+        report_data.execute()

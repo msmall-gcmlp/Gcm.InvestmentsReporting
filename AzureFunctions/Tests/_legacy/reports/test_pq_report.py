@@ -4,9 +4,9 @@ import datetime as dt
 import pandas as pd
 import ast
 
-from _legacy.Reports.reports.performance_quality.pq_peer_summary_report import PerformanceQualityPeerSummaryReport
-from _legacy.Reports.reports.performance_quality.pq_report import PerformanceQualityReport
-from _legacy.Reports.reports.performance_quality.pq_report_data import PerformanceQualityReportData
+from _legacy.Reports.reports.performance_quality.peer_level_analytics import PerformanceQualityPeerLevelAnalytics
+from _legacy.Reports.reports.performance_quality.report import PerformanceQualityReport
+from _legacy.Reports.reports.performance_quality.report_data import PerformanceQualityReportData
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
 
 
@@ -32,7 +32,7 @@ class TestPerformanceQualityReport:
     def perf_quality_report(
         self, runner, skye_fund_inputs, skye_primary_peer_inputs, skye_secondary_peer_inputs, skye_eh_inputs, skye_eh200_inputs, market_factor_inputs
     ):
-        perf_quality_report = PerformanceQualityReport(runner=runner, as_of_date=dt.date(2022, 3, 31), fund_name="Skye")
+        perf_quality_report = PerformanceQualityReport(fund_name="Skye")
         perf_quality_report._fund_inputs_cache = skye_fund_inputs
 
         perf_quality_report._primary_peer_inputs_cache = skye_primary_peer_inputs
@@ -44,7 +44,7 @@ class TestPerformanceQualityReport:
 
     @pytest.fixture
     def perf_quality_peer(self, runner, skye_primary_peer_inputs, market_factor_inputs):
-        perf_quality_peer = PerformanceQualityPeerSummaryReport(runner=runner, as_of_date=dt.date(2022, 3, 31), peer_group="GCM TMT")
+        perf_quality_peer = PerformanceQualityPeerLevelAnalytics(peer_group="GCM TMT")
         perf_quality_peer._peer_inputs_cache = skye_primary_peer_inputs
         perf_quality_peer._market_factor_inputs_cache = market_factor_inputs
         return perf_quality_peer

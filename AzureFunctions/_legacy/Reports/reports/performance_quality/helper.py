@@ -10,13 +10,14 @@ from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
     AggregateFromDaily,
 )
+from gcm.inv.scenario import Scenario
 
 
 class PerformanceQualityHelper:
-    def __init__(self, runner, as_of_date):
-        self._runner = runner
-        self._as_of_date = as_of_date
-        self._analytics = Analytics()
+    def __init__(self):
+        self._dao = Scenario.get_attribute("dao")
+        self._as_of_date = Scenario.get_attribute("as_of_date")
+        self.analytics = Analytics()
         self.underlying_data_location = "raw/investmentsreporting/underlyingdata/performancequality"
 
     def download_inputs(self, location, file_path) -> dict:
@@ -25,7 +26,7 @@ class PerformanceQualityHelper:
             file_path,
             retry=False,
         )
-        file = self._runner.execute(
+        file = self._dao.execute(
             params=read_params,
             source=DaoSource.DataLake,
             operation=lambda dao, params: dao.get_data(read_params),
@@ -35,6 +36,26 @@ class PerformanceQualityHelper:
 
     @cached_property
     def market_factor_returns(self):
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+        file = "market_factor_returns_" + as_of_date + ".json"
+        market_factor_inputs = self.download_inputs(
+            location=self.underlying_data_location, file_path=file
+        )
+
+        returns = pd.read_json(market_factor_inputs, orient="index")
+        if len(returns) > 0:
+            returns = AggregateFromDaily().transform(
+                data=returns,
+                method="geometric",
+                period=Periodicity.Monthly,
+            )
+            returns.index = [dt.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
+        else:
+            returns = pd.DataFrame()
+        return returns
+
+    @cached_property
+    def peer_arb_mapping(self):
         as_of_date = self._as_of_date.strftime("%Y-%m-%d")
         file = "market_factor_returns_" + as_of_date + ".json"
         market_factor_inputs = self.download_inputs(
@@ -66,7 +87,7 @@ class PerformanceQualityHelper:
         return returns.to_frame()
 
     def get_trailing_vol(self, returns, trailing_months):
-        return self._analytics.compute_trailing_vol(
+        return self.analytics.compute_trailing_vol(
             ror=returns,
             window=trailing_months,
             as_of_date=self._as_of_date,
@@ -75,7 +96,7 @@ class PerformanceQualityHelper:
         )
 
     def get_trailing_beta(self, returns, trailing_months):
-        return self._analytics.compute_trailing_beta(
+        return self.analytics.compute_trailing_beta(
             ror=returns,
             benchmark_ror=self.sp500_return,
             window=trailing_months,
@@ -84,7 +105,7 @@ class PerformanceQualityHelper:
         )
 
     def get_trailing_sharpe(self, returns, trailing_months):
-        return self._analytics.compute_trailing_sharpe_ratio(
+        return self.analytics.compute_trailing_sharpe_ratio(
             ror=returns,
             rf_ror=self.rf_return,
             window=trailing_months,
@@ -93,7 +114,7 @@ class PerformanceQualityHelper:
         )
 
     def get_trailing_win_loss_ratio(self, returns, trailing_months):
-        return self._analytics.compute_trailing_win_loss_ratio(
+        return self.analytics.compute_trailing_win_loss_ratio(
             ror=returns,
             window=trailing_months,
             as_of_date=self._as_of_date,
@@ -101,7 +122,7 @@ class PerformanceQualityHelper:
         )
 
     def get_trailing_batting_avg(self, returns, trailing_months):
-        return self._analytics.compute_trailing_batting_average(
+        return self.analytics.compute_trailing_batting_average(
             ror=returns,
             window=trailing_months,
             as_of_date=self._as_of_date,
@@ -109,7 +130,7 @@ class PerformanceQualityHelper:
         )
 
     def get_rolling_return(self, returns, trailing_months):
-        return self._analytics.compute_trailing_return(
+        return self.analytics.compute_trailing_return(
             ror=returns,
             window=trailing_months,
             as_of_date=self._as_of_date,
@@ -120,7 +141,7 @@ class PerformanceQualityHelper:
         )
 
     def get_rolling_vol(self, returns, trailing_months):
-        return self._analytics.compute_trailing_vol(
+        return self.analytics.compute_trailing_vol(
             ror=returns,
             window=trailing_months,
             as_of_date=self._as_of_date,
@@ -130,7 +151,7 @@ class PerformanceQualityHelper:
         )
 
     def get_rolling_sharpe_ratio(self, returns, trailing_months, remove_outliers=False):
-        rolling_sharpe = self._analytics.compute_trailing_sharpe_ratio(
+        rolling_sharpe = self.analytics.compute_trailing_sharpe_ratio(
             ror=returns,
             rf_ror=self.rf_return,
             window=trailing_months,
@@ -148,7 +169,7 @@ class PerformanceQualityHelper:
         return rolling_sharpe
 
     def get_rolling_beta(self, returns, trailing_months):
-        return self._analytics.compute_trailing_beta(
+        return self.analytics.compute_trailing_beta(
             ror=returns,
             benchmark_ror=self.sp500_return,
             window=trailing_months,
@@ -158,7 +179,7 @@ class PerformanceQualityHelper:
         )
 
     def get_rolling_batting_avg(self, returns, trailing_months):
-        return self._analytics.compute_trailing_batting_average(
+        return self.analytics.compute_trailing_batting_average(
             ror=returns,
             window=trailing_months,
             as_of_date=self._as_of_date,
@@ -167,7 +188,7 @@ class PerformanceQualityHelper:
         )
 
     def get_rolling_win_loss_ratio(self, returns, trailing_months):
-        return self._analytics.compute_trailing_win_loss_ratio(
+        return self.analytics.compute_trailing_win_loss_ratio(
             ror=returns,
             window=trailing_months,
             as_of_date=self._as_of_date,

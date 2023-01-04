@@ -1,25 +1,27 @@
 import json
 from functools import cached_property
-
+import datetime as dt
 import pandas as pd
 import ast
-from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from gcm.inv.quantlib.timeseries.analytics import Analytics
+from _legacy.Reports.reports.performance_quality.peer_conditional_excess_returns import generate_peer_conditional_excess_returns
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
-from _legacy.Reports.reports.performance_quality.pq_helper import PerformanceQualityHelper
+from _legacy.Reports.reports.performance_quality.helper import PerformanceQualityHelper
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.DaoSources import DaoSource
+from gcm.inv.scenario import Scenario
 
 
-class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
-    def __init__(self, runner, as_of_date, peer_group):
-        super().__init__(runner=runner)
-        self._as_of_date = as_of_date
+class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
+    def __init__(self, peer_group):
+        super().__init__(runner=Scenario.get_attribute("dao"))
+        self._as_of_date = Scenario.get_attribute("as_of_date")
         self._peer_group = peer_group
-        self._analytics = Analytics()
         self._summary_data_location = "raw/investmentsreporting/summarydata/performancequality"
-        self._helper = PerformanceQualityHelper(runner=self._runner, as_of_date=self._as_of_date)
+        self._helper = PerformanceQualityHelper()
+        self._analytics = self._helper.analytics
 
     @cached_property
     def _peer_inputs(self):
@@ -27,6 +29,11 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         file = self._peer_group.replace("/", "") + "_peer_inputs_" + as_of_date + ".json"
         inputs = self._helper.download_inputs(location=self._helper.underlying_data_location, file_path=file)
         return inputs
+
+    @cached_property
+    def _primary_peer_group_default_arb(self):
+        bmrk = pd.read_json(self._peer_inputs["peer_group_abs_return_bmrk"], orient="index")
+        return bmrk
 
     @cached_property
     def _gcm_peer_returns(self):
@@ -280,11 +287,25 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
             )
         return summary
 
-    def generate_performance_quality_peer_summary_report(self):
-        performance_stability_peer_summary = self.build_performance_stability_peer_summary()
+    def generate_peer_level_summaries(self):
+        market_scenarios, conditional_ptile_summary = \
+            generate_peer_conditional_excess_returns(peer_group=self._peer_group)
+
+        condl_mkt_bmrk = market_scenarios.columns[0]
+        condl_mkt_bmrk = pd.DataFrame({"condl_mkt_bmrk": [condl_mkt_bmrk]})
+
+        condl_peer_heading = self._peer_group.replace("GCM", "") + " Peer Percentile"
+        condl_peer_heading = pd.DataFrame({"condl_peer_heading": [condl_peer_heading]})
+
+        performance_stability_summary = self.build_performance_stability_peer_summary()
 
         input_data_json = {
-            "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient="index"),
+            "performance_stability_peer_summary": performance_stability_summary.to_json(orient="index"),
+            "condl_mkt_bmrk": condl_mkt_bmrk.to_json(orient="index"),
+            "condl_mkt_return": conditional_ptile_summary.iloc[:, 0].to_json(orient="index"),
+            "condl_peer_excess_returns": conditional_ptile_summary.iloc[:, 1:].to_json(orient="index"),
+            "condl_peer_heading": condl_peer_heading.to_json(orient="index"),
+            "market_scenarios": market_scenarios.to_json(orient="index")
         }
 
         data_to_write = json.dumps(input_data_json)
@@ -301,5 +322,26 @@ class PerformanceQualityPeerSummaryReport(ReportingRunnerBase):
         )
 
     def run(self, **kwargs):
-        self.generate_performance_quality_peer_summary_report()
+        self.generate_peer_level_summaries()
         return True
+
+
+if __name__ == "__main__":
+    runner = DaoRunner(
+        container_lambda=lambda b, i: b.config.from_dict(i),
+        config_params={
+            DaoRunnerConfigArgs.dao_global_envs.name: {
+                DaoSource.InvestmentsDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.PubDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+            }
+        },
+    )
+
+    with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
+        analytics = PerformanceQualityPeerLevelAnalytics(peer_group='GCM TMT').execute()

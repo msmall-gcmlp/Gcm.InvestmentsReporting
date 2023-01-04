@@ -2,9 +2,9 @@ import datetime as dt
 import json
 from gcm.inv.scenario import Scenario
 from pandas._libs.tslibs.offsets import relativedelta
-from _legacy.Reports.reports.performance_quality.pq_peer_summary_report import PerformanceQualityPeerSummaryReport
-from _legacy.Reports.reports.performance_quality.pq_report_data import PerformanceQualityReportData
-from _legacy.Reports.reports.performance_quality.pq_report import PerformanceQualityReport
+from _legacy.Reports.reports.performance_quality.peer_level_analytics import PerformanceQualityPeerLevelAnalytics
+from _legacy.Reports.reports.performance_quality.report_data import PerformanceQualityReportData
+from _legacy.Reports.reports.performance_quality.report import PerformanceQualityReport
 from gcm.Dao.DaoRunner import DaoRunner
 
 
@@ -46,12 +46,12 @@ class RunPerformanceQualityReports:
 
     def generate_peer_summaries(self, peer_groups):
         for peer in peer_groups:
-            perf_quality_report = PerformanceQualityPeerSummaryReport(runner=self._runner, as_of_date=self._as_of_date, peer_group=peer)
+            perf_quality_report = PerformanceQualityPeerLevelAnalytics(peer_group=peer)
             perf_quality_report.execute()
 
     def generate_fund_reports(self, fund_names):
         for fund in fund_names:
-            perf_quality_report = PerformanceQualityReport(runner=self._runner, as_of_date=self._as_of_date, fund_name=fund)
+            perf_quality_report = PerformanceQualityReport(fund_name=fund)
             perf_quality_report.execute()
 
 
