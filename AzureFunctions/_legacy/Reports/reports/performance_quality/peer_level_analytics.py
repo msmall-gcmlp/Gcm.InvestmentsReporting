@@ -297,12 +297,18 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         condl_peer_heading = self._peer_group.replace("GCM", "") + " Peer Percentile"
         condl_peer_heading = pd.DataFrame({"condl_peer_heading": [condl_peer_heading]})
 
+        # hack to display as non-percentage in Excel
+        condl_mkt_return = conditional_ptile_summary.iloc[:, 0]
+        if condl_mkt_return.name == 'MOVE Index':
+            condl_mkt_return = condl_mkt_return.astype(int).astype(str) + ' '
+            condl_mkt_return[0] = condl_mkt_return[0] + '(Lvl)'
+
         performance_stability_summary = self.build_performance_stability_peer_summary()
 
         input_data_json = {
             "performance_stability_peer_summary": performance_stability_summary.to_json(orient="index"),
             "condl_mkt_bmrk": condl_mkt_bmrk.to_json(orient="index"),
-            "condl_mkt_return": conditional_ptile_summary.iloc[:, 0].to_json(orient="index"),
+            "condl_mkt_return": condl_mkt_return.to_json(orient="index"),
             "condl_peer_excess_returns": conditional_ptile_summary.iloc[:, 1:].to_json(orient="index"),
             "condl_peer_heading": condl_peer_heading.to_json(orient="index"),
             "market_scenarios": market_scenarios.to_json(orient="index")
@@ -344,4 +350,4 @@ if __name__ == "__main__":
     )
 
     with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
-        analytics = PerformanceQualityPeerLevelAnalytics(peer_group='GCM TMT').execute()
+        analytics = PerformanceQualityPeerLevelAnalytics(peer_group='GCM Macro').execute()

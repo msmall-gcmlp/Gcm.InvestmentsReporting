@@ -11,6 +11,7 @@ from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
 from gcm.Dao.DaoRunner import DaoRunnerConfigArgs, DaoRunner
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario
+from gcm.inv.utils.date import DatePeriod
 
 
 def _collect_input_data(peer_group, start_date, end_date):
@@ -24,15 +25,27 @@ def _collect_input_data(peer_group, start_date, end_date):
     passive_bmrk = peer_arb_mapping[peer_arb_mapping['ReportingPeerGroup'] == peer_group]
     passive_bmrk = passive_bmrk['Ticker'].squeeze()
 
-    fin_index_returns = Factor(tickers=[passive_bmrk]).get_returns(start_date=start_date,
-                                                                   end_date=end_date,
-                                                                   fill_na=True)
-    fin_index_returns = AggregateFromDaily().transform(
-        data=fin_index_returns,
-        method="geometric",
-        period=Periodicity.Monthly,
-        first_of_day=True
-    )
+    if peer_group == 'GCM Macro':
+        passive_bmrk = "MOVE Index"
+        fin_index_returns = Factor(tickers=[passive_bmrk]).get_dimensions(DatePeriod(start_date=start_date,
+                                                                                     end_date=end_date))
+        fin_index_returns = fin_index_returns.pivot_table(index="Date", columns="Ticker", values="PxLast")
+        fin_index_returns = AggregateFromDaily().transform(
+            data=fin_index_returns,
+            method="last",
+            period=Periodicity.Monthly,
+            first_of_day=True
+        )
+    else:
+        fin_index_returns = Factor(tickers=[passive_bmrk]).get_returns(start_date=start_date,
+                                                                       end_date=end_date,
+                                                                       fill_na=True)
+        fin_index_returns = AggregateFromDaily().transform(
+            data=fin_index_returns,
+            method="geometric",
+            period=Periodicity.Monthly,
+            first_of_day=True
+        )
 
     return peer_returns, fin_index_returns
 
@@ -42,18 +55,22 @@ def _compute_rolling_excess_metrics(peer_returns, fin_index_returns, percentiles
     passive_bmrk = fin_index_returns.columns[0]
     betas = []
     excess_returns = pd.DataFrame()
-    for fund in peer_bmrk_ror.columns[:-1]:
-        fund_returns = peer_bmrk_ror[[passive_bmrk, fund]].dropna()
 
-        if fund_returns.shape[0] > 0:
-            beta = scipy.stats.linregress(x=fund_returns[passive_bmrk], y=fund_returns[fund])[0]
-            beta = round(max(min(beta, 1.5), 0.1), 1)
-            betas.append(beta)
+    if passive_bmrk != 'MOVE Index':
+        for fund in peer_bmrk_ror.columns[:-1]:
+            fund_returns = peer_bmrk_ror[[passive_bmrk, fund]].dropna()
 
-            beta_adj_index = peer_bmrk_ror[passive_bmrk] * beta
-            excess_return = peer_bmrk_ror[fund] - beta_adj_index
-            excess_return = excess_return.to_frame(fund)
-            excess_returns = pd.concat([excess_returns, excess_return], axis=1)
+            if fund_returns.shape[0] > 0:
+                beta = scipy.stats.linregress(x=fund_returns[passive_bmrk], y=fund_returns[fund])[0]
+                beta = round(max(min(beta, 1.5), 0.1), 1)
+                betas.append(beta)
+
+                beta_adj_index = peer_bmrk_ror[passive_bmrk] * beta
+                excess_return = peer_bmrk_ror[fund] - beta_adj_index
+                excess_return = excess_return.to_frame(fund)
+                excess_returns = pd.concat([excess_returns, excess_return], axis=1)
+    else:
+        excess_returns = peer_returns.copy()
 
     rolling_excess_returns = Analytics().compute_trailing_return(ror=excess_returns,
                                                                  window=window,
@@ -77,13 +94,17 @@ def _compute_rolling_excess_metrics(peer_returns, fin_index_returns, percentiles
 
 
 def _compute_market_scenarios(fin_index_returns, market_ptiles, window=36):
-    rolling_3y_bmrk = Analytics().compute_trailing_return(ror=fin_index_returns,
-                                                          window=window,
-                                                          as_of_date=fin_index_returns.index.max(),
-                                                          method='geometric',
-                                                          periodicity=Periodicity.Monthly,
-                                                          annualize=True,
-                                                          include_history=True)
+    passive_bmrk = fin_index_returns.columns[0]
+    if passive_bmrk == 'MOVE Index':
+        rolling_3y_bmrk = fin_index_returns.rolling(window).mean().dropna()
+    else:
+        rolling_3y_bmrk = Analytics().compute_trailing_return(ror=fin_index_returns,
+                                                              window=window,
+                                                              as_of_date=fin_index_returns.index.max(),
+                                                              method='geometric',
+                                                              periodicity=Periodicity.Monthly,
+                                                              annualize=True,
+                                                              include_history=True)
 
     # sum(mkt_probs) == 1
     # spx_percentiles = 100 * np.cumsum(mkt_probs)
@@ -147,5 +168,5 @@ if __name__ == "__main__":
 
     with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
         market_scenarios, conditional_ptile_summary = \
-            generate_peer_conditional_excess_returns(peer_group='GCM Fundamental Credit')
+            generate_peer_conditional_excess_returns(peer_group='GCM Macro')
         print(market_scenarios)

@@ -1587,4 +1587,4 @@ if __name__ == "__main__":
     )
 
     with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
-        analytics = PerformanceQualityReport(fund_name='Skye').execute()
+        analytics = PerformanceQualityReport(fund_name='Element').execute()

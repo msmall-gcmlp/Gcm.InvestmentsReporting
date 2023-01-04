@@ -383,7 +383,7 @@ if __name__ == "__main__":
 
     as_of_date = dt.date(2022, 10, 31)
     with Scenario(runner=runner, as_of_date=as_of_date).context():
-        prd_ids = [20016, 23441, 75614]
+        prd_ids = [20016, 23441, 75614, 28015]
         # dev_ids = [19224, 23319, 74984]
         start_date = as_of_date - relativedelta(years=10)
         report_data = PerformanceQualityReportData(start_date=start_date, end_date=as_of_date,
