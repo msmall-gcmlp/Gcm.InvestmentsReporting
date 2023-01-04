@@ -288,7 +288,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return summary
 
     def generate_peer_level_summaries(self):
-        market_scenarios, conditional_ptile_summary = \
+        bmrk_returns, market_scenarios, conditional_ptile_summary = \
             generate_peer_conditional_excess_returns(peer_group=self._peer_group)
 
         condl_mkt_bmrk = market_scenarios.columns[0]
@@ -311,7 +311,8 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
             "condl_mkt_return": condl_mkt_return.to_json(orient="index"),
             "condl_peer_excess_returns": conditional_ptile_summary.iloc[:, 1:].to_json(orient="index"),
             "condl_peer_heading": condl_peer_heading.to_json(orient="index"),
-            "market_scenarios": market_scenarios.to_json(orient="index")
+            "market_scenarios_3y": market_scenarios.to_json(orient="index"),
+            "market_returns_monthly": bmrk_returns.to_json(orient="index"),
         }
 
         data_to_write = json.dumps(input_data_json)
@@ -350,4 +351,4 @@ if __name__ == "__main__":
     )
 
     with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
-        analytics = PerformanceQualityPeerLevelAnalytics(peer_group='GCM Macro').execute()
+        analytics = PerformanceQualityPeerLevelAnalytics(peer_group='GCM Multi-PM').execute()

@@ -264,6 +264,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
             fund_arb_id = dimn['AbsoluteBenchmarkId'].squeeze()
             fund_arb_betas = abs_bmrk_betas[fund_arb_id]
+            fund_arb_betas = fund_arb_betas[fund_arb_betas != 0]
             fund_inputs["abs_bmrk_betas"] = fund_arb_betas.to_json(orient="index")
 
             report_inputs["fund_inputs"][name] = fund_inputs

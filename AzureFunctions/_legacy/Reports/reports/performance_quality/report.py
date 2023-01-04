@@ -5,6 +5,8 @@ import ast
 import numpy as np
 import datetime as dt
 from functools import partial, cached_property
+
+import scipy
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from _legacy.Reports.reports.performance_quality.helper import PerformanceQualityHelper
 from _legacy.core.ReportStructure.report_structure import (
@@ -129,6 +131,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         else:
             returns = pd.DataFrame()
         return returns
+
+    @cached_property
+    def _abs_bmrk_betas(self):
+        return pd.read_json(self._fund_inputs["abs_bmrk_betas"], orient="index")
 
     @cached_property
     def _exposure(self):
@@ -471,9 +477,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return heading
 
     @cached_property
-    def _market_scenarios(self):
+    def _market_scenarios_3y(self):
         if self._primary_peer_group is not None:
-            scenarios = pd.read_json(self._peer_level_analytics["market_scenarios"], orient="index")
+            scenarios = pd.read_json(self._peer_level_analytics["market_scenarios_3y"], orient="index")
+        else:
+            scenarios = None
+        return scenarios
+
+    @cached_property
+    def _market_returns_monthly(self):
+        if self._primary_peer_group is not None:
+            scenarios = pd.read_json(self._peer_level_analytics["market_returns_monthly"], orient="index")
         else:
             scenarios = None
         return scenarios
@@ -1259,6 +1273,50 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         return summary
 
+    def build_conditional_fund_return_summary(self):
+        market_percentiles = ['< 10th', '10th - 25th', '25th - 50th',
+                              '50th - 75th', '75th - 90th', '> 90th']
+        column_headings = ["Excess 25%", "Excess mean", "Excess 75%",
+                           "Total 25%", "Total mean", "Total 75%", "Total count"]
+
+        if self._fund_returns.shape[0] == 0:
+            return pd.DataFrame(columns=column_headings, index=market_percentiles)
+
+        bmrk = self._market_scenarios_3y.columns[0]
+        rors = self._fund_returns.merge(self._market_returns_monthly, left_index=True, right_index=True)
+
+        if bmrk == 'MOVE Index':
+            beta = 0
+        elif bmrk in self._abs_bmrk_betas.index:
+            beta = self._abs_bmrk_betas.loc[bmrk].squeeze()
+        else:
+            beta = scipy.stats.linregress(x=rors[bmrk], y=rors[self._fund_name])[0]
+            beta = round(max(min(beta, 1.5), 0.1), 1)
+
+        beta_adj_index = rors[bmrk] * beta
+        excess_return = rors[self._fund_name] - beta_adj_index
+        excess_return = excess_return.to_frame('Excess')
+        total_return = rors[self._fund_name].to_frame('Total')
+
+        fund_returns = total_return.merge(excess_return, left_index=True, right_index=True)
+
+        rolling_fund_returns = self._analytics.compute_trailing_return(ror=fund_returns,
+                                                                       window=36,
+                                                                       as_of_date=excess_return.index.max(),
+                                                                       method='geometric',
+                                                                       periodicity=Periodicity.Monthly,
+                                                                       annualize=True,
+                                                                       include_history=True)
+
+        rolling_rors = rolling_fund_returns.merge(self._market_scenarios_3y, left_index=True, right_index=True)
+
+        summary_stats = rolling_rors.groupby('MarketScenario')[['Total', 'Excess']].describe()
+        summary_stats.columns = [' '.join(col).strip() for col in summary_stats.columns.values]
+
+        summary_stats = summary_stats[column_headings].reindex(market_percentiles)
+
+        return summary_stats
+
     def build_performance_stability_fund_summary(self):
         if self._fund_returns.shape[0] == 0:
             return pd.DataFrame(
@@ -1439,6 +1497,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         header_info = self.get_header_info()
 
         return_summary = self.build_benchmark_summary()
+        conditional_fund_return_summary = self.build_conditional_fund_return_summary()
         constituent_count_summary = self.build_constituent_count_summary()
         absolute_return_benchmark = self.get_absolute_return_benchmark()
         peer_group_heading = self.get_peer_group_heading()
@@ -1493,6 +1552,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "condl_mkt_return": self._condl_mkt_return,
             "condl_peer_excess_returns": self._condl_peer_excess_returns,
             "condl_peer_heading": self._condl_peer_heading,
+            "condl_fund_return_summary": conditional_fund_return_summary,
         }
 
         input_data_json = {
@@ -1522,6 +1582,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "condl_mkt_return": self._condl_mkt_return.to_json(orient="index"),
             "condl_peer_excess_returns": self._condl_peer_excess_returns.to_json(orient="index"),
             "condl_peer_heading": self._condl_peer_heading.to_json(orient="index"),
+            "condl_fund_return_summary": conditional_fund_return_summary.to_json(orient="index"),
         }
 
         data_to_write = json.dumps(input_data_json)
@@ -1587,4 +1648,4 @@ if __name__ == "__main__":
     )
 
     with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
-        analytics = PerformanceQualityReport(fund_name='Element').execute()
+        analytics = PerformanceQualityReport(fund_name='D1 Capital').execute()

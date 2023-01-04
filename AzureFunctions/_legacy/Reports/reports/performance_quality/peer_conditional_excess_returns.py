@@ -146,7 +146,7 @@ def generate_peer_conditional_excess_returns(peer_group):
     conditional_ptile_summary = _summarize_strategy_excess(market_scenarios=market_scenarios,
                                                            excess_ptiles=excess_ptiles)
 
-    return market_scenarios, conditional_ptile_summary
+    return fin_index_returns, market_scenarios, conditional_ptile_summary
 
 
 if __name__ == "__main__":
@@ -167,6 +167,6 @@ if __name__ == "__main__":
     )
 
     with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
-        market_scenarios, conditional_ptile_summary = \
-            generate_peer_conditional_excess_returns(peer_group='GCM Macro')
+        fin_index_returns, market_scenarios, conditional_ptile_summary = \
+            generate_peer_conditional_excess_returns(peer_group='GCM Multi-PM')
         print(market_scenarios)
