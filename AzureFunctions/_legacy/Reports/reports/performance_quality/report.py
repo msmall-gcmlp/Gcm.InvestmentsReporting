@@ -1277,7 +1277,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         market_percentiles = ['< 10th', '10th - 25th', '25th - 50th',
                               '50th - 75th', '75th - 90th', '> 90th']
         column_headings = ["Excess 25%", "Excess mean", "Excess 75%",
-                           "Total 25%", "Total mean", "Total 75%", "Total count"]
+                           'Excess Ptile - 25%', 'Excess Ptile - Mean', 'Excess Ptile - 75%', "Excess count"]
 
         if self._fund_returns.shape[0] == 0:
             return pd.DataFrame(columns=column_headings, index=market_percentiles)
@@ -1310,10 +1310,23 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         rolling_rors = rolling_fund_returns.merge(self._market_scenarios_3y, left_index=True, right_index=True)
 
-        summary_stats = rolling_rors.groupby('MarketScenario')[['Total', 'Excess']].describe()
-        summary_stats.columns = [' '.join(col).strip() for col in summary_stats.columns.values]
+        # summary_stats = rolling_rors.groupby('MarketScenario')[['Total', 'Excess']].describe()
+        # summary_stats.columns = [' '.join(col).strip() for col in summary_stats.columns.values]
 
-        summary_stats = summary_stats[column_headings].reindex(market_percentiles)
+        summary_stats = rolling_rors.groupby('MarketScenario')[['Excess']].describe()
+        summary_stats.columns = [' '.join(col).strip() for col in summary_stats.columns.values]
+        summary_stats = summary_stats[["Excess 25%", "Excess mean", "Excess 75%", "Excess count"]]
+        summary_stats = summary_stats.reindex(market_percentiles)
+
+        fund_25 = self._condl_peer_excess_returns.sub(summary_stats['Excess 25%'], axis=0).abs().idxmin(axis=1)
+        fund_mean = self._condl_peer_excess_returns.sub(summary_stats['Excess mean'], axis=0).abs().idxmin(axis=1)
+        fund_75 = self._condl_peer_excess_returns.sub(summary_stats['Excess 75%'], axis=0).abs().idxmin(axis=1)
+
+        summary_stats['Excess Ptile - 25%'] = fund_25.astype(str) + 'th'
+        summary_stats['Excess Ptile - Mean'] = fund_mean.astype(str) + 'th'
+        summary_stats['Excess Ptile - 75%'] = fund_75.astype(str) + 'th'
+
+        summary_stats = summary_stats[column_headings]
 
         return summary_stats
 
@@ -1648,4 +1661,4 @@ if __name__ == "__main__":
     )
 
     with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
-        analytics = PerformanceQualityReport(fund_name='D1 Capital').execute()
+        analytics = PerformanceQualityReport(fund_name='Citadel').execute()
