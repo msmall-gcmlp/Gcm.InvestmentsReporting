@@ -37,7 +37,7 @@ from openpyxl.utils.cell import get_column_letter
 
 class PerformanceScreenerReport(ReportingRunnerBase):
     def __init__(self, peer_group, trailing_months=36):
-        super().__init__(runner=Scenario.get_attribute("runner"))
+        super().__init__(runner=Scenario.get_attribute("dao"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
         self._end_date = self._as_of_date
         self._trailing_months = trailing_months
@@ -686,5 +686,5 @@ if __name__ == "__main__":
     for peer_group in peer_groups:
         as_of_dates = [dt.date(2022, 6, 30)]
         for as_of_date in as_of_dates:
-            with Scenario(runner=runner, as_of_date=as_of_date).context():
+            with Scenario(dao=runner, as_of_date=as_of_date).context():
                 PerformanceScreenerReport(peer_group=peer_group).execute()

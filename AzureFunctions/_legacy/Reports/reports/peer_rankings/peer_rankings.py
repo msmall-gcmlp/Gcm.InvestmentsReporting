@@ -16,7 +16,7 @@ scaler = MinMaxScaler()
 
 class PeerRankings(ReportingRunnerBase):
     def __init__(self):
-        super().__init__(runner=Scenario.get_attribute("runner"))
+        super().__init__(runner=Scenario.get_attribute("dao"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
         self._end_date = dt.date(self._as_of_date.year, self._as_of_date.month,
                                  calendar.monthrange(self._as_of_date.year, self._as_of_date.month)[1])

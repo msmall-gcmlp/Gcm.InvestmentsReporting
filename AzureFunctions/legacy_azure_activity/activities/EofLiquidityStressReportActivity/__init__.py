@@ -24,15 +24,10 @@ def main(requestBody) -> str:
         }
     }
 
-    runner = DaoRunner(
-        container_lambda=lambda b, i: b.config.from_dict(i),
-        config_params=config_params,
-    )
-
     if run == "RunEofLiquidityStress":
-        with Scenario(runner=runner, as_of_date=as_of_date).context():
+        with Scenario(dao_config=config_params, as_of_date=as_of_date).context():
             input_data = EofStressTestingData(
-                runner=runner,
+                runner=Scenario.get_attribute("dao"),
                 as_of_date=params["as_of_date"],
                 scenario=["Liquidity Stress"],
             ).execute()

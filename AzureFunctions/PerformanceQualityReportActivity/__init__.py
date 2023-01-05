@@ -27,7 +27,7 @@ def main(requestBody) -> str:
         else:
             investment_group_ids = ast.literal_eval(params.get("investment_group_ids"))
 
-        with Scenario(runner=runner, as_of_date=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             perf_quality_data = PerformanceQualityReportData(
                 start_date=as_of_date - relativedelta(years=10),
                 end_date=as_of_date,

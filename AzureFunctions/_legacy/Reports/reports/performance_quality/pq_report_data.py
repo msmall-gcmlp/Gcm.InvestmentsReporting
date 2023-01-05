@@ -16,7 +16,7 @@ from gcm.inv.quantlib.timeseries.analytics import Analytics
 
 class PerformanceQualityReportData(ReportingRunnerBase):
     def __init__(self, start_date, end_date, investment_group_ids=None):
-        super().__init__(runner=Scenario.get_attribute("runner"))
+        super().__init__(runner=Scenario.get_attribute("dao"))
         self._start_date = start_date
         self._end_date = end_date
         self._as_of_date = Scenario.get_attribute("as_of_date")

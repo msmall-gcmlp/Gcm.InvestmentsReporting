@@ -46,7 +46,7 @@ def main(requestBody) -> str:
         df = file.to_tabular_data(
             TabularDataOutputTypes.PandasDataFrame, params
         )
-        with Scenario(runner=runner, as_of_date=as_of_date).context():
+        with Scenario(as_of_date=as_of_date).context():
             input_data = MarketPerformanceQualityReportData(
                 start_date=start_date,
                 runner=runner,

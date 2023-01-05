@@ -29,9 +29,9 @@ from gcm.inv.scenario import Scenario
 
 class BbaReport(ReportingRunnerBase):
     def __init__(self):
-        super().__init__(runner=Scenario.get_attribute("runner"))
+        super().__init__(runner=Scenario.get_attribute("dao"))
         self._firm_only = Scenario.get_attribute("firm_only")
-        self._runner = Scenario.get_attribute("runner")
+        self._runner = Scenario.get_attribute("dao")
         self._report_date = Scenario.get_attribute("as_of_date")
         self._strategy_order = ["Credit", "Long/Short Equity", "Macro", "Multi-Strategy", "Quantitative", "Relative Value"]
         self._portfolio = Portfolio()

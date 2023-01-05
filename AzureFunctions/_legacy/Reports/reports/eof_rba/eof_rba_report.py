@@ -27,7 +27,7 @@ from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 
 class EofReturnBasedAttributionReport(ReportingRunnerBase):
     def __init__(self):
-        super().__init__(runner=Scenario.get_attribute("runner"))
+        super().__init__(runner=Scenario.get_attribute("dao"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
         self._periodicity = Scenario.get_attribute("periodicity")
         self._analytics = Analytics()
@@ -430,5 +430,5 @@ if __name__ == "__main__":
 
     as_of_date = dt.date(2022, 8, 31)
 
-    with Scenario(runner=runner, as_of_date=as_of_date, periodicity=PeriodicROR.ITD).context():
+    with Scenario(dao=runner, as_of_date=as_of_date, periodicity=PeriodicROR.ITD).context():
         eof_rba = EofReturnBasedAttributionReport().execute()
