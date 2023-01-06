@@ -10,7 +10,6 @@ from _legacy.Reports.reports.performance_quality.peer_level_analytics import (
 from _legacy.Reports.reports.performance_quality.report import (
     PerformanceQualityReport,
 )
-from gcm.Dao.DaoRunner import DaoRunner
 from dateutil.relativedelta import relativedelta
 
 
@@ -19,9 +18,8 @@ def main(requestBody) -> str:
     run = params["run"]
     as_of_date = params["as_of_date"]
     as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
-    runner = DaoRunner()
 
-    with Scenario(runner=runner, as_of_date=as_of_date).context():
+    with Scenario(as_of_date=as_of_date).context():
 
         if run == "PerformanceQualityReportData":
             if params.get("investment_group_ids") is None:
@@ -37,11 +35,7 @@ def main(requestBody) -> str:
             return perf_quality_data.execute()
 
         elif run == "PerformanceQualityPeerSummaryReport":
-            peer_group = params["peer_group"]
-
-            return PerformanceQualityPeerLevelAnalytics(peer_group=peer_group).execute()
+            return PerformanceQualityPeerLevelAnalytics(peer_group=params["peer_group"]).execute()
 
         elif run == "PerformanceQualityReport":
-            fund_name = params["fund_name"]
-
-            return PerformanceQualityReport(fund_name=fund_name).execute()
+            return PerformanceQualityReport(fund_name=params["fund_name"]).execute()

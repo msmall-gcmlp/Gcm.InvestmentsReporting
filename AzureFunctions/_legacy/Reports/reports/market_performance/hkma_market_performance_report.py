@@ -17,7 +17,7 @@ from dateutil.relativedelta import relativedelta
 
 class HkmaMarketPerformanceReport(ReportingRunnerBase):
     def __init__(self):
-        super().__init__(runner=Scenario.get_attribute("runner"))
+        super().__init__(runner=Scenario.get_attribute("dao"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
         self._tickers = ['SPX Index',
                    'CCMP Index',
@@ -185,5 +185,5 @@ if __name__ == "__main__":
                 }
             })
 
-    with Scenario(runner=runner, as_of_date=dt.date(2022, 11, 3)).context():
+    with Scenario(dao=runner, as_of_date=dt.date(2022, 11, 3)).context():
         HkmaMarketPerformanceReport().execute()

@@ -29,7 +29,7 @@ class TestPerformanceQualityReport:
         return perf_quality_peer
 
     def test_performance_quality_report_data(self, runner):
-        with Scenario(runner=runner, as_of_date=dt.date(2022, 8, 31)).context():
+        with Scenario(dao=runner, as_of_date=dt.date(2022, 3, 31)).context():
             perf_quality = PerformanceQualityReportData(
                 start_date=dt.date(2012, 3, 1), end_date=dt.date(2022, 8, 31),
                 investment_group_ids=[19224, 23319, 74984]

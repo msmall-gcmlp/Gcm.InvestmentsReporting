@@ -11,7 +11,7 @@ class TestPeerRankingReport:
         return DaoRunner()
 
     def test_peer_ranking_report(self, runner):
-        with Scenario(runner=runner, as_of_date=dt.date(2022, 3, 31)).context():
+        with Scenario(dao=runner, as_of_date=dt.date(2022, 3, 31)).context():
             peer_ranking_report = PerformanceScreenerReport(peer_group=['GCM Multi-PM'])
             constituent_returns = peer_ranking_report._updated_constituent_returns
             constituents = peer_ranking_report._constituents
