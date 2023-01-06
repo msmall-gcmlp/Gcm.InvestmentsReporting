@@ -1481,7 +1481,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def build_risk_model_implied_forwards_summary(self):
-        if self._fund_returns.shape[0] < 12:
+        number_sims = self._fund_distributions.shape[0]
+
+        if self._fund_returns.shape[0] < 12 or number_sims == 0:
             summary = pd.DataFrame(columns={"Forwards"}, index=["TTM_Ptile_vs_Expected", "ForwardReturn"])
             return summary
 
@@ -1500,7 +1502,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         ttm_plus_2y_exp = ((1 + ttm_return) * (1 + exp_return) * (1 + exp_return)) ** (1 / 3) - 1
         ttm_plus_2y_exp = ttm_plus_2y_exp.round(2)
 
-        number_sims = self._fund_distributions.shape[0]
         ttm_ptile = (self._fund_distributions < ttm_plus_2y_exp).sum().squeeze() / number_sims
         ttm_ptile = ttm_ptile.round(2)
 
