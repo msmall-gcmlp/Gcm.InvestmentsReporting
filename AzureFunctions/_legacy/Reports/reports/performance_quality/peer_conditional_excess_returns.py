@@ -23,7 +23,11 @@ def _collect_input_data(peer_group, start_date, end_date):
 
     peer_arb_mapping = pd.read_csv(os.path.dirname(__file__) + "/peer_group_to_arb_mapping.csv")
     passive_bmrk = peer_arb_mapping[peer_arb_mapping['ReportingPeerGroup'] == peer_group]
-    passive_bmrk = passive_bmrk['Ticker'].squeeze()
+
+    if passive_bmrk.shape[0] == 0:
+        passive_bmrk = 'GDDUWI Index'
+    else:
+        passive_bmrk = passive_bmrk['Ticker'].squeeze()
 
     if peer_group == 'GCM Macro':
         passive_bmrk = "MOVE Index"

@@ -266,8 +266,11 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             fund_inputs["peer_group_abs_return_bmrk"] = peer_arb.to_json(orient="index")
 
             fund_arb_id = dimn['AbsoluteBenchmarkId'].squeeze()
-            fund_arb_betas = abs_bmrk_betas[fund_arb_id]
-            fund_arb_betas = fund_arb_betas[fund_arb_betas != 0]
+            if fund_arb_id in abs_bmrk_betas.columns.values:
+                fund_arb_betas = abs_bmrk_betas[fund_arb_id]
+                fund_arb_betas = fund_arb_betas[fund_arb_betas != 0]
+            else:
+                fund_arb_betas = pd.Series(dtype=object)
             fund_inputs["abs_bmrk_betas"] = fund_arb_betas.to_json(orient="index")
 
             expectations = fund_expectations[fund_expectations["InvestmentGroupId"] == fund_id]

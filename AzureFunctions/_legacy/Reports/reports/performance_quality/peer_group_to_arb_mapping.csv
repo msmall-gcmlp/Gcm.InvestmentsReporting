@@ -1,32 +1,35 @@
 ﻿ReportingPeerGroup,Ticker
-GCM Activism Peer Group,MXWO Index
+GCM Activism Peer Group,GDDUWI Index
 GCM Asia,MCHI US Index
-GCM Asia Credit,HYG US Equity
+GCM Asia Credit,LF98TRUU Index
 GCM Asia Equity,MCHI US Index
 GCM Asia Macro,MCHI US Index
 GCM China,MCHI US Index
-GCM Consumer,SPX Index
-GCM Cross Cap,MXWO Index
-GCM Diversifying Strategies,MXWO Index
-GCM DS Multi-Strategy,MXWO Index
-GCM Emerging Market Credit,MXWO Index
-GCM Energy,RGUSES Index
-GCM Europe Credit,HYG US Equity
+GCM Consumer,SPTRCOND Index
+GCM Cross Cap,GDDUWI Index
+GCM Diversifying Strategies,GDDUWI Index
+GCM DS Multi-Strategy,GDDUWI Index
+GCM Emerging Market Credit,LF98TRUU Index
+GCM Energy,SPTRENRS Index
+GCM Europe Credit,LF98TRUU Index
 GCM Europe Equity,MXEU Index
-GCM Financials,SPX Index
-GCM Fundamental Credit,HYG US Equity
-GCM Generalist Long/Short Equity,SPX Index
-GCM Healthcare,XBI US Equity
-GCM Industrials,SPX Index
+GCM Equities,SPXT Index
+GCM Long/Short Equity,SPXT Index
+GCM Generalist Long/Short Equity,SPXT Index
+GCM Financials,SPTRFINL Index
+GCM Fundamental Credit,LF98TRUU Index
+GCM Generalist Long/Short Equity,SPXT Index
+GCM Healthcare,SPTRHLTH Index
+GCM Industrials,SPTRINDU Index
 GCM Japan,MCHI US Index
-GCM Long Only Equity,SPX Index
-GCM Long/Short Credit,HYG US Equity
-GCM Macro,MXWO Index
-GCM Multi-PM,MXWO Index
-GCM Quant,MXWO Index
-GCM Real Estate,SPX Index
-GCM Relative Value,MXWO Index
-GCM Structured Credit,HYG US Equity
-GCM TMT,NDX Index
-GCM Utilities,SPX Index
-GCM Multi-Strategy,MXWO Index
+GCM Long Only Equity,SPXT Index
+GCM Long/Short Credit,LF98TRUU Index
+GCM Macro,GDDUWI Index
+GCM Multi-PM,GDDUWI Index
+GCM Quant,GDDUWI Index
+GCM Real Estate,S5RLST Index
+GCM Relative Value,GDDUWI Index
+GCM Structured Credit,LF98TRUU Index
+GCM TMT,XNDX Index
+GCM Utilities,SPTRUTIL Index
+GCM Multi-Strategy,GDDUWI Index
