@@ -14,11 +14,12 @@ from _legacy.core.reporting_runner_base import (
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
+from gcm.inv.dataprovider.risk_model import RunName
 
 
 class PerformanceQualityReportData(ReportingRunnerBase):
     def __init__(self, start_date, end_date, investment_group_ids=None):
-        super().__init__(runner=Scenario.get_attribute("runner"))
+        super().__init__(runner=Scenario.get_attribute("dao"))
         self._start_date = start_date
         self._end_date = end_date
         self._as_of_date = Scenario.get_attribute("as_of_date")
@@ -60,8 +61,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             "Strategy",
             "SubStrategy",
             "FleScl",
-            "RiskModelExpectedReturn",
-            "RiskModelExpectedVol",
         ]
 
         fund_dimn = fund_dimn.reindex(columns=fund_dimn_columns, fill_value=None)
@@ -210,6 +209,10 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             public_or_private="Private",
         )
 
+        fund_expectations = inv_group.get_fund_expectations()
+        #TODO - get 1Y lagged distributions to compare for forward returns
+        fund_distributions = inv_group.get_simulated_fund_returns(run_name=RunName.ARS_EMM)
+
         report_inputs = dict()
         report_inputs["fund_inputs"] = dict()
         report_inputs["peer_inputs"] = dict()
@@ -266,6 +269,15 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             fund_arb_betas = abs_bmrk_betas[fund_arb_id]
             fund_arb_betas = fund_arb_betas[fund_arb_betas != 0]
             fund_inputs["abs_bmrk_betas"] = fund_arb_betas.to_json(orient="index")
+
+            expectations = fund_expectations[fund_expectations["InvestmentGroupId"] == fund_id]
+            fund_inputs["expectations"] = expectations.to_json(orient="index")
+
+            if fund_id in fund_distributions.columns:
+                distributions = fund_distributions[fund_id]
+            else:
+                distributions = pd.DataFrame()
+            fund_inputs["distributions"] = distributions.to_json(orient="index")
 
             report_inputs["fund_inputs"][name] = fund_inputs
 
@@ -383,10 +395,10 @@ if __name__ == "__main__":
     )
 
     as_of_date = dt.date(2022, 10, 31)
-    with Scenario(runner=runner, as_of_date=as_of_date).context():
-        prd_ids = [20016, 23441, 75614, 28015]
-        # dev_ids = [19224, 23319, 74984]
+    with Scenario(dao=runner, as_of_date=as_of_date).context():
+        ids = [20016, 23441, 75614, 28015]  # prd
+        # ids = [19224, 23319, 74984]  # dev
         start_date = as_of_date - relativedelta(years=10)
         report_data = PerformanceQualityReportData(start_date=start_date, end_date=as_of_date,
-                                                   investment_group_ids=prd_ids)
+                                                   investment_group_ids=ids)
         report_data.execute()

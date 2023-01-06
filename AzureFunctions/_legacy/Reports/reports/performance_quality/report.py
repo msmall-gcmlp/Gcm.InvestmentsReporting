@@ -97,12 +97,22 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return self._fund_dimn["FleScl"].squeeze().round(2)
 
     @cached_property
+    def _fund_expectations(self):
+        expectations = pd.read_json(self._fund_inputs["expectations"], orient="index")
+        return expectations
+
+    @cached_property
+    def _fund_distributions(self):
+        distributions = pd.read_json(self._fund_inputs["distributions"], orient="index")
+        return distributions
+
+    @cached_property
     def _risk_model_expected_return(self):
-        return self._fund_dimn["RiskModelExpectedReturn"].squeeze().round(2)
+        return self._fund_expectations["RoR"].squeeze().round(2)
 
     @cached_property
     def _risk_model_expected_vol(self):
-        return self._fund_dimn["RiskModelExpectedVol"].squeeze().round(2)
+        return self._fund_expectations["Volatility"].squeeze().round(2)
 
     @cached_property
     def _fund_returns(self):
@@ -1322,9 +1332,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         fund_mean = self._condl_peer_excess_returns.sub(summary_stats['Excess mean'], axis=0).abs().idxmin(axis=1)
         fund_75 = self._condl_peer_excess_returns.sub(summary_stats['Excess 75%'], axis=0).abs().idxmin(axis=1)
 
-        summary_stats['Excess Ptile - 25%'] = fund_25.astype(str) + 'th'
-        summary_stats['Excess Ptile - Mean'] = fund_mean.astype(str) + 'th'
-        summary_stats['Excess Ptile - 75%'] = fund_75.astype(str) + 'th'
+        summary_stats['Excess Ptile - 25%'] = ['' if str(x) == 'nan' else str(int(x)) + 'th' for x in fund_25]
+        summary_stats['Excess Ptile - Mean'] = ['' if str(x) == 'nan' else str(int(x)) + 'th' for x in fund_mean]
+        summary_stats['Excess Ptile - 75%'] = ['' if str(x) == 'nan' else str(int(x)) + 'th' for x in fund_75]
 
         summary_stats = summary_stats[column_headings]
 
@@ -1464,6 +1474,52 @@ class PerformanceQualityReport(ReportingRunnerBase):
         )
         return summary
 
+    def build_risk_model_implied_forwards_summary(self):
+        if self._fund_returns.shape[0] < 12:
+            summary = pd.DataFrame(index=["TTM_Ptile_vs_Expected", "ForwardReturn"])
+            return summary
+
+        exp_return = self._risk_model_expected_return
+
+        ttm_return = self._analytics.compute_trailing_return(
+            ror=self._fund_returns,
+            window=12,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            periodicity=Periodicity.Monthly,
+            annualize=True,
+        )
+        ttm_return = ttm_return.squeeze()
+
+        ttm_plus_2y_exp = ((1 + ttm_return) * (1 + exp_return) * (1 + exp_return)) ** (1 / 3) - 1
+        ttm_plus_2y_exp = ttm_plus_2y_exp.round(2)
+
+        number_sims = self._fund_distributions.shape[0]
+        ttm_ptile = (self._fund_distributions < ttm_plus_2y_exp).sum().squeeze() / number_sims
+        ttm_ptile = ttm_ptile.round(2)
+
+        shrinkage = 0.25
+        shrunk_ptile = (ttm_ptile * (1 - shrinkage)) + (0.5 * shrinkage)
+        distribution_index = int(round(shrunk_ptile * number_sims, 0))
+        sorted_distribution = sorted(self._fund_distributions.squeeze())
+        implied_forward_3y = round(sorted_distribution[distribution_index], 2)
+
+        implied_forward_2y = (((1 + implied_forward_3y) ** 3) / (1 + ttm_return)) ** (1 / 2) - 1
+        # implied_3y_check = ((1 + implied_forward_2y) * (1 + implied_forward_2y) * (1 + ttm_return)) ** (1 / 3) - 1
+        # round(implied_3y_check, 2) == implied_forward_3y
+
+        implied_forward_2y = round(implied_forward_2y, 2)
+        summary = pd.DataFrame(
+            {
+                "Forwards": [
+                    ttm_ptile * 100,
+                    implied_forward_2y,
+                ]
+            },
+            index=["TTM_Ptile_vs_Expected", "ForwardReturn"],
+        )
+        return summary
+
     def build_monthly_performance_summary(self):
         end_year = self._as_of_date.year
         years = [x for x in range(end_year - 52, end_year + 1)]
@@ -1530,6 +1586,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         shortfall_summary = self.build_shortfall_summary()
         risk_model_expectations = self.build_risk_model_expectations_summary()
+        risk_model_implied_forwards = self.build_risk_model_implied_forwards_summary()
 
         exposure_summary = self.build_exposure_summary()
         latest_exposure_heading = self.get_latest_exposure_heading()
@@ -1566,6 +1623,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "condl_peer_excess_returns": self._condl_peer_excess_returns,
             "condl_peer_heading": self._condl_peer_heading,
             "condl_fund_return_summary": conditional_fund_return_summary,
+            "risk_model_forwards": risk_model_implied_forwards,
         }
 
         input_data_json = {
@@ -1596,6 +1654,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "condl_peer_excess_returns": self._condl_peer_excess_returns.to_json(orient="index"),
             "condl_peer_heading": self._condl_peer_heading.to_json(orient="index"),
             "condl_fund_return_summary": conditional_fund_return_summary.to_json(orient="index"),
+            "risk_model_forwards": risk_model_implied_forwards.to_json(orient="index"),
         }
 
         data_to_write = json.dumps(input_data_json)
@@ -1660,5 +1719,6 @@ if __name__ == "__main__":
         },
     )
 
-    with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
-        analytics = PerformanceQualityReport(fund_name='Citadel').execute()
+    with Scenario(dao=runner, as_of_date=dt.date(2022, 10, 31)).context():
+        for fund in ['Skye', 'Citadel', 'Element', 'D1 Capital']:
+            PerformanceQualityReport(fund_name=fund).execute()

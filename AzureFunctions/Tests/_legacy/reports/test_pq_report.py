@@ -32,7 +32,8 @@ class TestPerformanceQualityReport:
     def perf_quality_report(
         self, runner, skye_fund_inputs, skye_primary_peer_inputs, skye_secondary_peer_inputs, skye_eh_inputs, skye_eh200_inputs, market_factor_inputs
     ):
-        perf_quality_report = PerformanceQualityReport(fund_name="Skye")
+        with Scenario(as_of_date=dt.date(2022, 3, 31)).context():
+            perf_quality_report = PerformanceQualityReport(fund_name="Skye")
         perf_quality_report._fund_inputs_cache = skye_fund_inputs
 
         perf_quality_report._primary_peer_inputs_cache = skye_primary_peer_inputs
