@@ -7,61 +7,41 @@ import ast
 from _legacy.Reports.reports.performance_quality.peer_level_analytics import PerformanceQualityPeerLevelAnalytics
 from _legacy.Reports.reports.performance_quality.report import PerformanceQualityReport
 from _legacy.Reports.reports.performance_quality.report_data import PerformanceQualityReportData
-from gcm.Dao.DaoRunner import DaoRunner, DaoSource, DaoRunnerConfigArgs
+from gcm.Dao.DaoRunner import DaoRunner
 
 
 class TestPerformanceQualityReport:
     @pytest.fixture
     def runner(self):
-        config_params = {
-            DaoRunnerConfigArgs.dao_global_envs.name: {
-                DaoSource.PubDwh.name: {
-                    "Environment": "uat",
-                    "Subscription": "nonprd",
-                },
-            }
-        }
-
-        runner = DaoRunner(
-            container_lambda=lambda b, i: b.config.from_dict(i),
-            config_params=config_params,
-        )
-        return runner
+        return DaoRunner()
 
     @pytest.fixture
-    def perf_quality_report(
-        self, runner, skye_fund_inputs, skye_primary_peer_inputs, skye_secondary_peer_inputs, skye_eh_inputs, skye_eh200_inputs, market_factor_inputs
-    ):
-        with Scenario(as_of_date=dt.date(2022, 3, 31)).context():
+    def perf_quality_report(self, runner):
+        with Scenario(dao=runner, as_of_date=dt.date(2022, 8, 31)).context():
             perf_quality_report = PerformanceQualityReport(fund_name="Skye")
-        perf_quality_report._fund_inputs_cache = skye_fund_inputs
 
-        perf_quality_report._primary_peer_inputs_cache = skye_primary_peer_inputs
-        perf_quality_report._secondary_peer_inputs_cache = skye_secondary_peer_inputs
-        perf_quality_report._eurekahedge_inputs_cache = skye_eh_inputs
-        perf_quality_report._eurekahedge200_inputs_cache = skye_eh200_inputs
-        perf_quality_report._market_factor_inputs_cache = market_factor_inputs
         return perf_quality_report
 
     @pytest.fixture
-    def perf_quality_peer(self, runner, skye_primary_peer_inputs, market_factor_inputs):
-        perf_quality_peer = PerformanceQualityPeerLevelAnalytics(peer_group="GCM TMT")
-        perf_quality_peer._peer_inputs_cache = skye_primary_peer_inputs
-        perf_quality_peer._market_factor_inputs_cache = market_factor_inputs
+    def perf_quality_peer(self, runner):
+        with Scenario(dao=runner, as_of_date=dt.date(2022, 8, 31)).context():
+            perf_quality_peer = PerformanceQualityPeerLevelAnalytics(peer_group="GCM TMT")
         return perf_quality_peer
 
     def test_performance_quality_report_data(self, runner):
-        with Scenario(runner=runner, as_of_date=dt.date(2022, 3, 31)).context():
+        with Scenario(runner=runner, as_of_date=dt.date(2022, 8, 31)).context():
             perf_quality = PerformanceQualityReportData(
-                start_date=dt.date(2012, 3, 1), end_date=dt.date(2022, 3, 31), investment_group_ids=[19224, 23319, 74984]
+                start_date=dt.date(2012, 3, 1), end_date=dt.date(2022, 8, 31),
+                investment_group_ids=[19224, 23319, 74984]
             )
 
             report_inputs = perf_quality.get_performance_quality_report_inputs()
+            # perf_quality.generate_inputs_and_write_to_datalake()
 
         fund_inputs = report_inputs["fund_inputs"]["Skye"]
 
         # import json
-        # with open("Skye_fund_inputs_2022-03-31.json", 'w') as f:
+        # with open("Skye_fund_inputs_2022-08-31.json", 'w') as f:
         #     json.dump(fund_inputs, f)
 
         fund_dimn = pd.read_json(fund_inputs["fund_dimn"], orient="index")
