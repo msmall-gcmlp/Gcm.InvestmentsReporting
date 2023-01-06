@@ -108,11 +108,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _risk_model_expected_return(self):
-        return self._fund_expectations["RoR"].squeeze().round(2)
+        if self._fund_expectations.shape[0] == 0:
+            return np.nan
+        else:
+            return self._fund_expectations["RoR"].squeeze().round(2)
 
     @cached_property
     def _risk_model_expected_vol(self):
-        return self._fund_expectations["Volatility"].squeeze().round(2)
+        if self._fund_expectations.shape[0] == 0:
+            return np.nan
+        else:
+            return self._fund_expectations["Volatility"].squeeze().round(2)
 
     @cached_property
     def _fund_returns(self):
@@ -1289,7 +1295,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         column_headings = ["Excess 25%", "Excess mean", "Excess 75%",
                            'Excess Ptile - 25%', 'Excess Ptile - Mean', 'Excess Ptile - 75%', "Excess count"]
 
-        if self._fund_returns.shape[0] == 0:
+        if self._fund_returns.shape[0] == 0 or self._primary_peer_group is None:
             return pd.DataFrame(columns=column_headings, index=market_percentiles)
 
         bmrk = self._market_scenarios_3y.columns[0]
@@ -1466,8 +1472,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = pd.DataFrame(
             {
                 "Expectations": [
-                    self._risk_model_expected_return.copy(),
-                    self._risk_model_expected_vol.copy(),
+                    self._risk_model_expected_return,
+                    self._risk_model_expected_vol,
                 ]
             },
             index=["ExpectedReturn", "ExpectedVolatility"],
@@ -1476,7 +1482,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def build_risk_model_implied_forwards_summary(self):
         if self._fund_returns.shape[0] < 12:
-            summary = pd.DataFrame(index=["TTM_Ptile_vs_Expected", "ForwardReturn"])
+            summary = pd.DataFrame(columns={"Forwards"}, index=["TTM_Ptile_vs_Expected", "ForwardReturn"])
             return summary
 
         exp_return = self._risk_model_expected_return
