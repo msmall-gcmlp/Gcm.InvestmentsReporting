@@ -1295,7 +1295,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         column_headings = ["Excess 25%", "Excess mean", "Excess 75%",
                            'Excess Ptile - 25%', 'Excess Ptile - Mean', 'Excess Ptile - 75%', "Excess count"]
 
-        if self._fund_returns.shape[0] == 0 or self._primary_peer_group is None:
+        if self._fund_returns.shape[0] < 36 or self._primary_peer_group is None:
             return pd.DataFrame(columns=column_headings, index=market_percentiles)
 
         bmrk = self._market_scenarios_3y.columns[0]
