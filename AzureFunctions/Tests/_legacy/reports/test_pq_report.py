@@ -34,7 +34,6 @@ class TestPerformanceQualityReport:
                 start_date=dt.date(2012, 3, 1), end_date=dt.date(2022, 8, 31),
                 investment_group_ids=[19224, 23319, 74984]
             )
-
             report_inputs = perf_quality.get_performance_quality_report_inputs()
             # perf_quality.generate_inputs_and_write_to_datalake()
 
