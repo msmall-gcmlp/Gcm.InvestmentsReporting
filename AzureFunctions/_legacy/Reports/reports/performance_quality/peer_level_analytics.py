@@ -347,7 +347,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
 
     def run(self, **kwargs):
         self.generate_peer_level_summaries()
-        return True
+        return self._peer_group + " Complete"
 
 
 if __name__ == "__main__":

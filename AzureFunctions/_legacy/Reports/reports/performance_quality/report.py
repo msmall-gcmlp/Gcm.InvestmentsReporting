@@ -1484,7 +1484,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         number_sims = self._fund_distributions.shape[0]
 
         if self._fund_returns.shape[0] < 12 or number_sims == 0:
-            summary = pd.DataFrame(columns={"Forwards"}, index=["TTM_Ptile_vs_Expected", "ForwardReturn"])
+            summary = pd.DataFrame(columns=["Forwards"], index=["TTM_Ptile_vs_Expected", "ForwardReturn"])
             return summary
 
         exp_return = self._risk_model_expected_return
@@ -1706,7 +1706,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def run(self, **kwargs):
         self.generate_performance_quality_report()
-        return True
+        return self._fund_name + ' Complete'
 
 
 if __name__ == "__main__":
