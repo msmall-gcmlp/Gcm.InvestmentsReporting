@@ -25,7 +25,7 @@ class TestPerformanceQualityReport:
     @pytest.fixture
     def perf_quality_peer(self, runner):
         with Scenario(dao=runner, as_of_date=dt.date(2022, 8, 31)).context():
-            perf_quality_peer = PerformanceQualityPeerLevelAnalytics(peer_group="Citadel")
+            perf_quality_peer = PerformanceQualityPeerLevelAnalytics(peer_group="GCM TMT")
         return perf_quality_peer
 
     def test_performance_quality_report_data(self, runner):
