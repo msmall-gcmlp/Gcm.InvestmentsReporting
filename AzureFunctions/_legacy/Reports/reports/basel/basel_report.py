@@ -1,6 +1,5 @@
 import pandas as pd
 from datetime import datetime as dt
-
 from gcm.Dao.DaoRunner import DaoRunnerConfigArgs, DaoRunner
 from gcm.Dao.DaoSources import DaoSource
 from _legacy.core.ReportStructure.report_structure import (
@@ -174,15 +173,16 @@ class BaselReport(ReportingRunnerBase):
 
         input_data = dictfilt(input_data, wanted_keys)
         input_data["header_info"] = self.get_header_info()
-        input_data["as_of_date"] = self.get_as_of_date()
+        input_data["asofdate"] = self.get_as_of_date()
 
-        as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
+        as_of_date = dt.combine(self._as_of_date, dt.min.time())
         report_name = "Basel_Report_" + self._investment_name + "_" + self._as_of_date.strftime("%Y%m%d")
-        with Scenario(as_of_date=as_of_date).context():
+        with Scenario(runner=DaoRunner(), as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="Basel Template.xlsx",
                 save=True,
+                save_as_pdf=False,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.cross_entity,
                 entity_source=DaoSource.InvestmentsDwh,
@@ -260,3 +260,4 @@ if __name__ == "__main__":
                 input_data=data_per_investment,
                 mapping_to_template=df_mapping,
             ).execute()
+
