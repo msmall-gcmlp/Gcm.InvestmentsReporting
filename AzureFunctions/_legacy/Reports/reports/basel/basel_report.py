@@ -260,4 +260,3 @@ if __name__ == "__main__":
                 input_data=data_per_investment,
                 mapping_to_template=df_mapping,
             ).execute()
-
