@@ -33,6 +33,14 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return inputs
 
     @cached_property
+    def _peer_returns(self):
+        if self._peer_inputs is not None:
+            returns = pd.read_json(self._peer_inputs["gcm_peer_returns"], orient="index")
+            return returns.squeeze()
+        else:
+            return pd.Series()
+
+    @cached_property
     def _peer_arb_benchmark_returns(self):
         daily_returns = pd.read_json(self._peer_inputs["peer_group_abs_return_bmrk_returns"], orient="index")
         if daily_returns.columns[0] == 'MOVE Index':
@@ -401,6 +409,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
             "market_scenarios_3y": market_scenarios.to_json(orient="index"),
             "market_returns_monthly": self._peer_arb_benchmark_returns.to_json(orient="index"),
             "constituent_total_returns": constituent_total_returns,
+            "gcm_peer_returns": self._gcm_peer_returns.to_json(orient="index"),
         }
 
         data_to_write = json.dumps(input_data_json)

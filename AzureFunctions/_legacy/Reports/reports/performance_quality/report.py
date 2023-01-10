@@ -208,9 +208,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _primary_peer_returns(self):
-        inputs = self._primary_peer_inputs
-        if inputs is not None:
-            returns = pd.read_json(inputs["gcm_peer_returns"], orient="index")
+        if self._primary_peer_analytics is not None:
+            returns = pd.read_json(self._primary_peer_analytics["gcm_peer_returns"], orient="index")
             return returns.squeeze()
         else:
             return pd.Series()
