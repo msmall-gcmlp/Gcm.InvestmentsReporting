@@ -9,9 +9,11 @@ from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 from _legacy.Reports.reports.performance_quality.helper import PerformanceQualityHelper
-from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.DaoRunner import DaoRunner
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario
+from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
+from gcm.inv.quantlib.enum_source import Periodicity, PeriodicROR
 
 
 class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
@@ -31,9 +33,31 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return inputs
 
     @cached_property
-    def _primary_peer_group_default_arb(self):
-        bmrk = pd.read_json(self._peer_inputs["peer_group_abs_return_bmrk"], orient="index")
-        return bmrk
+    def _peer_returns(self):
+        if self._peer_inputs is not None:
+            returns = pd.read_json(self._peer_inputs["gcm_peer_returns"], orient="index")
+            return returns.squeeze()
+        else:
+            return pd.Series()
+
+    @cached_property
+    def _peer_arb_benchmark_returns(self):
+        daily_returns = pd.read_json(self._peer_inputs["peer_group_abs_return_bmrk_returns"], orient="index")
+        if daily_returns.columns[0] == 'MOVE Index':
+            returns = AggregateFromDaily().transform(
+                data=daily_returns,
+                method="last",
+                period=Periodicity.Monthly,
+                first_of_day=True
+            )
+        else:
+            returns = AggregateFromDaily().transform(
+                data=daily_returns,
+                method="geometric",
+                period=Periodicity.Monthly,
+                first_of_day=True
+            )
+        return returns
 
     @cached_property
     def _gcm_peer_returns(self):
@@ -49,13 +73,13 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         returns_columns = [ast.literal_eval(x) for x in returns.columns]
         returns_columns = pd.MultiIndex.from_tuples(
             returns_columns,
-            names=["PeerGroupName", "SourceInvestmentId"],
+            names=["PeerGroupName", "InvestmentGroupName"],
         )
         returns.columns = returns_columns
         return returns
 
     @property
-    def _primary_peer_constituent_returns(self):
+    def _constituent_returns(self):
         peer_group_index = self._gcm_peer_constituent_returns.columns.get_level_values(0) == self._peer_group
         if any(peer_group_index):
             returns = self._gcm_peer_constituent_returns.loc[:, peer_group_index]
@@ -65,7 +89,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return returns
 
     def _get_peer_rolling_return_summary(self):
-        returns = self._primary_peer_constituent_returns.copy()
+        returns = self._constituent_returns.copy()
         rolling_12m_returns = self._helper.get_rolling_return(returns=returns, trailing_months=12)
 
         rolling_1y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=12)
@@ -87,7 +111,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return summary
 
     def _get_peer_rolling_sharpe_summary(self):
-        returns = self._primary_peer_constituent_returns.copy()
+        returns = self._constituent_returns.copy()
         rolling_12m_sharpes = self._helper.get_rolling_sharpe_ratio(returns=returns, trailing_months=12,
                                                                     remove_outliers=True)
 
@@ -216,7 +240,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return summary
 
     def build_performance_stability_peer_summary(self):
-        peer_returns = self._primary_peer_constituent_returns.copy()
+        peer_returns = self._constituent_returns[-120:]
 
         if peer_returns.shape[0] > 0:
             vol = self._get_peer_trailing_vol_summary(returns=peer_returns)
@@ -287,9 +311,84 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
             )
         return summary
 
+    def _calculate_constituent_total_returns(self):
+        def _sanitize_list(returns_df):
+            return returns_df.dropna().round(4).tolist()
+
+        mtd_returns = self._analytics.compute_periodic_return(
+            ror=self._constituent_returns,
+            period=PeriodicROR.MTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
+        )
+
+        qtd_returns = self._analytics.compute_periodic_return(
+            ror=self._constituent_returns,
+            period=PeriodicROR.QTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
+        )
+        ytd_returns = self._analytics.compute_periodic_return(
+            ror=self._constituent_returns,
+            period=PeriodicROR.QTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
+        )
+
+        t1y_returns = self._analytics.compute_trailing_return(
+            ror=self._constituent_returns,
+            window=12,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        t3y_returns = self._analytics.compute_trailing_return(
+            ror=self._constituent_returns,
+            window=36,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        t5y_returns = self._analytics.compute_trailing_return(
+            ror=self._constituent_returns,
+            window=60,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        t10y_returns = self._analytics.compute_trailing_return(
+            ror=self._constituent_returns,
+            window=120,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        periodic_returns = {PeriodicROR.MTD.value: _sanitize_list(mtd_returns),
+                            PeriodicROR.QTD.value: _sanitize_list(qtd_returns),
+                            PeriodicROR.YTD.value: _sanitize_list(ytd_returns),
+                            'T12': _sanitize_list(t1y_returns),
+                            'T36': _sanitize_list(t3y_returns),
+                            'T60': _sanitize_list(t5y_returns),
+                            'T120': _sanitize_list(t10y_returns)}
+        return periodic_returns
+
+    def _summarize_peer_counts(self):
+        counts = self._helper.summarize_counts(returns=self._constituent_returns)
+        return {'counts': [int(x) for x in counts]}
+
     def generate_peer_level_summaries(self):
-        bmrk_returns, market_scenarios, conditional_ptile_summary = \
-            generate_peer_conditional_excess_returns(peer_group=self._peer_group)
+        constituent_total_returns = self._calculate_constituent_total_returns()
+        market_scenarios, conditional_ptile_summary = \
+            generate_peer_conditional_excess_returns(peer_returns=self._constituent_returns,
+                                                     benchmark_returns=self._peer_arb_benchmark_returns)
 
         condl_mkt_bmrk = market_scenarios.columns[0]
         condl_mkt_bmrk = pd.DataFrame({"condl_mkt_bmrk": [condl_mkt_bmrk]})
@@ -305,6 +404,8 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
 
         performance_stability_summary = self.build_performance_stability_peer_summary()
 
+        peer_counts = self._summarize_peer_counts()
+
         input_data_json = {
             "performance_stability_peer_summary": performance_stability_summary.to_json(orient="index"),
             "condl_mkt_bmrk": condl_mkt_bmrk.to_json(orient="index"),
@@ -312,7 +413,10 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
             "condl_peer_excess_returns": conditional_ptile_summary.iloc[:, 1:].to_json(orient="index"),
             "condl_peer_heading": condl_peer_heading.to_json(orient="index"),
             "market_scenarios_3y": market_scenarios.to_json(orient="index"),
-            "market_returns_monthly": bmrk_returns.to_json(orient="index"),
+            "market_returns_monthly": self._peer_arb_benchmark_returns.to_json(orient="index"),
+            "constituent_total_returns": constituent_total_returns,
+            "gcm_peer_returns": self._gcm_peer_returns.to_json(orient="index"),
+            "peer_counts": peer_counts
         }
 
         data_to_write = json.dumps(input_data_json)
@@ -330,25 +434,26 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
 
     def run(self, **kwargs):
         self.generate_peer_level_summaries()
-        return True
+        return self._peer_group + " Complete"
 
 
 if __name__ == "__main__":
-    runner = DaoRunner(
-        container_lambda=lambda b, i: b.config.from_dict(i),
-        config_params={
-            DaoRunnerConfigArgs.dao_global_envs.name: {
-                DaoSource.InvestmentsDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
-                },
-                DaoSource.PubDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
-                },
-            }
-        },
-    )
+    runner = DaoRunner()
+    # runner = DaoRunner(
+    #     container_lambda=lambda b, i: b.config.from_dict(i),
+    #     config_params={
+    #         DaoRunnerConfigArgs.dao_global_envs.name: {
+    #             DaoSource.InvestmentsDwh.name: {
+    #                 "Environment": "prd",
+    #                 "Subscription": "prd",
+    #             },
+    #             DaoSource.PubDwh.name: {
+    #                 "Environment": "prd",
+    #                 "Subscription": "prd",
+    #             },
+    #         }
+    #     },
+    # )
 
     with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
         analytics = PerformanceQualityPeerLevelAnalytics(peer_group='GCM Multi-PM').execute()

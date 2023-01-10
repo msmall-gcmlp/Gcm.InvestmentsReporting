@@ -5,7 +5,8 @@ from pandas._libs.tslibs.offsets import relativedelta
 from _legacy.Reports.reports.performance_quality.peer_level_analytics import PerformanceQualityPeerLevelAnalytics
 from _legacy.Reports.reports.performance_quality.report_data import PerformanceQualityReportData
 from _legacy.Reports.reports.performance_quality.report import PerformanceQualityReport
-from gcm.Dao.DaoRunner import DaoRunner
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.DaoSources import DaoSource
 
 
 class RunPerformanceQualityReports:
@@ -33,43 +34,44 @@ class RunPerformanceQualityReports:
 
 if __name__ == "__main__":
     runner = DaoRunner()
-    # self._runner = DaoRunner(
-    #     container_lambda=lambda b, i: b.config.from_dict(i),
-    #     config_params={
-    #         DaoRunnerConfigArgs.dao_global_envs.name: {
-    #             DaoSource.DataLake.name: {
-    #                 "Environment": "prd",
-    #                 "Subscription": "prd",
-    #             },
-    #             DaoSource.PubDwh.name: {
-    #                 "Environment": "prd",
-    #                 "Subscription": "prd",
-    #             },
-    #             DaoSource.InvestmentsDwh.name: {
-    #                 "Environment": "prd",
-    #                 "Subscription": "prd",
-    #             },
-    #             # DaoSource.DataLake_Blob.name: {
-    #             #     "Environment": "prd",
-    #             #     "Subscription": "prd",
-    #             # },
-    #         }
-    #     },
-    # )
-    as_of_date = dt.date(2022, 10, 31)
-    with Scenario(dao=runner, as_of_date=as_of_date).context():
-        report_runner = RunPerformanceQualityReports(as_of_date=as_of_date)
-        # prd_ids = [20016, 23441, 75614]
-        # dev_ids = [19224]  # [23319, 74984]
+    runner = DaoRunner(
+        container_lambda=lambda b, i: b.config.from_dict(i),
+        config_params={
+            DaoRunnerConfigArgs.dao_global_envs.name: {
+                DaoSource.DataLake.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.PubDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.InvestmentsDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.DataLake_Blob.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.ReportingStorage.name: {
+                    "Environment": "uat",
+                    "Subscription": "nonprd",
+                },
+            }
+        },
+    )
+    for as_of_date in [dt.date(2022, 10, 31)]:
+        with Scenario(dao=runner, as_of_date=as_of_date).context():
+            report_runner = RunPerformanceQualityReports(as_of_date=as_of_date)
+            prd_ids = [20016, 23441, 75614, 28015]
+            # dev_ids = [19224, 23319, 74984]
 
-        funds_and_peers = report_runner.generate_report_data(investment_group_ids=None)
+            funds_and_peers = report_runner.generate_report_data(investment_group_ids=[18506])
 
-        funds_and_peers = json.loads(funds_and_peers)
-        fund_names = funds_and_peers.get("fund_names")
-        peer_groups = funds_and_peers.get("peer_groups")
+            funds_and_peers = json.loads(funds_and_peers)
+            fund_names = funds_and_peers.get("fund_names")
+            peer_groups = funds_and_peers.get("peer_groups")
 
-        fund_names = ["Citadel", "D1 Capital", "Skye"]
-        peer_groups = ["GCM Multi-PM", "GCM TMT", "GCM Equities", "GCM Relative Value"]
-
-        report_runner.generate_peer_summaries(peer_groups=peer_groups)
-        report_runner.generate_fund_reports(fund_names=fund_names)
+            report_runner.generate_peer_summaries(peer_groups=peer_groups)
+            report_runner.generate_fund_reports(fund_names=fund_names)

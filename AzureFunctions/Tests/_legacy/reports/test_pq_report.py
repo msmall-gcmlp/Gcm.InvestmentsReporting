@@ -17,22 +17,22 @@ class TestPerformanceQualityReport:
 
     @pytest.fixture
     def perf_quality_report(self, runner):
-        with Scenario(dao=runner, as_of_date=dt.date(2022, 8, 31)).context():
+        with Scenario(dao=runner, as_of_date=dt.date(2022, 9, 30)).context():
             perf_quality_report = PerformanceQualityReport(fund_name="Skye")
 
         return perf_quality_report
 
     @pytest.fixture
     def perf_quality_peer(self, runner):
-        with Scenario(dao=runner, as_of_date=dt.date(2022, 8, 31)).context():
+        with Scenario(dao=runner, as_of_date=dt.date(2022, 9, 30)).context():
             perf_quality_peer = PerformanceQualityPeerLevelAnalytics(peer_group="GCM TMT")
         return perf_quality_peer
 
     def test_performance_quality_report_data(self, runner):
-        with Scenario(dao=runner, as_of_date=dt.date(2022, 3, 31)).context():
+        with Scenario(dao=runner, as_of_date=dt.date(2022, 9, 30)).context():
             perf_quality = PerformanceQualityReportData(
-                start_date=dt.date(2012, 3, 1), end_date=dt.date(2022, 8, 31),
-                investment_group_ids=[19224, 23319, 74984]
+                start_date=dt.date(2012, 3, 1), end_date=dt.date(2022, 9, 30),
+                investment_group_ids=[74984]
             )
             report_inputs = perf_quality.get_performance_quality_report_inputs()
             # perf_quality.generate_inputs_and_write_to_datalake()
@@ -60,7 +60,7 @@ class TestPerformanceQualityReport:
         gcm_peer_returns = pd.read_json(peer_inputs["gcm_peer_returns"], orient="index")
         gcm_peer_constituent_returns = pd.read_json(peer_inputs["gcm_peer_constituent_returns"], orient="index")
         gcm_peer_columns = [ast.literal_eval(x) for x in gcm_peer_constituent_returns.columns]
-        gcm_peer_columns = pd.MultiIndex.from_tuples(gcm_peer_columns, names=["PeerGroupName", "SourceInvestmentId"])
+        gcm_peer_columns = pd.MultiIndex.from_tuples(gcm_peer_columns, names=["PeerGroupName", "InvestmentGroupName"])
         gcm_peer_constituent_returns.columns = gcm_peer_columns
         eh_inputs = report_inputs['eurekahedge_inputs']["EHI100 Long-Biased Fundamental Equity"]
         eurekahedge_returns = pd.read_json(eh_inputs['eurekahedge_returns'], orient='index')

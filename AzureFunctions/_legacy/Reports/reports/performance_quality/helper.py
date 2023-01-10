@@ -35,7 +35,7 @@ class PerformanceQualityHelper:
         return inputs
 
     @cached_property
-    def market_factor_returns(self):
+    def market_factor_returns_daily(self):
         as_of_date = self._as_of_date.strftime("%Y-%m-%d")
         file = "market_factor_returns_" + as_of_date + ".json"
         market_factor_inputs = self.download_inputs(
@@ -43,13 +43,18 @@ class PerformanceQualityHelper:
         )
 
         returns = pd.read_json(market_factor_inputs, orient="index")
-        if len(returns) > 0:
+        return returns
+
+    @cached_property
+    def market_factor_returns(self):
+        if len(self.market_factor_returns_daily) > 0:
             returns = AggregateFromDaily().transform(
-                data=returns,
+                data=self.market_factor_returns_daily[["SBMMTB1 Index", "SPXT Index"]],
                 method="geometric",
                 period=Periodicity.Monthly,
             )
             returns.index = [dt.datetime(x.year, x.month, 1) for x in returns.index.tolist()]
+            returns = returns[-120:]
         else:
             returns = pd.DataFrame()
         return returns
@@ -227,3 +232,18 @@ class PerformanceQualityHelper:
             summary = pd.DataFrame({"Fund": [""]}, index=["Median"])
 
         return summary
+
+    @staticmethod
+    def summarize_counts(returns):
+        def _get_peers_with_returns_in_ttm(returns):
+            return returns.notna()[-12:].any().sum()
+
+        def _get_peers_with_current_month_return(returns):
+            return returns.notna().sum(axis=1)[-1]
+
+        if returns.shape[0] == 0:
+            return [np.nan, np.nan]
+
+        updated_constituents = _get_peers_with_current_month_return(returns)
+        active_constituents = _get_peers_with_returns_in_ttm(returns)
+        return [updated_constituents, active_constituents]
