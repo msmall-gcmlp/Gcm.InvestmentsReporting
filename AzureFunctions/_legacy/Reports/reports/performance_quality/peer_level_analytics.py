@@ -79,7 +79,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return returns
 
     @property
-    def _primary_peer_constituent_returns(self):
+    def _constituent_returns(self):
         peer_group_index = self._gcm_peer_constituent_returns.columns.get_level_values(0) == self._peer_group
         if any(peer_group_index):
             returns = self._gcm_peer_constituent_returns.loc[:, peer_group_index]
@@ -89,7 +89,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return returns
 
     def _get_peer_rolling_return_summary(self):
-        returns = self._primary_peer_constituent_returns.copy()
+        returns = self._constituent_returns.copy()
         rolling_12m_returns = self._helper.get_rolling_return(returns=returns, trailing_months=12)
 
         rolling_1y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=12)
@@ -111,7 +111,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return summary
 
     def _get_peer_rolling_sharpe_summary(self):
-        returns = self._primary_peer_constituent_returns.copy()
+        returns = self._constituent_returns.copy()
         rolling_12m_sharpes = self._helper.get_rolling_sharpe_ratio(returns=returns, trailing_months=12,
                                                                     remove_outliers=True)
 
@@ -240,7 +240,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return summary
 
     def build_performance_stability_peer_summary(self):
-        peer_returns = self._primary_peer_constituent_returns[-120:]
+        peer_returns = self._constituent_returns[-120:]
 
         if peer_returns.shape[0] > 0:
             vol = self._get_peer_trailing_vol_summary(returns=peer_returns)
@@ -316,27 +316,27 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
             return returns_df.dropna().round(4).tolist()
 
         mtd_returns = self._analytics.compute_periodic_return(
-            ror=self._primary_peer_constituent_returns,
+            ror=self._constituent_returns,
             period=PeriodicROR.MTD,
             as_of_date=self._as_of_date,
             method="geometric",
         )
 
         qtd_returns = self._analytics.compute_periodic_return(
-            ror=self._primary_peer_constituent_returns,
+            ror=self._constituent_returns,
             period=PeriodicROR.QTD,
             as_of_date=self._as_of_date,
             method="geometric",
         )
         ytd_returns = self._analytics.compute_periodic_return(
-            ror=self._primary_peer_constituent_returns,
+            ror=self._constituent_returns,
             period=PeriodicROR.QTD,
             as_of_date=self._as_of_date,
             method="geometric",
         )
 
         t1y_returns = self._analytics.compute_trailing_return(
-            ror=self._primary_peer_constituent_returns,
+            ror=self._constituent_returns,
             window=12,
             as_of_date=self._as_of_date,
             method="geometric",
@@ -345,7 +345,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         )
 
         t3y_returns = self._analytics.compute_trailing_return(
-            ror=self._primary_peer_constituent_returns,
+            ror=self._constituent_returns,
             window=36,
             as_of_date=self._as_of_date,
             method="geometric",
@@ -354,7 +354,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         )
 
         t5y_returns = self._analytics.compute_trailing_return(
-            ror=self._primary_peer_constituent_returns,
+            ror=self._constituent_returns,
             window=60,
             as_of_date=self._as_of_date,
             method="geometric",
@@ -363,7 +363,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         )
 
         t10y_returns = self._analytics.compute_trailing_return(
-            ror=self._primary_peer_constituent_returns,
+            ror=self._constituent_returns,
             window=120,
             as_of_date=self._as_of_date,
             method="geometric",
@@ -380,10 +380,14 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
                             'T120': _sanitize_list(t10y_returns)}
         return periodic_returns
 
+    def _summarize_peer_counts(self):
+        counts = self._helper.summarize_counts(returns=self._constituent_returns)
+        return {'counts': [int(x) for x in counts]}
+
     def generate_peer_level_summaries(self):
         constituent_total_returns = self._calculate_constituent_total_returns()
         market_scenarios, conditional_ptile_summary = \
-            generate_peer_conditional_excess_returns(peer_returns=self._primary_peer_constituent_returns,
+            generate_peer_conditional_excess_returns(peer_returns=self._constituent_returns,
                                                      benchmark_returns=self._peer_arb_benchmark_returns)
 
         condl_mkt_bmrk = market_scenarios.columns[0]
@@ -400,6 +404,8 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
 
         performance_stability_summary = self.build_performance_stability_peer_summary()
 
+        peer_counts = self._summarize_peer_counts()
+
         input_data_json = {
             "performance_stability_peer_summary": performance_stability_summary.to_json(orient="index"),
             "condl_mkt_bmrk": condl_mkt_bmrk.to_json(orient="index"),
@@ -410,6 +416,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
             "market_returns_monthly": self._peer_arb_benchmark_returns.to_json(orient="index"),
             "constituent_total_returns": constituent_total_returns,
             "gcm_peer_returns": self._gcm_peer_returns.to_json(orient="index"),
+            "peer_counts": peer_counts
         }
 
         data_to_write = json.dumps(input_data_json)

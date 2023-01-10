@@ -183,30 +183,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
             )
 
     @cached_property
-    def _primary_peer_inputs(self):
-        if self._primary_peer_group is not None:
-            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
-            file = self._primary_peer_group.replace("/", "") + "_peer_inputs_" + as_of_date + ".json"
-            primary_peer_inputs = self._helper.download_inputs(
-                location=self._helper.underlying_data_location, file_path=file
-            )
-        else:
-            primary_peer_inputs = None
-        return primary_peer_inputs
-
-    @cached_property
-    def _secondary_peer_inputs(self):
-        if self._secondary_peer_group is not None:
-            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
-            file = self._secondary_peer_group.replace("/", "") + "_peer_inputs_" + as_of_date + ".json"
-            secondary_peer_inputs = self._helper.download_inputs(
-                location=self._helper.underlying_data_location, file_path=file
-            )
-        else:
-            secondary_peer_inputs = None
-        return secondary_peer_inputs
-
-    @cached_property
     def _primary_peer_returns(self):
         if self._primary_peer_analytics is not None:
             returns = pd.read_json(self._primary_peer_analytics["gcm_peer_returns"], orient="index")
@@ -215,36 +191,18 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.Series()
 
     @cached_property
-    def _primary_peer_constituent_returns(self):
-        inputs = self._primary_peer_inputs
-        if inputs is not None:
-            returns = pd.read_json(inputs["gcm_peer_constituent_returns"], orient="index")
-            returns_columns = [ast.literal_eval(x) for x in returns.columns]
-            returns_columns = pd.MultiIndex.from_tuples(
-                returns_columns,
-                names=["PeerGroupName", "InvestmentGroupName"],
-            )
-            returns.columns = returns_columns
-            returns = returns.droplevel(0, axis=1)
+    def _primary_peer_counts(self):
+        if self._primary_peer_analytics is not None:
+            return self._primary_peer_analytics["peer_counts"].get('counts')
         else:
-            returns = pd.DataFrame()
-        return returns
+            return None
 
     @cached_property
-    def _secondary_peer_constituent_returns(self):
-        inputs = self._secondary_peer_inputs
-        if inputs is not None:
-            returns = pd.read_json(inputs["gcm_peer_constituent_returns"], orient="index")
-            returns_columns = [ast.literal_eval(x) for x in returns.columns]
-            returns_columns = pd.MultiIndex.from_tuples(
-                returns_columns,
-                names=["PeerGroupName", "InvestmentGroupName"],
-            )
-            returns.columns = returns_columns
-            returns = returns.droplevel(0, axis=1)
+    def _secondary_peer_counts(self):
+        if self._secondary_peer_analytics is not None:
+            return self._secondary_peer_analytics["peer_counts"].get('counts')
         else:
-            returns = pd.DataFrame()
-        return returns
+            return None
 
     @cached_property
     def _eurekahedge_inputs(self):
@@ -821,26 +779,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return summary
 
     def build_constituent_count_summary(self):
-        def _get_peers_with_returns_in_ttm(returns):
-            return returns.notna()[-12:].any().sum()
+        eureka = self._helper.summarize_counts(returns=self._eurekahedge_constituent_returns)
+        ehi200 = self._helper.summarize_counts(returns=self._ehi200_constituent_returns)
 
-        def _get_peers_with_current_month_return(returns):
-            return returns.notna().sum(axis=1)[-1]
-
-        def _summarize_counts(returns):
-            if returns.shape[0] == 0:
-                return [np.nan, np.nan]
-
-            updated_constituents = _get_peers_with_current_month_return(returns)
-            active_constituents = _get_peers_with_returns_in_ttm(returns)
-            return [updated_constituents, active_constituents]
-
-        primary = _summarize_counts(returns=self._primary_peer_constituent_returns)
-        secondary = _summarize_counts(returns=self._secondary_peer_constituent_returns)
-        eureka = _summarize_counts(returns=self._eurekahedge_constituent_returns)
-        ehi200 = _summarize_counts(returns=self._ehi200_constituent_returns)
-
-        summary = pd.DataFrame({"primary": primary, "secondary": secondary, "eureka": eureka, "ehi200": ehi200})
+        summary = pd.DataFrame({"primary": self._primary_peer_counts,
+                                "secondary": self._secondary_peer_counts,
+                                "eureka": eureka,
+                                "ehi200": ehi200})
         return summary
 
     @staticmethod

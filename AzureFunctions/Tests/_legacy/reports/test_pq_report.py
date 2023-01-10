@@ -17,21 +17,21 @@ class TestPerformanceQualityReport:
 
     @pytest.fixture
     def perf_quality_report(self, runner):
-        with Scenario(dao=runner, as_of_date=dt.date(2022, 8, 31)).context():
+        with Scenario(dao=runner, as_of_date=dt.date(2022, 9, 30)).context():
             perf_quality_report = PerformanceQualityReport(fund_name="Skye")
 
         return perf_quality_report
 
     @pytest.fixture
     def perf_quality_peer(self, runner):
-        with Scenario(dao=runner, as_of_date=dt.date(2022, 8, 31)).context():
+        with Scenario(dao=runner, as_of_date=dt.date(2022, 9, 30)).context():
             perf_quality_peer = PerformanceQualityPeerLevelAnalytics(peer_group="GCM TMT")
         return perf_quality_peer
 
     def test_performance_quality_report_data(self, runner):
-        with Scenario(dao=runner, as_of_date=dt.date(2022, 3, 31)).context():
+        with Scenario(dao=runner, as_of_date=dt.date(2022, 9, 30)).context():
             perf_quality = PerformanceQualityReportData(
-                start_date=dt.date(2012, 3, 1), end_date=dt.date(2022, 8, 31),
+                start_date=dt.date(2012, 3, 1), end_date=dt.date(2022, 9, 30),
                 investment_group_ids=[74984]
             )
             report_inputs = perf_quality.get_performance_quality_report_inputs()

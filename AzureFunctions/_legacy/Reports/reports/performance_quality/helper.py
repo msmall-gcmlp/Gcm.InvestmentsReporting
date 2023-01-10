@@ -232,3 +232,18 @@ class PerformanceQualityHelper:
             summary = pd.DataFrame({"Fund": [""]}, index=["Median"])
 
         return summary
+
+    @staticmethod
+    def summarize_counts(returns):
+        def _get_peers_with_returns_in_ttm(returns):
+            return returns.notna()[-12:].any().sum()
+
+        def _get_peers_with_current_month_return(returns):
+            return returns.notna().sum(axis=1)[-1]
+
+        if returns.shape[0] == 0:
+            return [np.nan, np.nan]
+
+        updated_constituents = _get_peers_with_current_month_return(returns)
+        active_constituents = _get_peers_with_returns_in_ttm(returns)
+        return [updated_constituents, active_constituents]
