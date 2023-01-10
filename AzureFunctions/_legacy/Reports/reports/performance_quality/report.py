@@ -449,17 +449,23 @@ class PerformanceQualityReport(ReportingRunnerBase):
         )
         return header
 
-    @cached_property
-    def _peer_level_analytics(self):
+    def _download_peer_analytics(self, peer_group):
         as_of_date = self._as_of_date.strftime("%Y-%m-%d")
-        file = self._primary_peer_group.replace("/", "") + "_peer_" + as_of_date + ".json"
-        analytics = self._helper.download_inputs(location=self._summary_data_location, file_path=file)
-        return analytics
+        file = peer_group.replace("/", "") + "_peer_" + as_of_date + ".json"
+        return self._helper.download_inputs(location=self._summary_data_location, file_path=file)
+
+    @cached_property
+    def _primary_peer_analytics(self):
+        return self._download_peer_analytics(peer_group=self._primary_peer_group)
+
+    @cached_property
+    def _secondary_peer_analytics(self):
+        return self._download_peer_analytics(peer_group=self._secondary_peer_group)
 
     @cached_property
     def _condl_mkt_bmrk(self):
         if self._primary_peer_group is not None:
-            bmrk = pd.read_json(self._peer_level_analytics["condl_mkt_bmrk"], orient="index")
+            bmrk = pd.read_json(self._primary_peer_analytics["condl_mkt_bmrk"], orient="index")
         else:
             bmrk = pd.DataFrame()
         return bmrk
@@ -467,7 +473,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _condl_mkt_return(self):
         if self._primary_peer_group is not None:
-            returns = pd.read_json(self._peer_level_analytics["condl_mkt_return"], orient="index")
+            returns = pd.read_json(self._primary_peer_analytics["condl_mkt_return"], orient="index")
         else:
             returns = pd.DataFrame(index=['< 10th', '10th - 25th', '25th - 50th',
                                           '50th - 75th', '75th - 90th', '> 90th'],
@@ -477,7 +483,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _condl_peer_excess_returns(self):
         if self._primary_peer_group is not None:
-            returns = pd.read_json(self._peer_level_analytics["condl_peer_excess_returns"], orient="index")
+            returns = pd.read_json(self._primary_peer_analytics["condl_peer_excess_returns"], orient="index")
         else:
             returns = pd.DataFrame(index=['< 10th', '10th - 25th', '25th - 50th',
                                           '50th - 75th', '75th - 90th', '> 90th'],
@@ -487,7 +493,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _condl_peer_heading(self):
         if self._primary_peer_group is not None:
-            heading = pd.read_json(self._peer_level_analytics["condl_peer_heading"], orient="index")
+            heading = pd.read_json(self._primary_peer_analytics["condl_peer_heading"], orient="index")
         else:
             heading = pd.DataFrame()
         return heading
@@ -495,7 +501,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _market_scenarios_3y(self):
         if self._primary_peer_group is not None:
-            scenarios = pd.read_json(self._peer_level_analytics["market_scenarios_3y"], orient="index")
+            scenarios = pd.read_json(self._primary_peer_analytics["market_scenarios_3y"], orient="index")
         else:
             scenarios = None
         return scenarios
@@ -503,10 +509,24 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _market_returns_monthly(self):
         if self._primary_peer_group is not None:
-            scenarios = pd.read_json(self._peer_level_analytics["market_returns_monthly"], orient="index")
+            scenarios = pd.read_json(self._primary_peer_analytics["market_returns_monthly"], orient="index")
         else:
             scenarios = None
         return scenarios
+
+    @cached_property
+    def _primary_peer_total_returns(self):
+        if self._primary_peer_group is not None:
+            return self._primary_peer_analytics["constituent_total_returns"]
+        else:
+            return None
+
+    @cached_property
+    def _secondary_peer_total_returns(self):
+        if self._secondary_peer_group is not None:
+            return self._secondary_peer_analytics["constituent_total_returns"]
+        else:
+            return None
 
     def get_peer_group_heading(self):
         if self._primary_peer_group is not None:
@@ -648,26 +668,35 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         return summary
 
-    def _calculate_periodic_percentile(self, constituent_returns, fund_periodic_return, period):
-        periodic = self._analytics.compute_periodic_return(
-            ror=constituent_returns,
-            period=period,
-            as_of_date=self._as_of_date,
-            method="geometric",
-        )
+    def _calculate_periodic_percentile(self, fund_periodic_return, period, peer_monthly_rors=None,
+                                       peer_total_returns=None):
+        if peer_total_returns is None:
+            periodic = self._analytics.compute_periodic_return(
+                ror=peer_monthly_rors,
+                period=period,
+                as_of_date=self._as_of_date,
+                method="geometric",
+            )
+        else:
+            periodic = pd.Series(peer_total_returns.get(period.value))
         periodics = pd.concat([pd.Series([fund_periodic_return.squeeze()]), periodic], axis=0)
         ptile = periodics.rank(pct=True)[0:1].squeeze().round(2) * 100
         return ptile
 
-    def _calculate_trailing_percentile(self, constituent_returns, fund_periodic_return, trailing_months):
-        returns = self._analytics.compute_trailing_return(
-            ror=constituent_returns,
-            window=trailing_months,
-            as_of_date=self._as_of_date,
-            method="geometric",
-            annualize=True,
-            periodicity=Periodicity.Monthly,
-        )
+    def _calculate_trailing_percentile(self, fund_periodic_return, trailing_months, peer_monthly_rors=None,
+                                       peer_total_returns=None):
+        if peer_total_returns is None:
+            returns = self._analytics.compute_trailing_return(
+                ror=peer_monthly_rors,
+                window=trailing_months,
+                as_of_date=self._as_of_date,
+                method="geometric",
+                annualize=True,
+                periodicity=Periodicity.Monthly,
+            )
+        else:
+            returns = pd.Series(peer_total_returns.get('T' + str(trailing_months)))
+
         if isinstance(fund_periodic_return.squeeze(), float):
             returns = pd.concat(
                 [pd.Series([fund_periodic_return.squeeze()]), returns],
@@ -678,64 +707,58 @@ class PerformanceQualityReport(ReportingRunnerBase):
             ptile = ""
         return ptile
 
-    def _get_percentile_summary(self, fund_returns, constituent_returns, group_name):
+    def _get_percentile_summary(self, fund_returns, group_name, constituent_monthly_rors=None,
+                                constituent_total_returns=None):
         fund_returns = fund_returns.copy()
-        constituent_returns = constituent_returns.copy()
         index = ["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y"]
 
-        if len(constituent_returns) > 0:
-            mtd_ptile = self._calculate_periodic_percentile(
-                constituent_returns=constituent_returns,
-                fund_periodic_return=fund_returns.loc["MTD"],
-                period=PeriodicROR.MTD,
-            )
-            qtd_ptile = self._calculate_periodic_percentile(
-                constituent_returns=constituent_returns,
-                fund_periodic_return=fund_returns.loc["QTD"],
-                period=PeriodicROR.QTD,
-            )
-            ytd_ptile = self._calculate_periodic_percentile(
-                constituent_returns=constituent_returns,
-                fund_periodic_return=fund_returns.loc["YTD"],
-                period=PeriodicROR.YTD,
-            )
-            trailing_1y_ptile = self._calculate_trailing_percentile(
-                constituent_returns=constituent_returns,
-                fund_periodic_return=fund_returns.loc["TTM"],
-                trailing_months=12,
-            )
-            trailing_3y_ptile = self._calculate_trailing_percentile(
-                constituent_returns=constituent_returns,
-                fund_periodic_return=fund_returns.loc["3Y"],
-                trailing_months=36,
-            )
-            trailing_5y_ptile = self._calculate_trailing_percentile(
-                constituent_returns=constituent_returns,
-                fund_periodic_return=fund_returns.loc["5Y"],
-                trailing_months=60,
-            )
-            trailing_10y_ptile = self._calculate_trailing_percentile(
-                constituent_returns=constituent_returns,
-                fund_periodic_return=fund_returns.loc["10Y"],
-                trailing_months=120,
-            )
+        if constituent_monthly_rors is None or len(constituent_monthly_rors) == 0:
+            if constituent_total_returns is None or len(constituent_total_returns) == 0:
+                return pd.DataFrame({group_name: [""] * len(index)}, index=index)
 
-            summary = pd.DataFrame(
-                {
-                    group_name: [
-                        mtd_ptile,
-                        qtd_ptile,
-                        ytd_ptile,
-                        trailing_1y_ptile,
-                        trailing_3y_ptile,
-                        trailing_5y_ptile,
-                        trailing_10y_ptile,
-                    ]
-                },
-                index=index,
-            )
-        else:
-            summary = pd.DataFrame({group_name: [""] * len(index)}, index=index)
+        mtd_ptile = self._calculate_periodic_percentile(fund_periodic_return=fund_returns.loc["MTD"],
+                                                        period=PeriodicROR.MTD,
+                                                        peer_monthly_rors=constituent_monthly_rors,
+                                                        peer_total_returns=constituent_total_returns)
+        qtd_ptile = self._calculate_periodic_percentile(fund_periodic_return=fund_returns.loc["QTD"],
+                                                        period=PeriodicROR.QTD,
+                                                        peer_monthly_rors=constituent_monthly_rors,
+                                                        peer_total_returns=constituent_total_returns)
+        ytd_ptile = self._calculate_periodic_percentile(fund_periodic_return=fund_returns.loc["YTD"],
+                                                        period=PeriodicROR.YTD,
+                                                        peer_monthly_rors=constituent_monthly_rors,
+                                                        peer_total_returns=constituent_total_returns)
+        trailing_1y_ptile = self._calculate_trailing_percentile(fund_periodic_return=fund_returns.loc["TTM"],
+                                                                trailing_months=12,
+                                                                peer_monthly_rors=constituent_monthly_rors,
+                                                                peer_total_returns=constituent_total_returns)
+        trailing_3y_ptile = self._calculate_trailing_percentile(fund_periodic_return=fund_returns.loc["3Y"],
+                                                                trailing_months=36,
+                                                                peer_monthly_rors=constituent_monthly_rors,
+                                                                peer_total_returns=constituent_total_returns)
+        trailing_5y_ptile = self._calculate_trailing_percentile(fund_periodic_return=fund_returns.loc["5Y"],
+                                                                trailing_months=60,
+                                                                peer_monthly_rors=constituent_monthly_rors,
+                                                                peer_total_returns=constituent_total_returns)
+        trailing_10y_ptile = self._calculate_trailing_percentile(fund_periodic_return=fund_returns.loc["10Y"],
+                                                                 trailing_months=120,
+                                                                 peer_monthly_rors=constituent_monthly_rors,
+                                                                 peer_total_returns=constituent_total_returns)
+
+        summary = pd.DataFrame(
+            {
+                group_name: [
+                    mtd_ptile,
+                    qtd_ptile,
+                    ytd_ptile,
+                    trailing_1y_ptile,
+                    trailing_3y_ptile,
+                    trailing_5y_ptile,
+                    trailing_10y_ptile,
+                ]
+            },
+            index=index,
+        )
 
         return summary
 
@@ -762,28 +785,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
             benchmark_name="EHI200",
         )
 
-        primary_peer_percentiles = self._get_percentile_summary(
-            fund_returns=fund_returns,
-            constituent_returns=self._primary_peer_constituent_returns,
-            group_name="Peer1Ptile",
-        )
+        primary_peer_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="Peer1Ptile",
+                                                                constituent_total_returns=self._primary_peer_total_returns)
 
-        secondary_peer_percentiles = self._get_percentile_summary(
-            fund_returns=fund_returns,
-            constituent_returns=self._secondary_peer_constituent_returns,
-            group_name="Peer2Ptile",
-        )
-        eurekahedge_percentiles = self._get_percentile_summary(
-            fund_returns=fund_returns,
-            constituent_returns=self._eurekahedge_constituent_returns,
-            group_name="EH50Ptile",
-        )
+        secondary_peer_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="Peer2Ptile",
+                                                                  constituent_total_returns=self._secondary_peer_total_returns)
 
-        ehi200_percentiles = self._get_percentile_summary(
-            fund_returns=fund_returns,
-            constituent_returns=self._ehi200_constituent_returns,
-            group_name="EHI200Ptile",
-        )
+        eurekahedge_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="EH50Ptile",
+                                                               constituent_monthly_rors=self._eurekahedge_constituent_returns)
+
+        ehi200_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="EHI200Ptile",
+                                                          constituent_monthly_rors=self._ehi200_constituent_returns)
 
         summary = absolute_return_summary.copy()
         summary = summary.merge(
@@ -1407,7 +1419,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def build_performance_stability_peer_summary(self):
         if self._primary_peer_group is not None:
             summary = pd.read_json(
-                self._peer_level_analytics["performance_stability_peer_summary"],
+                self._primary_peer_analytics["performance_stability_peer_summary"],
                 orient="index",
             )
         else:

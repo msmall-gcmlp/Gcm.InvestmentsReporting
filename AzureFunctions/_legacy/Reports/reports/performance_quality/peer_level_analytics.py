@@ -13,7 +13,7 @@ from gcm.Dao.DaoRunner import DaoRunner
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario
 from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
-from gcm.inv.quantlib.enum_source import Periodicity
+from gcm.inv.quantlib.enum_source import Periodicity, PeriodicROR
 
 
 class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
@@ -303,7 +303,77 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
             )
         return summary
 
+    def _calculate_constituent_total_returns(self):
+        def _sanitize_list(returns_df):
+            return returns_df.dropna().round(4).tolist()
+
+        mtd_returns = self._analytics.compute_periodic_return(
+            ror=self._primary_peer_constituent_returns,
+            period=PeriodicROR.MTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
+        )
+
+        qtd_returns = self._analytics.compute_periodic_return(
+            ror=self._primary_peer_constituent_returns,
+            period=PeriodicROR.QTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
+        )
+        ytd_returns = self._analytics.compute_periodic_return(
+            ror=self._primary_peer_constituent_returns,
+            period=PeriodicROR.QTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
+        )
+
+        t1y_returns = self._analytics.compute_trailing_return(
+            ror=self._primary_peer_constituent_returns,
+            window=12,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        t3y_returns = self._analytics.compute_trailing_return(
+            ror=self._primary_peer_constituent_returns,
+            window=36,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        t5y_returns = self._analytics.compute_trailing_return(
+            ror=self._primary_peer_constituent_returns,
+            window=60,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        t10y_returns = self._analytics.compute_trailing_return(
+            ror=self._primary_peer_constituent_returns,
+            window=120,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        periodic_returns = {PeriodicROR.MTD.value: _sanitize_list(mtd_returns),
+                            PeriodicROR.QTD.value: _sanitize_list(qtd_returns),
+                            PeriodicROR.YTD.value: _sanitize_list(ytd_returns),
+                            'T12': _sanitize_list(t1y_returns),
+                            'T36': _sanitize_list(t3y_returns),
+                            'T60': _sanitize_list(t5y_returns),
+                            'T120': _sanitize_list(t10y_returns)}
+        return periodic_returns
+
     def generate_peer_level_summaries(self):
+        constituent_total_returns = self._calculate_constituent_total_returns()
         market_scenarios, conditional_ptile_summary = \
             generate_peer_conditional_excess_returns(peer_returns=self._primary_peer_constituent_returns,
                                                      benchmark_returns=self._peer_arb_benchmark_returns)
@@ -330,6 +400,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
             "condl_peer_heading": condl_peer_heading.to_json(orient="index"),
             "market_scenarios_3y": market_scenarios.to_json(orient="index"),
             "market_returns_monthly": self._peer_arb_benchmark_returns.to_json(orient="index"),
+            "constituent_total_returns": constituent_total_returns,
         }
 
         data_to_write = json.dumps(input_data_json)
