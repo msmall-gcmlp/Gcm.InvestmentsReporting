@@ -413,10 +413,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _primary_peer_analytics(self):
+        if self._primary_peer_group is None:
+            return None
         return self._download_peer_analytics(peer_group=self._primary_peer_group)
 
     @cached_property
     def _secondary_peer_analytics(self):
+        if self._secondary_peer_group is None:
+            return None
         return self._download_peer_analytics(peer_group=self._secondary_peer_group)
 
     @cached_property
