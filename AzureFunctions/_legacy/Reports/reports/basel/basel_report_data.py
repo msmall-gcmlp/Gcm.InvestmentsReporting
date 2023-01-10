@@ -1,12 +1,10 @@
-from gcm.inv.dataprovider.pub_dwh.allocation_query import (
-    get_pub_dwh_portfolio_holdings,
-)
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
-
-# from gcm.inv.quantlib.timeseries.analytics import Analytics
 import pandas as pd
+from gcm.inv.dataprovider.pub_dwh.allocation_query import (
+    get_pub_portfolio_allocation_all_holdings,
+)
 
 
 class BaselReportData(ReportingRunnerBase):
@@ -18,7 +16,13 @@ class BaselReportData(ReportingRunnerBase):
         self._runner = runner
 
     def portfolio_composition(self):
-        allocation = get_pub_dwh_portfolio_holdings(self._runner, self._as_of_date, self._portfolio_name)
+
+        allocation = get_pub_portfolio_allocation_all_holdings(
+            runner=self._runner,
+            start_date=self._as_of_date,
+            end_date=self._as_of_date,
+            portfolio_acronyms=self._portfolio_name,
+        )
 
         return allocation
 
