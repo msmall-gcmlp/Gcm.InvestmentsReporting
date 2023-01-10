@@ -661,17 +661,29 @@ if __name__ == "__main__":
                    "GCM Utilities",
                    ]
 
-    peer_groups = ["GCM Multi-PM"]
+    peer_groups = ["GCM Fundamental Credit"]
 
     runner = DaoRunner(
             container_lambda=lambda b, i: b.config.from_dict(i),
             config_params={
                 DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.DataLake.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.PubDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
                     DaoSource.InvestmentsDwh.name: {
                         "Environment": "prd",
                         "Subscription": "prd",
                     },
-                    DaoSource.DataLake.name: {
+                    DaoSource.DataLake_Blob.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.ReportingStorage.name: {
                         "Environment": "prd",
                         "Subscription": "prd",
                     },
@@ -684,7 +696,7 @@ if __name__ == "__main__":
     as_of_dates = pd.to_datetime(as_of_dates).date.tolist()
 
     for peer_group in peer_groups:
-        as_of_dates = [dt.date(2022, 6, 30)]
+        as_of_dates = [dt.date(2022, 10, 31)]
         for as_of_date in as_of_dates:
             with Scenario(dao=runner, as_of_date=as_of_date).context():
                 PerformanceScreenerReport(peer_group=peer_group).execute()

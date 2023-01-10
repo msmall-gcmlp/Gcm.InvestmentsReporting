@@ -223,7 +223,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
             returns_columns = pd.MultiIndex.from_tuples(
                 returns_columns,
-                names=["PeerGroupName", "SourceInvestmentId"],
+                names=["PeerGroupName", "InvestmentGroupName"],
             )
             returns.columns = returns_columns
             returns = returns.droplevel(0, axis=1)
@@ -239,7 +239,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns_columns = [ast.literal_eval(x) for x in returns.columns]
             returns_columns = pd.MultiIndex.from_tuples(
                 returns_columns,
-                names=["PeerGroupName", "SourceInvestmentId"],
+                names=["PeerGroupName", "InvestmentGroupName"],
             )
             returns.columns = returns_columns
             returns = returns.droplevel(0, axis=1)

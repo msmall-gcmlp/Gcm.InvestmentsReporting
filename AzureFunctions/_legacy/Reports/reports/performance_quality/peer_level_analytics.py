@@ -9,9 +9,11 @@ from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 from _legacy.Reports.reports.performance_quality.helper import PerformanceQualityHelper
-from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.DaoRunner import DaoRunner
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario
+from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
+from gcm.inv.quantlib.enum_source import Periodicity
 
 
 class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
@@ -31,9 +33,23 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return inputs
 
     @cached_property
-    def _primary_peer_group_default_arb(self):
-        bmrk = pd.read_json(self._peer_inputs["peer_group_abs_return_bmrk"], orient="index")
-        return bmrk
+    def _peer_arb_benchmark_returns(self):
+        daily_returns = pd.read_json(self._peer_inputs["peer_group_abs_return_bmrk_returns"], orient="index")
+        if daily_returns.columns[0] == 'MOVE Index':
+            returns = AggregateFromDaily().transform(
+                data=daily_returns,
+                method="last",
+                period=Periodicity.Monthly,
+                first_of_day=True
+            )
+        else:
+            returns = AggregateFromDaily().transform(
+                data=daily_returns,
+                method="geometric",
+                period=Periodicity.Monthly,
+                first_of_day=True
+            )
+        return returns
 
     @cached_property
     def _gcm_peer_returns(self):
@@ -49,7 +65,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         returns_columns = [ast.literal_eval(x) for x in returns.columns]
         returns_columns = pd.MultiIndex.from_tuples(
             returns_columns,
-            names=["PeerGroupName", "SourceInvestmentId"],
+            names=["PeerGroupName", "InvestmentGroupName"],
         )
         returns.columns = returns_columns
         return returns
@@ -216,7 +232,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return summary
 
     def build_performance_stability_peer_summary(self):
-        peer_returns = self._primary_peer_constituent_returns.copy()
+        peer_returns = self._primary_peer_constituent_returns[-120:]
 
         if peer_returns.shape[0] > 0:
             vol = self._get_peer_trailing_vol_summary(returns=peer_returns)
@@ -288,8 +304,9 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         return summary
 
     def generate_peer_level_summaries(self):
-        bmrk_returns, market_scenarios, conditional_ptile_summary = \
-            generate_peer_conditional_excess_returns(peer_group=self._peer_group)
+        market_scenarios, conditional_ptile_summary = \
+            generate_peer_conditional_excess_returns(peer_returns=self._primary_peer_constituent_returns,
+                                                     benchmark_returns=self._peer_arb_benchmark_returns)
 
         condl_mkt_bmrk = market_scenarios.columns[0]
         condl_mkt_bmrk = pd.DataFrame({"condl_mkt_bmrk": [condl_mkt_bmrk]})
@@ -312,7 +329,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
             "condl_peer_excess_returns": conditional_ptile_summary.iloc[:, 1:].to_json(orient="index"),
             "condl_peer_heading": condl_peer_heading.to_json(orient="index"),
             "market_scenarios_3y": market_scenarios.to_json(orient="index"),
-            "market_returns_monthly": bmrk_returns.to_json(orient="index"),
+            "market_returns_monthly": self._peer_arb_benchmark_returns.to_json(orient="index"),
         }
 
         data_to_write = json.dumps(input_data_json)
@@ -334,21 +351,22 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
 
 
 if __name__ == "__main__":
-    runner = DaoRunner(
-        container_lambda=lambda b, i: b.config.from_dict(i),
-        config_params={
-            DaoRunnerConfigArgs.dao_global_envs.name: {
-                DaoSource.InvestmentsDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
-                },
-                DaoSource.PubDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
-                },
-            }
-        },
-    )
+    runner = DaoRunner()
+    # runner = DaoRunner(
+    #     container_lambda=lambda b, i: b.config.from_dict(i),
+    #     config_params={
+    #         DaoRunnerConfigArgs.dao_global_envs.name: {
+    #             DaoSource.InvestmentsDwh.name: {
+    #                 "Environment": "prd",
+    #                 "Subscription": "prd",
+    #             },
+    #             DaoSource.PubDwh.name: {
+    #                 "Environment": "prd",
+    #                 "Subscription": "prd",
+    #             },
+    #         }
+    #     },
+    # )
 
     with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
         analytics = PerformanceQualityPeerLevelAnalytics(peer_group='GCM Multi-PM').execute()

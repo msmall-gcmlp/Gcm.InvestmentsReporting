@@ -1,57 +1,8 @@
 import pandas as pd
-import datetime as dt
-import os
 import scipy.stats
 from gcm.inv.quantlib.enum_source import Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
-from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
 import numpy as np
-from gcm.inv.dataprovider.factor import Factor
-from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
-from gcm.Dao.DaoRunner import DaoRunnerConfigArgs, DaoRunner
-from gcm.Dao.DaoSources import DaoSource
-from gcm.inv.scenario import Scenario
-from gcm.inv.utils.date import DatePeriod
-
-
-def _collect_input_data(peer_group, start_date, end_date):
-    peer_returns = StrategyBenchmark().get_altsoft_peer_constituent_returns(start_date=start_date,
-                                                                            end_date=end_date,
-                                                                            peer_names=[peer_group],
-                                                                            wide=True)
-    peer_returns.columns = peer_returns.columns.droplevel(0)
-
-    peer_arb_mapping = pd.read_csv(os.path.dirname(__file__) + "/peer_group_to_arb_mapping.csv")
-    passive_bmrk = peer_arb_mapping[peer_arb_mapping['ReportingPeerGroup'] == peer_group]
-
-    if passive_bmrk.shape[0] == 0:
-        passive_bmrk = 'GDDUWI Index'
-    else:
-        passive_bmrk = passive_bmrk['Ticker'].squeeze()
-
-    if peer_group == 'GCM Macro':
-        passive_bmrk = "MOVE Index"
-        fin_index_returns = Factor(tickers=[passive_bmrk]).get_dimensions(DatePeriod(start_date=start_date,
-                                                                                     end_date=end_date))
-        fin_index_returns = fin_index_returns.pivot_table(index="Date", columns="Ticker", values="PxLast")
-        fin_index_returns = AggregateFromDaily().transform(
-            data=fin_index_returns,
-            method="last",
-            period=Periodicity.Monthly,
-            first_of_day=True
-        )
-    else:
-        fin_index_returns = Factor(tickers=[passive_bmrk]).get_returns(start_date=start_date,
-                                                                       end_date=end_date,
-                                                                       fill_na=True)
-        fin_index_returns = AggregateFromDaily().transform(
-            data=fin_index_returns,
-            method="geometric",
-            period=Periodicity.Monthly,
-            first_of_day=True
-        )
-
-    return peer_returns, fin_index_returns
 
 
 def _compute_rolling_excess_metrics(peer_returns, fin_index_returns, percentiles=[25, 50, 75], window=36):
@@ -132,45 +83,20 @@ def _summarize_strategy_excess(market_scenarios, excess_ptiles):
     return conditional_ptile_summary
 
 
-def generate_peer_conditional_excess_returns(peer_group):
-    start_date = dt.date(2000, 1, 1)
-    end_date = Scenario.get_attribute("as_of_date")
-    peer_returns, fin_index_returns = _collect_input_data(peer_group=peer_group,
-                                                          start_date=start_date,
-                                                          end_date=end_date)
+def generate_peer_conditional_excess_returns(peer_returns, benchmark_returns):
     # note Market Percentiles and Peer Percentiles do not have to be the same. Just happen to be here.
-
     excess_ptiles = _compute_rolling_excess_metrics(peer_returns=peer_returns,
-                                                    fin_index_returns=fin_index_returns,
+                                                    fin_index_returns=benchmark_returns,
                                                     percentiles=[10, 25, 50, 75, 90])
 
-    market_scenarios = _compute_market_scenarios(fin_index_returns=fin_index_returns,
+    market_scenarios = _compute_market_scenarios(fin_index_returns=benchmark_returns,
                                                  market_ptiles=[10, 25, 50, 75, 90])
 
     conditional_ptile_summary = _summarize_strategy_excess(market_scenarios=market_scenarios,
                                                            excess_ptiles=excess_ptiles)
 
-    return fin_index_returns, market_scenarios, conditional_ptile_summary
+    return market_scenarios, conditional_ptile_summary
 
 
 if __name__ == "__main__":
-    runner = DaoRunner(
-        container_lambda=lambda b, i: b.config.from_dict(i),
-        config_params={
-            DaoRunnerConfigArgs.dao_global_envs.name: {
-                DaoSource.InvestmentsDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
-                },
-                DaoSource.PubDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
-                },
-            }
-        },
-    )
-
-    with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
-        fin_index_returns, market_scenarios, conditional_ptile_summary = \
-            generate_peer_conditional_excess_returns(peer_group='GCM Multi-PM')
-        print(market_scenarios)
+    pass
