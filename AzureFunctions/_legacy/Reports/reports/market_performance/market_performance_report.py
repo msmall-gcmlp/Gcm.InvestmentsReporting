@@ -3,6 +3,9 @@ import pandas as pd
 import datetime as dt
 import numpy as np
 from gcm.Dao.DaoSources import DaoSource
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.Utils.tabular_data_util_outputs import TabularDataOutputTypes
+from gcm.inv.quantlib.timeseries.transformer.level_change import LevelChange
 from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
@@ -18,6 +21,16 @@ from gcm.inv.quantlib.timeseries.analytics import Analytics
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
+from _legacy.Reports.reports.market_performance.report_data import MarketPerformanceQualityReportData
+from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
+    AzureDataLakeFile,
+)
+from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
+    AzureDataLakeDao,
+)
+from pandas.tseries.offsets import BDay
+from datetime import timedelta
+from dateutil.relativedelta import relativedelta
 
 
 class MarketPerformanceReport(ReportingRunnerBase):
@@ -40,9 +53,21 @@ class MarketPerformanceReport(ReportingRunnerBase):
         self._daily_prices = prices
         self._ticker_mapping = ticker_mapping
 
+    @staticmethod
+    def _previous_week(ref):
+        return ref - timedelta(days=ref.weekday())
+
+    @staticmethod
+    def _previous_month(ref):
+        return dt.date(year=ref.year, month=ref.month, day=1) - timedelta(days=1)
+
+    @staticmethod
+    def _trailing_year(ref):
+        return ref - relativedelta(years=1) + BDay(1)
+
     def _get_return_summary(self, returns, column_name, method):
         returns = returns.copy()
-        as_of_date = self._as_of_date
+        as_of_date = returns.last_valid_index()
 
         mtd_return = self._analytics.compute_periodic_return(
             ror=returns,
@@ -65,7 +90,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
             method=method,
         )
 
-        trailing_1D_return = self._analytics.compute_trailing_return(
+        trailing_1d_return = self._analytics.compute_trailing_return(
             ror=returns,
             window=1,
             as_of_date=as_of_date,
@@ -73,28 +98,44 @@ class MarketPerformanceReport(ReportingRunnerBase):
             periodicity=Periodicity.Daily,
             annualize=False,
         )
-
+        start_week = self._previous_week(as_of_date)
+        window1y = sum(returns.index >= str(start_week))
         trailing_week_return = self._analytics.compute_trailing_return(
             ror=returns,
-            window=5,
+            window=window1y,
             as_of_date=as_of_date,
             method=method,
             periodicity=Periodicity.Daily,
             annualize=False,
         )
-
+        #  with returns the return should be one day moved, as it will include previous day's price
+        ttm_period = self._trailing_year(as_of_date)
+        ttm_return = returns[returns.index >= str(ttm_period)]
+        ttm_return_nonzero = ttm_return[ttm_return != 0]
+        # avoid having first return 0s
+        start_index = ttm_return_nonzero.first_valid_index()
+        year_end_30 = dt.date(as_of_date.year, 12, 30)
+        year_end_31 = dt.date(as_of_date.year, 12, 31)
+        # handle cases when the last trading day is 29 or 30th
+        if (self._as_of_date.month == 12) & (self._as_of_date.day == 29):
+            if (year_end_30.isoweekday() > 5) & (year_end_31.isoweekday() > 5):
+                start_index = dt.date(as_of_date.year, 1, 1)
+        if (self._as_of_date.month == 12) & (self._as_of_date.day == 30):
+            if year_end_31.isoweekday() > 5:
+                start_index = dt.date(as_of_date.year, 1, 1)
+        if (self._as_of_date.month == 12) & (self._as_of_date.day == 31):
+            start_index = dt.date(as_of_date.year, 1, 1)
+        window1y = sum(ttm_return.index >= str(start_index))
         trailing_1y_return = self._analytics.compute_trailing_return(
             ror=returns,
-            window=252,
+            window=window1y,
             as_of_date=as_of_date,
             method=method,
             periodicity=Periodicity.Daily,
             annualize=False,
         )
-
-        # rounding to 2 so that Excess Return matches optically
         stats = [
-            trailing_1D_return,
+            trailing_1d_return,
             trailing_week_return,
             mtd_return,
             qtd_return,
@@ -109,11 +150,13 @@ class MarketPerformanceReport(ReportingRunnerBase):
         return summary
 
     def _getr_vol_adj_move(self, returns, column_name, method):
-        as_of_date = self._as_of_date
-
+        as_of_date = returns.last_valid_index()
+        vol_period = as_of_date - relativedelta(years=2) + BDay(1)
+        window = sum(returns.index >= str(vol_period))
+        # calculated return include previous price information, thus window -1 is used
         annualized_vol = self._analytics.compute_trailing_vol(
             ror=returns,
-            window=504,
+            window=(window),
             as_of_date=as_of_date,
             periodicity=Periodicity.Daily,
             annualize=True,
@@ -146,34 +189,37 @@ class MarketPerformanceReport(ReportingRunnerBase):
         return summary
 
     def _max_ppt_ttm(self, returns, column, description, method):
-        as_of_date = self._as_of_date
+        as_of_date = returns.last_valid_index()
+        ttm_period = self._trailing_year(as_of_date)
+        window = sum(returns.index >= str(ttm_period))
         if method == "arithmetic":
             if 'Volatility' in description[0]:
                 drawdown = self._analytics.compute_max_trough_to_peak_level_change(
                     prices=self._daily_prices[column],
-                    window=252,
+                    window=window,
                     as_of_date=as_of_date,
                     periodicity=Periodicity.Daily,
                 )
             else:
                 drawdown = self._analytics.compute_max_drawdown_level_change(
                     prices=self._daily_prices[column],
-                    window=252,
+                    window=window,
                     as_of_date=as_of_date,
                     periodicity=Periodicity.Daily,
                 )
         elif method == 'geometric':
             if 'Volatility' in description[0]:
+                # calculated return include previous price information, thus window -1 is used
                 drawdown = self._analytics.compute_max_trough_to_peak(
                     ror=returns,
-                    window=252,
+                    window=(window),
                     as_of_date=as_of_date,
                     periodicity=Periodicity.Daily
                 )
             else:
                 drawdown = self._analytics.compute_max_drawdown(
                     ror=returns,
-                    window=252,
+                    window=(window),
                     as_of_date=as_of_date,
                     periodicity=Periodicity.Daily
                 )
@@ -255,20 +301,23 @@ class MarketPerformanceReport(ReportingRunnerBase):
 
         output_table = pd.DataFrame()
         returns_by_category = self._get_returns_by_category(category)
-        price_change_by_category = self._get_price_change_by_category(category)
-        combined_columns = set(returns_by_category.columns.append(price_change_by_category.columns))
+        price_by_category = self._get_price_by_category(category)
+        combined_columns = set(returns_by_category.columns.append(price_by_category.columns))
         for column in combined_columns:
             transformation = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].Transformation.values
             description = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].description.values
-
+            print(column)
             if transformation[0] == "arithmetic":
-                input_returns = price_change_by_category[column]
-                last_valid_asof = price_change_by_category[column].last_valid_index()
+                price = price_by_category[column]
+                price.dropna(inplace=True)
+                input_returns = LevelChange().transform(price)
+                last_valid_asof = price.last_valid_index()
             else:
                 input_returns = returns_by_category[column]
+                input_returns.dropna(inplace=True)
                 last_valid_asof = returns_by_category[column].last_valid_index()
 
-            last_valid_asof = pd.DataFrame([last_valid_asof], columns = ['As_of_date'], index = description)
+            last_valid_asof = pd.DataFrame([last_valid_asof], columns=['As_of_date'], index=description)
             input_returns = input_returns.fillna(method="ffill")
             agg_returns = self._get_return_summary(input_returns, description, transformation[0])
             agg_vol = self._getr_vol_adj_move(input_returns, description, transformation[0])
@@ -285,7 +334,6 @@ class MarketPerformanceReport(ReportingRunnerBase):
             else:
                 agg_stat = pd.concat([agg_returns.T, agg_vol.T, max_dd, last_valid_asof], axis=1)
             # Change the unit, multiply by 100
-
             unit_mult100 = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].Unit_Mul100.values
             unit_in_prc = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].Unit_in_prct.values
             format = self._ticker_mapping[self._ticker_mapping["Ticker"] == column].format.values
@@ -468,3 +516,56 @@ class MarketPerformanceReport(ReportingRunnerBase):
     def run(self, **kwargs):
         self.generate_market_performance_quality_report()
         return True
+
+
+if __name__ == "__main__":
+
+    runner = DaoRunner(
+        container_lambda=lambda b, i: b.config.from_dict(i),
+        config_params={
+            DaoRunnerConfigArgs.dao_global_envs.name: {
+                DaoSource.InvestmentsDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.PubDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+            }
+        },
+    )
+
+    end_date = dt.date(2023, 1, 3)
+    as_of_date = end_date
+    start_date = as_of_date - BDay(700)
+    runner = DaoRunner()
+    file_name = "market_performance_tickers.csv"
+    folder = "marketperformance"
+    loc = "raw/investmentsreporting/underlyingdata/"
+    location = f"{loc}/{folder}/"
+    params = AzureDataLakeDao.create_get_data_params(location, file_name, True)
+
+    file: AzureDataLakeFile = runner.execute(
+        params=params,
+        source=DaoSource.DataLake,
+        operation=lambda dao, params: dao.get_data(params),
+    )
+    df = file.to_tabular_data(TabularDataOutputTypes.PandasDataFrame, params)
+    with Scenario(runner=runner, as_of_date=as_of_date).context():
+        input_data = MarketPerformanceQualityReportData(
+            start_date=start_date,
+            runner=runner,
+            as_of_date=as_of_date,
+            ticker_map=df,
+        ).execute()
+    runner2 = DaoRunner()
+    MarketPerformance = MarketPerformanceReport(
+        runner=runner2,
+        as_of_date=as_of_date,
+        interval="MTD",
+        factor_daily_returns=input_data[0],
+        prices=input_data[1],
+        price_change=input_data[2],
+        ticker_mapping=df,
+    ).execute()

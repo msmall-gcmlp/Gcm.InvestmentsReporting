@@ -22,18 +22,17 @@ class MarketPerformanceQualityReportData(ReportingRunnerBase):
 
     def get_market_performance_quality_report_inputs(self):
         # pre-filtering to EMMs to avoid performance issues. refactor later to occur behind the scenes in data provider
-        # add relative patch
-        # extract factor returns
-
         market_factor_returns = self._factors.get_returns(
             start_date=self._start_date,
             end_date=self._as_of_date,
-            fill_na=True,
+            fill_na=False,
         )
+        # market_factor_returns = market_factor_returns.reindex(business_dates)
+        market_factor_returns = market_factor_returns[market_factor_returns.index.dayofweek < 5]
         # extract factor prices
         market_factor_data = self._factors.get_dimensions(date_period=DatePeriod(start_date=self._start_date, end_date=self._as_of_date))
-
         price = market_factor_data.pivot_table(index="Date", columns="Ticker", values="PxLast")
+        price = price[price.index.dayofweek < 5]
         # Calculate level change for yields
         level_change = LevelChange().transform(price)
 
