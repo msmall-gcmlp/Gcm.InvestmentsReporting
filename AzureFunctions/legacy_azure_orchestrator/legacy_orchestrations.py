@@ -10,6 +10,7 @@ class LegacyOrchestrations(ExtendedEnum):
     MarketPerformanceReportOrchestrator = auto()
     HkmaMarketPerformanceReportOrchestrator = auto()
     PerformanceScreenerReportOrchestrator = auto()
+    SingleNameEquityExposureOrchestrator = auto()
 
     # TODO: refactor below to be scenario compliant
     # ReportCopyOrchestrator = auto()
