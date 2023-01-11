@@ -18,10 +18,10 @@ def main(requestBody) -> str:
                     "Environment": "dev",
                     "Subscription": "nonprd",
                 },
-                DaoSource.PubDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
-                },
+                # DaoSource.PubDwh.name: {
+                #     "Environment": "prd",
+                #     "Subscription": "prd",
+                # },
                 # DaoSource.DataLake.name: {
                 #     "Subscription": "prd"},
             }
