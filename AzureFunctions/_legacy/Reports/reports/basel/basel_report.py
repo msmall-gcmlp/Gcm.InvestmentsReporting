@@ -209,10 +209,10 @@ if __name__ == "__main__":
                 "Environment": "prd",
                 "Subscription": "prd",
             },
-            DaoSource.InvestmentsDwh.name: {
-                "Environment": "prd",
-                "Subscription": "prd",
-            }
+            # DaoSource.InvestmentsDwh.name: {
+            #     "Environment": "prd",
+            #     "Subscription": "prd",
+            # }
         }
     }
     runner = DaoRunner(

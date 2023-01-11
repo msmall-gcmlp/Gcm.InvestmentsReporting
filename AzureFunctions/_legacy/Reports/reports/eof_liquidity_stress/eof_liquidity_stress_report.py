@@ -1,7 +1,9 @@
-import datetime as dt
+from datetime import datetime as dt
 import pandas as pd
 import math
 from gcm.Dao.DaoSources import DaoSource
+
+from _legacy.Reports.reports.eof_liquidity_stress.report_data import EofStressTestingData
 from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
@@ -177,7 +179,7 @@ class EofLiquidityReport(ReportingRunnerBase):
             "Total_up": total_up
         }
 
-        as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
+        as_of_date = dt.combine(self._as_of_date, dt.min.time())
         with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
@@ -198,3 +200,38 @@ class EofLiquidityReport(ReportingRunnerBase):
     def run(self, **kwargs):
         self.generate_liquidity_stress_report()
         return True
+
+
+if __name__ == "__main__":
+    as_of_date = '2020-10-01'
+    scenario = ["Liquidity Stress"],
+    as_of_date = dt.strptime(as_of_date, "%Y-%m-%d").date()
+    # config_params = {
+    #     DaoRunnerConfigArgs.dao_global_envs.name: {
+    #         # DaoSource.PubDwh.name: {
+    #         #     "Environment": "prd",
+    #         #     "Subscription": "prd",
+    #         # },
+    #         DaoSource.InvestmentsDwh.name: {
+    #             "Environment": "prd",
+    #             "Subscription": "prd",
+    #         }
+    #     }
+    # }
+    # runner = DaoRunner(
+    #     container_lambda=lambda b, i: b.config.from_dict(i),
+    #     config_params=config_params,
+    # )
+    with Scenario(as_of_date=as_of_date).context():
+        input_data = EofStressTestingData(
+            runner=Scenario.get_attribute("dao"),
+            as_of_date=as_of_date,
+            scenario=["Liquidity Stress"],
+        ).execute()
+
+        eof_liquidity = EofLiquidityReport(
+            runner=Scenario.get_attribute("dao"),
+            as_of_date=as_of_date,
+            factor_inventory=input_data,
+            manager_exposure=input_data,
+        ).execute()
