@@ -1,5 +1,6 @@
 import pandas as pd
-import datetime as dt
+from datetime import datetime as dt
+from gcm.Dao.DaoRunner import DaoRunnerConfigArgs, DaoRunner
 from gcm.Dao.DaoSources import DaoSource
 from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
@@ -13,6 +14,11 @@ from gcm.inv.scenario import Scenario
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
+from gcm.Dao.Utils.tabular_data_util_outputs import TabularDataOutputTypes
+from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
+from gcm.Dao.daos.azure_datalake.azure_datalake_file import AzureDataLakeFile
+
+from _legacy.Reports.reports.basel.basel_report_data import BaselReportData
 
 
 class BaselReport(ReportingRunnerBase):
@@ -167,15 +173,16 @@ class BaselReport(ReportingRunnerBase):
 
         input_data = dictfilt(input_data, wanted_keys)
         input_data["header_info"] = self.get_header_info()
-        input_data["as_of_date"] = self.get_as_of_date()
+        input_data["asofdate"] = self.get_as_of_date()
 
-        as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
+        as_of_date = dt.combine(self._as_of_date, dt.min.time())
         report_name = "Basel_Report_" + self._investment_name + "_" + self._as_of_date.strftime("%Y%m%d")
-        with Scenario(as_of_date=as_of_date).context():
+        with Scenario(runner=DaoRunner(), as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="Basel Template.xlsx",
                 save=True,
+                save_as_pdf=False,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.cross_entity,
                 entity_source=DaoSource.InvestmentsDwh,
@@ -188,3 +195,68 @@ class BaselReport(ReportingRunnerBase):
     def run(self, **kwargs):
         self.generate_basel_report()
         return True
+
+
+if __name__ == "__main__":
+    as_of_date = '2022-09-30'
+    balancedate = '2022-10-31'
+    portfolio_names = ['YAKUMO', 'AMATSU ']
+    as_of_date = dt.strptime(as_of_date, "%Y-%m-%d").date()
+    balancedate = dt.strptime(balancedate, "%Y-%m-%d").date()
+    config_params = {
+        DaoRunnerConfigArgs.dao_global_envs.name: {
+            DaoSource.PubDwh.name: {
+                "Environment": "prd",
+                "Subscription": "prd",
+            },
+            # DaoSource.InvestmentsDwh.name: {
+            #     "Environment": "prd",
+            #     "Subscription": "prd",
+            # }
+        }
+    }
+    runner = DaoRunner(
+        container_lambda=lambda b, i: b.config.from_dict(i),
+        config_params=config_params,
+    )
+
+    file_name = "truview_output.csv"
+    mapping_file_name = "basel_mapping.csv"
+    folder = "basel"
+    loc = "raw/investmentsreporting/underlyingdata/"
+    location = f"{loc}/{folder}/"
+    params = AzureDataLakeDao.create_get_data_params(location, file_name, True)
+    params_mapping = AzureDataLakeDao.create_get_data_params(location, mapping_file_name, True)
+    file: AzureDataLakeFile = runner.execute(
+        params=params,
+        source=DaoSource.DataLake,
+        operation=lambda dao, params: dao.get_data(params),
+    )
+    df = file.to_tabular_data(TabularDataOutputTypes.PandasDataFrame, params)
+
+    mapping_file: AzureDataLakeFile = runner.execute(
+        params=params_mapping,
+        source=DaoSource.DataLake,
+        operation=lambda dao, params_mapping: dao.get_data(params_mapping),
+    )
+    df_mapping = mapping_file.to_tabular_data(TabularDataOutputTypes.PandasDataFrame, params_mapping)
+    for portfolio_name in portfolio_names:
+        runner2 = DaoRunner(
+            container_lambda=lambda b, i: b.config.from_dict(i),
+            config_params=config_params,
+        )
+        portfolio_allocation = BaselReportData(
+            runner=runner2,
+            as_of_date=balancedate,
+            funds_exposure=df,
+            portfolio=portfolio_name,
+        ).execute()
+        for investment_name in portfolio_allocation["InvestmentName"].unique():
+            data_per_investment = portfolio_allocation[portfolio_allocation["InvestmentName"] == investment_name]
+            BaselReport(
+                runner=runner2,
+                as_of_date=as_of_date,
+                investment_name=investment_name,
+                input_data=data_per_investment,
+                mapping_to_template=df_mapping,
+            ).execute()

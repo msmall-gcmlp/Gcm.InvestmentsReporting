@@ -5,7 +5,7 @@ from _legacy.Reports.reports.basel.basel_report import (
 from _legacy.Reports.reports.basel.basel_report_data import (
     BaselReportData,
 )
-from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.DaoRunner import DaoRunner
 
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeDao,
@@ -18,6 +18,7 @@ from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.Utils.tabular_data_util_outputs import (
     TabularDataOutputTypes,
 )
+from gcm.inv.scenario import Scenario
 
 
 def main(requestBody) -> str:
@@ -28,18 +29,15 @@ def main(requestBody) -> str:
     portfolio_name = params["portfolio_name"]
     as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
     balancedate = datetime.strptime(balancedate, "%Y-%m-%d").date()
-    config_params = {
-        DaoRunnerConfigArgs.dao_global_envs.name: {
-            DaoSource.PubDwh.name: {
-                "Environment": "prd",
-                "Subscription": "prd",
-            }
-        }
-    }
-    runner = DaoRunner(
-        container_lambda=lambda b, i: b.config.from_dict(i),
-        config_params=config_params,
-    )
+    # config_params = {
+    #     DaoRunnerConfigArgs.dao_global_envs.name: {
+    #         DaoSource.PubDwh.name: {
+    #             "Environment": "prd",
+    #             "Subscription": "prd",
+    #         }
+    #     }
+    # }
+    runner = DaoRunner()
 
     if run == "RunBaselReport":
         file_name = "truview_output.csv"
@@ -72,12 +70,12 @@ def main(requestBody) -> str:
         df_mapping = mapping_file.to_tabular_data(
             TabularDataOutputTypes.PandasDataFrame, params_mapping
         )
-        runner2 = DaoRunner(
-            container_lambda=lambda b, i: b.config.from_dict(i),
-            config_params=config_params,
-        )
+        # runner2 = DaoRunner(
+        #     container_lambda=lambda b, i: b.config.from_dict(i),
+        #     config_params=config_params,
+        # )
         portfolio_allocation = BaselReportData(
-            runner=runner2,
+            runner=Scenario.get_attribute("dao"),
             as_of_date=balancedate,
             funds_exposure=df,
             portfolio=portfolio_name,
@@ -89,7 +87,7 @@ def main(requestBody) -> str:
                 portfolio_allocation["InvestmentName"] == investment_name
             ]
             BaselReport(
-                runner=runner2,
+                runner=Scenario.get_attribute("dao"),
                 as_of_date=as_of_date,
                 investment_name=investment_name,
                 input_data=data_per_investment,
