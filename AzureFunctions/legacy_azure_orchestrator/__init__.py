@@ -24,6 +24,9 @@ from .orchestrators.PerformanceScreenerReportOrchestrator import (
 from .orchestrators.MarketPerformanceReportOrchestrator import (
     orchestrator_function as market_performance_orchestrator_function,
 )
+from .orchestrators.SingleNameEquityExposureOrchestrator import (
+    orchestrator_function as singlename_equityexposure_orchestrator_function,
+)
 from gcm.inv.utils.azure.legacy_conversion.legacy_orchestration import (
     LegacyOrchestrator,
 )
@@ -43,6 +46,7 @@ class LegacyReportOrchestrator(LegacyOrchestrator):
             LegacyOrchestrations.MarketPerformanceReportOrchestrator: market_performance_orchestrator_function,
             LegacyOrchestrations.HkmaMarketPerformanceReportOrchestrator: hkma_mkt_orchestrator_function,
             LegacyOrchestrations.PerformanceScreenerReportOrchestrator: perf_screener_orchestrator_function,
+            LegacyOrchestrations.SingleNameEquityExposureOrchestrator: singlename_equityexposure_orchestrator_function
         }
 
     @property

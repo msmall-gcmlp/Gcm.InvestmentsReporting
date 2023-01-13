@@ -22,6 +22,9 @@ from .activities.MarketPerformanceReportActivity import (
 from .activities.PerformanceScreenerReportActivity import (
     main as perf_screener_main,
 )
+from .activities.SingleNameEquityActivity import (
+    main as singlename_equityexposure_main,
+)
 
 
 class LegacyReportConstructorActivity(LegacyActivity):
@@ -38,6 +41,7 @@ class LegacyReportConstructorActivity(LegacyActivity):
             LegacyActivities.HkmaMarketPerformanceReportActivity: hkma_report_main,
             LegacyActivities.MarketPerformanceReportActivity: market_report_main,
             LegacyActivities.PerformanceScreenerReportActivity: perf_screener_main,
+            LegacyActivities.SingleNameEquityActivity: singlename_equityexposure_main
         }
 
     @property

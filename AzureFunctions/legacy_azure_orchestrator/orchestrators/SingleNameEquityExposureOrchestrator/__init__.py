@@ -13,6 +13,7 @@ def orchestrator_function(
     params = client_input["params"]
     disct1 = {
         "params": {
+            "run": "RunSingleNameEquityExposure",
             "as_of_date": params["as_of_date"],
         },
     }

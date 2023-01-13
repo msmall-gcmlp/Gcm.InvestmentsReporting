@@ -14,6 +14,7 @@ class LegacyActivities(ExtendedEnum):
     HkmaMarketPerformanceReportActivity = auto()
     MarketPerformanceReportActivity = auto()
     PerformanceScreenerReportActivity = auto()
+    SingleNameEquityActivity = auto()
 
 
 class LegacyReportingActivityParsedArgs(LegacyReportingOrchParsedArgs):
