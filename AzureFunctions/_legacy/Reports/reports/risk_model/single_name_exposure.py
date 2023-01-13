@@ -172,7 +172,7 @@ class SingleNameReport(ReportingRunnerBase):
             )
 
     def run(self, **kwargs):
-        error_df = pd.DataFrame()
+        # error_df = pd.DataFrame()
         error = True
         for acronym in self._selected_acronyms:
             # acronym = 'GARS-A'
