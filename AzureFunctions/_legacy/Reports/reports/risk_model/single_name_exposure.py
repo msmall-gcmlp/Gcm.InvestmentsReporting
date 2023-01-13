@@ -194,7 +194,7 @@ class SingleNameReport(ReportingRunnerBase):
                         error_df,
                     ]
                 )
-        return True
+        return e
 
 
 if __name__ == "__main__":
