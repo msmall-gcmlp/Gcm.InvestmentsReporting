@@ -173,6 +173,7 @@ class SingleNameReport(ReportingRunnerBase):
 
     def run(self, **kwargs):
         error_df = pd.DataFrame()
+        error = True
         for acronym in self._selected_acronyms:
             # acronym = 'GARS-A'
             self._portfolio_acronym = acronym
@@ -181,20 +182,20 @@ class SingleNameReport(ReportingRunnerBase):
 
             except Exception as e:
                 error_msg = getattr(e, "message", repr(e))
-                print(error_msg)
-                error_df = pd.concat(
-                    [
-                        pd.DataFrame(
-                            {
-                                "Portfolio": [acronym],
-                                "Date": [self._as_of_date],
-                                "ErrorMessage": [error_msg],
-                            }
-                        ),
-                        error_df,
-                    ]
-                )
-        return e
+                # error_df = pd.concat(
+                #     [
+                #         pd.DataFrame(
+                #             {
+                #                 "Portfolio": [acronym],
+                #                 "Date": [self._as_of_date],
+                #                 "ErrorMessage": [error_msg],
+                #             }
+                #         ),
+                #         error_df,
+                #     ]
+                # )
+                raise error_msg
+        return error
 
 
 if __name__ == "__main__":
