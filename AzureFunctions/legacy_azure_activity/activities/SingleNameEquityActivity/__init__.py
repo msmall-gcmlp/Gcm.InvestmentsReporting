@@ -14,14 +14,14 @@ def main(requestBody) -> str:
     if run == 'RunSingleNameEquityExposure':
         config_params = {
             DaoSource.InvestmentsDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
             }
         }
         runner = DaoRunner(
             container_lambda=lambda b, i: b.config.from_dict(i),
             config_params=config_params,
         )
-        with Scenario(runner=runner, as_of_date=as_of_date).context():
+        with Scenario(dao=runner, as_of_date=as_of_date).context():
             single_name_equity_exposure = SingleNameReport()
             return single_name_equity_exposure.execute()

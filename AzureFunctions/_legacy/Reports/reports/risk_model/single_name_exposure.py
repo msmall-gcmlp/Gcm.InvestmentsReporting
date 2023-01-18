@@ -173,6 +173,7 @@ class SingleNameReport(ReportingRunnerBase):
 
     def run(self, **kwargs):
         error_df = pd.DataFrame()
+        self._selected_acronyms.sort()
         for acronym in self._selected_acronyms:
             error_msg = 'success'
             self._portfolio_acronym = acronym
@@ -220,5 +221,5 @@ if __name__ == "__main__":
 
     end_date = dt.date(2022, 9, 30)
 
-    with Scenario(runner=runner, as_of_date=end_date).context():
+    with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNameReport().execute()
