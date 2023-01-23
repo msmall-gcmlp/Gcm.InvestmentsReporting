@@ -20,7 +20,7 @@ from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.inv.scenario import Scenario
 
 
-class SingleNameReport(ReportingRunnerBase):
+class SingleNamePortfolioReport(ReportingRunnerBase):
     def __init__(self):
         super().__init__(runner=Scenario.get_attribute("dao"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
@@ -83,14 +83,27 @@ class SingleNameReport(ReportingRunnerBase):
         port_dimn = self._all_pub_port_dimn[self.__all_pub_port_dimn["Acronym"] == self._portfolio_acronym]
         return port_dimn["PubPortfolioId"].squeeze()
 
-    def build_single_name(self):
-        single_name = self._investment_group.overlay_singlename_exposure(
-            start_date=self._start_date,
-            end_date=self._end_date,
+    def get_single_nam_equityexposure(self, investment_group_id, as_of_date):
+        exposure = self._runner.execute(
+            params={
+                "schema": "AnalyticsData",
+                "table": "SingleNameEquityExposure",
+                "operation": lambda query, item: query.filter(item.InvestmentGroupId.in_(investment_group_id),
+                                                              item.AsOfDate == as_of_date),
+            },
+            source=DaoSource.InvestmentsDwh,
+            operation=lambda dao, params: dao.get_data(params),
         )
+        return exposure
+
+    def build_single_name(self):
+        # single_name = self._investment_group.overlay_singlename_exposure(
+        #     start_date=self._start_date,
+        #     end_date=self._end_date,
+        # )
+        single_name = self.get_single_nam_equityexposure(investment_group_id=self._inv_group_ids, as_of_date=self._as_of_date)
         single_name['AsOfDate'] = single_name['AsOfDate'].apply(lambda x: x.strftime('%Y-%m'))
-        portfolio_level = pd.merge(self._portfolio_holdings, single_name,
-                                   how='inner', on=['AsOfDate', 'InvestmentGroupName'])
+        portfolio_level = pd.merge(self._portfolio_holdings, single_name, how='inner', on=['AsOfDate', 'InvestmentGroupId'])
         portfolio_level['PortfolioNav'] = portfolio_level['PctNav'] * portfolio_level['ExpNav']
 
         # get funds without exposure
@@ -127,6 +140,7 @@ class SingleNameReport(ReportingRunnerBase):
         single_name = pd.merge(single_name, self._portfolio_holdings[['InvestmentGroupName', 'OpeningBalance', 'PctNav']],
                                how='left', on='InvestmentGroupName')
         single_name.rename(columns={'ExpNav': 'manager_allocation_pct'}, inplace=True)
+        single_name['Sector'] = single_name.Sector.str.title()
         portfolio_balance = self._portfolio_holdings[['OpeningBalance']].sum()
         single_name['portfolio_allocation'] = (portfolio_balance[0] * single_name['IssuerSum']) / 1000
         single_name['portfolio_allocation_permanager'] = (portfolio_balance[0] * single_name['PortfolioNav']) / 1000
@@ -139,6 +153,16 @@ class SingleNameReport(ReportingRunnerBase):
         portfolio_allocation.drop_duplicates(subset='Issuer', inplace=True)
         excluded_managers = self._portfolio_holdings[~ self._portfolio_holdings['InvestmentGroupName'].isin(single_name['InvestmentGroupName'].to_list())]
         excluded_managers['OpeningBalance'] = excluded_managers['OpeningBalance'] / 1000
+
+        manager_max_row = 8 + manager_allocation.shape[0]
+        manager_max_column = 'F'
+        portfolio_max_row = 8 + portfolio_allocation.shape[0]
+        portfolio_max_column = 'E'
+        excluded_max_row = 8 + excluded_managers.shape[0]
+        excludedr_max_column = 'D'
+        print_areas = {'PortfolioAllocation': 'B1:' + portfolio_max_column + str(portfolio_max_row),
+                       'ManagerAllocation': 'B1:' + manager_max_column + str(manager_max_row),
+                       'ExcludedManagers': 'B1:' + excludedr_max_column + str(excluded_max_row)}
         input_data = {
             "portfolio1": header_info,
             "portfolio2": header_info,
@@ -156,7 +180,7 @@ class SingleNameReport(ReportingRunnerBase):
         with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
-                template="SingleNameExposure_Template.xlsx",
+                template="SingleNameExposure_Template_Portfolio.xlsx",
                 save=True,
                 save_as_pdf=True,
                 runner=self._runner,
@@ -169,6 +193,7 @@ class SingleNameReport(ReportingRunnerBase):
                 report_type=ReportType.Risk,
                 aggregate_intervals=AggregateInterval.MTD,
                 report_frequency="Monthly",
+                print_areas=print_areas
             )
 
     def run(self, **kwargs):
@@ -222,4 +247,4 @@ if __name__ == "__main__":
     end_date = dt.date(2022, 9, 30)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
-        SingleNameReport().execute()
+        SingleNamePortfolioReport().execute()
