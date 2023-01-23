@@ -81,6 +81,7 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         #  assign sector to 'other' if there are duplicated sectors
         dupliacted_Issuers = single_name[single_name[['Issuer']].duplicated()]['Issuer']
         single_name.loc[single_name['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
+        single_name.sort_values(['ExpNav'], ascending=False, inplace=True)
         return single_name[['Issuer', 'Sector', 'ExpNav']]
 
     def get_header_info(self):
@@ -134,7 +135,7 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
             error_msg = 'success'
             self._inv_group_ids = ing_group_ids
             try:
-                self.generate_single_name_report(investment_group_id=ing_group_ids)
+                self.generate_single_name_report(investment_group_id=self._inv_group_ids)
 
             except Exception as e:
                 error_msg = getattr(e, "message", repr(e))

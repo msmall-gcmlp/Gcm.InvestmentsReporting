@@ -59,7 +59,8 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
         single_name_exposure = pd.merge(single_name, inv_group_dimn[['InvestmentGroupName', 'InvestmentGroupId']],
                                         how='inner', on=['InvestmentGroupName'])
         exposure_to_save = single_name_exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'Cusip', 'ExpNav', 'AsOfDate']]
-        dupliacted_Issuers = exposure_to_save[exposure_to_save[['Issuer']].duplicated()]['Issuer']
+        remove_duplicated_pears = exposure_to_save[['Issuer','Sector']].drop_duplicates()
+        dupliacted_Issuers = remove_duplicated_pears[remove_duplicated_pears[['Issuer']].duplicated()]['Issuer']
         exposure_to_save.loc[exposure_to_save['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
 
         dwh_subscription = os.environ.get("Subscription", "nonprd")
