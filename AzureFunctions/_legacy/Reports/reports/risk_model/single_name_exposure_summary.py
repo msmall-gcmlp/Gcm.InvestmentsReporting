@@ -84,7 +84,7 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         portfolio_level = portfolio_level.groupby(['Acronym', 'Issuer', 'Sector'])['IssuerNav', 'Issuerbalance'].sum().reset_index()
         portfolio_level.sort_values(['Acronym'], ascending=True, inplace=True)
         group_porrtfolios = portfolio_level.groupby('Acronym', group_keys=False)
-        largest_portfolio_level =group_porrtfolios.apply(lambda x: x.sort_values(by='IssuerNav', ascending=False).head(5))
+        largest_portfolio_level = group_porrtfolios.apply(lambda x: x.sort_values(by='IssuerNav', ascending=False).head(5))
         largest_portfolio_level = largest_portfolio_level[['Acronym', 'Issuer', 'Sector', 'Issuerbalance', 'IssuerNav']]
         # Firmwide
         firm_wide_holdings = self._investment_group.get_firmwide_allocation(
@@ -129,7 +129,7 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         portfolio_max_row = 7 + portfolio.shape[0]
         portfolio_max_column = 'F'
 
-        print_area_firm = {'FirmWideAllocation': ['B1:' + firm_wide_max_column + str(200), 'B' + str(firm_wide_max_row - 200)\
+        print_area_firm = {'FirmWideAllocation': ['B1:' + firm_wide_max_column + str(200), 'B' + str(firm_wide_max_row - 200)
                                                   + ":" + firm_wide_max_column + str(firm_wide_max_row)]}
 
         print_area_portfolio = {'PortfolioAllocation': 'B1:' + portfolio_max_column + str(portfolio_max_row)}

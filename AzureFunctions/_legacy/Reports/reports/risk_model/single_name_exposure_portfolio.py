@@ -160,9 +160,9 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         portfolio_max_column = 'E'
         excluded_max_row = 8 + excluded_managers.shape[0]
         excludedr_max_column = 'D'
-        print_areas = {'PortfolioAllocation': ['B1:' + portfolio_max_column + str(100), 'B' + str(portfolio_max_row - 100)\
+        print_areas = {'PortfolioAllocation': ['B1:' + portfolio_max_column + str(100), 'B' + str(portfolio_max_row - 100)
                                                + ":" + portfolio_max_column + str(portfolio_max_row)],
-                       'ManagerAllocation': ['B1:' + manager_max_column + str(100), 'B' + str(manager_max_row - 100)\
+                       'ManagerAllocation': ['B1:' + manager_max_column + str(100), 'B' + str(manager_max_row - 100)
                                              + ":" + manager_max_column + str(manager_max_row)],
                        'ExcludedManagers': 'B1:' + excludedr_max_column + str(excluded_max_row)}
         input_data = {
