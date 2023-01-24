@@ -57,6 +57,13 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         return self.__investment_group
 
     @property
+    def _pub_investment_group(self):
+        holdings = self._all_holdings[self._all_holdings['InvestmentGroupId'] == self._inv_group_ids]
+        pub_investment_group_id = holdings['PubInvestmentGroupId'].unique()
+        pub_investment_group_id = pub_investment_group_id.astype('float').astype('int').tolist()
+        return pub_investment_group_id
+
+    @property
     def _get_investment_group_name(self):
         holdings = self._all_holdings[self._all_holdings['InvestmentGroupId'] == self._inv_group_ids]
         investment_group_name = holdings.InvestmentGroupName.unique()
@@ -78,6 +85,7 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
     def build_single_name(self):
         single_name = self.get_single_name_equityexposure(investment_group_id=[self._inv_group_ids],
                                                           as_of_date=self._as_of_date)
+        single_name['Sector'] = single_name.Sector.str.title()
         #  assign sector to 'other' if there are duplicated sectors
         dupliacted_Issuers = single_name[single_name[['Issuer']].duplicated()]['Issuer']
         single_name.loc[single_name['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
@@ -98,6 +106,8 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         self._inv_group_ids = investment_group_id
         header_info = self.get_header_info()
         single_name = self.build_single_name()
+        if single_name.empty:
+            return
         single_name_max_row = 7 + single_name.shape[0]
         single_name_max_column = 'D'
         print_areas = {'ManagerAllocation': 'B1:' + single_name_max_column + str(single_name_max_row),
@@ -117,9 +127,9 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
                 save_as_pdf=True,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.manager_fund_group,
-                entity_name=self._get_investment_group_name[0],
-                entity_display_name=self._get_investment_group_name[0],
-                entity_ids=[self._inv_group_ids],
+                entity_name=self._get_investment_group_name[0].replace("/", ""),
+                entity_display_name=self._get_investment_group_name[0].replace("/", ""),
+                entity_ids=self._pub_investment_group,
                 entity_source=DaoSource.PubDwh,
                 report_name="ARS Single Name Equity Exposure",
                 report_type=ReportType.Risk,
@@ -133,6 +143,8 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         self._all_inv_group_ids.sort()
         for ing_group_ids in self._all_inv_group_ids:
             error_msg = 'success'
+            if ing_group_ids == 9077:
+                pass
             self._inv_group_ids = ing_group_ids
             try:
                 self.generate_single_name_report(investment_group_id=self._inv_group_ids)
@@ -151,7 +163,7 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
                         error_df,
                     ]
                 )
-        return ing_group_ids + error_msg
+        return str(ing_group_ids) + " " + error_msg
 
 
 if __name__ == "__main__":

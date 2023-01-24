@@ -97,6 +97,7 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         firm_wide['IssuerSum'] = firm_wide.groupby(['AsOfDate', 'Issuer'])['firmwide_pct'].transform(
             'sum')
         firm_wide.sort_values(['IssuerSum', 'firmwide_pct'], ascending=False, inplace=True)
+        firm_wide = firm_wide[firm_wide['InvestmentGroupName'] != 'Atlas Enhanced Fund']
         largest_firm_wide_level = firm_wide.groupby(['Issuer']).head(3).reset_index(drop=True)
         largest_firm_wide_level = largest_firm_wide_level.groupby(['Issuer', 'Sector', 'IssuerSum'])['InvestmentGroupName'].agg(
             ','.join).reset_index()
@@ -122,7 +123,9 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         firm_wide_max_column = 'E'
         portfolio_max_row = 7 + portfolio.shape[0]
         portfolio_max_column = 'E'
-        print_areas = {'FirmWideAllocation': 'B1:' + firm_wide_max_column + str(firm_wide_max_row),
+
+        print_areas = {'FirmWideAllocation': ['B1:' + firm_wide_max_column + str(200), 'B' + str(firm_wide_max_row - 200)\
+                                              + ":" + firm_wide_max_column + str(firm_wide_max_row)],
                        'PortfolioAllocation': 'B1:' + portfolio_max_column + str(portfolio_max_row)}
         input_data = {
             "as_of_date": as_of_date1,
