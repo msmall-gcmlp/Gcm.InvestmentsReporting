@@ -45,7 +45,7 @@ def _compute_rolling_excess_metrics(peer_returns, fin_index_returns, percentiles
 
     # excess_ptiles.mean()
 
-    return excess_ptiles
+    return excess_ptiles, rolling_excess_returns
 
 
 def _compute_market_scenarios(fin_index_returns, market_ptiles, window=36):
@@ -85,7 +85,7 @@ def _summarize_strategy_excess(market_scenarios, excess_ptiles):
 
 def generate_peer_conditional_excess_returns(peer_returns, benchmark_returns):
     # note Market Percentiles and Peer Percentiles do not have to be the same. Just happen to be here.
-    excess_ptiles = _compute_rolling_excess_metrics(peer_returns=peer_returns,
+    excess_ptiles, _ = _compute_rolling_excess_metrics(peer_returns=peer_returns,
                                                     fin_index_returns=benchmark_returns,
                                                     percentiles=[10, 25, 50, 75, 90])
 
@@ -96,6 +96,21 @@ def generate_peer_conditional_excess_returns(peer_returns, benchmark_returns):
                                                            excess_ptiles=excess_ptiles)
 
     return market_scenarios, conditional_ptile_summary
+
+
+def calculate_rolling_excess_returns(peer_returns, benchmark_returns):
+    _, rolling_excess_returns = _compute_rolling_excess_metrics(peer_returns=peer_returns,
+                                                                fin_index_returns=benchmark_returns,
+                                                                percentiles=[10, 25, 50, 75, 90])
+
+    market_scenarios = _compute_market_scenarios(fin_index_returns=benchmark_returns,
+                                                 market_ptiles=[10, 25, 50, 75, 90])
+
+    # conditional_ptile_summary = _summarize_strategy_excess(market_scenarios=market_scenarios,
+    #                                                        excess_ptiles=excess_ptiles)
+
+    rolling_excess_returns = market_scenarios.merge(rolling_excess_returns, left_index=True, right_index=True)
+    return rolling_excess_returns
 
 
 if __name__ == "__main__":

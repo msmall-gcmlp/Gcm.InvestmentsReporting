@@ -4,16 +4,19 @@ import datetime as dt
 import pandas as pd
 import ast
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from _legacy.Reports.reports.performance_quality.peer_conditional_excess_returns import generate_peer_conditional_excess_returns
+from _legacy.Reports.reports.performance_quality.peer_conditional_excess_returns import \
+    generate_peer_conditional_excess_returns, calculate_rolling_excess_returns
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 from _legacy.Reports.reports.performance_quality.helper import PerformanceQualityHelper
-from gcm.Dao.DaoRunner import DaoRunner
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario
 from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
 from gcm.inv.quantlib.enum_source import Periodicity, PeriodicROR
+import numpy as np
+import scipy
 
 
 class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
@@ -436,24 +439,139 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         self.generate_peer_level_summaries()
         return self._peer_group + " Complete"
 
+    def extract_peer_data(self):
+        rolling_excess_returns, market_scenarios = \
+            calculate_rolling_excess_returns(peer_returns=self._constituent_returns,
+                                             benchmark_returns=self._peer_arb_benchmark_returns)
+        rolling_returns = market_scenarios.merge(rolling_excess_returns, left_index=True, right_index=True)
+        return rolling_returns
+
 
 if __name__ == "__main__":
-    runner = DaoRunner()
-    # runner = DaoRunner(
-    #     container_lambda=lambda b, i: b.config.from_dict(i),
-    #     config_params={
-    #         DaoRunnerConfigArgs.dao_global_envs.name: {
-    #             DaoSource.InvestmentsDwh.name: {
-    #                 "Environment": "prd",
-    #                 "Subscription": "prd",
-    #             },
-    #             DaoSource.PubDwh.name: {
-    #                 "Environment": "prd",
-    #                 "Subscription": "prd",
-    #             },
-    #         }
-    #     },
-    # )
+    # runner = DaoRunner()
+    runner = DaoRunner(
+        container_lambda=lambda b, i: b.config.from_dict(i),
+        config_params={
+            DaoRunnerConfigArgs.dao_global_envs.name: {
+                DaoSource.DataLake.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.PubDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.InvestmentsDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.DataLake_Blob.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                # DaoSource.ReportingStorage.name: {
+                #     "Environment": "uat",
+                #     "Subscription": "nonprd",
+                # },
+            }
+        },
+    )
 
     with Scenario(runner=runner, as_of_date=dt.date(2022, 10, 31)).context():
-        analytics = PerformanceQualityPeerLevelAnalytics(peer_group='GCM Multi-PM').execute()
+        # analytics = PerformanceQualityPeerLevelAnalytics(peer_group='GCM Multi-PM').execute()
+        peer_groups = [
+            'GCM Asia Equity',
+            'GCM Consumer',
+            'GCM Cross Cap',
+            'GCM DS Multi-Strategy',
+            'GCM Europe Credit',
+            'GCM Europe Equity',
+            'GCM Fundamental Credit',
+            'GCM Generalist Long/Short Equity',
+            'GCM Healthcare',
+            'GCM Long/Short Credit',
+            'GCM Macro',
+            'GCM Multi-PM',
+            'GCM Quant',
+            'GCM Structured Credit',
+            'GCM TMT']
+
+        median_peer_excess_returns = None
+        passive_benchmarks = None
+        median_peer_excess_residuals = None
+        median_peer_summary = pd.DataFrame(index=peer_groups)
+        fund_summaries = {}
+
+        for peer in peer_groups:
+            analytics = PerformanceQualityPeerLevelAnalytics(peer_group=peer)
+            rolling_excess_returns = analytics.extract_peer_data()
+
+            not_na = rolling_excess_returns.iloc[:, 2:].notna().sum(axis=1) / (rolling_excess_returns.shape[1] - 2)
+            min_date = not_na[not_na > 0.3].index[0].strftime('%Y-%m-%d')
+            rolling_excess_returns = rolling_excess_returns.loc[min_date:]
+            median_peer_excess = rolling_excess_returns.iloc[:, 2:].apply(lambda x: np.nanpercentile(x, q=50), axis=1)
+            median_peer_excess = median_peer_excess.to_frame('MedianPeer')
+            tmp = median_peer_excess.rename(columns={'MedianPeer': peer})
+            if median_peer_excess_returns is None:
+                median_peer_excess_returns = tmp
+            else:
+                median_peer_excess_returns = median_peer_excess_returns.merge(tmp, left_index=True, right_index=True, how='outer')
+
+            bmrk = rolling_excess_returns.columns[0]
+            bmrk_returns = rolling_excess_returns.iloc[:, 0].to_frame()
+
+            if passive_benchmarks is None:
+                passive_benchmarks = bmrk_returns
+            elif bmrk not in passive_benchmarks.columns:
+                passive_benchmarks = passive_benchmarks.merge(bmrk_returns, left_index=True, right_index=True, how='outer')
+
+            median_and_bmrk_returns = median_peer_excess.merge(bmrk_returns, left_index=True, right_index=True, how='outer')
+            median_peer_fit = scipy.stats.linregress(x=median_and_bmrk_returns[bmrk], y=median_and_bmrk_returns['MedianPeer'])
+
+            median_peer_summary.loc[peer, 'beta'] = median_peer_fit[0]
+            median_peer_summary.loc[peer, 'alpha'] = median_peer_fit[1]
+            median_peer_residuals = median_and_bmrk_returns['MedianPeer'] - (median_peer_fit[0] * median_and_bmrk_returns[bmrk] + median_peer_fit[1])
+            tmp = median_peer_residuals.to_frame(peer)
+
+            if median_peer_excess_residuals is None:
+                median_peer_excess_residuals = tmp
+            else:
+                median_peer_excess_residuals = median_peer_excess_residuals.merge(tmp, left_index=True, right_index=True, how='outer')
+
+            median_peer_summary.loc[peer, 'ResidVol'] = median_peer_residuals.std()
+            median_peer_summary.loc[peer, 'CorrToBmrk'] = median_and_bmrk_returns.corr().iloc[1, 0]
+            median_peer_summary.loc[peer, 'MedianPeerVol'] = median_and_bmrk_returns.std()['MedianPeer']
+            median_peer_summary.loc[peer, 'BmrkVol'] = median_and_bmrk_returns.std()[bmrk]
+
+            fund_summary = pd.DataFrame(index=rolling_excess_returns.columns[2:])
+            for fund in rolling_excess_returns.columns[2:]:
+                fund_and_median_peer_excess = median_peer_excess.merge(rolling_excess_returns[[fund]], left_index=True, right_index=True)
+                fund_and_median_peer_excess = fund_and_median_peer_excess.dropna()
+
+                if fund_and_median_peer_excess.shape[0] > 0:
+                    fit = scipy.stats.linregress(x=fund_and_median_peer_excess['MedianPeer'], y=fund_and_median_peer_excess[fund])
+                    fund_summary.loc[fund, 'Beta'] = fit[0]
+                    fund_summary.loc[fund, 'Alpha'] = fit[1]
+
+                    fund_residuals = fund_and_median_peer_excess[fund] - (fit[0] * fund_and_median_peer_excess['MedianPeer'] + fit[1])
+                    fund_summary.loc[fund, 'ResidVol'] = fund_residuals.std()
+                    fund_summary.loc[fund, 'ExcessVol'] = fund_and_median_peer_excess[fund].std()
+                    fund_summary.loc[fund, 'CorrToPeerMedian'] = fund_and_median_peer_excess.corr().iloc[0, 1]
+            fund_summaries[peer] = fund_summary
+
+        print(fund_summaries['GCM TMT'].loc[['Skye', 'SRS Partners', 'D1 Capital', 'Tiger Global']])
+        print(fund_summaries['GCM Generalist Long/Short Equity'].loc[['D1 Capital', 'Tiger Global', 'Skye']])
+        median_peer_excess_res_cor_mat = median_peer_excess_residuals.corr()
+        median_peer_excess_res_cor_mat.median().sort_values(ascending=False)
+        passive_benchmarks_cor_mat = passive_benchmarks.corr()
+        combined_cor_mat = passive_benchmarks.merge(median_peer_excess_residuals, left_index=True, right_index=True).corr()
+        combined_cor_mat = combined_cor_mat.round(2)
+
+        # confirm close to 0 as we'll be assume excesses are uncorrelated to passive bmrks
+        combined_cor_mat.loc[median_peer_excess_residuals.columns, passive_benchmarks.columns].median().median()
+
+        # confirm not close to 0
+        combined_cor_mat.loc[median_peer_excess_residuals.columns, median_peer_excess_residuals.columns].median().median()
+        median_peer_summary['alpha'] / median_peer_summary['ResidVol']
+        tmp = median_peer_summary.sort_values('CorrToBmrk')
+        # combined_cor_mat.loc[['GCM Multi-PM', 'GCM TMT', 'XNDX Index', 'GDDUWI Index'], ['GCM Multi-PM', 'GCM TMT', 'XNDX Index', 'GDDUWI Index']]

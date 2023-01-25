@@ -95,7 +95,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
     @cached_property
     def _rf_returns(self):
-        returns = self._get_monthly_factor_returns(ticker="SBMMTB1 Index")
+        returns = self._get_monthly_factor_returns(ticker="I00078US Index")
         return returns
 
     @cached_property
@@ -661,7 +661,7 @@ if __name__ == "__main__":
                    "GCM Utilities",
                    ]
 
-    peer_groups = ["GCM Fundamental Credit"]
+    peer_groups = ["GCM Multi-PM"]
 
     runner = DaoRunner(
             container_lambda=lambda b, i: b.config.from_dict(i),
