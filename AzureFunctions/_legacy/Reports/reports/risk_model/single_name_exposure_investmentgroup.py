@@ -4,6 +4,8 @@ from functools import cached_property
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
+from sqlalchemy import func
+
 from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
@@ -52,8 +54,7 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
 
     @property
     def _investment_group(self):
-        if self.__investment_group is None:
-            self.__investment_group = InvestmentGroup(investment_group_ids=self._inv_group_ids)
+        self.__investment_group = InvestmentGroup(investment_group_ids=self._inv_group_ids)
         return self.__investment_group
 
     @property
@@ -70,27 +71,66 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         return investment_group_name
 
     def get_single_name_equityexposure(self, investment_group_id, as_of_date):
-        exposure = self._runner.execute(
+
+        def _create_query(session, items):
+            query = session.query(
+                items["AnalyticsData.SingleNameEquityExposure"]
+            ).select_from(items["AnalyticsData.SingleNameEquityExposure"])
+
+            return query
+
+        def _build_filters(session, items, investment_group_id, as_of_date):
+            query = _create_query(session, items)
+
+            subq = (
+                session.query(
+                    func.max(items["AnalyticsData.SingleNameEquityExposure"].AsOfDate).label("maxdate"),
+                ).filter(
+                    items["AnalyticsData.SingleNameEquityExposure"].InvestmentGroupId == investment_group_id,
+                    items["AnalyticsData.SingleNameEquityExposure"].AsOfDate <= as_of_date
+                ).subquery("t2")
+            )
+
+            query = query.filter(
+                items["AnalyticsData.SingleNameEquityExposure"].InvestmentGroupId == investment_group_id,
+                items["AnalyticsData.SingleNameEquityExposure"].AsOfDate == subq.c.maxdate
+            )
+
+            return query
+
+        result = self._runner.execute(
             params={
-                "schema": "AnalyticsData",
-                "table": "SingleNameEquityExposure",
-                "operation": lambda query, item: query.filter(item.InvestmentGroupId.in_(investment_group_id),
-                                                              item.AsOfDate == as_of_date),
+                "tables": [
+                    {
+                        "schema": "AnalyticsData",
+                        "table": "SingleNameEquityExposure",
+                    },
+
+                ],
+                "operation": lambda session, items: _build_filters(session, items,
+                                                                   investment_group_id=investment_group_id,
+                                                                   as_of_date=as_of_date),
             },
             source=DaoSource.InvestmentsDwh,
             operation=lambda dao, params: dao.get_data(params),
         )
-        return exposure
+        result['InvestmentGroupName'] = self._get_investment_group_name[0]
+        return result
 
     def build_single_name(self):
-        single_name = self.get_single_name_equityexposure(investment_group_id=[self._inv_group_ids],
+        # exposure by investments groups will reflect all the latest data available in SingleNameEquityExposure
+        # table
+        single_name = self.get_single_name_equityexposure(investment_group_id=self._inv_group_ids,
                                                           as_of_date=self._as_of_date)
-        single_name['Sector'] = single_name.Sector.str.title()
+
+        single_name_overlaid = self._investment_group.overlay_singlename_exposure(single_name,
+                                                                                  as_of_date=self._end_date)
+        single_name_overlaid['Sector'] = single_name_overlaid.Sector.str.title()
         #  assign sector to 'other' if there are duplicated sectors
-        dupliacted_Issuers = single_name[single_name[['Issuer']].duplicated()]['Issuer']
-        single_name.loc[single_name['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
-        single_name.sort_values(['ExpNav'], ascending=False, inplace=True)
-        return single_name[['Issuer', 'Sector', 'ExpNav']]
+        dupliacted_Issuers = single_name_overlaid[single_name_overlaid[['Issuer']].duplicated()]['Issuer']
+        single_name_overlaid.loc[single_name_overlaid['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
+        single_name_overlaid.sort_values(['ExpNav'], ascending=False, inplace=True)
+        return single_name_overlaid[['Issuer', 'Sector', 'ExpNav', 'AsOfDate']]
 
     def get_header_info(self):
         return pd.DataFrame(
@@ -109,7 +149,7 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         if single_name.empty:
             return
         single_name_max_row = 7 + single_name.shape[0]
-        single_name_max_column = 'D'
+        single_name_max_column = 'E'
         print_areas = {'ManagerAllocation': 'B1:' + single_name_max_column + str(single_name_max_row),
                        }
         input_data = {

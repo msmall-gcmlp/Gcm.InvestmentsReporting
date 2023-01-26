@@ -50,11 +50,9 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
         return self.__investment_group
 
     def save_single_name_exposure(self):
-        single_name = self._investment_group.overlay_singlename_exposure(
-            start_date=self._start_date,
-            end_date=self._end_date,
+        single_name = self._investment_group.get_single_name_exposure_by_investment_group(
+            as_of_date=self._end_date,
         )
-
         inv_group_dimn = self._investment_group.get_dimensions()
         single_name_exposure = pd.merge(single_name, inv_group_dimn[['InvestmentGroupName', 'InvestmentGroupId']],
                                         how='inner', on=['InvestmentGroupName'])
@@ -62,6 +60,7 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
         remove_duplicated_pears = exposure_to_save[['Issuer', 'Sector']].drop_duplicates()
         dupliacted_Issuers = remove_duplicated_pears[remove_duplicated_pears[['Issuer']].duplicated()]['Issuer']
         exposure_to_save.loc[exposure_to_save['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
+        exposure_to_save = exposure_to_save.groupby(['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate']).sum('ExpNav').reset_index()
 
         dwh_subscription = os.environ.get("Subscription", "nonprd")
         dwh_environment = os.environ.get("Environment", "dev").replace(
@@ -121,7 +120,7 @@ if __name__ == "__main__":
         }
     )
 
-    end_date = dt.date(2022, 9, 30)
+    end_date = dt.date(2022, 11, 30)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNameEquityExposureInvestmentsGroupPersist().execute()

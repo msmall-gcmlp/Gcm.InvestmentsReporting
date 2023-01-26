@@ -83,7 +83,7 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         port_dimn = self._all_pub_port_dimn[self.__all_pub_port_dimn["Acronym"] == self._portfolio_acronym]
         return port_dimn["PubPortfolioId"].squeeze()
 
-    def get_single_nam_equityexposure(self, investment_group_id, as_of_date):
+    def get_single_nam_equity_exposure(self, investment_group_id, as_of_date):
         exposure = self._runner.execute(
             params={
                 "schema": "AnalyticsData",
@@ -94,16 +94,17 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
             source=DaoSource.InvestmentsDwh,
             operation=lambda dao, params: dao.get_data(params),
         )
+
+        exposure = pd.merge(self._portfolio_holdings[['InvestmentGroupId', 'InvestmentGroupName']].drop_duplicates(),
+                            exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate', 'ExpNav']],
+                            how='inner', on=['InvestmentGroupId'])
         return exposure
 
     def build_single_name(self):
-        # single_name = self._investment_group.overlay_singlename_exposure(
-        #     start_date=self._start_date,
-        #     end_date=self._end_date,
-        # )
-        single_name = self.get_single_nam_equityexposure(investment_group_id=self._inv_group_ids, as_of_date=self._as_of_date)
+        single_name = self.get_single_nam_equity_exposure(investment_group_id=self._inv_group_ids, as_of_date=self._as_of_date)
+        single_name = self._investment_group.overlay_singlename_exposure(single_name[['InvestmentGroupName', 'Issuer', 'Sector', 'ExpNav', 'AsOfDate']], as_of_date=self._end_date)
         single_name['AsOfDate'] = single_name['AsOfDate'].apply(lambda x: x.strftime('%Y-%m'))
-        portfolio_level = pd.merge(self._portfolio_holdings, single_name, how='inner', on=['AsOfDate', 'InvestmentGroupId'])
+        portfolio_level = pd.merge(self._portfolio_holdings, single_name, how='inner', on=['AsOfDate', 'InvestmentGroupName'])
         portfolio_level['PortfolioNav'] = portfolio_level['PctNav'] * portfolio_level['ExpNav']
 
         # get funds without exposure
@@ -246,7 +247,7 @@ if __name__ == "__main__":
         },
     )
 
-    end_date = dt.date(2022, 9, 30)
+    end_date = dt.date(2022, 11, 30)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNamePortfolioReport().execute()

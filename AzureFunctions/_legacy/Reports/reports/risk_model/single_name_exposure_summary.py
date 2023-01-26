@@ -68,9 +68,13 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
     def build_single_name_summary(self):
         single_name = self.get_single_nam_equityexposure(
                                       as_of_date=self._as_of_date)
-        single_name['Sector'] = single_name.Sector.str.title()
+
+        single_name_overlaid = self._investment_group.overlay_singlename_exposure(single_name,
+                                                                                  as_of_date=self._end_date)
+
+        single_name_overlaid['Sector'] = single_name_overlaid.Sector.str.title()
         inv_group_dimn = self._investment_group.get_dimensions()
-        single_name_exposure = pd.merge(single_name,
+        single_name_exposure = pd.merge(single_name_overlaid,
                                         inv_group_dimn[['InvestmentGroupName', 'InvestmentGroupId']],
                                         how='inner',
                                         on=['InvestmentGroupId'])
@@ -174,8 +178,7 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
                 report_frequency="Monthly",
                 report_vertical=ReportVertical.ARS,
                 aggregate_intervals=AggregateInterval.MTD,
-                print_areas=print_area_portfolio
-            )
+                print_areas=print_area_portfolio)
 
     def run(self, **kwargs):
         self.generate_single_name_summary_report()
