@@ -145,7 +145,7 @@ def _normalize_equity_returns(bmrk_return, exp_rf, equity_risk_premia=0.055,
     return equity_summary, adj_equity_returns
 
 
-def _normalize_credit_returns(exp_rf, bmrk_return, hy_risk_premia=0.04, hy_ticker='LG30TRUH Index'):
+def _normalize_credit_returns(exp_rf, bmrk_return, hy_risk_premia=0.035, hy_ticker='LF98TRUU Index'):
     hy_delta = (hy_risk_premia + exp_rf) - bmrk_return[hy_ticker].mean()
     adj_credit_returns = bmrk_return[hy_ticker] + hy_delta
     return adj_credit_returns
@@ -157,7 +157,7 @@ def _normalize_rf_returns(exp_rf, bmrk_return, rf_ticker='I00078US Index'):
 
 def query_historical_benchmark_returns(as_of_date, lookback_years=20, rolling_years=3):
     with Scenario(dao=runner, as_of_date=as_of_date).context():
-        non_equity_tickers = ['LG30TRUH Index', 'MOVE Index']
+        non_equity_tickers = ['LF98TRUU Index', 'MOVE Index']
         rf = 'I00078US Index'
         tickers = equity_tickers + non_equity_tickers + [rf]
         if rolling_years == 3:
@@ -192,15 +192,37 @@ def summarize_benchmark_returns(rolling_3y_returns, exp_rf):
     ann_sharpe = (ann_ror - exp_rf) / ann_1y_vol
     return_summary = pd.concat([ann_ror, ann_3y_vol, ann_1y_vol, ann_sharpe], axis=1)
     return_summary.columns = ['AnnReturn', 'AnnVol3y', 'AnnVol1y', 'AnnSharpe1y']
-    return_summary.loc['MOVE Index', ['AnnVol3y', 'AnnVol1y', 'AnnSharpe1y']] = None
+    return_summary.loc['MOVE Index', ['AnnSharpe1y']] = None
+    return_summary.loc['MOVE Index'] = return_summary.loc['MOVE Index'] / 100
     return_summary = return_summary.sort_values('AnnReturn', ascending=False)
     return_summary = return_summary.round(2)
     return return_summary
 
 
+def get_arb_benchmark_summary(exp_rf, as_of_date):
+    historical = query_historical_benchmark_returns(as_of_date=as_of_date, lookback_years=20)
+    adjusted = normalize_benchmark_returns(bmrk_return=historical, exp_rf=exp_rf)
+    summary = summarize_benchmark_returns(rolling_3y_returns=adjusted, exp_rf=exp_rf)
+    return summary[['AnnReturn', 'AnnVol1y', 'AnnSharpe1y']]
+
+
+def generate_arb_simulations(exp_rf, as_of_date, number_sims=10_000):
+    historical_returns = query_historical_benchmark_returns(as_of_date=as_of_date,
+                                                            lookback_years=20)
+    adj_returns = normalize_benchmark_returns(bmrk_return=historical_returns, exp_rf=exp_rf)
+    n_returns = adj_returns.shape[0]
+    n_sims = int(number_sims)
+    repeats = int(np.ceil(n_sims / n_returns))
+
+    sim_returns = pd.concat([adj_returns] * repeats)[0:n_sims]
+    sim_arb_returns = sim_returns.reset_index(drop=True)
+    return sim_arb_returns
+
+
 if __name__ == "__main__":
     exp_rf = 0.03
-    historical_returns = query_historical_benchmark_returns(as_of_date=dt.date(2022, 12, 31),
+    as_of_date = dt.date(2022, 12, 31)
+    historical_returns = query_historical_benchmark_returns(as_of_date=as_of_date,
                                                             lookback_years=20)
     print(summarize_benchmark_returns(rolling_3y_returns=historical_returns, exp_rf=exp_rf))
 
@@ -209,3 +231,5 @@ if __name__ == "__main__":
     print(summarize_benchmark_returns(rolling_3y_returns=adj_returns, exp_rf=exp_rf))
 
     adj_returns_corr_mat = adj_returns.corr().round(2)
+
+    simulated_returns = generate_arb_simulations(exp_rf=exp_rf, as_of_date=as_of_date, number_sims=1e4)

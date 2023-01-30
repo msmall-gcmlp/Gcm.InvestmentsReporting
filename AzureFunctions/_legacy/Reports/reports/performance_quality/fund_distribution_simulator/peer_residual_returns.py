@@ -1,10 +1,10 @@
 import datetime as dt
 from functools import cached_property
-
+from scipy.stats import spearmanr
 import pandas as pd
 
 from _legacy.Reports.reports.performance_quality.fund_distribution_simulator.passive_benchmark_returns import \
-    get_monthly_returns, query_historical_benchmark_returns, summarize_benchmark_returns
+    get_monthly_returns, query_historical_benchmark_returns, summarize_benchmark_returns, get_arb_benchmark_summary
 from _legacy.Reports.reports.performance_quality.peer_conditional_excess_returns import calculate_rolling_excess_returns
 from _legacy.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, ReportVertical
 from _legacy.core.Runners.investmentsreporting import InvestmentsReportRunner
@@ -21,6 +21,7 @@ import os
 from gcm.inv.quantlib.enum_source import Periodicity
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
+from gcm.inv.dataprovider.investment_group import InvestmentGroup
 
 
 class PeerResidualReturns(ReportingRunnerBase):
@@ -147,10 +148,18 @@ class PeerResidualReturns(ReportingRunnerBase):
         bmrk_name = bmrk_returns.columns[0]
         peer = returns.columns[0]
         fit = scipy.stats.linregress(x=returns[bmrk_name], y=returns[peer])
+        corr = spearmanr(returns[bmrk_name], returns[peer])
+
+        if corr[1] > 0.10:
+            corr = None
+            beta = 0
+            alpha = returns[peer].mean()
+        else:
+            corr = corr[0]
+            beta = fit[0]
+            alpha = fit[1]
 
         min_date = returns.index.min().strftime('%b %Y')
-
-        corr = returns.corr().loc[bmrk_name, peer]
 
         peer_bmrk_vol = returns.std()[peer]
         bmrk_vol = returns.std()[bmrk_name]
@@ -158,15 +167,15 @@ class PeerResidualReturns(ReportingRunnerBase):
         historical_residuals = \
             self.calculate_residuals(x=bmrk_returns[bmrk_name],
                                      y=peer_excess[peer],
-                                     beta=fit[0],
-                                     alpha=fit[1])
+                                     beta=beta,
+                                     alpha=alpha)
 
         resid_vol = historical_residuals.std()
 
         summary = pd.DataFrame({'MinDate': [min_date],
                                 'Corr': [corr],
-                                'Beta': [fit[0]],
-                                'Alpha': [fit[1]],
+                                'Beta': [beta],
+                                'Alpha': [alpha],
                                 'Vol': [peer_bmrk_vol],
                                 'ResidVol': [resid_vol],
                                 'VolOverBmrkVol': [peer_bmrk_vol / bmrk_vol],
@@ -182,23 +191,33 @@ class PeerResidualReturns(ReportingRunnerBase):
         strat_name = returns.columns[0]
         fit = scipy.stats.linregress(x=returns[bmrk_name], y=returns[strat_name])
 
+        corr = spearmanr(returns[bmrk_name], returns[strat_name])
+
+        if corr[1] > 0.10:
+            corr = None
+            beta = 0
+            alpha = returns[strat_name].mean()
+        else:
+            corr = corr[0]
+            beta = fit[0]
+            alpha = fit[1]
+
         min_date = returns.index.min().strftime('%b %Y')
-        corr = returns.corr().loc[bmrk_name, strat_name]
         peer_bmrk_vol = returns.std()[strat_name]
         bmrk_vol = returns.std()[bmrk_name]
 
         historical_residuals = \
             self.calculate_residuals(x=returns[bmrk_name],
                                      y=returns[strat_name],
-                                     beta=fit[0],
-                                     alpha=fit[1])
+                                     beta=beta,
+                                     alpha=alpha)
 
         resid_vol = historical_residuals.std()
 
         summary = pd.DataFrame({'MinDate': [min_date],
                                 'Corr': [corr],
-                                'Beta': [fit[0]],
-                                'Alpha': [fit[1]],
+                                'Beta': [beta],
+                                'Alpha': [alpha],
                                 'Vol': [peer_bmrk_vol],
                                 'ResidVol': [resid_vol],
                                 'VolOverBmrkVol': [peer_bmrk_vol / bmrk_vol],
@@ -238,17 +257,11 @@ class PeerResidualReturns(ReportingRunnerBase):
                                                               periodicity=Periodicity.Monthly,
                                                               annualize=True,
                                                               include_history=True)
+
         return rolling_returns
 
-    def calculate_median_constituent_vol(self, constituent_returns, window=36):
-        rolling_returns = Analytics().compute_trailing_return(ror=constituent_returns,
-                                                              window=window,
-                                                              as_of_date=self._as_of_date,
-                                                              method='geometric',
-                                                              periodicity=Periodicity.Monthly,
-                                                              annualize=True,
-                                                              include_history=True)
-        median_1y_vol = (rolling_returns.std() / np.sqrt(12 / 36)).median()
+    def calculate_median_constituent_vol(self, constituent_returns):
+        median_1y_vol = (constituent_returns.std() * np.sqrt(12)).median()
         return median_1y_vol
 
     @staticmethod
@@ -288,7 +301,7 @@ class PeerResidualReturns(ReportingRunnerBase):
             # inter_peer_corr.index = inter_peer_corr.index.droplevel(1)
             mapping = peer_arb_mapping[['ReportingPeerGroup', 'PeerGroupShortName']]
             min_peer_corr_pair = inter_peer_corr.idxmin().to_frame('MinPeerCorrPair')
-            max_peer_corr_pair = inter_peer_corr.idxmin().to_frame('MaxPeerCorrPair')
+            max_peer_corr_pair = inter_peer_corr.idxmax().to_frame('MaxPeerCorrPair')
             min_peer_corr_pair = min_peer_corr_pair.replace(
                 dict(zip(mapping.ReportingPeerGroup, mapping.PeerGroupShortName)))
             max_peer_corr_pair = max_peer_corr_pair.replace(
@@ -306,18 +319,37 @@ class PeerResidualReturns(ReportingRunnerBase):
             peer_corr_summary = pd.concat([avg_inter_peer_corr, min_peer_corr_pairs, max_peer_corr_pairs], axis=1)
             corr_summary = pd.concat([arb_corr_summary, peer_corr_summary], axis=1)
             corr_summaries = pd.concat([corr_summaries, corr_summary])
-        return corr_summaries
 
-    @staticmethod
-    def generate_excel_inputs(historical_peer_summary, col_order):
-        tmp = historical_peer_summary[['BmrkName', 'Strategy']].reset_index()
-        arb = tmp[tmp['level_1'] == 'ehi'][['level_0', 'BmrkName']].set_index('level_0').rename(
-            columns={'BmrkName': 'ARB'})
-        ehi = tmp[tmp['level_1'] == 'ehi'][['level_0', 'Strategy']].set_index('level_0').rename(
-            columns={'Strategy': 'EHI'})
-        gcm = tmp[tmp['level_1'] == 'gcm'][['level_0', 'Strategy']].set_index('level_0').rename(
-            columns={'Strategy': 'GCM'})
-        benchmark_assignments = pd.concat([arb, ehi, gcm], axis=1).loc[col_order].T
+        hist_peer_corr_mat = peer_residuals.iloc[:, peer_residuals.columns.get_level_values(1) == 'Peer'].corr()
+        hist_peer_corr_mat[np.triu(np.ones(hist_peer_corr_mat.shape), k=1).astype(bool)] = None
+        hist_peer_corr_mat.index = hist_peer_corr_mat.index.droplevel(1)
+        hist_peer_corr_mat.columns = hist_peer_corr_mat.columns.droplevel(1)
+        return corr_summaries, hist_peer_corr_mat
+
+    def generate_excel_inputs(self, historical_peer_summary, peer_corr_mat, arb_assumptions, col_order):
+        mapping = self.peer_bmrk_mapping.set_index("ReportingPeerGroup").loc[col_order]
+
+        arb_assumptions = mapping[['Ticker']].merge(arb_assumptions, left_on='Ticker', right_index=True, how='left')
+        arb_assumptions = arb_assumptions.apply(lambda x: x.replace(' Index', '', regex=True))
+        arb_assumptions = arb_assumptions.T
+
+        bmrk_assignments = mapping[['Ticker', 'EhiBenchmarkShortName', 'BenchmarkSubstrategyShortName']]
+        bmrk_assignments = bmrk_assignments.apply(lambda x: x.replace(' Index', '', regex=True))
+        benchmark_assignments = bmrk_assignments.T
+
+        excess_spreads = historical_peer_summary[['Peer90', 'Peer75', 'Peer25', 'Peer10']]
+        peer_excess_spreads = excess_spreads[excess_spreads.index.get_level_values(1) == 'Peer'].loc[col_order]
+        peer_excess_spreads = peer_excess_spreads.T
+        ehi_excess_spreads = excess_spreads[excess_spreads.index.get_level_values(1) == 'ehi'].loc[col_order]
+        ehi_excess_spreads = ehi_excess_spreads.T
+
+        leverage = self._summarize_vol_adj_leverage_by_peer()
+        leverage = pd.DataFrame({'Peer': col_order}).merge(leverage, how='left').set_index('Peer').T
+
+        net_notional = self._summarize_net_by_peer()
+        net_notional = pd.DataFrame({'Peer': col_order}).merge(net_notional, how='left').set_index('Peer').T
+
+        peer_historical_corr_mat = peer_corr_mat.loc[col_order, col_order]
 
         def _format(data, field, row_order=['Peer', 'EhiTop', 'ehi', 'gcm']):
             summary = data[field].reset_index()
@@ -328,29 +360,36 @@ class PeerResidualReturns(ReportingRunnerBase):
             return summary.loc[row_order, col_order]
 
         excel_data = {
+            "arb_assumptions": arb_assumptions,
             "historical_total_vol": _format(historical_peer_summary, field='ItdTotalVol', row_order=['Peer', 'ehi']),
             "historical_beta_arb": _format(historical_peer_summary, field='ItdBetaVsBmrk', row_order=['Peer', 'ehi']),
+            "avg_gross_exposure": leverage,
+            "avg_net_exposure": net_notional,
             "min_return_date": _format(historical_peer_summary, field='MinDate'),
             "historical_excess_return": _format(historical_peer_summary, field='Alpha'),
+            "historical_residual_vol": _format(historical_peer_summary, field='ResidVol'),
             "historical_excess_vol": _format(historical_peer_summary, field='Vol'),
             "historical_excess_arb_vol_ratio": _format(historical_peer_summary, field='VolOverBmrkVol'),
-            "historical_residual_vol": _format(historical_peer_summary, field='ResidVol'),
             "historical_excess_corr_vs_arb": _format(historical_peer_summary, field='Corr'),
+            "peer_excess_ptile_spreads": peer_excess_spreads,
+            "ehi_excess_ptile_spreads": ehi_excess_spreads,
             "historical_5y_avg_corr_to_other_bmrks": _format(historical_peer_summary, field='IntraPeerBmrkCorr5Y'),
             "historical_itd_avg_corr_to_other_bmrks": _format(historical_peer_summary, field='IntraPeerBmrkCorrItd'),
             "historical_excess_corr_vs_all_arbs": _format(historical_peer_summary, field='AvgArbCorr'),
             "historical_excess_corr_arb_pairs": _format(historical_peer_summary, field='ArbCorrPairs'),
+            "benchmark_assignments": benchmark_assignments,
+            "peer_historical_corr_mat": peer_historical_corr_mat,
             "historical_excess_corr_vs_all_peers": _format(historical_peer_summary, field='AvgInterPeerCorr'),
             "historical_excess_min_corr_peer_pairs": _format(historical_peer_summary, field='MinInterPeerCorrPairs'),
-            "historical_excess_max_corr_peer_pairs": _format(historical_peer_summary, field='MaxInterPeerCorrPairs'),
-            "benchmark_assignments": benchmark_assignments
+            "historical_excess_max_corr_peer_pairs": _format(historical_peer_summary, field='MaxInterPeerCorrPairs')
         }
         return excel_data
 
-    def generate_excel_report(self, col_order, historical_peer_summary):
+    def generate_excel_report(self, col_order, historical_peer_summary, peer_corr_mat, arb_assumptions):
         col_order = self.peer_bmrk_mapping.set_index('PeerGroupShortName').loc[col_order]['ReportingPeerGroup']
         col_order = col_order.squeeze().tolist()
-        excel_data = self.generate_excel_inputs(historical_peer_summary, col_order=col_order)
+        excel_data = self.generate_excel_inputs(historical_peer_summary, peer_corr_mat, arb_assumptions,
+                                                col_order=col_order)
 
         with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
@@ -370,6 +409,47 @@ class PeerResidualReturns(ReportingRunnerBase):
                 output_dir="cleansed/investmentsreporting/printedexcels/",
                 report_output_source=DaoSource.DataLake,
             )
+
+    def _summarize_vol_adj_leverage_by_peer(self):
+        gross = self._emm_exposure[['InvestmentGroupName', 'ExposureStrategy', 'VolScalar', 'GrossNotional', 'Peer']]
+        gross['GrossVolAdj'] = gross['GrossNotional'] * gross['VolScalar']
+
+        gross = gross.groupby(['InvestmentGroupName', 'Peer'])['GrossVolAdj'].sum().reset_index()
+        peer_gross = gross.groupby('Peer')['GrossVolAdj'].median().reset_index().sort_values('GrossVolAdj')
+        peer_gross.rename(columns={'GrossVolAdj': 'Leverage'}, inplace=True)
+        return peer_gross
+
+    def _summarize_net_by_peer(self):
+        net = self._emm_exposure[['InvestmentGroupName', 'ExposureStrategy', 'NetNotional', 'Peer']]
+        net = net.groupby(['InvestmentGroupName', 'Peer'])['NetNotional'].sum().reset_index()
+        peer_net = net.groupby('Peer')['NetNotional'].mean().reset_index().sort_values('NetNotional')
+        return peer_net
+
+    @cached_property
+    def _emm_exposure(self):
+        investment_group = InvestmentGroup()
+        include_filters = dict(status=["EMM", "HPMM"])
+        exclude_filters = dict(strategy=['Other', 'Uninvested', 'Aggregated Prior Period Adjustment'])
+        inv_dimn = investment_group.get_dimensions(include_filters=include_filters,
+                                                   exclude_filters=exclude_filters,
+                                                   exclude_gcm_portfolios=True)
+        inv_group_ids = inv_dimn['InvestmentGroupId'].unique().tolist()
+        investment_group = InvestmentGroup(investment_group_ids=inv_group_ids)
+        exposure = investment_group.get_latest_exposure(as_of_date=self._as_of_date)
+        exposure = exposure.merge(inv_dimn[['InvestmentGroupName', 'ReportingPeerGroup']])
+        exposure.rename(columns={'ReportingPeerGroup': 'Peer'}, inplace=True)
+        exposure = exposure.sort_values(['InvestmentGroupName', 'ExposureStrategy'])
+
+        vol_adj = dict({'Equities': 1,
+                        'Credit': 0.34,
+                        'Currencies': 0.38,
+                        'FX Hedges': 0.38,
+                        'Commodities': 3,
+                        'Rates': 0.13,
+                        'Cash': 0})
+
+        exposure['VolScalar'] = exposure['ExposureStrategy'].map(vol_adj).fillna(1)
+        return exposure
 
     def run(self, **kwargs):
         return True
@@ -401,37 +481,36 @@ if __name__ == "__main__":
     )
     as_of_date = dt.date(2022, 12, 31)
     with Scenario(dao=runner, as_of_date=as_of_date).context():
-        peer_groups = [
-            'GCM Generalist Long/Short Equity',
-            'GCM Multi-PM',
-            # 'GCM Macro',
-            # 'GCM DS Multi-Strategy',
-            # 'GCM Quant'
-            # 'GCM Relative Value',
-            # 'GCM Multi-Strategy',
-            # 'GCM Fundamental Credit',
-            # 'GCM Long/Short Credit',
-            # 'GCM Structured Credit',
-            # 'GCM Consumer',
-            # 'GCM Healthcare',
-            # 'GCM TMT',
-            # 'GCM Energy',
-            # 'GCM Financials',
-            # 'GCM China',
-            # 'GCM Asia Equity',
-            # 'GCM Europe Credit',
-            # 'GCM Europe Equity',
-            # 'GCM Cross Cap'
-        ]
-
-        peer_ptiles = [25, 50, 75]
-
         peer_residuals = PeerResidualReturns()
+        arb_assumptions = get_arb_benchmark_summary(exp_rf=0.03, as_of_date=as_of_date)
         benchmark_returns = peer_residuals.benchmark_returns
         historical_peer_summary = []
         historical_peer_residuals = pd.DataFrame()
 
-        for peer in peer_groups:
+        col_order = ['Generalist L/S Eqty',
+                     'Multi-PM',
+                     'Macro',
+                     'Div Multi-Strat',
+                     'Quant',
+                     'Relative Value',
+                     'Cross Cap',
+                     'Fdmtl Credit',
+                     'Structured Credit',
+                     'L/S Credit',
+                     'Europe Credit',
+                     'Consumer',
+                     'Energy',
+                     'Financials',
+                     'Healthcare',
+                     'TMT',
+                     'Asia Equity',
+                     'China',
+                     'Europe Eqty'
+                     ]
+
+        peer_groups = peer_residuals.peer_bmrk_mapping.set_index('PeerGroupShortName').loc[col_order]
+
+        for peer in peer_groups['ReportingPeerGroup'].tolist():
             print(peer)
             bmrk_name = peer_residuals.get_peer_benchmark(peer=peer)
             bmrk_monthly_returns = benchmark_returns[[bmrk_name]]
@@ -447,7 +526,10 @@ if __name__ == "__main__":
                                                                       benchmark_returns=bmrk_monthly_returns)
 
             peer_bmrk_excess = peer_residuals.calculate_ptile_bmrks(constituent_returns=constituent_excess,
-                                                                    ptiles=peer_ptiles)
+                                                                    ptiles=[10, 25, 50, 75, 90])
+
+            ehi_bmrk_excess = peer_residuals.calculate_ptile_bmrks(constituent_returns=ehi_constituent_excess,
+                                                                   ptiles=[10, 25, 50, 75, 90])
 
             ehi_top_qtile_excess = peer_residuals.calculate_ptile_bmrks(constituent_returns=ehi_constituent_excess,
                                                                         ptiles=[63])
@@ -455,6 +537,11 @@ if __name__ == "__main__":
             peer_summary, peer_res = peer_residuals.generate_historical_peer_summary(peer_excess=peer_bmrk_excess,
                                                                                      bmrk_returns=constituent_excess.iloc[:, 0].to_frame(),
                                                                                      peer_name=peer)
+
+            peer_excess_spreads = peer_bmrk_excess.mean() - peer_bmrk_excess['Peer50'].mean()
+            peer_excess_spreads = peer_excess_spreads.to_frame(peer).T
+
+            peer_summary.loc[:, peer_excess_spreads.columns] = peer_excess_spreads.values
             peer_summary.loc[:, 'ItdTotalVol'] = peer_residuals.calculate_median_constituent_vol(
                 constituent_returns=constituent_monthly_returns)
             peer_summary.loc[:, 'ItdBetaVsBmrk'] = peer_residuals.calculate_median_constituent_beta(
@@ -468,6 +555,9 @@ if __name__ == "__main__":
             gcm_summary, gcm_res = peer_residuals.generate_historical_bmrk_summary(peer_name=peer, bmrk_type='gcm')
             ehi_summary, ehi_res = peer_residuals.generate_historical_bmrk_summary(peer_name=peer, bmrk_type='ehi')
 
+            ehi_bmrk_excess_spreads = ehi_bmrk_excess.mean() - ehi_bmrk_excess['Peer50'].mean()
+            ehi_bmrk_excess_spreads = ehi_bmrk_excess_spreads.to_frame(peer).T
+            ehi_summary.loc[:, ehi_bmrk_excess_spreads.columns] = ehi_bmrk_excess_spreads.values
             ehi_summary.loc[:, 'ItdTotalVol'] = peer_residuals.calculate_median_constituent_vol(
                 constituent_returns=ehi_constituent_monthly_returns)
             ehi_summary.loc[:, 'ItdBetaVsBmrk'] = peer_residuals.calculate_median_constituent_beta(
@@ -512,31 +602,13 @@ if __name__ == "__main__":
             # fund_summaries[peer] = fund_summary
 
         historical_peer_summary = pd.concat(historical_peer_summary, axis=0)
-        corr_summaries = peer_residuals.generate_correlation_summaries(peer_residuals=historical_peer_residuals)
+        corr_summaries, peer_corr_mat = peer_residuals.generate_correlation_summaries(peer_residuals=historical_peer_residuals)
         historical_peer_summary = pd.concat([historical_peer_summary, corr_summaries], axis=1)
 
-        col_order = ['Generalist L/S Eqty',
-                     'Multi-PM',
-                     # 'Macro',
-                     # 'Div Multi-Strat',
-                     # 'Quant',
-                     # 'Relative Value',
-                     # 'Cross Cap',
-                     # 'Fdmtl Credit',
-                     # 'Structured Credit',
-                     # 'L/S Credit',
-                     # 'Europe Credit',
-                     # 'Consumer',
-                     # 'Energy',
-                     # 'Financials',
-                     # 'Healthcare',
-                     # 'TMT',
-                     # 'Asia Equity',
-                     # 'China',
-                     # 'Europe Eqty'
-                     ]
-
-        peer_residuals.generate_excel_report(col_order=col_order, historical_peer_summary=historical_peer_summary)
+        peer_residuals.generate_excel_report(col_order=col_order,
+                                             historical_peer_summary=historical_peer_summary,
+                                             peer_corr_mat=peer_corr_mat,
+                                             arb_assumptions=arb_assumptions)
 
         # historical_peer_summary.to_csv('historical_peer_summary.csv')
         # historical_peer_residuals = historical_peer_residuals.dropna()
