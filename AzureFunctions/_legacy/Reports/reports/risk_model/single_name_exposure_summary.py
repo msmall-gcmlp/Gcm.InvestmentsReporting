@@ -53,7 +53,7 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
             self.__investment_group = InvestmentGroup(investment_group_ids=self._inv_group_ids)
         return self.__investment_group
 
-    def get_single_nam_equityexposure(self, as_of_date):
+    def get_single_nam_equity_exposure(self, as_of_date):
         exposure = self._runner.execute(
             params={
                 "schema": "AnalyticsData",
@@ -63,24 +63,26 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
             source=DaoSource.InvestmentsDwh,
             operation=lambda dao, params: dao.get_data(params),
         )
+
+        exposure = pd.merge(self._all_holdings[['InvestmentGroupId', 'InvestmentGroupName']].drop_duplicates(),
+                            exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate', 'ExpNav']],
+                            how='inner', on=['InvestmentGroupId'])
         return exposure
 
     def build_single_name_summary(self):
-        single_name = self.get_single_nam_equityexposure(
+        single_name = self.get_single_nam_equity_exposure(
                                       as_of_date=self._as_of_date)
 
         single_name_overlaid = self._investment_group.overlay_singlename_exposure(single_name,
                                                                                   as_of_date=self._end_date)
 
         single_name_overlaid['Sector'] = single_name_overlaid.Sector.str.title()
-        inv_group_dimn = self._investment_group.get_dimensions()
-        single_name_exposure = pd.merge(single_name_overlaid,
-                                        inv_group_dimn[['InvestmentGroupName', 'InvestmentGroupId']],
-                                        how='inner',
-                                        on=['InvestmentGroupId'])
-        single_name_exposure = single_name_exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'Cusip', 'ExpNav', 'AsOfDate']]
+        single_name_exposure = single_name_overlaid[['InvestmentGroupId', 'InvestmentGroupName', 'Issuer', 'Sector', 'ExpNav', 'AsOfDate']]
         single_name_exposure['AsOfDate'] = single_name_exposure['AsOfDate'].apply(lambda x: x.strftime('%Y-%m'))
-        portfolio_level = pd.merge(self._all_holdings, single_name_exposure, how='inner', on=['AsOfDate', 'InvestmentGroupId'])
+        portfolio_level = pd.merge(self._all_holdings,
+                                   single_name_exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'ExpNav', 'AsOfDate']],
+                                   how='inner',
+                                   on=['AsOfDate', 'InvestmentGroupId'])
         portfolio_level['IssuerNav'] = portfolio_level['PctNav'] * portfolio_level['ExpNav']
         portfolio_level['Issuerbalance'] = (portfolio_level['OpeningBalance'] * portfolio_level['ExpNav']) / 1000
 
@@ -97,7 +99,10 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         firm_wide_holdings['AsOfDate'] = firm_wide_holdings['Date'].apply(lambda x: x.strftime('%Y-%m'))
         total_balance = firm_wide_holdings['OpeningBalance'].sum()
         firm_wide_holdings['PctNav'] = firm_wide_holdings['OpeningBalance'] / total_balance
-        firm_wide = pd.merge(single_name_exposure, firm_wide_holdings, how='inner', on=['InvestmentGroupId', 'AsOfDate'])
+        firm_wide = pd.merge(single_name_exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'ExpNav', 'AsOfDate']],
+                             firm_wide_holdings,
+                             how='inner',
+                             on=['InvestmentGroupId', 'AsOfDate'])
         firm_wide['firmwide_pct'] = firm_wide['ExpNav'] * firm_wide['PctNav']
         firm_wide['firmwide_allocation'] = (firm_wide['ExpNav'] * firm_wide['OpeningBalance']) / 1000
 
@@ -109,7 +114,7 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         firm_wide = firm_wide[firm_wide['InvestmentGroupName'] != 'Atlas Enhanced Fund']
         largest_firm_wide_level = firm_wide.groupby(['Issuer']).head(3).reset_index(drop=True)
         largest_firm_wide_level = largest_firm_wide_level.groupby(['Issuer', 'Sector', 'Issuer_allocation', 'IssuerSum'])['InvestmentGroupName'].agg(
-            ','.join).reset_index()
+            ', '.join).reset_index()
         largest_firm_wide_level = largest_firm_wide_level[['Issuer', 'InvestmentGroupName', 'Sector', 'Issuer_allocation', 'IssuerSum']]
         largest_firm_wide_level.sort_values(['IssuerSum'], ascending=False, inplace=True)
         return [largest_portfolio_level, largest_firm_wide_level]
@@ -127,15 +132,16 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         as_of_date1 = self.get_as_of_date()
         single_name = self.build_single_name_summary()
         firm_wide = single_name[1]
+        firm_wide['InvestmentGroupName'] = firm_wide['InvestmentGroupName'].str[0:46]
+        firm_wide['Issuer'] = firm_wide['Issuer'].str[0:39]
         portfolio = single_name[0]
-        firm_wide_max_row = 7 + firm_wide.shape[0]
-        firm_wide_max_column = 'F'
+        portfolio['Issuer'] = portfolio['Issuer'].str[0:39]
+
+        firm_wide_longs = firm_wide[firm_wide['IssuerSum'] > 0.0]
+        firm_wide_shorts = firm_wide[firm_wide['IssuerSum'] <= 0.0]
+        firm_wide_shorts.sort_values(by='IssuerSum', ascending=True, inplace=True)
         portfolio_max_row = 7 + portfolio.shape[0]
         portfolio_max_column = 'F'
-
-        print_area_firm = {'FirmWideAllocation': ['B1:' + firm_wide_max_column + str(200), 'B' + str(firm_wide_max_row - 200)
-                                                  + ":" + firm_wide_max_column + str(firm_wide_max_row)]}
-
         print_area_portfolio = {'PortfolioAllocation': 'B1:' + portfolio_max_column + str(portfolio_max_row)}
         input_data_portfolio = {
             "as_of_date": as_of_date1,
@@ -143,37 +149,38 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
 
         }
         input_data_issuer = {
-            "as_of_date": as_of_date1,
-            "firmwide_allocation": firm_wide,
+            "as_of_date1": as_of_date1,
+            "as_of_date2": as_of_date1,
+            "firmwide_allocation_longs": firm_wide_longs,
+            "firmwide_allocation_shorts": firm_wide_shorts
         }
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data_issuer,
-                template="SingleNameExposure_Template_Issuer_Summary.xlsx",
+                template="SingleNamePosition_Template_Firm_Issuer.xlsx",
                 save=True,
                 save_as_pdf=True,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.cross_entity,
                 entity_name='FIRM',
                 entity_source=DaoSource.PubDwh,
-                report_name="ARS Single Name Equity Exposure Summary - Issuer level",
+                report_name="ARS Single Name Position - Firm x Issuer",
                 report_type=ReportType.Risk,
                 report_frequency="Monthly",
                 report_vertical=ReportVertical.ARS,
                 aggregate_intervals=AggregateInterval.MTD,
-                print_areas=print_area_firm
             )
             InvestmentsReportRunner().execute(
                 data=input_data_portfolio,
-                template="SingleNameExposure_Template_Portfolio_Summary.xlsx",
+                template="SingleNamePosition_Template_Firm_Portfolio.xlsx",
                 save=True,
                 save_as_pdf=True,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.cross_entity,
                 entity_name='FIRM',
                 entity_source=DaoSource.PubDwh,
-                report_name="ARS Single Name Equity Exposure Summary - Portfolio level",
+                report_name="ARS Single Name Position - Firm x Portfolio",
                 report_type=ReportType.Risk,
                 report_frequency="Monthly",
                 report_vertical=ReportVertical.ARS,

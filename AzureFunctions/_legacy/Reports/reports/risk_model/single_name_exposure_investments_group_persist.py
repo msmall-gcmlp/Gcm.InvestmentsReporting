@@ -50,6 +50,15 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
         return self.__investment_group
 
     def save_single_name_exposure(self):
+        # short sector name mapping
+        sector_short_names = dict(
+            {'HEALTH CARE': 'Health Care', 'FINANCE': 'Finance', 'INFORMATION TECHNOLOGY': 'Info Tech',
+             'CONSUMER DISCRETIONARY': 'Cons Discr', 'BROAD MARKET INDICES': 'Index', 'UTILITIES': 'Utilities',
+             'Other': 'Other', 'INDUSTRIALS': 'Industrials', 'COMMUNICATION SERVICES': 'Comm Svcs', 'ENERGY': 'Energy',
+             'REAL ESTATE': 'Real Estate', 'UTILITIES AND TELECOMMUNICATIONS': 'Util & Telecomm',
+             'MATERIALS': 'Materials', 'CONSUMER STAPLES': 'Cons Staples', 'CONGLOMERATES': 'Conglom',
+             'COMMUNICATIONS': 'Comm Svcs'})
+
         single_name = self._investment_group.get_single_name_exposure_by_investment_group(
             as_of_date=self._end_date,
         )
@@ -61,6 +70,7 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
         dupliacted_Issuers = remove_duplicated_pears[remove_duplicated_pears[['Issuer']].duplicated()]['Issuer']
         exposure_to_save.loc[exposure_to_save['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
         exposure_to_save = exposure_to_save.groupby(['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate']).sum('ExpNav').reset_index()
+        exposure_to_save['Sector'] = exposure_to_save['Sector'].map(sector_short_names)
 
         dwh_subscription = os.environ.get("Subscription", "nonprd")
         dwh_environment = os.environ.get("Environment", "dev").replace(
@@ -120,7 +130,7 @@ if __name__ == "__main__":
         }
     )
 
-    end_date = dt.date(2022, 11, 30)
+    end_date = dt.date(2022, 9, 30)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNameEquityExposureInvestmentsGroupPersist().execute()

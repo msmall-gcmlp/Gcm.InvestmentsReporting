@@ -130,7 +130,7 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         dupliacted_Issuers = single_name_overlaid[single_name_overlaid[['Issuer']].duplicated()]['Issuer']
         single_name_overlaid.loc[single_name_overlaid['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
         single_name_overlaid.sort_values(['ExpNav'], ascending=False, inplace=True)
-        return single_name_overlaid[['Issuer', 'Sector', 'ExpNav', 'AsOfDate']]
+        return single_name_overlaid[['Issuer', 'Sector', 'ExpNav']]
 
     def get_header_info(self):
         return pd.DataFrame(
@@ -146,15 +146,24 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         self._inv_group_ids = investment_group_id
         header_info = self.get_header_info()
         single_name = self.build_single_name()
+        single_name['Issuer'] = single_name['Issuer'].str[0:39]
+        single_name_long = single_name[single_name['ExpNav'] > 0.0]
+        single_name_short = single_name[single_name['ExpNav'] <= 0.0]
+        single_name_short.sort_values(by='ExpNav', ascending=True, inplace=True)
         if single_name.empty:
             return
-        single_name_max_row = 7 + single_name.shape[0]
-        single_name_max_column = 'E'
-        print_areas = {'ManagerAllocation': 'B1:' + single_name_max_column + str(single_name_max_row),
-                       }
+
+        # single_name_max_row = 7 + single_name.shape[0]
+        # single_name_max_column = 'D'
+        #
+        # print_areas = {'ManagerLongs': 'B1:' + single_name_max_column + str(single_name_max_row),
+        #                'ManagerShorts': 'B1:' + single_name_max_column + str(single_name_max_row),
+        #                }
         input_data = {
-            "header": header_info,
-            "manager_allocation": single_name,
+            "header_info_1": header_info,
+            "header_info_2": header_info,
+            "managerlongs": single_name_long,
+            "managershorts": single_name_short,
 
         }
 
@@ -162,7 +171,7 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
-                template="SingleNameExposure_Template_InvestmentGroup.xlsx",
+                template="SingleNamePosition_Template_Portfolio_Fund.xlsx",
                 save=True,
                 save_as_pdf=True,
                 runner=self._runner,
@@ -171,11 +180,10 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
                 entity_display_name=self._get_investment_group_name[0].replace("/", ""),
                 entity_ids=self._pub_investment_group,
                 entity_source=DaoSource.PubDwh,
-                report_name="ARS Single Name Equity Exposure",
+                report_name="ARS Single Name Position - Portfolio Fund",
                 report_type=ReportType.Risk,
                 aggregate_intervals=AggregateInterval.MTD,
                 report_frequency="Monthly",
-                print_areas=print_areas
             )
 
     def run(self, **kwargs):
@@ -228,7 +236,7 @@ if __name__ == "__main__":
         },
     )
 
-    end_date = dt.date(2022, 9, 30)
+    end_date = dt.date(2022, 12, 31)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNameInvestmentGroupReport().execute()
