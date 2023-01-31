@@ -7,6 +7,8 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
 )
 from gcm.inv.scenario import Scenario
 import io
+import os
+import pathlib
 
 license__location = (
     "/".join(
@@ -28,7 +30,7 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
     params["file_path"] = params["file_path"].replace(".xlsx", ".pdf")
     assert params is not None
     dao = Scenario.get_attribute("dao")
-    from asposecells.api import Workbook, SaveFormat, LoadOptions, License
+    from asposecells.api import Workbook, SaveFormat, LoadOptions, License, FontConfigs
 
     lic = License()
     try:
@@ -43,16 +45,22 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
             operation=lambda d, p: d.get_data(p),
         )
         lic.setLicense(license_content.content)
-    except:
+    except Exception as ex:
         logging.info("skipping licensing step")
 
     logging.info("Exporting PDF")
     loadOptions = LoadOptions()
     workbook = Workbook()
+    full_path = pathlib.Path(__file__).parent.resolve()
+    fonts_relative_path = "assets/fonts"
+    fonts_folder_path = os.path.join(full_path, fonts_relative_path)
+    logging.info(f"Fonts directory: {fonts_folder_path}")
+
     wb = workbook.createWorkbookFromBytes(
         file.read(), loadOptions=loadOptions
     )
     wb.calculateFormula(True)
+    FontConfigs.setFontFolder(fonts_folder_path, True)
 
     v = wb.saveToBytes(SaveFormat.PDF)
     dao.execute(
