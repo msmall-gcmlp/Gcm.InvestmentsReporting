@@ -31,13 +31,35 @@ class SimulateResiduals(ReportingRunnerBase):
         super().__init__(runner=Scenario.get_attribute("dao"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
 
-    @staticmethod
-    def _generate_monthly_peer_residual_simulations(number_sims=10_000):
+    @cached_property
+    def _raw_cor_mat(self):
         cor_mat = pd.read_csv(os.path.dirname(__file__) + "/expected_peer_cor_mat.csv")
-        raw_peers = cor_mat.columns[1:]
-        peer_arb_mapping = pd.read_csv(os.path.dirname(__file__) + "/../peer_group_to_arb_mapping.csv")
-        mapping = dict(zip(peer_arb_mapping['PeerGroupShortName'], peer_arb_mapping['ReportingPeerGroup']))
-        peers = raw_peers.map(mapping)
+        return cor_mat
+
+    @cached_property
+    def _ordered_raw_peer_names(self):
+        return self._raw_cor_mat.columns[1:]
+
+    @cached_property
+    def _peer_arb_mapping(self):
+        return pd.read_csv(os.path.dirname(__file__) + "/../peer_group_to_arb_mapping.csv")
+
+    @cached_property
+    def _peer_short_name_mapping(self):
+        return dict(zip(self._peer_arb_mapping['PeerGroupShortName'], self._peer_arb_mapping['ReportingPeerGroup']))
+
+    @cached_property
+    def _expectations(self):
+        expectations = pd.read_csv(os.path.dirname(__file__) + "/peer_residual_expectations.csv")
+        expectations = expectations.set_index('PeerShortName').reindex(self._ordered_raw_peer_names)
+        expectations.index = expectations.index.map(self._peer_short_name_mapping)
+        return expectations
+
+    def _generate_monthly_peer_residual_simulations(self, number_sims=10_000):
+        cor_mat = self._raw_cor_mat
+        raw_peers = self._ordered_raw_peer_names
+
+        peers = raw_peers.map(self._peer_short_name_mapping)
 
         cor_mat = np.asarray(cor_mat.iloc[:, 1:])
 
@@ -49,9 +71,7 @@ class SimulateResiduals(ReportingRunnerBase):
 
         means = [0] * len(peers)
 
-        vols = pd.read_csv(os.path.dirname(__file__) + "/expected_peer_residual_vols.csv")
-        vols = vols.set_index('PeerShortName').reindex(raw_peers)
-        vols = vols['ResidualVol'].tolist()
+        vols = self._expectations['ResidualVol'].tolist()
         vols = [(x * 3 * np.sqrt(1 / 36)).round(5) for x in vols]
 
         cov_mat = np.asarray(cor_mat) * np.outer(vols, vols)
@@ -64,13 +84,28 @@ class SimulateResiduals(ReportingRunnerBase):
         all(residuals.corr().round(1) == cor_mat.round(1))
         return residuals
 
-    def generate_rolling_peer_residual_simulations(self, rolling_years=3, number_sims=10_000):
+    def _generate_rolling_peer_residual_simulations(self, rolling_years=3, number_sims=10_000):
         rolling_months = int(rolling_years * 12)
         n_sims = number_sims + rolling_months - 1
         monthly_residuals = self._generate_monthly_peer_residual_simulations(number_sims=n_sims)
         rolling_residuals = monthly_residuals.rolling(rolling_months).sum() / 3
         rolling_residuals = rolling_residuals.dropna().reset_index(drop=True)
         return rolling_residuals
+
+    def generate_rolling_peer_excess_simulations(self, arb_sims, rolling_years=3, number_sims=10_000):
+        error = self._generate_rolling_peer_residual_simulations(rolling_years=rolling_years, number_sims=number_sims)
+        excess = error.copy()
+        for peer in error.columns:
+            exp = self._expectations.loc[peer]
+            alpha = exp.loc['AlphaToArb']
+            beta = exp.loc['BetaToArb']
+            arb = self._peer_arb_mapping[self._peer_arb_mapping['ReportingPeerGroup'] == peer]['Ticker']
+            if peer == 'GCM Macro':
+                beta = beta / 100
+                arb = 'MOVE Index'
+            excess[peer] = (beta * arb_sims[arb]).squeeze() + alpha + error[peer]
+
+        return excess
 
     def run(self, **kwargs):
         return True
@@ -105,7 +140,7 @@ if __name__ == "__main__":
 
     with Scenario(dao=runner, as_of_date=as_of_date).context():
         arb_sims = generate_arb_simulations(exp_rf=0.03, as_of_date=as_of_date)
-        peer_sims = SimulateResiduals().generate_rolling_peer_residual_simulations()
+        peer_sims = SimulateResiduals().generate_rolling_peer_excess_simulations(arb_sims=arb_sims)
         sims = pd.concat([arb_sims, peer_sims], axis=1)
         sim_cor_mat = sims.corr().round(1)
         sims.mean()
