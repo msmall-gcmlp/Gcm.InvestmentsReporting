@@ -45,7 +45,7 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
             operation=lambda d, p: d.get_data(p),
         )
         lic.setLicense(license_content.content)
-    except Exception as _:
+    except:
         logging.info("skipping licensing step")
 
     logging.info("Exporting PDF")
