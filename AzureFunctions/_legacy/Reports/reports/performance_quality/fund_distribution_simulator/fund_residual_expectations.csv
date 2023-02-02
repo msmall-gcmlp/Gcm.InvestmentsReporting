@@ -1,0 +1,4 @@
+﻿Fund,NetNotional,BetaToPeer,ExcessPtile,ResidualVol,PeerGroup
+Skye,0.8,1.67,50,0.06,GCM TMT
+SRS,0.2,0.50,75,0.08,GCM TMT
+Citadel,0,1.05,90,0.05,GCM DS Multi-Strategy

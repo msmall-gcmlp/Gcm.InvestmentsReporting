@@ -28,11 +28,12 @@ runner = DaoRunner(
                 },
             }
         },
-    )
+)
 
 equity_tickers = ['GDDUWI Index', 'M7EU Index', 'MXCN Index', 'SPTRRLST Index',
                   'SPTRCOND Index', 'SPTRENRS Index', 'SPTRFINL Index', 'SPTRHLTH Index',
                   'SPTRINDU Index', 'SPTRUTIL Index', 'SPXT Index', 'XNDX Index']
+
 
 def _get_move_index_levels(as_of_date):
     daily_levels = Factor(tickers=["MOVE Index"]).get_dimensions(DatePeriod(start_date=dt.date(2000, 1, 1),
@@ -137,7 +138,7 @@ def _normalize_equity_returns(bmrk_return, exp_rf, equity_risk_premia=0.055,
         exp_vol_1y = adj_equity_returns[bmrk].std() / (1 / 3) ** (1 / 2)
         equity_summary.loc[bmrk, 'exp_return'] = exp_return
         equity_summary.loc[bmrk, 'exp_std_1y'] = exp_vol_1y
-        equity_summary.loc[bmrk, 'exp_sharpe'] = (exp_return - exp_rf) /exp_vol_1y
+        equity_summary.loc[bmrk, 'exp_sharpe'] = (exp_return - exp_rf) / exp_vol_1y
 
     equity_summary = equity_summary[['beta', 'hist_alpha', 'exp_return', 'exp_std_1y', 'exp_sharpe']]
     equity_summary = equity_summary.sort_values('exp_return', ascending=False)
@@ -173,7 +174,7 @@ def normalize_benchmark_returns(bmrk_return, exp_rf):
     equity_summary, adj_equity_returns = _normalize_equity_returns(bmrk_return=bmrk_return,
                                                                    exp_rf=exp_rf)
     adj_credit_returns = _normalize_credit_returns(bmrk_return=bmrk_return, exp_rf=exp_rf)
-    adj_rf_returns = _normalize_rf_returns(bmrk_return=bmrk_return,exp_rf=exp_rf)
+    adj_rf_returns = _normalize_rf_returns(bmrk_return=bmrk_return, exp_rf=exp_rf)
     adj_move_levels = bmrk_return['MOVE Index']
 
     adj_returns = adj_equity_returns.merge(adj_rf_returns, left_index=True, right_index=True)

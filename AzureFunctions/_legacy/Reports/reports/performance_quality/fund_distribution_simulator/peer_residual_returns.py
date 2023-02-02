@@ -1,10 +1,10 @@
 import datetime as dt
 from functools import cached_property
-from scipy.stats import spearmanr
+from scipy.stats import spearmanr, percentileofscore
 import pandas as pd
 
 from _legacy.Reports.reports.performance_quality.fund_distribution_simulator.passive_benchmark_returns import \
-    get_monthly_returns, query_historical_benchmark_returns, summarize_benchmark_returns, get_arb_benchmark_summary
+    get_monthly_returns, query_historical_benchmark_returns, get_arb_benchmark_summary
 from _legacy.Reports.reports.performance_quality.peer_conditional_excess_returns import calculate_rolling_excess_returns
 from _legacy.core.ReportStructure.report_structure import ReportingEntityTypes, ReportType, ReportVertical
 from _legacy.core.Runners.investmentsreporting import InvestmentsReportRunner
@@ -241,7 +241,7 @@ class PeerResidualReturns(ReportingRunnerBase):
             hf_returns = self.ehi_benchmark_returns
             substrat = self.get_peer_ehi_benchmark(peer=peer_name)
 
-        monthly_returns = hf_returns.merge(self.benchmark_returns, left_index=True, right_index=True,  how='left')
+        monthly_returns = hf_returns.merge(self.benchmark_returns, left_index=True, right_index=True, how='left')
 
         bmrk = self.get_peer_benchmark(peer=peer_name)
 
@@ -451,6 +451,70 @@ class PeerResidualReturns(ReportingRunnerBase):
         exposure['VolScalar'] = exposure['ExposureStrategy'].map(vol_adj).fillna(1)
         return exposure
 
+    @staticmethod
+    def _humble_by_binning(data, ptile_bounds=[25, 50, 75], round_to=None):
+        raw_ptiles = np.array([percentileofscore(data, x, nan_policy='omit') for x in data])
+        raw_ptiles = np.nan_to_num(raw_ptiles, nan=50)
+
+        ptile_bounds = [-1] + ptile_bounds + [101]  # pad to avoid inclusion issues
+        bin_ind = np.digitize(raw_ptiles, ptile_bounds, right=True)
+        mids = [np.mean([ptile_bounds[x], ptile_bounds[x + 1]]) for x in range(len(ptile_bounds) - 1)]
+        bin_mid_values = np.nanpercentile(data, q=mids).tolist()
+
+        if round_to is not None:
+            bin_mid_values = [round(round_to * round(x / round_to), 2) for x in bin_mid_values]
+        humbled_values = np.take(bin_mid_values, bin_ind - 1)
+        return humbled_values
+
+    def generate_peer_constituent_summary(self, peer_constituent_excess_to_arb, peer_bmrk_residuals):
+        summary = pd.DataFrame(index=peer_constituent_excess_to_arb.columns)
+
+        for fund in summary.index:
+            fund_peer = pd.concat([peer_constituent_excess_to_arb[[fund]], peer_bmrk_residuals], axis=1).dropna()
+            correl = spearmanr(fund_peer)
+            pval = round(correl[1], 2)
+            summary.loc[fund, 'CorrPValue'] = pval
+
+            if str(pval) == 'nan':
+                cor_val = np.nan
+            elif pval < 0.10:
+                cor_val = round(correl[0], 2)
+            else:
+                cor_val = 0
+
+            summary.loc[fund, 'Corr'] = cor_val
+
+            vols = fund_peer.std()
+            summary.loc[fund, 'FundExcessVol'] = vols.iloc[0]
+            summary.loc[fund, 'PeerExcessVol'] = vols.iloc[1]
+            summary.loc[fund, 'ExcessVolRatio'] = vols.iloc[0] / vols.iloc[1]
+
+            if fund_peer.shape[0] > 0:
+                fit = scipy.stats.linregress(x=fund_peer.iloc[:, 1], y=fund_peer.iloc[:, 0])
+                alpha = fit[1]
+                beta = fit[0]
+
+                historical_residuals = \
+                    peer_residuals.calculate_residuals(x=fund_peer.iloc[:, 1],
+                                                       y=fund_peer.iloc[:, 0],
+                                                       beta=fit[0],
+                                                       alpha=fit[1])
+
+                resid_vol = historical_residuals.std()
+                summary.loc[fund, 'AlphaToPeer'] = alpha
+                summary.loc[fund, 'BetaToPeer'] = beta
+                summary.loc[fund, 'ResidVolToPeer'] = resid_vol
+
+        summary['Peer'] = peer
+
+        summary['HumbledCorr'] = self._humble_by_binning(summary['Corr'], round_to=0.05)
+        excess_vol_ratios = summary['ExcessVolRatio']
+        summary['HumbledExcessVolRatio'] = self._humble_by_binning(excess_vol_ratios, round_to=0.50)
+        resid_vols = summary['ResidVolToPeer']
+        summary['HumbledResidVolToPeer'] = self._humble_by_binning(resid_vols, round_to=0.01)
+        summary['HumbledBetaToPeer'] = summary['HumbledExcessVolRatio'] * summary['HumbledCorr']
+        return summary
+
     def run(self, **kwargs):
         return True
 
@@ -486,6 +550,7 @@ if __name__ == "__main__":
         benchmark_returns = peer_residuals.benchmark_returns
         historical_peer_summary = []
         historical_peer_residuals = pd.DataFrame()
+        peer_constituent_summaries = pd.DataFrame()
 
         col_order = ['Generalist L/S Eqty',
                      'Multi-PM',
@@ -537,6 +602,11 @@ if __name__ == "__main__":
             peer_summary, peer_res = peer_residuals.generate_historical_peer_summary(peer_excess=peer_bmrk_excess,
                                                                                      bmrk_returns=constituent_excess.iloc[:, 0].to_frame(),
                                                                                      peer_name=peer)
+
+            peer_constituent_summary = peer_residuals.generate_peer_constituent_summary(constituent_excess.iloc[:, 2:],
+                                                                                        peer_res)
+
+            peer_constituent_summaries = pd.concat([peer_constituent_summaries, peer_constituent_summary], axis=0)
 
             peer_excess_spreads = peer_bmrk_excess.mean() - peer_bmrk_excess['Peer50'].mean()
             peer_excess_spreads = peer_excess_spreads.to_frame(peer).T
@@ -604,6 +674,8 @@ if __name__ == "__main__":
         historical_peer_summary = pd.concat(historical_peer_summary, axis=0)
         corr_summaries, peer_corr_mat = peer_residuals.generate_correlation_summaries(peer_residuals=historical_peer_residuals)
         historical_peer_summary = pd.concat([historical_peer_summary, corr_summaries], axis=1)
+
+        peer_constituent_summaries.to_csv('peer_constituent_summaries.csv')
 
         peer_residuals.generate_excel_report(col_order=col_order,
                                              historical_peer_summary=historical_peer_summary,
