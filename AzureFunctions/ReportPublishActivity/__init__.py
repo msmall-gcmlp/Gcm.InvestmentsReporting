@@ -14,7 +14,6 @@ from ..Reporting.core.report_structure import ReportStructure
 from ..Reporting.Reports.controller import get_report_class_by_name
 from azure.core.exceptions import ResourceNotFoundError
 from openpyxl import Workbook
-from openpyxl.writer.excel import save_virtual_workbook
 from ..utils.excel_io import ExcelIO
 from ..Reporting.core.components.report_table import ReportTable
 from ..utils.convert_excel_to_pdf import convert
@@ -97,7 +96,10 @@ class ReportPublishActivity(BaseActivity):
                         template, report_structure
                     )
                 )
-                b = save_virtual_workbook(final_template)
+                wb_stream = io.BytesIO()
+                final_template.save(wb_stream)
+                b = wb_stream.getvalue()
+                # b = save_virtual_workbook(final_template)
                 [params, source] = report_structure.save_params()
                 # TODO: Not sure why this happens with ReportingStorage
 
