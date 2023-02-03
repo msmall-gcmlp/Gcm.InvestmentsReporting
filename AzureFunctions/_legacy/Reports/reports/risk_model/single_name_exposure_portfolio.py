@@ -127,6 +127,7 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
                     self._as_of_date,
                 ]
             })
+
     def generate_single_name_report(self, acronym):
         self._portfolio_acronym = acronym
         header_info = self.get_header_info()

@@ -79,8 +79,8 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
         config_params = {
             DaoRunnerConfigArgs.dao_global_envs.name: {
                 DaoSource.InvestmentsDwh.name: {
-                    "Environment": dwh_environment,
-                    "Subscription": dwh_subscription,
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 DaoSource.DataLake_Blob.name: {
                     "Environment": dwh_environment,
