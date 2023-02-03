@@ -12,7 +12,6 @@ from gcm.Dao.DaoRunner import DaoRunner
 from gcm.Dao.DaoSources import DaoSource
 import openpyxl
 from ..Utils.excel_io import ExcelIO
-from openpyxl.writer.excel import save_virtual_workbook
 import datetime as dt
 import json
 from openpyxl import Workbook
@@ -274,7 +273,9 @@ class ReportStructure(ABC):
                 for k in self.data:
                     wb.create_sheet(title=k)
                     wb = excel_io.write_dataframe_to_xl(wb, self.data[k], k, cell_address)
-            b = save_virtual_workbook(wb)
+            b = io.BytesIO()
+            wb.save(b)
+            b = b.getvalue()
         params = AzureDataLakeDao.create_get_data_params(
             output_dir,
             self.output_name(),
