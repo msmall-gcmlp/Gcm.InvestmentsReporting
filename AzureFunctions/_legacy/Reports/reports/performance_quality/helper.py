@@ -49,7 +49,7 @@ class PerformanceQualityHelper:
     def market_factor_returns(self):
         if len(self.market_factor_returns_daily) > 0:
             returns = AggregateFromDaily().transform(
-                data=self.market_factor_returns_daily[["SBMMTB1 Index", "SPXT Index"]],
+                data=self.market_factor_returns_daily[["I00078US Index", "SPXT Index"]],
                 method="geometric",
                 period=Periodicity.Monthly,
             )
@@ -87,7 +87,7 @@ class PerformanceQualityHelper:
 
     @cached_property
     def rf_return(self):
-        returns = self.market_factor_returns["SBMMTB1 Index"]
+        returns = self.market_factor_returns["I00078US Index"]
         returns.name = "1M_RiskFree"
         return returns.to_frame()
 

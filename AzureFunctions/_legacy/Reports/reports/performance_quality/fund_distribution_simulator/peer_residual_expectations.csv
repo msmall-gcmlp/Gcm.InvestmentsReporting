@@ -1,20 +1,20 @@
-﻿PeerShortName,ResidualVol,BetaToArb,AlphaToArb
-Generalist L/S Eqty,0.04,-0.06,0.03
-Multi-PM,0.04,0.00,0.04
-Macro,0.03,0.04,0.02
-Div Multi-Strat,0.04,-0.07,0.04
-Quant,0.05,-0.17,0.06
-Relative Value,0.04,-0.13,0.05
-Cross Cap,0.04,0.00,0.03
-Fdmtl Credit,0.03,0.07,0.02
-Structured Credit,0.03,0.14,0.03
-L/S Credit,0.02,0.11,0.02
-Europe Credit,0.03,0.07,0.02
-Consumer,0.05,-0.07,0.04
-Energy,0.05,-0.06,0.06
-Financials,0.05,-0.05,0.04
-Healthcare,0.05,-0.08,0.04
-TMT,0.05,-0.05,0.04
-Asia Equity,0.05,-0.05,0.04
-China,0.07,-0.07,0.06
-Europe Eqty,0.04,-0.06,0.03
+﻿PeerShortName,ResidualVol,BetaToArb,Excess_90th,Excess_75th,Excess_50th,Excess_25th,Excess_10th
+Generalist L/S Eqty,0.04,-0.06,0.12,0.08,0.03,-0.02,-0.06
+Multi-PM,0.04,0,0.12,0.08,0.04,0.01,-0.03
+Macro,0.03,0.04,0.12,0.05,0.02,-0.02,-0.06
+Div Multi-Strat,0.04,-0.07,0.12,0.08,0.04,0.01,-0.03
+Quant,0.05,-0.17,0.12,0.08,0.06,-0.02,-0.06
+Relative Value,0.04,-0.13,0.1,0.08,0.05,0.01,-0.03
+Cross Cap,0.04,0,0.08,0.04,0.03,-0.02,-0.05
+Fdmtl Credit,0.03,0.07,0.09,0.05,0.02,-0.01,-0.03
+Structured Credit,0.03,0.14,0.08,0.05,0.03,-0.01,-0.03
+L/S Credit,0.02,0.11,0.08,0.05,0.02,-0.01,-0.03
+Europe Credit,0.03,0.07,0.09,0.05,0.02,-0.01,-0.03
+Consumer,0.05,-0.07,0.15,0.09,0.04,-0.04,-0.07
+Energy,0.05,-0.06,0.15,0.09,0.06,-0.04,-0.07
+Financials,0.05,-0.05,0.15,0.09,0.04,-0.04,-0.07
+Healthcare,0.05,-0.08,0.15,0.09,0.04,-0.04,-0.07
+TMT,0.05,-0.05,0.15,0.09,0.04,-0.04,-0.07
+Asia Equity,0.05,-0.05,0.12,0.09,0.04,-0.04,-0.07
+China,0.07,-0.07,0.15,0.09,0.06,-0.04,-0.07
+Europe Eqty,0.04,-0.06,0.1,0.09,0.03,-0.04,-0.07

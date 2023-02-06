@@ -7,20 +7,20 @@ def orchestrator_function(
     context: df.DurableOrchestrationContext,
 ) -> LegacyTasks:
     # get factor Returns
-    client_input = LegacyReportingOrchParsedArgs.parse_client_inputs(
-        context
+    orchestrator_input: dict = (
+        LegacyReportingOrchParsedArgs.parse_client_inputs(context)
     )
-    params = client_input["params"]
-    disct1 = {
-        "params": {
-            "run": "RunSingleNameEquityExposure",
-            "as_of_date": params["as_of_date"],
-        },
-    }
+    # """
+    # run param can take following values
+    # 'RunSingleNameEquityExposureInvestmentGroupPersist'
+    # 'RunSingleNameEquityExposureInvestmentGroupReport'
+    # 'RunSingleNameEquityExposurePortfolio'
+    # 'RunSingleNameEquityExposureSummary'
+    # """
     return LegacyTasks(
         [
             ActivitySet(
-                [ActivityParams("SingleNameEquityActivity", disct1)]
+                [ActivityParams("SingleNameEquityActivity", orchestrator_input)]
             )
         ]
     )
