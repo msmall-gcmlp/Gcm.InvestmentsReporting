@@ -21,6 +21,8 @@ license__location = (
     + "/"
 )
 
+FONTS_RELATIVE_PATH = "assets/fonts"
+
 
 def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
     java_client.install_jre()
@@ -51,16 +53,11 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
     logging.info("Exporting PDF")
     loadOptions = LoadOptions()
     workbook = Workbook()
-    full_path = pathlib.Path(__file__).parent.resolve()
-    fonts_relative_path = "assets/fonts"
-    fonts_folder_path = os.path.join(full_path, fonts_relative_path)
-    logging.info(f"Fonts directory: {fonts_folder_path}")
-
     wb = workbook.createWorkbookFromBytes(
         file.read(), loadOptions=loadOptions
     )
     wb.calculateFormula(True)
-    FontConfigs.setFontFolder(fonts_folder_path, True)
+    FontConfigs.setFontFolder(get_fonts_path(), True)
 
     v = wb.saveToBytes(SaveFormat.PDF)
     dao.execute(
@@ -68,4 +65,12 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
         source=source,
         operation=lambda d, p: d.post_data(p, v),
     )
-    logging.info("The PDF was saved to ")
+    logging.info(f"Exported PDF: {str(params)}")
+
+
+def get_fonts_path() -> str:
+    full_path = pathlib.Path(__file__).parent.resolve()
+    fonts_folder_path = os.path.join(full_path, FONTS_RELATIVE_PATH)
+    logging.info(f"Fonts directory: {fonts_folder_path}")
+
+    return fonts_folder_path
