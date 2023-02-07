@@ -3,7 +3,7 @@ import logging
 import datetime as dt
 import numpy as np
 from functools import cached_property
-from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.DaoRunner import DaoRunner
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
@@ -667,42 +667,42 @@ if __name__ == "__main__":
                    "GCM Utilities",
                    ]
 
-    peer_groups = ["GCM Multi-PM"]
+    peer_groups = ["GCM Financials"]
 
-    runner = DaoRunner(
-            container_lambda=lambda b, i: b.config.from_dict(i),
-            config_params={
-                DaoRunnerConfigArgs.dao_global_envs.name: {
-                    DaoSource.DataLake.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
-                    },
-                    DaoSource.PubDwh.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
-                    },
-                    DaoSource.InvestmentsDwh.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
-                    },
-                    DaoSource.DataLake_Blob.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
-                    },
-                    DaoSource.ReportingStorage.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
-                    },
-                }
-            })
+    # runner = DaoRunner(
+    #         container_lambda=lambda b, i: b.config.from_dict(i),
+    #         config_params={
+    #             DaoRunnerConfigArgs.dao_global_envs.name: {
+    #                 DaoSource.DataLake.name: {
+    #                     "Environment": "dev",
+    #                     "Subscription": "nonprd",
+    #                 },
+    #                 DaoSource.PubDwh.name: {
+    #                     "Environment": "prd",
+    #                     "Subscription": "prd",
+    #                 },
+    #                 DaoSource.InvestmentsDwh.name: {
+    #                     "Environment": "prd",
+    #                     "Subscription": "prd",
+    #                 },
+    #                 DaoSource.DataLake_Blob.name: {
+    #                     "Environment": "prd",
+    #                     "Subscription": "prd",
+    #                 },
+    #                 DaoSource.ReportingStorage.name: {
+    #                     "Environment": "uat",
+    #                     "Subscription": "nonprd",
+    #                 },
+    #             }
+    #         })
 
-    # runner = DaoRunner()
+    runner = DaoRunner()
 
     as_of_dates = pd.date_range(dt.date(2019, 12, 31), dt.date(2022, 9, 30), freq='Q').tolist()
     as_of_dates = pd.to_datetime(as_of_dates).date.tolist()
 
     for peer_group in peer_groups:
-        as_of_dates = [dt.date(2022, 10, 31)]
+        as_of_dates = [dt.date(2022, 12, 31)]
         for as_of_date in as_of_dates:
             with Scenario(dao=runner, as_of_date=as_of_date).context():
                 PerformanceScreenerReport(peer_group=peer_group).execute()

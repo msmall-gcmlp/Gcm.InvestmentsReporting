@@ -19,9 +19,6 @@ from _legacy.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
-from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
-    AggregateFromDaily,
-)
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
@@ -132,22 +129,20 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _itd_months(self):
-        return self._fund_returns.shape[0]
+        all_returns = self._fund_returns.merge(self._primary_peer_returns, left_index=True, right_index=True)
+        all_returns = all_returns.merge(self._ehi50_returns, left_index=True, right_index=True)
+        all_returns = all_returns.merge(self._ehi200_returns, left_index=True, right_index=True)
+        all_returns = all_returns.merge(self._abs_bmrk_returns, left_index=True, right_index=True)
+        return all_returns.shape[0]
 
     @cached_property
     def _abs_bmrk_returns(self):
         returns = pd.read_json(self._fund_inputs["abs_bmrk_returns"], orient="index")
-        if len(returns) > 1:
-            _abs_bmrk_returns = AggregateFromDaily().transform(
-                data=returns,
-                method="geometric",
-                period=Periodicity.Monthly,
-            )
-        else:
-            _abs_bmrk_returns = pd.DataFrame()
+        if len(returns) <= 1:
+            returns = pd.DataFrame()
 
-        if any(self._fund_id.squeeze() == list(_abs_bmrk_returns.columns)):
-            returns = _abs_bmrk_returns[self._fund_id].squeeze()
+        if any(self._fund_id.squeeze() == list(returns.columns)):
+            returns = returns[self._fund_id].squeeze()
         else:
             returns = pd.DataFrame()
         return returns
