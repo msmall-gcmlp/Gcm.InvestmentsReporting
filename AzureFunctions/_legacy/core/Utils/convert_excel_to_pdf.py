@@ -22,6 +22,7 @@ license__location = (
 
 FONTS_RELATIVE_PATH = "assets/fonts"
 
+
 def convert(
     file: io.BytesIO,
     runner: DaoRunner,
@@ -55,7 +56,7 @@ def convert(
     loadOptions = LoadOptions()
     workbook = Workbook()
     wb = workbook.createWorkbookFromBytes(file.read(), loadOptions=loadOptions)
-    
+
     FontConfigs.setFontFolder(get_fonts_path(), True)
     v = wb.saveToBytes(SaveFormat.PDF)
     runner.execute(
@@ -64,6 +65,7 @@ def convert(
         operation=lambda d, p: d.post_data(p, v),
     )
     logging.info(f"Exported PDF: {str(params)}")
+
 
 def get_fonts_path() -> str:
     full_path = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
