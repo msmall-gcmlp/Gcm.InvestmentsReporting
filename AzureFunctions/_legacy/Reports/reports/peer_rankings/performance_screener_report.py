@@ -383,7 +383,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         # r_squared = self._get_arb_r_squared()
         # summary = excess_return.merge(r_squared, how='left', left_index=True, right_index=True)
 
-        if summary.shape[1] == 0:
+        if summary.shape[1] == 0 or summary.isna().all().squeeze():
             return pd.DataFrame(columns=['Excess', 'ExcessDecile'], index=summary.index)
 
         summary['Excess'] = summary['Excess'] + np.random.random(summary.shape[0]) / 1e3
@@ -620,8 +620,14 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         logging.info("Excel stored to DataLake for: " + self._peer_group)
 
     def run(self, **kwargs):
-        self.generate_performance_screener_report()
-        return self._peer_group + " Complete"
+        try:
+            self.generate_performance_screener_report()
+            result = "Complete"
+
+        except:
+            result = "Failed - Insufficient Data"
+
+        return f"{self._peer_group} {result}"
 
 
 if __name__ == "__main__":
