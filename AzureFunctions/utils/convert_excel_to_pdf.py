@@ -69,7 +69,7 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
 
 
 def get_fonts_path() -> str:
-    full_path = pathlib.Path(__file__).parent.resolve()
+    full_path = pathlib.Path(__file__).parent.parent.resolve()
     fonts_folder_path = os.path.join(full_path, FONTS_RELATIVE_PATH)
     logging.info(f"Fonts directory: {fonts_folder_path}")
 
