@@ -8,8 +8,10 @@ from _legacy.core.reporting_runner_base import (
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario
+from gcm.inv.models.alpha_percentile_conviction.sampling import sample_alpha
 import numpy as np
 import os
+import scipy
 
 
 class SimulateResiduals(ReportingRunnerBase):
@@ -57,7 +59,7 @@ class SimulateResiduals(ReportingRunnerBase):
         return expectations
 
     @staticmethod
-    def _generate_monthly_residual_simulations(cor_mat, names, expectations, number_sims=10_000):
+    def _generate_monthly_residual_simulations(residual_vols, cor_mat, names, number_sims=10_000):
         i_upper = np.triu_indices(cor_mat.shape[0], 1)
         cor_mat[i_upper] = cor_mat.T[i_upper]
         cor_mat = pd.DataFrame(cor_mat)
@@ -65,8 +67,7 @@ class SimulateResiduals(ReportingRunnerBase):
         cor_mat.columns = names
 
         means = [0] * len(names)
-
-        vols = expectations['ResidualVol'].tolist()
+        vols = residual_vols
         vols = [(x * 3 * np.sqrt(1 / 36)).round(5) for x in vols]
 
         cov_mat = np.asarray(cor_mat) * np.outer(vols, vols)
@@ -83,17 +84,34 @@ class SimulateResiduals(ReportingRunnerBase):
         cor_mat = np.asarray(self._raw_peer_cor_mat.iloc[:, 1:])
         raw_peers = self._ordered_raw_peer_names
         peers = raw_peers.map(self._peer_short_name_mapping)
+        res_vols = self._peer_expectations['VolExSystematic'].tolist()
         residuals = self._generate_monthly_residual_simulations(cor_mat=cor_mat,
                                                                 names=peers,
-                                                                expectations=self._peer_expectations,
+                                                                residual_vols=res_vols,
                                                                 number_sims=number_sims)
         return residuals
 
     def _generate_monthly_fund_residual_simulations(self, number_sims=10_000):
         cor_mat = np.asarray(self._raw_fund_cor_mat.iloc[:, 1:])
+        peers = self._fund_expectations['PeerGroup'].loc[self._raw_fund_cor_mat['Fund']]
+        for a in range(peers.shape[0]):
+            for b in range(peers.shape[0]):
+                if peers[a] == peers[b]:
+                    cor_mat[a, b] = max(cor_mat[a, b], 0.30)
+                else:
+                    cor_mat[a, b] = max(cor_mat[a, b], 0.10)
+
+        exp = self._fund_expectations
+        peer_vol = self._peer_expectations['VolExSystematic']
+        peer_vol = peer_vol.loc[exp['PeerGroup']]
+        fund_vol = exp['VolExSystematic']
+        beta = exp['CorrToPeer'] * (fund_vol.values / peer_vol.values)
+        idio_vol = np.sqrt((fund_vol ** 2).values - ((beta ** 2).values * (peer_vol.values ** 2)))
+        # exp['ResidualVol'] = pd.DataFrame(idio_vol, index=fund_vol.index)
+        residual_vols = idio_vol.tolist()
         residuals = self._generate_monthly_residual_simulations(cor_mat=cor_mat,
                                                                 names=self._ordered_raw_fund_names,
-                                                                expectations=self._fund_expectations,
+                                                                residual_vols=residual_vols,
                                                                 number_sims=number_sims)
         return residuals
 
@@ -136,23 +154,41 @@ class SimulateResiduals(ReportingRunnerBase):
 
         return excess
 
-    def _generate_fund_alpha_draw_percentile_draw(self, rolling_years=3, number_sims=10_000):
-        # n_months = int(rolling_years * 12)
-        #
-        # # each monthly alpha is a random draw
-        # monthly_draw = pd.DataFrame([random.random() for x in range(number_sims + n_months - 1)])
-        #
-        # np.random.normal(0.05, 0.1, 100)
-        #
-        # # over rolling 3-year period, total alpha is rolling average of monthly draws
-        # # rolling_draw represents the percentile of alpha from alpha distribution
-        # rolling_draw = monthly_draw.rolling(n_months).mean().dropna().rank(pct=True)
-        return True
+    @staticmethod
+    def _generate_rolling_index(number_sims, n_months):
+        # uniform draw of monthly indexes
+        independent_monthly_draws = pd.DataFrame([np.random.random() for x in range(number_sims + n_months - 1)])
+        rolling_index = independent_monthly_draws.rolling(n_months).mean().dropna().rank().astype(int)
+        rolling_index = rolling_index.squeeze().tolist()
+        return rolling_index
+
+    def _simulate_fund_excess_to_arb(self, fund_excess_ptile, peer_excess_grid, conviction=3,
+                                     rolling_years=3, number_sims=10_000, conf_level_cap=0.80):
+        n_months = int(rolling_years * 12)
+
+        independent_alphas = sample_alpha(
+            fund_ptile_mode=fund_excess_ptile,
+            conviction_level=conviction,
+            peer_alpha_25th=peer_excess_grid.loc['Excess_25th'],
+            peer_alpha_75th=peer_excess_grid.loc['Excess_75th'],
+            max_alpha=(peer_excess_grid.loc['Excess_90th'] + 0.05),
+            min_alpha=(peer_excess_grid.loc['Excess_10th'] - 0.05),
+            num_samples=number_sims + n_months - 1,
+            conf_level_cap=conf_level_cap)
+        independent_alphas = pd.DataFrame(sorted(independent_alphas))
+
+        rolling_index = self._generate_rolling_index(number_sims=number_sims, n_months=n_months)
+
+        rolling_alphas = independent_alphas.iloc[rolling_index, :]
+        rolling_alphas = rolling_alphas.reset_index(drop=True).squeeze()
+
+        return rolling_alphas
 
     def generate_rolling_fund_excess_simulations(self, arb_sims, peer_sims, rolling_years=3, number_sims=10_000):
         error = self._generate_rolling_fund_residual_simulations(rolling_years=rolling_years, number_sims=number_sims)
         excess = error.copy()
         for fund in error.columns:
+            print(fund)
             exp = self._fund_expectations.loc[fund]
             peer_group = exp.loc['PeerGroup']
             peer_exp = self._peer_expectations.loc[peer_group]
@@ -165,9 +201,17 @@ class SimulateResiduals(ReportingRunnerBase):
             arb = self._peer_arb_mapping[self._peer_arb_mapping['ReportingPeerGroup'] == peer_group]['Ticker']
 
             market_beta_ctr = (exp.loc['NetNotional'] * arb_sims[arb]).squeeze()
-            peer_beta_ctr = (exp.loc['BetaToPeer'] * peer_sims[peer_group]).squeeze()
+            beta_to_peer = exp.loc['CorrToPeer'] * (exp.loc['VolExSystematic'] / peer_exp.loc['VolExSystematic'])
+            peer_beta_ctr = (beta_to_peer * peer_sims[peer_group]).squeeze()
             fund_error = error[fund]
-            fund_alpha = peer_alphas.loc['Excess_' + str(exp.loc['ExcessPtile']) + 'th']
+
+            fund_excess = self._simulate_fund_excess_to_arb(fund_excess_ptile=exp.loc['ExcessPtile'] / 100,
+                                                            peer_excess_grid=peer_alphas,
+                                                            conviction=exp.loc['Conviction'])
+
+            # fund_excess includes benefits of exposure to premia embedded in peer group.
+            # need to subtract the peer beta ctr from the excess to arrive at fund-specific delta
+            fund_alpha = fund_excess - peer_beta_ctr.mean()
             excess[fund] = market_beta_ctr + peer_beta_ctr + fund_alpha + fund_error
 
         return excess
@@ -208,7 +252,18 @@ if __name__ == "__main__":
         peer_sims = SimulateResiduals().generate_rolling_peer_excess_simulations(arb_sims=arb_sims)
         fund_sims = SimulateResiduals().generate_rolling_fund_excess_simulations(arb_sims=arb_sims,
                                                                                  peer_sims=peer_sims)
-        sims = pd.concat([arb_sims, peer_sims], axis=1)
+        sims = pd.concat([arb_sims, peer_sims, fund_sims], axis=1)
         sim_cor_mat = sims.corr().round(1)
-        sims.mean()
-        sims.std()
+
+        fund_sim_cor_mat = fund_sims.corr().round(1)
+        sim_summary = pd.DataFrame({'Return': fund_sims.mean(),
+                      'Vol': fund_sims.std() / np.sqrt(1 / 3),
+                      'Sharpe': (fund_sims.mean() - 0.03) / (fund_sims.std() / np.sqrt(1 / 3)),
+                      'AvgCorr': (fund_sim_cor_mat.sum() - 1) / (fund_sim_cor_mat.shape[0] - 1)})
+
+        scipy.stats.linregress(y=fund_sims.mean(axis=1), x=arb_sims['SPXT Index'])
+
+        sim_summary.to_csv('sim_summary.csv')
+
+        tmp = (pd.Series([1 / 65] * 65) @ np.asarray(fund_sims.cov()))
+        tmp = pd.DataFrame(tmp, index=fund_sim_cor_mat.index).sort_values(0)

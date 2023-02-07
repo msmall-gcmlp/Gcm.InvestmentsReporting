@@ -261,8 +261,16 @@ class PeerResidualReturns(ReportingRunnerBase):
         return rolling_returns
 
     def calculate_median_constituent_vol(self, constituent_returns):
-        median_1y_vol = (constituent_returns.std() * np.sqrt(12)).median()
-        return median_1y_vol
+        rolling_returns = Analytics().compute_trailing_return(ror=constituent_returns,
+                                                              window=36,
+                                                              as_of_date=self._as_of_date,
+                                                              method='geometric',
+                                                              periodicity=Periodicity.Monthly,
+                                                              annualize=True,
+                                                              include_history=True)
+        median_rolling_return = rolling_returns.median(axis=1)
+        median_total_vol = median_rolling_return.std()
+        return median_total_vol
 
     @staticmethod
     def calculate_median_constituent_beta(constituent_returns, benchmark_returns):
@@ -468,6 +476,7 @@ class PeerResidualReturns(ReportingRunnerBase):
 
     def generate_peer_constituent_summary(self, peer_constituent_excess_to_arb, peer_bmrk_residuals):
         summary = pd.DataFrame(index=peer_constituent_excess_to_arb.columns)
+        residuals = pd.DataFrame()
 
         for fund in summary.index:
             fund_peer = pd.concat([peer_constituent_excess_to_arb[[fund]], peer_bmrk_residuals], axis=1).dropna()
@@ -499,8 +508,11 @@ class PeerResidualReturns(ReportingRunnerBase):
                                                        y=fund_peer.iloc[:, 0],
                                                        beta=fit[0],
                                                        alpha=fit[1])
-
                 resid_vol = historical_residuals.std()
+
+                historical_residuals = historical_residuals.to_frame(fund)
+                residuals = pd.concat([residuals, historical_residuals], axis=1)
+
                 summary.loc[fund, 'AlphaToPeer'] = alpha
                 summary.loc[fund, 'BetaToPeer'] = beta
                 summary.loc[fund, 'ResidVolToPeer'] = resid_vol
@@ -513,7 +525,7 @@ class PeerResidualReturns(ReportingRunnerBase):
         resid_vols = summary['ResidVolToPeer']
         summary['HumbledResidVolToPeer'] = self._humble_by_binning(resid_vols, round_to=0.01)
         summary['HumbledBetaToPeer'] = summary['HumbledExcessVolRatio'] * summary['HumbledCorr']
-        return summary
+        return summary, residuals
 
     def run(self, **kwargs):
         return True
@@ -577,138 +589,115 @@ if __name__ == "__main__":
 
         for peer in peer_groups['ReportingPeerGroup'].tolist():
             print(peer)
+            peer = 'GCM TMT'
             bmrk_name = peer_residuals.get_peer_benchmark(peer=peer)
             bmrk_monthly_returns = benchmark_returns[[bmrk_name]]
 
             constituent_monthly_returns = peer_residuals.query_peer_returns(peer=peer, min_peer_coverage=0.3)
-            ehi_bmrk = peer_residuals.get_peer_ehi_benchmark(peer)
-            ehi_constituent_monthly_returns = peer_residuals.query_ehi_constituent_returns(benchmark_name=ehi_bmrk, min_peer_coverage=0.3)
+            # ehi_bmrk = peer_residuals.get_peer_ehi_benchmark(peer)
+            # ehi_constituent_monthly_returns = peer_residuals.query_ehi_constituent_returns(benchmark_name=ehi_bmrk, min_peer_coverage=0.3)
 
             constituent_excess = calculate_rolling_excess_returns(peer_returns=constituent_monthly_returns,
                                                                   benchmark_returns=bmrk_monthly_returns)
 
-            ehi_constituent_excess = calculate_rolling_excess_returns(peer_returns=ehi_constituent_monthly_returns,
-                                                                      benchmark_returns=bmrk_monthly_returns)
+            # ehi_constituent_excess = calculate_rolling_excess_returns(peer_returns=ehi_constituent_monthly_returns,
+            #                                                           benchmark_returns=bmrk_monthly_returns)
 
             peer_bmrk_excess = peer_residuals.calculate_ptile_bmrks(constituent_returns=constituent_excess,
                                                                     ptiles=[10, 25, 50, 75, 90])
 
-            ehi_bmrk_excess = peer_residuals.calculate_ptile_bmrks(constituent_returns=ehi_constituent_excess,
-                                                                   ptiles=[10, 25, 50, 75, 90])
-
-            ehi_top_qtile_excess = peer_residuals.calculate_ptile_bmrks(constituent_returns=ehi_constituent_excess,
-                                                                        ptiles=[63])
+            # ehi_bmrk_excess = peer_residuals.calculate_ptile_bmrks(constituent_returns=ehi_constituent_excess,
+            #                                                        ptiles=[10, 25, 50, 75, 90])
+            #
+            # ehi_top_qtile_excess = peer_residuals.calculate_ptile_bmrks(constituent_returns=ehi_constituent_excess,
+            #                                                             ptiles=[63])
 
             peer_summary, peer_res = peer_residuals.generate_historical_peer_summary(peer_excess=peer_bmrk_excess,
                                                                                      bmrk_returns=constituent_excess.iloc[:, 0].to_frame(),
                                                                                      peer_name=peer)
 
-            peer_constituent_summary = peer_residuals.generate_peer_constituent_summary(constituent_excess.iloc[:, 2:],
-                                                                                        peer_res)
+            peer_constituent_summary, peer_constituent_res = \
+                peer_residuals.generate_peer_constituent_summary(constituent_excess.iloc[:, 2:], peer_res)
+
+            def calculate_pvalues(df):
+                dfcols = pd.DataFrame(columns=df.columns)
+                pvalues = dfcols.transpose().join(dfcols, how='outer')
+                for r in df.columns:
+                    for c in df.columns:
+                        tmp = df[df[r].notnull() & df[c].notnull()]
+                        pvalues[r][c] = round(spearmanr(tmp[r], tmp[c])[1], 4)
+                return pvalues
+
+            def calculate_corrs(df):
+                dfcols = pd.DataFrame(columns=df.columns)
+                corrs = dfcols.transpose().join(dfcols, how='outer')
+                for r in df.columns:
+                    for c in df.columns:
+                        tmp = df[df[r].notnull() & df[c].notnull()]
+                        corrs[r][c] = round(spearmanr(tmp[r], tmp[c])[0], 4)
+                p_values = calculate_pvalues(df)
+                corrs[p_values > 0.1] = 0
+                return corrs
+
+            cor_mat = calculate_corrs(peer_constituent_res)
 
             peer_constituent_summaries = pd.concat([peer_constituent_summaries, peer_constituent_summary], axis=0)
 
-            peer_excess_spreads = peer_bmrk_excess.mean() - peer_bmrk_excess['Peer50'].mean()
-            peer_excess_spreads = peer_excess_spreads.to_frame(peer).T
-
-            peer_summary.loc[:, peer_excess_spreads.columns] = peer_excess_spreads.values
-            peer_summary.loc[:, 'ItdTotalVol'] = peer_residuals.calculate_median_constituent_vol(
-                constituent_returns=constituent_monthly_returns)
-            peer_summary.loc[:, 'ItdBetaVsBmrk'] = peer_residuals.calculate_median_constituent_beta(
-                constituent_returns=constituent_monthly_returns, benchmark_returns=bmrk_monthly_returns)
-
-            ehi_top_qtile_summary, ehi_top_qtile_res = \
-                peer_residuals.generate_historical_ehi_constituent_summary(peer_excess=ehi_top_qtile_excess,
-                                                                           bmrk_returns=ehi_constituent_excess.iloc[:, 0].to_frame(),
-                                                                           peer_name=peer)
-
-            gcm_summary, gcm_res = peer_residuals.generate_historical_bmrk_summary(peer_name=peer, bmrk_type='gcm')
-            ehi_summary, ehi_res = peer_residuals.generate_historical_bmrk_summary(peer_name=peer, bmrk_type='ehi')
-
-            ehi_bmrk_excess_spreads = ehi_bmrk_excess.mean() - ehi_bmrk_excess['Peer50'].mean()
-            ehi_bmrk_excess_spreads = ehi_bmrk_excess_spreads.to_frame(peer).T
-            ehi_summary.loc[:, ehi_bmrk_excess_spreads.columns] = ehi_bmrk_excess_spreads.values
-            ehi_summary.loc[:, 'ItdTotalVol'] = peer_residuals.calculate_median_constituent_vol(
-                constituent_returns=ehi_constituent_monthly_returns)
-            ehi_summary.loc[:, 'ItdBetaVsBmrk'] = peer_residuals.calculate_median_constituent_beta(
-                constituent_returns=ehi_constituent_monthly_returns, benchmark_returns=bmrk_monthly_returns)
-
-            summary = pd.concat([peer_summary, gcm_summary, ehi_summary, ehi_top_qtile_summary], axis=0)
-
-            peer_res = peer_res.to_frame()
-            peer_res.columns = pd.MultiIndex.from_tuples([(peer, 'Peer')], names=["PeerGroup", "BmrkType"])
-
-            gcm_res = gcm_res.to_frame()
-            gcm_res.columns = pd.MultiIndex.from_tuples([(peer, 'gcm')], names=["PeerGroup", "BmrkType"])
-
-            ehi_res = ehi_res.to_frame()
-            ehi_res.columns = pd.MultiIndex.from_tuples([(peer, 'ehi')], names=["PeerGroup", "BmrkType"])
-
-            ehi_top_qtile_res = ehi_top_qtile_res.to_frame()
-            ehi_top_qtile_res.columns = pd.MultiIndex.from_tuples([(peer, 'EhiTop')], names=["PeerGroup", "BmrkType"])
-
-            residuals = pd.concat([peer_res, gcm_res, ehi_res, ehi_top_qtile_res], axis=1)
-
-            avg_corr_5 = ((residuals.tail(60).corr().sum() - 1) / (residuals.shape[1] - 1)).to_frame('IntraPeerBmrkCorr5Y')
-            avg_corr_itd = ((residuals.corr().sum() - 1) / (residuals.shape[1] - 1)).to_frame('IntraPeerBmrkCorrItd')
-            summary = pd.concat([summary, avg_corr_5, avg_corr_itd], axis=1)
-
-            historical_peer_summary.append(summary)
-            historical_peer_residuals = pd.concat([historical_peer_residuals, residuals], axis=1)
-            # fund_summary = pd.DataFrame(index=rolling_excess_returns.columns[2:])
-            # for fund in rolling_excess_returns.columns[2:]:
-            #     fund_and_median_peer_excess = median_peer_excess.merge(rolling_excess_returns[[fund]], left_index=True, right_index=True)
-            #     fund_and_median_peer_excess = fund_and_median_peer_excess.dropna()
+            # peer_excess_spreads = peer_bmrk_excess.mean() - peer_bmrk_excess['Peer50'].mean()
+            # peer_excess_spreads = peer_excess_spreads.to_frame(peer).T
             #
-            #     if fund_and_median_peer_excess.shape[0] > 0:
-            #         fit = scipy.stats.linregress(x=fund_and_median_peer_excess['PeerBmrk'], y=fund_and_median_peer_excess[fund])
-            #         fund_summary.loc[fund, 'Beta'] = fit[0]
-            #         fund_summary.loc[fund, 'Alpha'] = fit[1]
+            # peer_summary.loc[:, peer_excess_spreads.columns] = peer_excess_spreads.values
+            # peer_summary.loc[:, 'ItdTotalVol'] = peer_residuals.calculate_median_constituent_vol(
+            #     constituent_returns=constituent_monthly_returns)
+            # peer_summary.loc[:, 'ItdBetaVsBmrk'] = peer_residuals.calculate_median_constituent_beta(
+            #     constituent_returns=constituent_monthly_returns, benchmark_returns=bmrk_monthly_returns)
             #
-            #         fund_residuals = fund_and_median_peer_excess[fund] - (fit[0] * fund_and_median_peer_excess['PeerBmrk'] + fit[1])
-            #         fund_summary.loc[fund, 'ResidVol'] = fund_residuals.std()
-            #         fund_summary.loc[fund, 'ExcessVol'] = fund_and_median_peer_excess[fund].std()
-            #         fund_summary.loc[fund, 'CorrToPeerMedian'] = fund_and_median_peer_excess.corr().iloc[0, 1]
-            # fund_summaries[peer] = fund_summary
+            # ehi_top_qtile_summary, ehi_top_qtile_res = \
+            #     peer_residuals.generate_historical_ehi_constituent_summary(peer_excess=ehi_top_qtile_excess,
+            #                                                                bmrk_returns=ehi_constituent_excess.iloc[:, 0].to_frame(),
+            #                                                                peer_name=peer)
+            #
+            # gcm_summary, gcm_res = peer_residuals.generate_historical_bmrk_summary(peer_name=peer, bmrk_type='gcm')
+            # ehi_summary, ehi_res = peer_residuals.generate_historical_bmrk_summary(peer_name=peer, bmrk_type='ehi')
+            #
+            # ehi_bmrk_excess_spreads = ehi_bmrk_excess.mean() - ehi_bmrk_excess['Peer50'].mean()
+            # ehi_bmrk_excess_spreads = ehi_bmrk_excess_spreads.to_frame(peer).T
+            # ehi_summary.loc[:, ehi_bmrk_excess_spreads.columns] = ehi_bmrk_excess_spreads.values
+            # ehi_summary.loc[:, 'ItdTotalVol'] = peer_residuals.calculate_median_constituent_vol(
+            #     constituent_returns=ehi_constituent_monthly_returns)
+            # ehi_summary.loc[:, 'ItdBetaVsBmrk'] = peer_residuals.calculate_median_constituent_beta(
+            #     constituent_returns=ehi_constituent_monthly_returns, benchmark_returns=bmrk_monthly_returns)
+            #
+            # summary = pd.concat([peer_summary, gcm_summary, ehi_summary, ehi_top_qtile_summary], axis=0)
+            #
+            # peer_res = peer_res.to_frame()
+            # peer_res.columns = pd.MultiIndex.from_tuples([(peer, 'Peer')], names=["PeerGroup", "BmrkType"])
+            #
+            # gcm_res = gcm_res.to_frame()
+            # gcm_res.columns = pd.MultiIndex.from_tuples([(peer, 'gcm')], names=["PeerGroup", "BmrkType"])
+            #
+            # ehi_res = ehi_res.to_frame()
+            # ehi_res.columns = pd.MultiIndex.from_tuples([(peer, 'ehi')], names=["PeerGroup", "BmrkType"])
+            #
+            # ehi_top_qtile_res = ehi_top_qtile_res.to_frame()
+            # ehi_top_qtile_res.columns = pd.MultiIndex.from_tuples([(peer, 'EhiTop')], names=["PeerGroup", "BmrkType"])
+            #
+            # residuals = pd.concat([peer_res, gcm_res, ehi_res, ehi_top_qtile_res], axis=1)
+            #
+            # avg_corr_5 = ((residuals.tail(60).corr().sum() - 1) / (residuals.shape[1] - 1)).to_frame('IntraPeerBmrkCorr5Y')
+            # avg_corr_itd = ((residuals.corr().sum() - 1) / (residuals.shape[1] - 1)).to_frame('IntraPeerBmrkCorrItd')
+            # summary = pd.concat([summary, avg_corr_5, avg_corr_itd], axis=1)
+            #
+            # historical_peer_summary.append(summary)
+            # historical_peer_residuals = pd.concat([historical_peer_residuals, residuals], axis=1)
 
-        historical_peer_summary = pd.concat(historical_peer_summary, axis=0)
-        corr_summaries, peer_corr_mat = peer_residuals.generate_correlation_summaries(peer_residuals=historical_peer_residuals)
-        historical_peer_summary = pd.concat([historical_peer_summary, corr_summaries], axis=1)
+        # historical_peer_summary = pd.concat(historical_peer_summary, axis=0)
+        # corr_summaries, peer_corr_mat = peer_residuals.generate_correlation_summaries(peer_residuals=historical_peer_residuals)
+        # historical_peer_summary = pd.concat([historical_peer_summary, corr_summaries], axis=1)
 
         peer_constituent_summaries.to_csv('peer_constituent_summaries.csv')
 
-        peer_residuals.generate_excel_report(col_order=col_order,
-                                             historical_peer_summary=historical_peer_summary,
-                                             peer_corr_mat=peer_corr_mat,
-                                             arb_assumptions=arb_assumptions)
-
-        # historical_peer_summary.to_csv('historical_peer_summary.csv')
-        # historical_peer_residuals = historical_peer_residuals.dropna()
-        # cor_mat = historical_peer_residuals.corr()  # check correlation of comps (i.e. peer vs. cw vs. eh)
-        # cor_mat.to_csv('resid_cor_mat.csv')
-        #
-        # historical_peer_residuals['GCM Generalist Long/Short Equity'].corr()
-        #
-        #
-        #
-        #
-        # historical_peer_summary[['PeerAlpha', 'gcmAlpha', 'ehiAlpha', 'EhiTopAlpha']]
-        # historical_peer_summary[['PeerCorr_50th', 'gcmCorr', 'ehiCorr', 'EhiTopCorr']]
-        # historical_peer_summary[['PeerVolOverBmrkVol', 'gcmVolOverBmrkVol', 'ehiVolOverBmrkVol', 'EhiTopVolOverBmrkVol']]
-        #
-        # print(fund_summaries['GCM TMT'].loc[['Skye', 'SRS Partners', 'D1 Capital', 'Tiger Global']])
-        # print(fund_summaries['GCM Generalist Long/Short Equity'].loc[['D1 Capital', 'Tiger Global', 'Skye']])
-        # median_peer_excess_res_cor_mat = median_peer_excess_residuals.corr()
-        # median_peer_excess_res_cor_mat.median().sort_values(ascending=False)
-        # passive_benchmarks_cor_mat = passive_benchmarks.corr()
-        # combined_cor_mat = passive_benchmarks.merge(median_peer_excess_residuals, left_index=True, right_index=True).corr()
-        # combined_cor_mat = combined_cor_mat.round(2)
-        #
-        # confirm close to 0 as we'll be assume excesses are uncorrelated to passive bmrks
-        # combined_cor_mat.loc[median_peer_excess_residuals.columns, passive_benchmarks.columns].median().median()
-        #
-        # confirm not close to 0
-        # combined_cor_mat.loc[median_peer_excess_residuals.columns, median_peer_excess_residuals.columns].median().median()
-        # summary['alpha'] / summary['ResidVol']
-        # tmp = summary.sort_values('CorrToBmrk')
-        # combined_cor_mat.loc[['GCM Multi-PM', 'GCM TMT', 'XNDX Index', 'GDDUWI Index'], ['GCM Multi-PM', 'GCM TMT', 'XNDX Index', 'GDDUWI Index']]
+        # peer_residuals.generate_excel_report(col_order=col_order,
+        #                                      historical_peer_summary=historical_peer_summary,
+        #                                      peer_corr_mat=peer_corr_mat,
+        #                                      arb_assumptions=arb_assumptions)
