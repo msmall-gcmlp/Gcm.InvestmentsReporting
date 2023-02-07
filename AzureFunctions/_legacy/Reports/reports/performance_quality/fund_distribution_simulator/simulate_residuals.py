@@ -257,8 +257,8 @@ if __name__ == "__main__":
 
         fund_sim_cor_mat = fund_sims.corr().round(1)
         sim_summary = pd.DataFrame({'Return': fund_sims.mean(),
-                      'Vol': fund_sims.std() / np.sqrt(1/3),
-                      'Sharpe': (fund_sims.mean() - 0.03) / (fund_sims.std() / np.sqrt(1/3)),
+                      'Vol': fund_sims.std() / np.sqrt(1 / 3),
+                      'Sharpe': (fund_sims.mean() - 0.03) / (fund_sims.std() / np.sqrt(1 / 3)),
                       'AvgCorr': (fund_sim_cor_mat.sum() - 1) / (fund_sim_cor_mat.shape[0] - 1)})
 
         scipy.stats.linregress(y=fund_sims.mean(axis=1), x=arb_sims['SPXT Index'])
