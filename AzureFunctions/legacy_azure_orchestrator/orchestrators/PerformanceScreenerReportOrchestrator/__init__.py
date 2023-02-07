@@ -45,7 +45,7 @@ def orchestrator_function(
             "GCM Fundamental Credit",
             "GCM Generalist Long/Short Equity",
             "GCM Healthcare",
-            "GCM Illiquid Credit",
+            # "GCM Illiquid Credit",
             # "GCM India",
             "GCM Industrials",
             "GCM Japan",
