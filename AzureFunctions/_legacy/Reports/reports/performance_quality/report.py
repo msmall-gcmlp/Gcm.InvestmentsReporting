@@ -131,6 +131,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.DataFrame()
 
     @cached_property
+    def _itd_months(self):
+        return self._fund_returns.shape[0]
+
+    @cached_property
     def _abs_bmrk_returns(self):
         returns = pd.read_json(self._fund_inputs["abs_bmrk_returns"], orient="index")
         if len(returns) > 1:
@@ -533,7 +537,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         returns = returns.copy()
         if returns.shape[0] == 0:
             return pd.DataFrame(
-                index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y"],
+                index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y", "ITD"],
                 columns=["Fund"],
             )
 
@@ -594,6 +598,15 @@ class PerformanceQualityReport(ReportingRunnerBase):
             annualize=True,
         )
 
+        itd_return = self._analytics.compute_trailing_return(
+            ror=returns,
+            window=self._itd_months,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            periodicity=Periodicity.Monthly,
+            annualize=True if self._itd_months > 12 else False,
+        )
+
         # rounding to 2 so that Excess Return matches optically
         stats = [
             mtd_return,
@@ -603,11 +616,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
             trailing_3y_return,
             trailing_5y_return,
             trailing_10y_return,
+            itd_return
         ]
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame(
             {return_type: [round(x, 2) if isinstance(x, float) else " " for x in stats]},
-            index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y"],
+            index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y", "ITD"],
         )
         return summary
 
@@ -774,10 +788,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
             left_index=True,
             right_index=True,
         )
-        summary = summary.merge(primary_peer_percentiles, left_index=True, right_index=True)
-        summary = summary.merge(secondary_peer_percentiles, left_index=True, right_index=True)
-        summary = summary.merge(eurekahedge_percentiles, left_index=True, right_index=True)
-        summary = summary.merge(ehi200_percentiles, left_index=True, right_index=True)
+        summary = summary.merge(primary_peer_percentiles, left_index=True, right_index=True, how='left')
+        summary = summary.merge(secondary_peer_percentiles, left_index=True, right_index=True, how='left')
+        summary = summary.merge(eurekahedge_percentiles, left_index=True, right_index=True, how='left')
+        summary = summary.merge(ehi200_percentiles, left_index=True, right_index=True, how='left')
 
         summary = summary.fillna("")
         return summary
