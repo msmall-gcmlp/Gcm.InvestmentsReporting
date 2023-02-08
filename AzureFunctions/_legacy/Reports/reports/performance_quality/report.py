@@ -686,6 +686,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
             if constituent_total_returns is None or len(constituent_total_returns) == 0:
                 return pd.DataFrame({group_name: [""] * len(index)}, index=index)
 
+        if fund_returns.loc["MTD"].squeeze() == ' ':
+            return pd.DataFrame({group_name: [""] * len(index)}, index=index)
+
         mtd_ptile = self._calculate_periodic_percentile(fund_periodic_return=fund_returns.loc["MTD"],
                                                         period=PeriodicROR.MTD,
                                                         peer_monthly_rors=constituent_monthly_rors,
