@@ -25,6 +25,9 @@ from .activities.PerformanceScreenerReportActivity import (
 from .activities.SingleNameEquityActivity import (
     main as singlename_equityexposure_main,
 )
+from .activities.XPFundPqReportActivity import (
+    main as x_pfund_pq_report_main,
+)
 
 
 class LegacyReportConstructorActivity(LegacyActivity):
@@ -41,7 +44,8 @@ class LegacyReportConstructorActivity(LegacyActivity):
             LegacyActivities.HkmaMarketPerformanceReportActivity: hkma_report_main,
             LegacyActivities.MarketPerformanceReportActivity: market_report_main,
             LegacyActivities.PerformanceScreenerReportActivity: perf_screener_main,
-            LegacyActivities.SingleNameEquityActivity: singlename_equityexposure_main
+            LegacyActivities.SingleNameEquityActivity: singlename_equityexposure_main,
+            LegacyActivities.XPFundPqReportActivity: x_pfund_pq_report_main,
         }
 
     @property

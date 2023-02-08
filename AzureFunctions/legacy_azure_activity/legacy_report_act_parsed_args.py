@@ -15,6 +15,7 @@ class LegacyActivities(ExtendedEnum):
     MarketPerformanceReportActivity = auto()
     PerformanceScreenerReportActivity = auto()
     SingleNameEquityActivity = auto()
+    XPFundPqReportActivity = auto()
 
 
 class LegacyReportingActivityParsedArgs(LegacyReportingOrchParsedArgs):
