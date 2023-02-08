@@ -187,7 +187,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.read_json(self._primary_peer_analytics["gcm_peer_returns"], orient="index")
             return returns.squeeze()
         else:
-            return pd.Series()
+            return pd.Series(name='PrimaryPeer')
 
     @cached_property
     def _primary_peer_counts(self):
@@ -231,7 +231,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.read_json(inputs["eurekahedge_returns"], orient="index")
             return returns.squeeze()
         else:
-            return pd.Series()
+            return pd.Series(name='Ehi50')
 
     @cached_property
     def _ehi200_returns(self):
@@ -242,7 +242,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if isinstance(returns, pd.DataFrame):
             return returns.squeeze()
         else:
-            return pd.Series()
+            return pd.Series(name='Ehi200')
 
     @cached_property
     def _eurekahedge_constituent_returns(self):
@@ -1674,8 +1674,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
         logging.info("Excel stored to DataLake for: " + self._fund_name)
 
     def run(self, **kwargs):
-        self.generate_performance_quality_report()
-        return self._fund_name + ' Complete'
+        try:
+            self.generate_performance_quality_report()
+            return f"{self._fund_name} Complete"
+        except Exception as e:
+            raise RuntimeError(f"Failed for {self._fund_name}") from e
 
 
 if __name__ == "__main__":
