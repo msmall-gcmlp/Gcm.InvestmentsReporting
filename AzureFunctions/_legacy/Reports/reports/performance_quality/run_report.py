@@ -64,18 +64,18 @@ if __name__ == "__main__":
     for as_of_date in [dt.date(2022, 12, 31)]:
         with Scenario(dao=runner, as_of_date=as_of_date).context():
             report_runner = RunPerformanceQualityReports(as_of_date=as_of_date)
-            # prd_ids = [20016,
-            #            23441,
-            #            28015,
-            #            75614,
-            #            85905]
-            # # dev_ids = [19224, 23319, 74984]
-            #
-            # funds_and_peers = report_runner.generate_report_data(investment_group_ids=prd_ids)
-            #
-            # funds_and_peers = json.loads(funds_and_peers)
-            # fund_names = funds_and_peers.get("fund_names")
-            # peer_groups = funds_and_peers.get("peer_groups")
-            #
-            # report_runner.generate_peer_summaries(peer_groups=peer_groups)
-            report_runner.generate_fund_reports(fund_names=['AHP Fund II PV Off'])
+            prd_ids = [20016,
+                       23441,
+                       28015,
+                       75614,
+                       85905]
+            # dev_ids = [19224, 23319, 74984]
+
+            funds_and_peers = report_runner.generate_report_data(investment_group_ids=prd_ids)
+
+            funds_and_peers = json.loads(funds_and_peers)
+            fund_names = funds_and_peers.get("fund_names")
+            peer_groups = funds_and_peers.get("peer_groups")
+
+            report_runner.generate_peer_summaries(peer_groups=peer_groups)
+            report_runner.generate_fund_reports(fund_names=fund_names)
