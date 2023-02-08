@@ -39,7 +39,7 @@ class RunXPFundPqReport(ReportingRunnerBase):
             entity_type=ReportingEntityTypes.cross_entity,
             entity_name='FIRM',
             entity_display_name='FIRM',
-            report_name="ARS Performance Quality",
+            report_name="ARS Performance Quality - Firm x Portfolio Fund",
             report_type=ReportType.Performance,
             report_vertical=ReportVertical.ARS,
             report_frequency="Monthly",
