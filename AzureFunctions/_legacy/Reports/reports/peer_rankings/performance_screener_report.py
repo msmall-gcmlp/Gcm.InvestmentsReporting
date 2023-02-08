@@ -460,6 +460,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         summary['Rank'] = [round(x, 0) if x != -100 else np.NAN for x in summary['Rank']]
 
         name_overrides = dict(zip(self._constituents['InvestmentGroupName'], self._constituents['InvestmentName']))
+        summary["InvestmentGroupNameRaw"] = summary["InvestmentGroupName"]
         summary["InvestmentGroupName"] = summary["InvestmentGroupName"].replace(name_overrides)
         summary["InvestmentGroupName"] = summary["InvestmentGroupName"].str.slice(0, 27)
 
@@ -565,7 +566,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         input_data = {
             "header_info1": header_info,
             "header_info2": header_info,
-            "summary_table": summary_table,
+            "summary_table": summary_table.drop(columns={'InvestmentGroupNameRaw'}),
             "calendar_return_headings": calendar_return_headings,
             "omitted_funds": omitted_funds,
             "constituents1": constituent_counts,
@@ -667,15 +668,15 @@ if __name__ == "__main__":
                    "GCM Utilities",
                    ]
 
-    peer_groups = ["GCM Financials"]
+    peer_groups = ["GCM TMT"]
 
     # runner = DaoRunner(
     #         container_lambda=lambda b, i: b.config.from_dict(i),
     #         config_params={
     #             DaoRunnerConfigArgs.dao_global_envs.name: {
     #                 DaoSource.DataLake.name: {
-    #                     "Environment": "dev",
-    #                     "Subscription": "nonprd",
+    #                     "Environment": "prd",
+    #                     "Subscription": "prd",
     #                 },
     #                 DaoSource.PubDwh.name: {
     #                     "Environment": "prd",
@@ -690,8 +691,8 @@ if __name__ == "__main__":
     #                     "Subscription": "prd",
     #                 },
     #                 DaoSource.ReportingStorage.name: {
-    #                     "Environment": "uat",
-    #                     "Subscription": "nonprd",
+    #                     "Environment": "prd",
+    #                     "Subscription": "prd",
     #                 },
     #             }
     #         })
