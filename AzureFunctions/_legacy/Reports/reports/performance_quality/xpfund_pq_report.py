@@ -96,19 +96,29 @@ def _pivot_and_reindex(data, level_1_cols, level_2_cols):
     return data
 
 
-def _format_benchmark_summary(full_stats):
+def _format_benchmark_excess_summary(full_stats):
     data = full_stats['benchmark_summary']
     # Excludes: AbsoluteReturnBenchmark, GcmPeer, EHI50, EHI200
     cols = ['Fund',
             'AbsoluteReturnBenchmarkExcess',
             'GcmPeerExcess',
             'EHI50Excess',
-            'EHI200Excess',
-            'Peer1Ptile',
+            'EHI200Excess']
+    periods = ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y', 'ITD']
+    formatted_summary = _pivot_and_reindex(data=data,
+                                           level_1_cols=cols,
+                                           level_2_cols=periods)
+    return formatted_summary
+
+
+def _format_benchmark_ptile_summary(full_stats):
+    data = full_stats['benchmark_summary']
+    # Excludes: AbsoluteReturnBenchmark, GcmPeer, EHI50, EHI200
+    cols = ['Peer1Ptile',
             'Peer2Ptile',
             'EH50Ptile',
             'EHI200Ptile']
-    periods = ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y', 'ITD']
+    periods = ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y']
     formatted_summary = _pivot_and_reindex(data=data,
                                            level_1_cols=cols,
                                            level_2_cols=periods)
@@ -207,8 +217,9 @@ def _format_exposure_summary(full_stats):
     return formatted_summary
 
 
-def _generate_final_summary(emm_dimn, pq_stats, peer_rankings):
-    benchmark = _format_benchmark_summary(full_stats=pq_stats)
+def _generate_final_summary(emm_dimn, pq_stats, peer_rankings, peer_rankings_lag):
+    benchmark_excess = _format_benchmark_excess_summary(full_stats=pq_stats)
+    benchmark_ptile = _format_benchmark_ptile_summary(full_stats=pq_stats)
     perf_stability = _format_perf_stability_summary(full_stats=pq_stats)
     rba_idios = _format_rba_attribution(full_stats=pq_stats)
     rba_risk = _format_rba_risk_decomp(full_stats=pq_stats)
@@ -217,7 +228,8 @@ def _generate_final_summary(emm_dimn, pq_stats, peer_rankings):
     expectations = _format_risk_model_expectations(full_stats=pq_stats)
     exposure = _format_exposure_summary(full_stats=pq_stats)
 
-    final_summary = pd.concat([benchmark,
+    final_summary = pd.concat([benchmark_excess,
+                               benchmark_ptile,
                                perf_stability,
                                rba_idios,
                                rba_risk,
@@ -228,6 +240,8 @@ def _generate_final_summary(emm_dimn, pq_stats, peer_rankings):
 
     final_summary = emm_dimn.merge(final_summary, left_index=True, right_index=True, how='left')
     final_summary = final_summary.merge(peer_rankings, left_index=True, right_index=True, how='left')
+    final_summary = final_summary.merge(peer_rankings_lag, left_index=True, right_index=True, how='left')
+    final_summary = final_summary.reset_index()
     return final_summary
 
 
@@ -278,8 +292,13 @@ def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date):
     with Scenario(dao=runner, as_of_date=date).context():
         emm_dimn = _get_emm_dimn(as_of_date=date)
         peer_rankings = _get_peer_rankings(runner=runner, as_of_date=date, emm_dimn=emm_dimn)
+        lagged_date = pd.to_datetime(date - pd.tseries.offsets.MonthEnd(3)).date()
+        peer_rankings_lag = _get_peer_rankings(runner=runner, as_of_date=lagged_date, emm_dimn=emm_dimn)
         pq_stats = _get_performance_quality_metrics(runner=runner, emm_dimn=emm_dimn, as_of_date=date)
-        final_summary = _generate_final_summary(emm_dimn=emm_dimn, pq_stats=pq_stats, peer_rankings=peer_rankings)
+        final_summary = _generate_final_summary(emm_dimn=emm_dimn,
+                                                pq_stats=pq_stats,
+                                                peer_rankings=peer_rankings,
+                                                peer_rankings_lag=peer_rankings_lag)
     return final_summary
 
 
@@ -289,16 +308,16 @@ if __name__ == "__main__":
         config_params={
             DaoRunnerConfigArgs.dao_global_envs.name: {
                 DaoSource.DataLake.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 DaoSource.InvestmentsDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 DaoSource.PubDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
             }
         },

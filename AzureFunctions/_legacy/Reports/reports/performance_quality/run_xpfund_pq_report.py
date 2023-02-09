@@ -14,7 +14,7 @@ from _legacy.core.Runners.investmentsreporting import (
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
-from gcm.Dao.DaoRunner import DaoRunner
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs, DaoSource
 from gcm.inv.scenario import Scenario
 
 
@@ -24,12 +24,13 @@ class RunXPFundPqReport(ReportingRunnerBase):
         self._as_of_date = as_of_date
 
     def generate_report(self):
+        report_data = generate_xpfund_pq_report_data(runner=dao_runner, date=self._as_of_date)
         input_data = {
             'as_of_date': pd.DataFrame({'date': [self._as_of_date]}),
-            'report_data': generate_xpfund_pq_report_data(runner=dao_runner, date=self._as_of_date)
+            'report_data': report_data
         }
 
-        print_areas = {'XPFUND_Performance_Quality': 'FP1:FV3'}
+        print_areas = {'XPFUND_Performance_Quality': 'FL1:FU3'}
 
         InvestmentsReportRunner().execute(
             data=input_data,
@@ -58,26 +59,26 @@ class RunXPFundPqReport(ReportingRunnerBase):
 
 
 if __name__ == "__main__":
-    # dao_runner = DaoRunner(
-    #     container_lambda=lambda b, i: b.config.from_dict(i),
-    #     config_params={
-    #         DaoRunnerConfigArgs.dao_global_envs.name: {
-    #             DaoSource.DataLake.name: {
-    #                 "Environment": "prd",
-    #                 "Subscription": "prd",
-    #             },
-    #             DaoSource.InvestmentsDwh.name: {
-    #                 "Environment": "prd",
-    #                 "Subscription": "prd",
-    #             },
-    #             DaoSource.PubDwh.name: {
-    #                 "Environment": "prd",
-    #                 "Subscription": "prd",
-    #             },
-    #         }
-    #     },
-    # )
-    dao_runner = DaoRunner()
+    dao_runner = DaoRunner(
+        container_lambda=lambda b, i: b.config.from_dict(i),
+        config_params={
+            DaoRunnerConfigArgs.dao_global_envs.name: {
+                DaoSource.DataLake.name: {
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
+                },
+                DaoSource.InvestmentsDwh.name: {
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
+                },
+                DaoSource.PubDwh.name: {
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
+                },
+            }
+        },
+    )
+
     date = dt.date(2022, 12, 31)
     with Scenario(as_of_date=date).context():
         RunXPFundPqReport(runner=dao_runner, as_of_date=date).execute()
