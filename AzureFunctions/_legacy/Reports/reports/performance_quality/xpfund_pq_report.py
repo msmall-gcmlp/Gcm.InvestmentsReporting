@@ -248,7 +248,7 @@ def _generate_final_summary(emm_dimn, pq_stats, peer_rankings, peer_rankings_lag
 def _get_peer_rankings(runner, as_of_date, emm_dimn):
     peer_screen_location = "raw/investmentsreporting/summarydata/ars_performance_screener"
     peers = sorted([x for x in emm_dimn['ReportingPeerGroup'].unique().tolist() if str(x) != 'nan' and x is not None])
-    peer_rankings = pd.DataFrame()
+    peer_rankings = pd.DataFrame(columns=['InvestmentGroupNameRaw', 'Peer', 'Decile', 'Confidence', 'Persistence'])
     for peer in peers:
         print(peer)
         peer_ranks = _download_inputs(runner=runner,

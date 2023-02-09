@@ -24,7 +24,7 @@ class RunXPFundPqReport(ReportingRunnerBase):
         self._as_of_date = as_of_date
 
     def generate_report(self):
-        report_data = generate_xpfund_pq_report_data(runner=dao_runner, date=self._as_of_date)
+        report_data = generate_xpfund_pq_report_data(runner=self._runner, date=self._as_of_date)
         input_data = {
             'as_of_date': pd.DataFrame({'date': [self._as_of_date]}),
             'report_data': report_data
@@ -53,11 +53,8 @@ class RunXPFundPqReport(ReportingRunnerBase):
             )
 
     def run(self, **kwargs):
-        try:
-            self.generate_report()
-            return "Complete"
-        except Exception as e:
-            raise RuntimeError("Failed") from e
+        self.generate_report()
+        return "Complete"
 
 
 if __name__ == "__main__":
