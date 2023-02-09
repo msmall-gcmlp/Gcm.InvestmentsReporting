@@ -1,0 +1,66 @@
+﻿Fund,PeerGroup,NetNotional,ExcessPtile,Conviction,CorrToPeer,VolExSystematic
+Apollo Credit Strategies Fund,GCM Long/Short Credit,0.25,90,4,0.7,0.03
+Brevan Howard Master,GCM Macro,0,90,3,0.6,0.06
+Citadel,GCM Multi-PM,0.1,90,5,0.55,0.07
+DE Shaw,GCM Multi-PM,0.1,90,5,0.3,0.04
+Diameter Main Fund,GCM Long/Short Credit,0.25,90,4,0,0.01
+Elliott,GCM DS Multi-Strategy,0.2,90,4,0.8,0.04
+Fidera,GCM Europe Credit,0.75,90,4,0.55,0.03
+Hawk Ridge,GCM Generalist Long/Short Equity,0.4,90,3,0.45,0.03
+QRT Torus,GCM Quant,0,90,3,0,0.05
+ReadyState,GCM Long/Short Credit,0,90,4,0,0.02
+Sona Credit,GCM Europe Credit,0.25,90,4,0.75,0.07
+SRS Partners,GCM TMT,0.2,90,3,0,0.04
+Alphadyne Global Rates II,GCM Macro,0,75,3,0,0.06
+Aspex,GCM Asia Equity,0.6,75,3,0.8,0.02
+Atlas Enhanced Fund,GCM Multi-PM,0.1,75,3,0.7,0.05
+Avala,GCM Generalist Long/Short Equity,0.4,75,3,0.5,0.03
+BlackRock Strategic,GCM Europe Equity,0.2,75,3,0.35,0.05
+Braidwell,GCM Healthcare,0.4,75,3,0.2,0.04
+Brigade SC Dislocation,GCM Structured Credit,1.25,75,3,0.65,0.02
+Brigade Structured Credit,GCM Structured Credit,1,75,3,0.65,0.02
+Candlestick,GCM Consumer,0.2,75,3,0,0.01
+Capula Tactical Macro,GCM Macro,0,75,3,0,0.05
+Carronade Credit Fund,GCM Fundamental Credit,0.25,75,3,0.3,0.03
+Citadel Global Equities,GCM Multi-PM,0.1,75,3,0.3,0.05
+Coatue,GCM TMT,0.5,75,3,0.1,0.04
+Corre Opportunities,GCM Fundamental Credit,0.75,75,3,0.3,0.03
+D1 Capital,GCM TMT,0.6,75,3,0.7,0.06
+Deep Track,GCM Healthcare,0.6,75,3,0.2,0.05
+Forest Avenue Capital,GCM Generalist Long/Short Equity,0.4,75,3,0.5,0.03
+GCM Equity Opps Fund,GCM Multi-PM,0.15,75,3,0.3,0.03
+GCM Special Opps Fund,GCM DS Multi-Strategy,0.7,75,3,0.7,0.06
+Hel Ved,GCM Asia Equity,0.4,75,3,0.35,0.03
+Kennedy Lewis Dislocation,GCM Fundamental Credit,1,75,3,0,0.01
+Kinetic Partners,GCM Generalist Long/Short Equity,0.4,75,3,0.5,0.03
+Laurion,GCM Relative Value,0,75,3,0.45,0.07
+LMR Master,GCM DS Multi-Strategy,0,75,3,0,0.05
+Lynrock Lake,GCM Fundamental Credit,0.75,75,3,-0.2,0.02
+Magnetar Constellation,GCM Structured Credit,0.75,75,3,0.2,0.02
+Maplelane,GCM TMT,0.05,75,3,0.1,0.14
+Marshall Wace Eureka Fund,GCM Multi-PM,0.15,75,3,0.55,0.02
+Pentwater Equity Opp,GCM Cross Cap,0.35,75,3,0.7,0.03
+Point72,GCM Multi-PM,0.15,75,3,0.7,0.02
+Redmile,GCM Healthcare,0.5,75,3,0.75,0.06
+Rokos,GCM Macro,0,75,3,0.35,0.04
+Silver Point,GCM Fundamental Credit,0.75,75,3,0.8,0.04
+Skye,GCM TMT,1,75,3,0.7,0.11
+SurgoCap,GCM Generalist Long/Short Equity,0.7,75,3,0.5,0.03
+Tairen Alpha,GCM Asia Equity,0.1,75,3,0,0.04
+Tiger Global,GCM TMT,0.6,75,3,0.7,0.1
+Voloridge,GCM Quant,0,75,3,0,0.03
+Voyager,GCM TMT,0.7,75,3,0.1,0.07
+Waterfall Dislocation,GCM Structured Credit,1,75,3,0.75,0.02
+Waterfall Victoria,GCM Structured Credit,0.75,75,3,0.75,0.02
+Whale Rock Hybrid Long/Short,GCM TMT,0.7,75,3,0.5,0.07
+Woodline Partners,GCM Multi-PM,0.1,75,3,0,0.03
+Avidity,GCM Healthcare,0.05,50,3,0,0.02
+Canyon VRF,GCM Fundamental Credit,0.75,50,3,0.55,0.02
+Dragoneer Global Fund,GCM TMT,1,50,3,0.7,0.06
+Element,GCM Macro,0,50,4,-0.35,0.08
+Exodus Point,GCM Multi-PM,0,50,3,0,0.01
+Holocene,GCM Multi-PM,0.1,50,3,0.3,0.01
+Pentwater Credit,GCM Fundamental Credit,0.75,50,3,0.3,0.05
+Schonfeld Strategic Partners,GCM Multi-PM,0.15,50,3,0,0.05
+Sculptor Credit Opps,GCM Fundamental Credit,0.75,50,3,0.55,0.04
+Whale Rock,GCM TMT,0.7,50,3,0.5,0.07

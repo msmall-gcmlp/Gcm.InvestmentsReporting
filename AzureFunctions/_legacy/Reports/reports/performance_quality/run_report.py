@@ -16,7 +16,7 @@ class RunPerformanceQualityReports:
 
     def generate_report_data(self, investment_group_ids):
         perf_quality_data = PerformanceQualityReportData(
-            start_date=self._as_of_date - relativedelta(years=10), end_date=self._as_of_date,
+            start_date=self._as_of_date - relativedelta(years=20), end_date=self._as_of_date,
             investment_group_ids=investment_group_ids
         )
         return perf_quality_data.execute()
@@ -33,7 +33,7 @@ class RunPerformanceQualityReports:
 
 
 if __name__ == "__main__":
-    runner = DaoRunner()
+    # runner = DaoRunner()
     runner = DaoRunner(
         container_lambda=lambda b, i: b.config.from_dict(i),
         config_params={
@@ -55,19 +55,23 @@ if __name__ == "__main__":
                     "Subscription": "prd",
                 },
                 DaoSource.ReportingStorage.name: {
-                    "Environment": "uat",
-                    "Subscription": "nonprd",
+                    "Environment": "prd",
+                    "Subscription": "prd",
                 },
             }
         },
     )
-    for as_of_date in [dt.date(2022, 10, 31)]:
+    for as_of_date in [dt.date(2022, 12, 31)]:
         with Scenario(dao=runner, as_of_date=as_of_date).context():
             report_runner = RunPerformanceQualityReports(as_of_date=as_of_date)
-            prd_ids = [20016, 23441, 75614, 28015]
+            prd_ids = [20016,
+                       23441,
+                       28015,
+                       75614,
+                       85905]
             # dev_ids = [19224, 23319, 74984]
 
-            funds_and_peers = report_runner.generate_report_data(investment_group_ids=[18506])
+            funds_and_peers = report_runner.generate_report_data(investment_group_ids=prd_ids)
 
             funds_and_peers = json.loads(funds_and_peers)
             fund_names = funds_and_peers.get("fund_names")

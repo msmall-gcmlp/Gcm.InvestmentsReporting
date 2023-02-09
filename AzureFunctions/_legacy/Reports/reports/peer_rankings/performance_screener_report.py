@@ -3,7 +3,7 @@ import logging
 import datetime as dt
 import numpy as np
 from functools import cached_property
-from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.Dao.DaoRunner import DaoRunner
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
@@ -95,7 +95,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
     @cached_property
     def _rf_returns(self):
-        returns = self._get_monthly_factor_returns(ticker="SBMMTB1 Index")
+        returns = self._get_monthly_factor_returns(ticker="I00078US Index")
         return returns
 
     @cached_property
@@ -383,7 +383,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         # r_squared = self._get_arb_r_squared()
         # summary = excess_return.merge(r_squared, how='left', left_index=True, right_index=True)
 
-        if summary.shape[1] == 0:
+        if summary.shape[1] == 0 or summary.isna().all().squeeze():
             return pd.DataFrame(columns=['Excess', 'ExcessDecile'], index=summary.index)
 
         summary['Excess'] = summary['Excess'] + np.random.random(summary.shape[0]) / 1e3
@@ -460,6 +460,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         summary['Rank'] = [round(x, 0) if x != -100 else np.NAN for x in summary['Rank']]
 
         name_overrides = dict(zip(self._constituents['InvestmentGroupName'], self._constituents['InvestmentName']))
+        summary["InvestmentGroupNameRaw"] = summary["InvestmentGroupName"]
         summary["InvestmentGroupName"] = summary["InvestmentGroupName"].replace(name_overrides)
         summary["InvestmentGroupName"] = summary["InvestmentGroupName"].str.slice(0, 27)
 
@@ -565,7 +566,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         input_data = {
             "header_info1": header_info,
             "header_info2": header_info,
-            "summary_table": summary_table,
+            "summary_table": summary_table.drop(columns={'InvestmentGroupNameRaw'}),
             "calendar_return_headings": calendar_return_headings,
             "omitted_funds": omitted_funds,
             "constituents1": constituent_counts,
@@ -620,8 +621,14 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         logging.info("Excel stored to DataLake for: " + self._peer_group)
 
     def run(self, **kwargs):
-        self.generate_performance_screener_report()
-        return self._peer_group + " Complete"
+        try:
+            self.generate_performance_screener_report()
+            result = "Complete"
+
+        except:
+            result = "Failed - Insufficient Data"
+
+        return f"{self._peer_group} {result}"
 
 
 if __name__ == "__main__":
@@ -661,42 +668,42 @@ if __name__ == "__main__":
                    "GCM Utilities",
                    ]
 
-    peer_groups = ["GCM Fundamental Credit"]
+    peer_groups = ["GCM TMT"]
 
-    runner = DaoRunner(
-            container_lambda=lambda b, i: b.config.from_dict(i),
-            config_params={
-                DaoRunnerConfigArgs.dao_global_envs.name: {
-                    DaoSource.DataLake.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
-                    },
-                    DaoSource.PubDwh.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
-                    },
-                    DaoSource.InvestmentsDwh.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
-                    },
-                    DaoSource.DataLake_Blob.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
-                    },
-                    DaoSource.ReportingStorage.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
-                    },
-                }
-            })
+    # runner = DaoRunner(
+    #         container_lambda=lambda b, i: b.config.from_dict(i),
+    #         config_params={
+    #             DaoRunnerConfigArgs.dao_global_envs.name: {
+    #                 DaoSource.DataLake.name: {
+    #                     "Environment": "prd",
+    #                     "Subscription": "prd",
+    #                 },
+    #                 DaoSource.PubDwh.name: {
+    #                     "Environment": "prd",
+    #                     "Subscription": "prd",
+    #                 },
+    #                 DaoSource.InvestmentsDwh.name: {
+    #                     "Environment": "prd",
+    #                     "Subscription": "prd",
+    #                 },
+    #                 DaoSource.DataLake_Blob.name: {
+    #                     "Environment": "prd",
+    #                     "Subscription": "prd",
+    #                 },
+    #                 DaoSource.ReportingStorage.name: {
+    #                     "Environment": "prd",
+    #                     "Subscription": "prd",
+    #                 },
+    #             }
+    #         })
 
-    # runner = DaoRunner()
+    runner = DaoRunner()
 
     as_of_dates = pd.date_range(dt.date(2019, 12, 31), dt.date(2022, 9, 30), freq='Q').tolist()
     as_of_dates = pd.to_datetime(as_of_dates).date.tolist()
 
     for peer_group in peer_groups:
-        as_of_dates = [dt.date(2022, 10, 31)]
+        as_of_dates = [dt.date(2022, 12, 31)]
         for as_of_date in as_of_dates:
             with Scenario(dao=runner, as_of_date=as_of_date).context():
                 PerformanceScreenerReport(peer_group=peer_group).execute()

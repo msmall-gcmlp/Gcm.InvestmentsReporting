@@ -7,6 +7,8 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
 )
 from gcm.inv.scenario import Scenario
 import io
+import os
+import pathlib
 
 license__location = (
     "/".join(
@@ -19,6 +21,8 @@ license__location = (
     + "/"
 )
 
+FONTS_RELATIVE_PATH = "assets/fonts"
+
 
 def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
     java_client.install_jre()
@@ -28,7 +32,7 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
     params["file_path"] = params["file_path"].replace(".xlsx", ".pdf")
     assert params is not None
     dao = Scenario.get_attribute("dao")
-    from asposecells.api import Workbook, SaveFormat, LoadOptions, License
+    from asposecells.api import Workbook, SaveFormat, LoadOptions, License, FontConfigs
 
     lic = License()
     try:
@@ -53,6 +57,7 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
         file.read(), loadOptions=loadOptions
     )
     wb.calculateFormula(True)
+    FontConfigs.setFontFolder(get_fonts_path(), True)
 
     v = wb.saveToBytes(SaveFormat.PDF)
     dao.execute(
@@ -60,4 +65,12 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
         source=source,
         operation=lambda d, p: d.post_data(p, v),
     )
-    logging.info("The PDF was saved to ")
+    logging.info(f"Exported PDF: {str(params)}")
+
+
+def get_fonts_path() -> str:
+    full_path = pathlib.Path(__file__).parent.parent.resolve()
+    fonts_folder_path = os.path.join(full_path, FONTS_RELATIVE_PATH)
+    logging.info(f"Fonts directory: {fonts_folder_path}")
+
+    return fonts_folder_path

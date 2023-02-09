@@ -92,7 +92,7 @@ class TestPerformanceQualityReport:
 
     def test_performance_quality_report_skye(self, perf_quality_report):
         benchmark_summary = perf_quality_report.build_benchmark_summary()
-        assert all(benchmark_summary.index == ["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y"])
+        assert all(benchmark_summary.index == ["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y", "ITD"])
         expected_columns = [
             "Fund",
             "AbsoluteReturnBenchmark",
@@ -112,7 +112,7 @@ class TestPerformanceQualityReport:
 
     def test_performance_quality_report_future_ahead(self, perf_quality_report):
         benchmark_summary = perf_quality_report.build_benchmark_summary()
-        assert all(benchmark_summary.index == ["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y"])
+        assert all(benchmark_summary.index == ["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y", "ITD"])
         expected_columns = [
             "Fund",
             "AbsoluteReturnBenchmark",
