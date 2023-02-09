@@ -32,23 +32,25 @@ class RunXPFundPqReport(ReportingRunnerBase):
 
         print_areas = {'XPFUND_Performance_Quality': 'FL1:FU3'}
 
-        InvestmentsReportRunner().execute(
-            data=input_data,
-            template="XPFUND_PerformanceQuality_Template.xlsx",
-            save=True,
-            runner=self._runner,
-            entity_type=ReportingEntityTypes.cross_entity,
-            entity_name='FIRM',
-            entity_display_name='FIRM',
-            report_name="ARS Performance Quality - Firm x Portfolio Fund",
-            report_type=ReportType.Performance,
-            report_vertical=ReportVertical.ARS,
-            report_frequency="Monthly",
-            aggregate_intervals=AggregateInterval.MTD,
-            print_areas=print_areas,
-            # output_dir="cleansed/investmentsreporting/printedexcels/",
-            # report_output_source=DaoSource.DataLake,
-        )
+        date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
+        with Scenario(as_of_date=date).context():
+            InvestmentsReportRunner().execute(
+                data=input_data,
+                template="XPFUND_PerformanceQuality_Template.xlsx",
+                save=True,
+                runner=self._runner,
+                entity_type=ReportingEntityTypes.cross_entity,
+                entity_name='FIRM',
+                entity_display_name='FIRM',
+                report_name="ARS Performance Quality - Firm x Portfolio Fund",
+                report_type=ReportType.Performance,
+                report_vertical=ReportVertical.ARS,
+                report_frequency="Monthly",
+                aggregate_intervals=AggregateInterval.MTD,
+                print_areas=print_areas,
+                # output_dir="cleansed/investmentsreporting/printedexcels/",
+                # report_output_source=DaoSource.DataLake,
+            )
 
     def run(self, **kwargs):
         try:
@@ -60,24 +62,31 @@ class RunXPFundPqReport(ReportingRunnerBase):
 
 if __name__ == "__main__":
     dao_runner = DaoRunner(
-        container_lambda=lambda b, i: b.config.from_dict(i),
-        config_params={
-            DaoRunnerConfigArgs.dao_global_envs.name: {
-                DaoSource.DataLake.name: {
-                    "Environment": "dev",
-                    "Subscription": "nonprd",
-                },
-                DaoSource.InvestmentsDwh.name: {
-                    "Environment": "dev",
-                    "Subscription": "nonprd",
-                },
-                DaoSource.PubDwh.name: {
-                    "Environment": "dev",
-                    "Subscription": "nonprd",
-                },
-            }
-        },
-    )
+            container_lambda=lambda b, i: b.config.from_dict(i),
+            config_params={
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.DataLake.name: {
+                        "Environment": "dev",
+                        "Subscription": "nonprd",
+                    },
+                    DaoSource.PubDwh.name: {
+                        "Environment": "dev",
+                        "Subscription": "nonprd",
+                    },
+                    DaoSource.InvestmentsDwh.name: {
+                        "Environment": "dev",
+                        "Subscription": "nonprd",
+                    },
+                    DaoSource.DataLake_Blob.name: {
+                        "Environment": "dev",
+                        "Subscription": "nonprd",
+                    },
+                    DaoSource.ReportingStorage.name: {
+                        "Environment": "dev",
+                        "Subscription": "nonprd",
+                    },
+                }
+            })
 
     date = dt.date(2022, 12, 31)
     with Scenario(as_of_date=date).context():
