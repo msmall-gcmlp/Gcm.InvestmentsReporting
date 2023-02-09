@@ -30,7 +30,7 @@ def orchestrator_function(
             "GCM Diversifying Strategies",
             # "GCM DS Alternative Trend",
             # "GCM DS CTA",
-            # "GCM DS Multi-Strategy",
+            "GCM DS Multi-Strategy",
             # "GCM DS Traditional CTA",
             "GCM Emerging Market Credit",
             "GCM Energy",
