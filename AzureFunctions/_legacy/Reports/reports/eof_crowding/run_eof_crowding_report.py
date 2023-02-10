@@ -41,7 +41,7 @@ class RunEofCrowdingReport(ReportingRunnerBase):
                 entity_type=ReportingEntityTypes.manager_fund_group,
                 entity_name="Equity Opps Fund Ltd",
                 entity_display_name="EOF",
-                entity_ids=[19163],
+                entity_ids=[640],
                 entity_source=DaoSource.PubDwh,
                 report_name="EOF HF Technicals Exposure",
                 report_type=ReportType.Risk,
