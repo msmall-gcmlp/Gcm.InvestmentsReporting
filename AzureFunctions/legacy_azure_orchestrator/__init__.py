@@ -33,6 +33,9 @@ from gcm.inv.utils.azure.legacy_conversion.legacy_orchestration import (
 from .orchestrators.XPFundPqReportOrchestrator import (
     orchestrator_function as x_pfund_pq_report_orchestrator_function,
 )
+from .orchestrators.EofCrowdingReportOrchestrator import (
+    orchestrator_function as eof_crowding_report_orchestrator_function,
+)
 
 
 class LegacyReportOrchestrator(LegacyOrchestrator):
@@ -50,7 +53,8 @@ class LegacyReportOrchestrator(LegacyOrchestrator):
             LegacyOrchestrations.HkmaMarketPerformanceReportOrchestrator: hkma_mkt_orchestrator_function,
             LegacyOrchestrations.PerformanceScreenerReportOrchestrator: perf_screener_orchestrator_function,
             LegacyOrchestrations.SingleNameEquityExposureOrchestrator: singlename_equityexposure_orchestrator_function,
-            LegacyOrchestrations.XPFundPqReportOrchestrator: x_pfund_pq_report_orchestrator_function
+            LegacyOrchestrations.XPFundPqReportOrchestrator: x_pfund_pq_report_orchestrator_function,
+            LegacyOrchestrations.EofCrowdingReportOrchestrator: eof_crowding_report_orchestrator_function
         }
 
     @property
