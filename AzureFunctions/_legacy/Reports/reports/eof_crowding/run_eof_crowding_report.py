@@ -48,6 +48,7 @@ class RunEofCrowdingReport(ReportingRunnerBase):
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Daily",
                 aggregate_intervals=AggregateInterval.Daily,
+                output_dir="eof/"
                 # print_areas=print_areas,
                 # output_dir="cleansed/investmentsreporting/printedexcels/",
                 # report_output_source=DaoSource.DataLake,
