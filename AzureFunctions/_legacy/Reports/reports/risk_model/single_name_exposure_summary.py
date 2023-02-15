@@ -152,11 +152,14 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         portfolio_level.sort_values(['Acronym'], ascending=True, inplace=True)
         group_porrtfolios = portfolio_level.groupby('Acronym', group_keys=False)
         largest_portfolio_level_log = group_porrtfolios.apply(lambda x: x.sort_values(by='IssuerNav', ascending=False).head(5))
+        largest_portfolio_level_log = largest_portfolio_level_log[largest_portfolio_level_log['IssuerNav']>=0]
         largest_portfolio_level_log = largest_portfolio_level_log[['Acronym', 'Issuer', 'Sector', 'Issuerbalance', 'IssuerNav']]
         largest_portfolio_level_short = group_porrtfolios.apply(
             lambda x: x.sort_values(by='IssuerNav', ascending=True).head(5))
+        largest_portfolio_level_short = largest_portfolio_level_short[largest_portfolio_level_short['IssuerNav'] <= 0]
         largest_portfolio_level_short = largest_portfolio_level_short[
             ['Acronym', 'Issuer', 'Sector', 'Issuerbalance', 'IssuerNav']]
+
         # Firmwide
         firm_wide_holdings = self._investment_group.get_firmwide_allocation(
             start_date=self._start_date,
