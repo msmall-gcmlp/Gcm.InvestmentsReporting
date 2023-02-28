@@ -21,6 +21,7 @@ from gcm.inv.scenario import Scenario
 from sqlalchemy import func, and_
 from gcm.inv.dataprovider.utilities import filter_many
 
+
 class SingleNamePortfolioReport(ReportingRunnerBase):
     def __init__(self):
         super().__init__(runner=Scenario.get_attribute("dao"))
@@ -149,8 +150,8 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
             operation=lambda dao, params: dao.get_data(params),
         )
         result = pd.merge(self._portfolio_holdings[['InvestmentGroupId', 'InvestmentGroupName']].drop_duplicates(),
-                                                    result[['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate', 'ExpNav']],
-                                                    how='inner', on=['InvestmentGroupId'])
+                          result[['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate', 'ExpNav']],
+                          how='inner', on=['InvestmentGroupId'])
         return result
 
     def build_single_name(self):

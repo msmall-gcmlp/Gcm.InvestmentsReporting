@@ -20,6 +20,7 @@ from _legacy.core.ReportStructure.report_structure import (
 from sqlalchemy import func, and_
 from gcm.inv.dataprovider.utilities import filter_many
 
+
 class SingleNameEquityExposureSummary(ReportingRunnerBase):
     def __init__(self):
         super().__init__(runner=Scenario.get_attribute("dao"))
@@ -126,8 +127,8 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
             operation=lambda dao, params: dao.get_data(params),
         )
         result = pd.merge(self._all_holdings[['InvestmentGroupId', 'InvestmentGroupName']].drop_duplicates(),
-                            result[['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate', 'ExpNav']],
-                            how='inner', on=['InvestmentGroupId'])
+                          result[['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate', 'ExpNav']],
+                          how='inner', on=['InvestmentGroupId'])
         return result
 
     def build_single_name_summary(self):
@@ -152,7 +153,7 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         portfolio_level.sort_values(['Acronym'], ascending=True, inplace=True)
         group_porrtfolios = portfolio_level.groupby('Acronym', group_keys=False)
         largest_portfolio_level_log = group_porrtfolios.apply(lambda x: x.sort_values(by='IssuerNav', ascending=False).head(5))
-        largest_portfolio_level_log = largest_portfolio_level_log[largest_portfolio_level_log['IssuerNav']>=0]
+        largest_portfolio_level_log = largest_portfolio_level_log[largest_portfolio_level_log['IssuerNav'] >= 0]
         largest_portfolio_level_log = largest_portfolio_level_log[['Acronym', 'Issuer', 'Sector', 'Issuerbalance', 'IssuerNav']]
         largest_portfolio_level_short = group_porrtfolios.apply(
             lambda x: x.sort_values(by='IssuerNav', ascending=True).head(5))
@@ -221,7 +222,6 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
             "as_of_date_short": as_of_date1,
             "portfolio_allocationlong": portfolio,
             "portfolio_allocationshort": portfolio_short
-
         }
         input_data_issuer = {
             "as_of_date1": as_of_date1,
