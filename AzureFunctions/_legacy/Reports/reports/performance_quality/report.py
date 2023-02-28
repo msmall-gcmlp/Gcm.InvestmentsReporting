@@ -19,9 +19,6 @@ from _legacy.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
-from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import (
-    AggregateFromDaily,
-)
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
@@ -131,19 +128,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.DataFrame()
 
     @cached_property
+    def _itd_months(self):
+        all_returns = self._fund_returns.merge(self._primary_peer_returns, left_index=True, right_index=True)
+        all_returns = all_returns.merge(self._ehi50_returns, left_index=True, right_index=True)
+        all_returns = all_returns.merge(self._ehi200_returns, left_index=True, right_index=True)
+        all_returns = all_returns.merge(self._abs_bmrk_returns, left_index=True, right_index=True)
+        return all_returns.shape[0]
+
+    @cached_property
     def _abs_bmrk_returns(self):
         returns = pd.read_json(self._fund_inputs["abs_bmrk_returns"], orient="index")
-        if len(returns) > 1:
-            _abs_bmrk_returns = AggregateFromDaily().transform(
-                data=returns,
-                method="geometric",
-                period=Periodicity.Monthly,
-            )
-        else:
-            _abs_bmrk_returns = pd.DataFrame()
+        if len(returns) <= 1:
+            returns = pd.DataFrame()
 
-        if any(self._fund_id.squeeze() == list(_abs_bmrk_returns.columns)):
-            returns = _abs_bmrk_returns[self._fund_id].squeeze()
+        if any(self._fund_id.squeeze() == list(returns.columns)):
+            returns = returns[self._fund_id].squeeze()
         else:
             returns = pd.DataFrame()
         return returns
@@ -188,7 +187,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.read_json(self._primary_peer_analytics["gcm_peer_returns"], orient="index")
             return returns.squeeze()
         else:
-            return pd.Series()
+            return pd.Series(name='PrimaryPeer')
 
     @cached_property
     def _primary_peer_counts(self):
@@ -232,7 +231,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             returns = pd.read_json(inputs["eurekahedge_returns"], orient="index")
             return returns.squeeze()
         else:
-            return pd.Series()
+            return pd.Series(name='Ehi50')
 
     @cached_property
     def _ehi200_returns(self):
@@ -243,7 +242,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if isinstance(returns, pd.DataFrame):
             return returns.squeeze()
         else:
-            return pd.Series()
+            return pd.Series(name='Ehi200')
 
     @cached_property
     def _eurekahedge_constituent_returns(self):
@@ -533,7 +532,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         returns = returns.copy()
         if returns.shape[0] == 0:
             return pd.DataFrame(
-                index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y"],
+                index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y", "ITD"],
                 columns=["Fund"],
             )
 
@@ -594,6 +593,15 @@ class PerformanceQualityReport(ReportingRunnerBase):
             annualize=True,
         )
 
+        itd_return = self._analytics.compute_trailing_return(
+            ror=returns,
+            window=self._itd_months,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            periodicity=Periodicity.Monthly,
+            annualize=True if self._itd_months > 12 else False,
+        )
+
         # rounding to 2 so that Excess Return matches optically
         stats = [
             mtd_return,
@@ -603,11 +611,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
             trailing_3y_return,
             trailing_5y_return,
             trailing_10y_return,
+            itd_return
         ]
         stats = [x.squeeze() for x in stats]
         summary = pd.DataFrame(
             {return_type: [round(x, 2) if isinstance(x, float) else " " for x in stats]},
-            index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y"],
+            index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y", "ITD"],
         )
         return summary
 
@@ -676,6 +685,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         if constituent_monthly_rors is None or len(constituent_monthly_rors) == 0:
             if constituent_total_returns is None or len(constituent_total_returns) == 0:
                 return pd.DataFrame({group_name: [""] * len(index)}, index=index)
+
+        if fund_returns.loc["MTD"].squeeze() == ' ':
+            return pd.DataFrame({group_name: [""] * len(index)}, index=index)
 
         mtd_ptile = self._calculate_periodic_percentile(fund_periodic_return=fund_returns.loc["MTD"],
                                                         period=PeriodicROR.MTD,
@@ -774,10 +786,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
             left_index=True,
             right_index=True,
         )
-        summary = summary.merge(primary_peer_percentiles, left_index=True, right_index=True)
-        summary = summary.merge(secondary_peer_percentiles, left_index=True, right_index=True)
-        summary = summary.merge(eurekahedge_percentiles, left_index=True, right_index=True)
-        summary = summary.merge(ehi200_percentiles, left_index=True, right_index=True)
+        summary = summary.merge(primary_peer_percentiles, left_index=True, right_index=True, how='left')
+        summary = summary.merge(secondary_peer_percentiles, left_index=True, right_index=True, how='left')
+        summary = summary.merge(eurekahedge_percentiles, left_index=True, right_index=True, how='left')
+        summary = summary.merge(ehi200_percentiles, left_index=True, right_index=True, how='left')
 
         summary = summary.fillna("")
         return summary
@@ -1665,8 +1677,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
         logging.info("Excel stored to DataLake for: " + self._fund_name)
 
     def run(self, **kwargs):
-        self.generate_performance_quality_report()
-        return self._fund_name + ' Complete'
+        try:
+            self.generate_performance_quality_report()
+            return f"{self._fund_name} Complete"
+        except Exception as e:
+            raise RuntimeError(f"Failed for {self._fund_name}") from e
 
 
 if __name__ == "__main__":

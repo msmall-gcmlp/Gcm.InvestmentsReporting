@@ -11,6 +11,8 @@ class LegacyOrchestrations(ExtendedEnum):
     HkmaMarketPerformanceReportOrchestrator = auto()
     PerformanceScreenerReportOrchestrator = auto()
     SingleNameEquityExposureOrchestrator = auto()
+    XPFundPqReportOrchestrator = auto()
+    EofCrowdingReportOrchestrator = auto()
 
     # TODO: refactor below to be scenario compliant
     # ReportCopyOrchestrator = auto()

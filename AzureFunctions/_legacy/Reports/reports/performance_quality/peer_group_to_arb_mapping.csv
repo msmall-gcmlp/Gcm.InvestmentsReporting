@@ -1,34 +1,34 @@
-﻿ReportingPeerGroup,Ticker
-GCM Activism Peer Group,GDDUWI Index
-GCM Asia,MCHI US Index
-GCM Asia Credit,LF98TRUU Index
-GCM Asia Equity,MCHI US Index
-GCM Asia Macro,MCHI US Index
-GCM China,MCHI US Index
-GCM Consumer,SPTRCOND Index
-GCM Cross Cap,GDDUWI Index
-GCM Diversifying Strategies,GDDUWI Index
-GCM DS Multi-Strategy,GDDUWI Index
-GCM Emerging Market Credit,LF98TRUU Index
-GCM Energy,SPTRENRS Index
-GCM Europe Credit,LF98TRUU Index
-GCM Europe Equity,MXEU Index
-GCM Equities,SPXT Index
-GCM Financials,SPTRFINL Index
-GCM Fundamental Credit,LF98TRUU Index
-GCM Generalist Long/Short Equity,SPXT Index
-GCM Healthcare,SPTRHLTH Index
-GCM Industrials,SPTRINDU Index
-GCM Japan,MCHI US Index
-GCM Long Only Equity,SPXT Index
-GCM Long/Short Equity,SPXT Index
-GCM Long/Short Credit,LF98TRUU Index
-GCM Macro,GDDUWI Index
-GCM Multi-PM,GDDUWI Index
-GCM Multi-Strategy,GDDUWI Index
-GCM Quant,GDDUWI Index
-GCM Real Estate,S5RLST Index
-GCM Relative Value,GDDUWI Index
-GCM Structured Credit,LF98TRUU Index
-GCM TMT,XNDX Index
-GCM Utilities,SPTRUTIL Index
+﻿ReportingPeerGroup,BenchmarkSubstrategy,Ticker,EhiBenchmark,PeerGroupShortName,BenchmarkSubstrategyShortName,EhiBenchmarkShortName
+GCM Activism Peer Group,Opportunistic MS,GDDUWI Index,EHI100 Multi-Strategy,Activism,Opp MS,Multi-Strat
+GCM Asia,Fundamental Long-Biased Equity,MXCN Index,EHI100 Asia,Asia,Long-Bias Eqty,Asia
+GCM Asia Credit,Fundamental Credit,LF98TRUU Index,EHI100 Asia Credit,Asia Credit,Fdmtl Credit,Asia Credit
+GCM Asia Equity,Fundamental Long-Biased Equity,MXCN Index,EHI100 Asia Equity,Asia Equity,Long-Bias Eqty,Asia Equity
+GCM Asia Macro,Global Macro,MXCN Index,EHI100 Asia Macro,Asia Macro,Gbl Macro,Asia Macro
+GCM China,Fundamental Long-Biased Equity,MXCN Index,EHI100 Asia,China,Long-Bias Eqty,Asia
+GCM Consumer,Fundamental Long-Biased Equity,SPTRCOND Index,EHI100 Long-Biased Fundamental Equity,Consumer,Long-Bias Eqty,Long-Biased Fdmtl Eqty
+GCM Cross Cap,Opportunistic MS,GDDUWI Index,EHI100 Multi-Strategy,Cross Cap,Opp MS,Multi-Strat
+GCM Diversifying Strategies,Diversified Multi-Strategy,GDDUWI Index,EHI100 Multi-Strategy,Div Strats,Div MS,Multi-Strat
+GCM DS Multi-Strategy,Diversified Multi-Strategy,GDDUWI Index,EHI100 Multi-Strategy,Div Multi-Strat,Div MS,Multi-Strat
+GCM Emerging Market Credit,Fundamental Credit,LF98TRUU Index,EHI100 Emerging Market Credit,EM Credit,Fdmtl Credit,EM Credit
+GCM Energy,Fundamental Long-Biased Equity,SPTRENRS Index,EHI100 Long-Biased Fundamental Equity,Energy,Long-Bias Eqty,Long-Biased Fdmtl Eqty
+GCM Europe Credit,Fundamental Credit,LF98TRUU Index,EHI100 Europe Credit,Europe Credit,Fdmtl Credit,Europe Credit
+GCM Europe Equity,Fundamental Long-Biased Equity,M7EU Index,EHI100 Europe Equity,Europe Eqty,Long-Bias Eqty,Europe Eqty
+GCM Equities,Fundamental Long-Biased Equity,SPXT Index,EHI100 Long-Biased Fundamental Equity,Equities,Long-Bias Eqty,Long-Biased Fdmtl Eqty
+GCM Financials,Fundamental Long-Biased Equity,SPTRFINL Index,EHI100 Long-Biased Fundamental Equity,Financials,Long-Bias Eqty,Long-Biased Fdmtl Eqty
+GCM Fundamental Credit,Fundamental Credit,LF98TRUU Index,EHI100 Fundamental Credit,Fdmtl Credit,Fdmtl Credit,Fdmtl Credit
+GCM Generalist Long/Short Equity,Fundamental Long-Biased Equity,SPXT Index,EHI100 Long-Biased Fundamental Equity,Generalist L/S Eqty,Long-Bias Eqty,Long-Biased Fdmtl Eqty
+GCM Healthcare,Fundamental Long-Biased Equity,SPTRHLTH Index,EHI100 Long-Biased Fundamental Equity,Healthcare,Long-Bias Eqty,Long-Biased Fdmtl Eqty
+GCM Industrials,Fundamental Long-Biased Equity,SPTRINDU Index,EHI100 Long-Biased Fundamental Equity,Industrials,Long-Bias Eqty,Long-Biased Fdmtl Eqty
+GCM Japan,Fundamental Long-Biased Equity,MXCN Index,EHI100 Asia,Japan,Long-Bias Eqty,Asia
+GCM Long Only Equity,Fundamental Long-Biased Equity,SPXT Index,EHI100 Long Only Equity,Long Only Eqty,Long-Bias Eqty,Long Only Eqty
+GCM Long/Short Equity,Fundamental Long-Biased Equity,SPXT Index,EHI100 Long-Biased Fundamental Equity,L/S Eqty,Long-Bias Eqty,Long-Biased Fdmtl Eqty
+GCM Long/Short Credit,Fundamental Credit,LF98TRUU Index,EHI100 Long/Short Credit,L/S Credit,Fdmtl Credit,L/S Credit
+GCM Macro,Global Macro,GDDUWI Index,EHI100 Macro,Macro,Gbl Macro,Macro
+GCM Multi-PM,Fundamental Market Neutral Equity,GDDUWI Index,EHI100 Multi-Strategy,Multi-PM,Mkt Neut Eqty,Multi-Strat
+GCM Multi-Strategy,Opportunistic MS,GDDUWI Index,EHI100 Multi-Strategy,Multi-Strat,Opp MS,Multi-Strat
+GCM Quant,Quantitative,GDDUWI Index,EHI100 Quant,Quant,Quant,Quant
+GCM Real Estate,Fundamental Long-Biased Equity,SPTRRLST Index,EHI100 Long-Biased Fundamental Equity,Real Estate,Long-Bias Eqty,Long-Biased Fdmtl Eqty
+GCM Relative Value,Fundamental Market Neutral Equity,GDDUWI Index,EHI100 Relative Value,Relative Value,Mkt Neut Eqty,Relative Value
+GCM Structured Credit,Structured Credit,LF98TRUU Index,EHI100 Structured Credit,Structured Credit,Structured Credit,Structured Credit
+GCM TMT,Fundamental Long-Biased Equity,XNDX Index,EHI100 Long-Biased Fundamental Equity,TMT,Long-Bias Eqty,Long-Biased Fdmtl Eqty
+GCM Utilities,Fundamental Long-Biased Equity,SPTRUTIL Index,EHI100 Long-Biased Fundamental Equity,Utilities,Long-Bias Eqty,Long-Biased Fdmtl Eqty

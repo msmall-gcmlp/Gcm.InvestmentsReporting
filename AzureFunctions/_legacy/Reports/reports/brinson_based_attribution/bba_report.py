@@ -40,7 +40,7 @@ class BbaReport(ReportingRunnerBase):
         self._investment_group = InvestmentGroup()
         self._entity_master = EntityMaster()
         self._factor_returns = AggregateFromDaily().transform(
-            data=Factor(tickers=["SPXT Index", "SBMMTB1 Index"]).get_returns(
+            data=Factor(tickers=["SPXT Index", "I00078US Index"]).get_returns(
                 start_date=dt.date(2010, 1, 1), end_date=self._report_date + MonthEnd(1), fill_na=True
             ),
             method="geometric",

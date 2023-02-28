@@ -149,7 +149,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         return exposure_latest, exposure_3y, exposure_5y, exposure_10y
 
     def _get_rf_and_spx(self):
-        market_factor_returns = Factor(tickers=["SBMMTB1 Index", "SPXT Index"]).get_returns(
+        market_factor_returns = Factor(tickers=["I00078US Index", "SPXT Index"]).get_returns(
             start_date=self._start_10y,
             end_date=self._end_date,
             fill_na=True,

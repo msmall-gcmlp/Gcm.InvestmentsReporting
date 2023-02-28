@@ -28,7 +28,7 @@ def main(requestBody) -> str:
                 investment_group_ids = ast.literal_eval(params.get("investment_group_ids"))
 
             perf_quality_data = PerformanceQualityReportData(
-                start_date=as_of_date - relativedelta(years=10),
+                start_date=as_of_date - relativedelta(years=20),
                 end_date=as_of_date,
                 investment_group_ids=investment_group_ids,
             )
