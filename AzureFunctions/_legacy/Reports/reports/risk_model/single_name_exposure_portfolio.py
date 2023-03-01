@@ -200,13 +200,15 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         dupliacted_Issuers = portfolio_allocation[portfolio_allocation[['Issuer']].duplicated()]['Issuer']
         portfolio_allocation.loc[portfolio_allocation['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
         portfolio_allocation.drop_duplicates(subset='Issuer', inplace=True)
+        portfolio_allocation['Usage'] = abs(portfolio_allocation['IssuerSum']) / 0.03
+        portfolio_allocation.loc[portfolio_allocation['Sector'].str.contains('Privates'), 'Usage'] = None
         excluded_managers = self._portfolio_holdings[~ self._portfolio_holdings['InvestmentGroupName'].isin(single_name['InvestmentGroupName'].to_list())]
         excluded_managers['OpeningBalance'] = excluded_managers['OpeningBalance'] / 1000
         manager_allocation_longs = manager_allocation[manager_allocation['manager_allocation_pct'] > 0.0]
         manager_allocation_shorts = manager_allocation[manager_allocation['manager_allocation_pct'] <= 0.0]
         manager_allocation_shorts.sort_values(by='manager_allocation_pct', ascending=True, inplace=True)
-        portfolio_allocation_longs = portfolio_allocation[portfolio_allocation['IssuerSum'] > 0.0]
-        portfolio_allocation_shorts = portfolio_allocation[portfolio_allocation['IssuerSum'] <= 0.0]
+        portfolio_allocation_longs = portfolio_allocation[portfolio_allocation['IssuerSum'] >= 0.0]
+        portfolio_allocation_shorts = portfolio_allocation[portfolio_allocation['IssuerSum'] < 0.0]
         portfolio_allocation_shorts.sort_values(by='IssuerSum', ascending=True, inplace=True)
         excluded_max_row = 10 + excluded_managers.shape[0]
         excludedr_max_column = 'D'
