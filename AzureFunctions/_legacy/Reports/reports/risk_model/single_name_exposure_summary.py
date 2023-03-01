@@ -131,7 +131,7 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
                           how='inner', on=['InvestmentGroupId'])
         return result
 
-    def build_single_name_summary(self):
+    def build_single_name_summary(self, usage_limit=0.03):
         single_name = self.get_single_nam_equity_exposure(investment_group_id=self._inv_group_ids,
                                                           as_of_date=self._as_of_date)
 
@@ -150,16 +150,23 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
 
         # get funds  per portfolio
         portfolio_level = portfolio_level.groupby(['Acronym', 'Issuer', 'Sector'])['IssuerNav', 'Issuerbalance'].sum().reset_index()
-        portfolio_level.sort_values(['Acronym'], ascending=True, inplace=True)
-        group_porrtfolios = portfolio_level.groupby('Acronym', group_keys=False)
-        largest_portfolio_level_log = group_porrtfolios.apply(lambda x: x.sort_values(by='IssuerNav', ascending=False).head(5))
-        largest_portfolio_level_log = largest_portfolio_level_log[largest_portfolio_level_log['IssuerNav'] >= 0]
-        largest_portfolio_level_log = largest_portfolio_level_log[['Acronym', 'Issuer', 'Sector', 'Issuerbalance', 'IssuerNav']]
-        largest_portfolio_level_short = group_porrtfolios.apply(
-            lambda x: x.sort_values(by='IssuerNav', ascending=True).head(5))
-        largest_portfolio_level_short = largest_portfolio_level_short[largest_portfolio_level_short['IssuerNav'] <= 0]
+        portfolio_level.sort_values(['Acronym', 'IssuerNav'], ascending=[True, False], inplace=True)
+        # group_porrtfolios = portfolio_level.groupby(portfolio_level['Acronym'])
+        #(portfolio_level['IssuerNav'] >= 0.015).groupby(portfolio_level['Acronym'])
+        #group_porrtfolios = portfolio_level.groupby('Acronym', group_keys=False)
+        portfolio_level.loc[:, 'Usage'] = abs(portfolio_level['IssuerNav']) / usage_limit
+        portfolio_level.loc[portfolio_level['Sector'].str.contains('Privates'), 'Usage'] = None
+
+        largest_portfolio_level_long = portfolio_level[portfolio_level['IssuerNav'] >= 0.015]
+
+        # largest_portfolio_level_long = group_porrtfolios.apply(lambda x: x.sort_values(by='IssuerNav', ascending=False).head(5))
+        # largest_portfolio_level_long = group_porrtfolios[group_porrtfolios['IssuerNav'] >= 0.015]
+        largest_portfolio_level_long = largest_portfolio_level_long[['Acronym', 'Issuer', 'Sector', 'Issuerbalance', 'IssuerNav', 'Usage']]
+        # largest_portfolio_level_short = group_porrtfolios.apply(
+        #     lambda x: x.sort_values(by='IssuerNav', ascending=True).head(5))
+        largest_portfolio_level_short = portfolio_level[portfolio_level['IssuerNav'] <= -0.015]
         largest_portfolio_level_short = largest_portfolio_level_short[
-            ['Acronym', 'Issuer', 'Sector', 'Issuerbalance', 'IssuerNav']]
+            ['Acronym', 'Issuer', 'Sector', 'Issuerbalance', 'IssuerNav', 'Usage']]
 
         # Firmwide
         firm_wide_holdings = self._investment_group.get_firmwide_allocation(
@@ -186,7 +193,7 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
             ', '.join).reset_index()
         largest_firm_wide_level = largest_firm_wide_level[['Issuer', 'InvestmentGroupName', 'Sector', 'Issuer_allocation', 'IssuerSum']]
         largest_firm_wide_level.sort_values(['IssuerSum'], ascending=False, inplace=True)
-        return [largest_portfolio_level_log, largest_firm_wide_level, largest_portfolio_level_short]
+        return [largest_portfolio_level_long, largest_firm_wide_level, largest_portfolio_level_short]
 
     def get_as_of_date(self):
         return pd.DataFrame(
@@ -212,9 +219,9 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         firm_wide_shorts = firm_wide[firm_wide['IssuerSum'] <= 0.0]
         firm_wide_shorts.sort_values(by='IssuerSum', ascending=True, inplace=True)
         portfolio_max_row = 9 + portfolio.shape[0]
-        portfolio_max_column = 'F'
-        portfolio_short_max_row = 9 + portfolio.shape[0]
-        portfolio_short__max_column = 'F'
+        portfolio_max_column = 'G'
+        portfolio_short_max_row = 9 + portfolio_short.shape[0]
+        portfolio_short__max_column = 'G'
         print_area_portfolio = {'PortfolioAllocationLong': 'B1:' + portfolio_max_column + str(portfolio_max_row),
                                 'PortfolioAllocationShort': 'B1:' + portfolio_short__max_column + str(portfolio_short_max_row)}
         input_data_portfolio = {
