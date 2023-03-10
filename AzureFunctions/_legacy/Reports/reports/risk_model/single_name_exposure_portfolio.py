@@ -18,6 +18,8 @@ from _legacy.core.reporting_runner_base import (
 from gcm.inv.dataprovider.portfolio import Portfolio
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.inv.scenario import Scenario
+from sqlalchemy import func, and_
+from gcm.inv.dataprovider.utilities import filter_many
 
 
 class SingleNamePortfolioReport(ReportingRunnerBase):
@@ -53,13 +55,6 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         return self._all_holdings.Acronym.unique()
 
     @property
-    def _selected_acronyms(self):
-        if self._portfolio_acronym is None:
-            return self._all_acronyms
-        else:
-            return self._portfolio_acronym
-
-    @property
     def _inv_group_ids(self):
         holdings = self._portfolio_holdings['InvestmentGroupId'].unique()
         investment_group_ids = holdings.astype('float').astype('int').tolist()
@@ -74,31 +69,90 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
 
     @property
     def _investment_group(self):
-        if self.__investment_group is None:
-            self.__investment_group = InvestmentGroup(investment_group_ids=self._inv_group_ids)
+        self.__investment_group = InvestmentGroup(investment_group_ids=self._inv_group_ids)
         return self.__investment_group
 
     @property
     def _pub_portfolio_id(self):
-        port_dimn = self._all_pub_port_dimn[self.__all_pub_port_dimn["Acronym"] == self._portfolio_acronym]
+        port_dimn = self._all_pub_port_dimn[self._all_pub_port_dimn["Acronym"] == self._portfolio_acronym]
         return port_dimn["PubPortfolioId"].squeeze()
 
+    # def get_single_nam_equity_exposure(self, investment_group_id, as_of_date):
+    #     exposure = self._runner.execute(
+    #         params={
+    #             "schema": "AnalyticsData",
+    #             "table": "SingleNameEquityExposure",
+    #             "operation": lambda query, item: query.filter(item.InvestmentGroupId.in_(investment_group_id),
+    #                                                           item.AsOfDate == as_of_date),
+    #         },
+    #         source=DaoSource.InvestmentsDwh,
+    #         operation=lambda dao, params: dao.get_data(params),
+    #     )
+    #
+    #     exposure = pd.merge(self._portfolio_holdings[['InvestmentGroupId', 'InvestmentGroupName']].drop_duplicates(),
+    #                         exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate', 'ExpNav']],
+    #                         how='inner', on=['InvestmentGroupId'])
+    #    return exposure
+
     def get_single_nam_equity_exposure(self, investment_group_id, as_of_date):
-        exposure = self._runner.execute(
+
+        def _create_query(session, items):
+            query = session.query(
+                items["AnalyticsData.SingleNameEquityExposure"]
+            ).select_from(items["AnalyticsData.SingleNameEquityExposure"])
+
+            return query
+
+        def _build_filters(session, items, investment_group_id, as_of_date):
+            query = _create_query(session, items)
+            query = filter_many(
+                query=query,
+                items=items,
+                table_name="AnalyticsData.SingleNameEquityExposure",
+                col_name="InvestmentGroupId",
+                ids=investment_group_id,
+            )
+            subq = (
+                session.query(
+                    func.max(items["AnalyticsData.SingleNameEquityExposure"].AsOfDate).label("maxdate"),
+                    items["AnalyticsData.SingleNameEquityExposure"].InvestmentGroupId,
+                ).group_by(
+                    items["AnalyticsData.SingleNameEquityExposure"].InvestmentGroupId,
+                ).filter(
+                    items["AnalyticsData.SingleNameEquityExposure"].AsOfDate <= as_of_date,
+                ).subquery("t2")
+            )
+
+            query = query.join(
+                subq,
+                and_(
+                    items["AnalyticsData.SingleNameEquityExposure"].InvestmentGroupId == subq.c.InvestmentGroupId,
+                    items["AnalyticsData.SingleNameEquityExposure"].AsOfDate == subq.c.maxdate,
+                ),
+            )
+
+            return query
+
+        result = self._runner.execute(
             params={
-                "schema": "AnalyticsData",
-                "table": "SingleNameEquityExposure",
-                "operation": lambda query, item: query.filter(item.InvestmentGroupId.in_(investment_group_id),
-                                                              item.AsOfDate == as_of_date),
+                "tables": [
+                    {
+                        "schema": "AnalyticsData",
+                        "table": "SingleNameEquityExposure",
+                    },
+
+                ],
+                "operation": lambda session, items: _build_filters(session, items,
+                                                                   investment_group_id=investment_group_id,
+                                                                   as_of_date=as_of_date),
             },
             source=DaoSource.InvestmentsDwh,
             operation=lambda dao, params: dao.get_data(params),
         )
-
-        exposure = pd.merge(self._portfolio_holdings[['InvestmentGroupId', 'InvestmentGroupName']].drop_duplicates(),
-                            exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate', 'ExpNav']],
-                            how='inner', on=['InvestmentGroupId'])
-        return exposure
+        result = pd.merge(self._portfolio_holdings[['InvestmentGroupId', 'InvestmentGroupName']].drop_duplicates(),
+                          result[['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate', 'ExpNav']],
+                          how='inner', on=['InvestmentGroupId'])
+        return result
 
     def build_single_name(self):
         single_name = self.get_single_nam_equity_exposure(investment_group_id=self._inv_group_ids, as_of_date=self._as_of_date)
@@ -107,13 +161,13 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         portfolio_level = pd.merge(self._portfolio_holdings,
                                    single_name[['InvestmentGroupId', 'Issuer', 'Sector', 'ExpNav', 'AsOfDate']],
                                    how='inner',
-                                   on=['AsOfDate', 'InvestmentGroupId'])
+                                   on=['InvestmentGroupId'])
         portfolio_level['PortfolioNav'] = portfolio_level['PctNav'] * portfolio_level['ExpNav']
 
         # get funds without exposure
-        portfolio_level['IssuerSum'] = portfolio_level.groupby(['AsOfDate', 'Issuer'])['PortfolioNav'].transform(
+        portfolio_level['IssuerSum'] = portfolio_level.groupby(['Issuer'])['PortfolioNav'].transform(
             'sum')
-        groupped = portfolio_level.groupby(['AsOfDate', 'Issuer', 'InvestmentGroupName', 'IssuerSum', 'Sector', 'ExpNav'])[
+        groupped = portfolio_level.groupby(['Issuer', 'InvestmentGroupName', 'IssuerSum', 'Sector', 'ExpNav'])[
             'PortfolioNav'].sum().reset_index()
         groupped.sort_values(['IssuerSum', 'PortfolioNav'], ascending=False, inplace=True)
         groupped['Issuer'] = groupped['Issuer'].str[0:39]
@@ -146,13 +200,15 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         dupliacted_Issuers = portfolio_allocation[portfolio_allocation[['Issuer']].duplicated()]['Issuer']
         portfolio_allocation.loc[portfolio_allocation['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
         portfolio_allocation.drop_duplicates(subset='Issuer', inplace=True)
+        portfolio_allocation['Usage'] = abs(portfolio_allocation['IssuerSum']) / 0.03
+        portfolio_allocation.loc[portfolio_allocation['Sector'].str.contains('Privates'), 'Usage'] = None
         excluded_managers = self._portfolio_holdings[~ self._portfolio_holdings['InvestmentGroupName'].isin(single_name['InvestmentGroupName'].to_list())]
         excluded_managers['OpeningBalance'] = excluded_managers['OpeningBalance'] / 1000
         manager_allocation_longs = manager_allocation[manager_allocation['manager_allocation_pct'] > 0.0]
         manager_allocation_shorts = manager_allocation[manager_allocation['manager_allocation_pct'] <= 0.0]
         manager_allocation_shorts.sort_values(by='manager_allocation_pct', ascending=True, inplace=True)
-        portfolio_allocation_longs = portfolio_allocation[portfolio_allocation['IssuerSum'] > 0.0]
-        portfolio_allocation_shorts = portfolio_allocation[portfolio_allocation['IssuerSum'] <= 0.0]
+        portfolio_allocation_longs = portfolio_allocation[portfolio_allocation['IssuerSum'] >= 0.0]
+        portfolio_allocation_shorts = portfolio_allocation[portfolio_allocation['IssuerSum'] < 0.0]
         portfolio_allocation_shorts.sort_values(by='IssuerSum', ascending=True, inplace=True)
         excluded_max_row = 10 + excluded_managers.shape[0]
         excludedr_max_column = 'D'
@@ -194,8 +250,8 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
 
     def run(self, **kwargs):
         error_df = pd.DataFrame()
-        self._selected_acronyms.sort()
-        for acronym in self._selected_acronyms:
+        self._all_acronyms.sort()
+        for acronym in self._all_acronyms:
             error_msg = 'success'
             self._portfolio_acronym = acronym
             try:
@@ -240,7 +296,7 @@ if __name__ == "__main__":
         },
     )
 
-    end_date = dt.date(2022, 11, 30)
+    end_date = dt.date(2022, 12, 31)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNamePortfolioReport().execute()
