@@ -184,7 +184,7 @@ class SimulateResiduals(ReportingRunnerBase):
 
         return rolling_alphas
 
-    def generate_rolling_fund_excess_simulations(self, arb_sims, peer_sims, rolling_years=3, number_sims=10_000):
+    def generate_rolling_fund_excess_simulations(self, arb_sims, peer_sims, exp_rf, rolling_years=3, number_sims=10_000):
         error = self._generate_rolling_fund_residual_simulations(rolling_years=rolling_years, number_sims=number_sims)
         excess = error.copy()
         for fund in error.columns:
@@ -200,7 +200,7 @@ class SimulateResiduals(ReportingRunnerBase):
 
             arb = self._peer_arb_mapping[self._peer_arb_mapping['ReportingPeerGroup'] == peer_group]['Ticker']
 
-            market_beta_ctr = (exp.loc['NetNotional'] * arb_sims[arb]).squeeze()
+            market_beta_ctr = (exp.loc['NetNotional'] * (arb_sims[arb] - exp_rf)).squeeze()
             beta_to_peer = exp.loc['CorrToPeer'] * (exp.loc['VolExSystematic'] / peer_exp.loc['VolExSystematic'])
             peer_beta_ctr = (beta_to_peer * peer_sims[peer_group]).squeeze()
             fund_error = error[fund]
@@ -212,7 +212,7 @@ class SimulateResiduals(ReportingRunnerBase):
             # fund_excess includes benefits of exposure to premia embedded in peer group.
             # need to subtract the peer beta ctr from the excess to arrive at fund-specific delta
             fund_alpha = fund_excess - peer_beta_ctr.mean()
-            excess[fund] = market_beta_ctr + peer_beta_ctr + fund_alpha + fund_error
+            excess[fund] = market_beta_ctr + peer_beta_ctr + fund_alpha + fund_error + exp_rf
 
         return excess
 
@@ -251,7 +251,8 @@ if __name__ == "__main__":
         arb_sims = generate_arb_simulations(exp_rf=0.03, as_of_date=as_of_date)
         peer_sims = SimulateResiduals().generate_rolling_peer_excess_simulations(arb_sims=arb_sims)
         fund_sims = SimulateResiduals().generate_rolling_fund_excess_simulations(arb_sims=arb_sims,
-                                                                                 peer_sims=peer_sims)
+                                                                                 peer_sims=peer_sims,
+                                                                                 exp_rf=0.03)
         sims = pd.concat([arb_sims, peer_sims, fund_sims], axis=1)
         sim_cor_mat = sims.corr().round(1)
 
@@ -264,6 +265,19 @@ if __name__ == "__main__":
         scipy.stats.linregress(y=fund_sims.mean(axis=1), x=arb_sims['SPXT Index'])
 
         sim_summary.to_csv('sim_summary.csv')
+
+        gcm_weights = pd.read_csv('gcm_firmwide_weights.csv')
+        exp_return = 0.3 * (0.09 - 0.03) + 0.04 + 0.03
+        exp_vol = 0.07
+        exp_rf = 0.03
+        lam = exp_return / (exp_vol ** 2)
+        implied_returns = lam * pd.Series(gcm_weights['GcmWeight']) @ np.asarray(fund_sims.cov())
+        implied_returns = implied_returns + exp_rf
+        return_scalar = exp_return / (pd.Series(gcm_weights['GcmWeight']) @ implied_returns)
+        implied_returns = pd.DataFrame({'Fund': fund_sims.columns,
+                                        'ImpliedReturn': implied_returns * return_scalar,
+                                        'GcmFirmwideWeight': gcm_weights['GcmWeight']})
+        implied_returns.to_csv('implied_returns.csv')
 
         tmp = (pd.Series([1 / 65] * 65) @ np.asarray(fund_sims.cov()))
         tmp = pd.DataFrame(tmp, index=fund_sim_cor_mat.index).sort_values(0)
