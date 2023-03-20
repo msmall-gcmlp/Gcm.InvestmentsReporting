@@ -26,11 +26,13 @@ GCM Industrials,S&P 500 Industrial
 GCM Japan,Nikkei 225 Avg P%C
 GCM Long Only Equity,S&P 500
 GCM Long/Short Credit,HFRI Credit Index
-GCM Macro,S&P 500
+GCM Macro,MSCI World
+GCM Macro ex. CTA,MSCI World
 GCM Merger Arbitrage,HFRI ED Merger Arb
 GCM Multi-PM,S&P 500
 GCM Multi-Strategy,S&P 500
 GCM Quant,S&P 500
+GCM Quant with CTA,S&P 500
 GCM Real Estate,S&P 500 Real Estate
 GCM Relative Value,HFRI Rel Val Total
 GCM Short Sellers,S&P 500
