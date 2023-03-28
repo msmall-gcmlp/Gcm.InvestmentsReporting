@@ -18,6 +18,9 @@ from gcm.inv.scenario import Scenario
 import datetime as dt
 
 
+# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=AggregatedPortolioFundAttributeReport&frequency=Monthly&save=True&aggregate_interval=MTD&entity_domain='Portfolio'
+
+
 class SampleArsPortfolioReport(ReportStructure):
     def __init__(self, report_meta: ReportMeta):
         super().__init__(
@@ -40,7 +43,7 @@ class SampleArsPortfolioReport(ReportStructure):
             frequencies=[
                 Frequency(FrequencyType.Monthly),
             ],
-            aggregate_intervals=[AggregateInterval.MTD],
+            aggregate_intervals=[AggregateInterval.MTD, AggregateInterval.YTD],
             consumer=ReportConsumer(
                 horizontal=[ReportConsumer.Horizontal.Risk],
                 vertical=ReportConsumer.Vertical.ARS,
@@ -57,6 +60,11 @@ class SampleArsPortfolioReport(ReportStructure):
         assert as_of_date is not None
         domain = self.report_meta.entity_domain
         entity_info: pd.DataFrame = self.report_meta.entity_info
+        aggregate_interval : AggregateInterval = Scenario.get_attribute("aggregate_interval")
+        if aggregate_interval == AggregateInterval.MTD:
+            # do something!
+            pass
+        start_date = as_of_date.offset(-aggregate_interval, Calendar.US)
         assert entity_info is not None
         if domain == EntityDomainTypes.InvestmentGroup:
             print("yay!")

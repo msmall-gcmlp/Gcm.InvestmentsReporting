@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.Utils.tabular_data_util_outputs import TabularDataOutputTypes
@@ -1865,7 +1864,7 @@ class BbaReport(object):
             source=DaoSource.DataLake,
             operation=lambda dao, params: dao.get_data(params),
         )
-        sub_strat_map = excel = file.to_tabular_data(
+        sub_strat_map = file.to_tabular_data(
             TabularDataOutputTypes.PandasDataFrame, params
         )
         return sub_strat_map

@@ -26,7 +26,7 @@ class MarketPerformanceReport(ReportStructure):
             zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
             sources="investmentsreporting",
             entity="exceltemplates",
-            path=["Market Performance_Template.xlsx.xlsx"],
+            path=["Market Performance_Template.xlsx"],
         )
 
     @classmethod

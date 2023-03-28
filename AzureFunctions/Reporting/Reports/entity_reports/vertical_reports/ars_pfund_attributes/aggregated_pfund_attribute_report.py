@@ -16,12 +16,14 @@ from .....core.components.report_table import ReportTable
 from ....report_names import ReportNames
 from .construct_data import BbaReport
 
-# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=AggregatedPortolioFundAttributeReport&frequency=Monthly&save=True&EntityDomainTypes=Vertical&EntityNames=["ARS"]
+# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=AggregatedPortolioFundAttributeReport&frequency=Monthly&save=True
 
 
 class AggregatedPortolioFundAttributeReport(ReportStructure):
     def __init__(self, report_meta: ReportMeta):
-        super().__init__(ReportNames.AggregatedPortolioFundAttributeReport, report_meta)
+        super().__init__(
+            ReportNames.AggregatedPortolioFundAttributeReport, report_meta
+        )
 
     @classmethod
     def available_metas(cls):
