@@ -16,7 +16,6 @@ from _legacy.core.reporting_runner_base import (
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
-from gcm.inv.dataprovider.risk_model import RunName
 from gcm.inv.dataprovider.peer_group import PeerGroup
 from gcm.inv.utils.date import DatePeriod
 
@@ -290,7 +289,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
     @cached_property
     def _fund_distributions(self):
         # TODO - get 1Y lagged distributions to compare for forward returns
-        return self._inv_group.get_simulated_fund_returns(run_name=RunName.ARS_EMM)
+        return self._inv_group.get_simulated_fund_returns()
 
     def get_performance_quality_report_inputs(self):
         exposure_latest, exposure_3y, exposure_5y, exposure_10y = self._get_exposures()
