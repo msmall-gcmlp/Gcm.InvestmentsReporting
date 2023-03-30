@@ -523,7 +523,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         return_count = omitted_fund_returns.count(axis=0)
         return_count = return_count.to_frame('NoReturns')
 
-        #TODO adjust
+        # TODO adjust
         partial_return = omitted_fund_returns.mean() * 12
         partial_return = partial_return.to_frame('PartialReturn')
 

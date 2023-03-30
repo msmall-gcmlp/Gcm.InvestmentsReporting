@@ -5,9 +5,7 @@ from _legacy.Reports.reports.eof_liquidity_stress.report_data import (
 from _legacy.Reports.reports.eof_liquidity_stress.eof_liquidity_stress_report import (
     EofLiquidityReport,
 )
-# from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.inv.scenario import Scenario
-# from gcm.Dao.DaoSources import DaoSource
 
 
 def main(requestBody) -> str:
@@ -39,8 +37,9 @@ def main(requestBody) -> str:
             eof_liquidity = EofLiquidityReport(
                 runner=Scenario.get_attribute("dao"),
                 as_of_date=as_of_date,
-                factor_inventory=input_data,
-                manager_exposure=input_data,
+                factor_inventory=input_data[0],
+                manager_exposure=input_data[0],
+                correlated_factors=input_data[1]
             )
 
         return eof_liquidity.execute()
