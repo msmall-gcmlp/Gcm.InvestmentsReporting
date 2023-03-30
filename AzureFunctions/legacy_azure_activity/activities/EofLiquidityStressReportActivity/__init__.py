@@ -6,6 +6,7 @@ from _legacy.Reports.reports.eof_liquidity_stress.eof_liquidity_stress_report im
     EofLiquidityReport,
 )
 from gcm.inv.scenario import Scenario
+from gcm.Dao.DaoRunner import DaoRunner
 
 
 def main(requestBody) -> str:
@@ -21,11 +22,11 @@ def main(requestBody) -> str:
     #         }
     #     }
     # }
-
+    runner = DaoRunner()
     if run == "RunEofLiquidityStress":
         with Scenario(as_of_date=as_of_date).context():
             input_data = EofStressTestingData(
-                runner=Scenario.get_attribute("dao"),
+                runner=runner,
                 as_of_date=params["as_of_date"],
                 scenario=["Liquidity Stress"],
             ).execute()
@@ -33,9 +34,10 @@ def main(requestBody) -> str:
             #     container_lambda=lambda b, i: b.config.from_dict(i),
             #     config_params=config_params,
             # )
-
+        runner2 = DaoRunner()
+        with Scenario(as_of_date=as_of_date).context():
             eof_liquidity = EofLiquidityReport(
-                runner=Scenario.get_attribute("dao"),
+                runner=runner2,
                 as_of_date=as_of_date,
                 factor_inventory=input_data[0],
                 manager_exposure=input_data[0],
