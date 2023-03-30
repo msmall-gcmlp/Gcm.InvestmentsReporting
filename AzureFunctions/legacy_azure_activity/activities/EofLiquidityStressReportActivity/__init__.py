@@ -8,6 +8,7 @@ from _legacy.Reports.reports.eof_liquidity_stress.eof_liquidity_stress_report im
 from gcm.inv.scenario import Scenario
 from gcm.Dao.DaoRunner import DaoRunner
 
+
 def main(requestBody) -> str:
     params = requestBody["params"]
     run = params["run"]
