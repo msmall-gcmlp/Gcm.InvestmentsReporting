@@ -32,7 +32,13 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
     params["file_path"] = params["file_path"].replace(".xlsx", ".pdf")
     assert params is not None
     dao = Scenario.get_attribute("dao")
-    from asposecells.api import Workbook, SaveFormat, LoadOptions, License, FontConfigs
+    from asposecells.api import (
+        Workbook,
+        SaveFormat,
+        LoadOptions,
+        License,
+        FontConfigs,
+    )
 
     lic = License()
     try:

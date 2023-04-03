@@ -1,6 +1,5 @@
 from .excel_io import ExcelIO
 from openpyxl import Workbook
-from openpyxl.writer.excel import save_virtual_workbook
 from Reporting.core.components.report_table import ReportTable
 from Reporting.core.report_structure import ReportStructure
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource
@@ -32,7 +31,9 @@ def save_report_structure_to_excel_return_virtual_book(
 ) -> Tuple[bytes, dict, DaoSource]:
     dao: DaoRunner = Scenario.get_attribute("dao")
     final_template = print_report_to_template(template, report_structure)
-    b = save_virtual_workbook(final_template)
+    wb_stream = io.BytesIO()
+    final_template.save(wb_stream)
+    b = wb_stream.getvalue()
     [params, source] = report_structure.save_params()
 
     # TODO: Not sure why this happens with ReportingStorage
