@@ -16,7 +16,6 @@ from _legacy.core.reporting_runner_base import (
 from gcm.inv.quantlib.timeseries.analytics import Analytics
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
-from gcm.inv.dataprovider.risk_model import RunName
 from gcm.inv.dataprovider.peer_group import PeerGroup
 from gcm.inv.utils.date import DatePeriod
 
@@ -149,7 +148,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         return exposure_latest, exposure_3y, exposure_5y, exposure_10y
 
     def _get_rf_and_spx(self):
-        market_factor_returns = Factor(tickers=["SBMMTB1 Index", "SPXT Index"]).get_returns(
+        market_factor_returns = Factor(tickers=["I00078US Index", "SPXT Index"]).get_returns(
             start_date=self._start_10y,
             end_date=self._end_date,
             fill_na=True,
@@ -158,6 +157,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
     @cached_property
     def _peer_arb_mapping(self):
+        # TODO replace with peer_group_arb_mapping used in InvestmentsModels
         peer_arb_mapping = pd.read_csv(os.path.dirname(__file__) + "/peer_group_to_arb_mapping.csv")
         peer_arb_mapping.loc[peer_arb_mapping['ReportingPeerGroup'] == 'GCM Macro', 'Ticker'] = 'MOVE Index'
         return peer_arb_mapping
@@ -290,7 +290,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
     @cached_property
     def _fund_distributions(self):
         # TODO - get 1Y lagged distributions to compare for forward returns
-        return self._inv_group.get_simulated_fund_returns(run_name=RunName.ARS_EMM)
+        return self._inv_group.get_simulated_fund_returns()
 
     def get_performance_quality_report_inputs(self):
         exposure_latest, exposure_3y, exposure_5y, exposure_10y = self._get_exposures()
