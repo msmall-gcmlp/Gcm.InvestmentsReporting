@@ -378,7 +378,7 @@ class MarketPerformanceReport(ReportingRunnerBase):
                     )
                     agg_stat = agg_stat.apply(function)
 
-            output_table = output_table.append(agg_stat)
+            output_table = pd.concat([output_table, agg_stat])
 
         return output_table
 
