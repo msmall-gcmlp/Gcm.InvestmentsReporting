@@ -9,7 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Gcm.AzureFunctions.Sdk" Version="7.*" />
-    <PackageReference Include="Gcm.AzureFunctions.Extensions.DurableFunctionsMonitor" Version="4.*" />
+    <PackageReference Include="Gcm.AzureFunctions.Extensions.DurableFunctionsMonitor" Version="5.*" />
     <None Update="host.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
