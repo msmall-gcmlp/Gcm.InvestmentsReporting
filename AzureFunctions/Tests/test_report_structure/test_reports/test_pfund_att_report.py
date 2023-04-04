@@ -18,9 +18,9 @@ from Reporting.core.report_structure import (
 from Reporting.Reports.entity_reports.vertical_reports.ars_pfund_attributes.aggregated_pfund_attribute_report import (
     AggregatedPortolioFundAttributeReport,
 )
-# from utils.conversion_tools.report_structure_to_excel import (
-#     save_report_structure_to_excel_return_virtual_book,
-# )
+from utils.conversion_tools.report_structure_to_excel import (
+    save_report_structure_to_excel_return_virtual_book,
+)
 
 
 class TestPFundAttReport(object):
@@ -60,12 +60,12 @@ class TestPFundAttReport(object):
                 entity_info=entity_info,
             )
             assert this_meta is not None
-            # validate_meta(class_structure, this_meta)
-            # this_report = class_structure(this_meta)
-            # template = this_report.get_template()
-            # virtual_workbook = (
-            #     save_report_structure_to_excel_return_virtual_book(
-            #         template, this_report, Scenario.get_attribute("save")
-            #     )
-            # )
-            # assert this_report is not None and virtual_workbook is not None
+            validate_meta(class_structure, this_meta)
+            this_report = class_structure(this_meta)
+            template = this_report.get_template()
+            virtual_workbook = (
+                save_report_structure_to_excel_return_virtual_book(
+                    template, this_report, Scenario.get_attribute("save")
+                )
+            )
+            assert this_report is not None and virtual_workbook is not None
