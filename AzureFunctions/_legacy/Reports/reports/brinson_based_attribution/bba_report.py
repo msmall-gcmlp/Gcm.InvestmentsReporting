@@ -308,7 +308,7 @@ class BbaReport(ReportingRunnerBase):
             sharpe_df = pd.DataFrame(
                 {"Sharpe": [(asset_ror.AnnRor.squeeze() - rf_ror.AnnRor.squeeze()) / asset_vol.squeeze()], "NoObs": trailing_period}
             )
-            result = result.append(sharpe_df)
+            result = pd.concat([result, sharpe_df])
         return result
 
     def ann_vol(self, returns, trailing_periods, freq=250):
@@ -325,7 +325,7 @@ class BbaReport(ReportingRunnerBase):
                 return_sub = returns
             ann_vol = pd.DataFrame(return_sub.std() * np.sqrt(freq))
             ann_vol["NoObs"] = len(return_sub)
-            result = result.append(ann_vol)
+            result = pd.concat([result, ann_vol])
         result = result.reset_index().rename(columns={"index": "Name", 0: "AnnVol"})
 
         return result
@@ -390,7 +390,7 @@ class BbaReport(ReportingRunnerBase):
                     corr_df = pd.DataFrame(
                         {"Asset": [asset], "Correlation": [return_sub.corr()[asset].loc[bmk]], "NoObs": [trailing_period]}
                     )
-                    result = result.append(corr_df)
+                    result = pd.concat([result, corr_df])
         return result
 
     def calculate_downside_capture(self, returns, assets, benchmarks, trailing_periods):
@@ -416,7 +416,7 @@ class BbaReport(ReportingRunnerBase):
                             "NoObs": [trailing_period],
                         }
                     )
-                    result = result.append(downside_df)
+                    result = pd.concat([result, downside_df])
         return result
 
     def get_betas_rpt(self, port_rtn, bmark_rtn, assets, benchmarks):
@@ -473,7 +473,7 @@ class BbaReport(ReportingRunnerBase):
                             "NoObs",
                         ],
                     )
-                    result = result.append(alpha_df)
+                    result = pd.concat([result, alpha_df])
         result = result.loc[(result.Name != "intercept") & (result.Benchmark != "intercept")]
         return result
 
@@ -1254,7 +1254,7 @@ class BbaReport(ReportingRunnerBase):
         return result
 
     def _append_total_row(self, df):
-        return df.append(df.sum(), ignore_index=True)
+        return pd.concat([df, df.sum()], ignore_index=True)
 
     def generate_firmwide_report(self):
         df = self._gcm_firmwide
