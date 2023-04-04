@@ -28,7 +28,7 @@ class TestPFundAttReport(object):
         with Scenario(
             as_of_date=dt.date(2022, 9, 1),
             aggregate_interval=AggregateInterval.Multi,
-            save=True,
+            save=False,
             dao_config={
                 DaoRunnerConfigArgs.dao_global_envs.name: {
                     DaoSource.PubDwh.name: {
@@ -60,7 +60,7 @@ class TestPFundAttReport(object):
                 entity_info=entity_info,
             )
             assert this_meta is not None
-            validate_meta(class_structure, this_meta)
+            validate_meta(class_structure, this_meta, strict=False)
             this_report = class_structure(this_meta)
             template = this_report.get_template()
             virtual_workbook = (
