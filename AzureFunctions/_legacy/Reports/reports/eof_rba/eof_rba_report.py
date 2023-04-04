@@ -311,7 +311,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         percentiles = self.calculate_return_percentile(returns=rolling_returns)
         percentiles["Metric"] = "Ptile vs Avg (Since 2000)"
 
-        summary = current_ptd_return.append(median_returns, ignore_index=True).append(percentiles, ignore_index=True)
+        summary = pd.concat([current_ptd_return, median_returns, percentiles], ignore_index=True)
         summary = summary.set_index("Metric")
 
         summary = summary.T
