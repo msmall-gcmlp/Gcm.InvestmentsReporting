@@ -83,18 +83,22 @@ class EofLiquidityReport(ReportingRunnerBase):
             correlated_factors = factor_shocks['GcmTicker'][factor_shocks['GcmTicker'].str.split('_', 1, expand=True)[1].duplicated()].unique()
             # append if doesnt exhist in the ticker
             correlated_factors = list(set(correlated_factors) - set(self._correlated_factors['Ticker'].to_list()))
-            self._correlated_factors = self._correlated_factors.append(pd.DataFrame({'Reporting Name': correlated_factors,
-
-                                                                                     'Ticker': correlated_factors}))
+            self._correlated_factors = pd.concat([
+                self._correlated_factors,
+                pd.DataFrame({'Reporting Name': correlated_factors,
+                              'Ticker': correlated_factors})
+            ])
         if (category == 'Region_Factor'):
             factor_shocks['GcmTicker'] = factor_shocks['GcmTicker'].str.split('_', 1, expand=True)[0]
             correlated_factors = factor_shocks['GcmTicker'][
                 factor_shocks['GcmTicker'].str.split('_', 1, expand=True)[0].duplicated()].unique()
             # append if doesnt exhist in the ticker
             correlated_factors = list(set(correlated_factors) - set(self._correlated_factors['Ticker'].to_list()))
-            self._correlated_factors = self._correlated_factors.append(
+            self._correlated_factors = pd.concat([
+                self._correlated_factors,
                 pd.DataFrame({'Reporting Name': correlated_factors,
-                              'Ticker': correlated_factors}))
+                              'Ticker': correlated_factors})
+            ])
 
         factor_shocks = pd.merge(factor_shocks, self._correlated_factors, left_on='GcmTicker', right_on='Ticker', how='left')
         factor_shocks.loc[~factor_shocks['Ticker'].isnull(), 'GcmTicker'] = factor_shocks['Reporting Name']
