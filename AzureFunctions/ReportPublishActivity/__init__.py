@@ -88,7 +88,7 @@ class ReportPublishActivity(BaseActivity):
             template = self.get_template(report_structure)
             if template is None:
                 # no template, get standard template
-                print("reached")
+                raise NotImplementedError("Must Have a Template (for now!)")
             else:
                 template: Workbook = template
                 final_template = (
@@ -99,10 +99,9 @@ class ReportPublishActivity(BaseActivity):
                 wb_stream = io.BytesIO()
                 final_template.save(wb_stream)
                 b = wb_stream.getvalue()
-                # b = save_virtual_workbook(final_template)
                 [params, source] = report_structure.save_params()
-                # TODO: Not sure why this happens with ReportingStorage
 
+                # TODO: Not sure why this happens with ReportingStorage
                 if (
                     source == DaoSource.ReportingStorage
                     and type(params) == dict
