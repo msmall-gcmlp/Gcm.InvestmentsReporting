@@ -8,12 +8,13 @@ from gcm.inv.entityhierarchy.EntityDomain.entity_domain.entity_domain_types impo
     get_domain,
     EntityDomain,
 )
-from Reporting.Reports.controller import validate_meta
 import pandas as pd
 from Reporting.core.report_structure import (
     ReportMeta,
     Frequency,
     FrequencyType,
+    ReportType,
+    ReportConsumer,
 )
 from Reporting.Reports.entity_reports.vertical_reports.ars_pfund_attributes.aggregated_pfund_attribute_report import (
     AggregatedPortolioFundAttributeReport,
@@ -47,11 +48,13 @@ class TestPFundAttReport(object):
                 r, s
             )
             class_structure = AggregatedPortolioFundAttributeReport
-            available_metas = class_structure.available_metas()
             this_meta = ReportMeta(
-                type=available_metas.report_type,
+                type=ReportType.Performance,
                 interval=Scenario.get_attribute("aggregate_interval"),
-                consumer=available_metas.consumer,
+                consumer=ReportConsumer(
+                    horizontal=[ReportConsumer.Horizontal.PM],
+                    vertical=ReportConsumer.Vertical.ARS,
+                ),
                 frequency=Frequency(
                     FrequencyType.Monthly,
                     Scenario.get_attribute("as_of_date"),
@@ -59,8 +62,6 @@ class TestPFundAttReport(object):
                 entity_domain=domain,
                 entity_info=entity_info,
             )
-            assert this_meta is not None
-            validate_meta(class_structure, this_meta, strict=False)
             this_report = class_structure(this_meta)
             template = this_report.get_template()
             virtual_workbook = (

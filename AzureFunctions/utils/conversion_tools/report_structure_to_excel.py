@@ -3,7 +3,6 @@ from openpyxl import Workbook
 from Reporting.core.components.report_table import ReportTable
 from Reporting.core.report_structure import ReportStructure
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource
-from .convert_excel_to_pdf import convert
 import io
 from typing import Tuple
 from gcm.inv.scenario import Scenario
@@ -52,19 +51,3 @@ def save_report_structure_to_excel_return_virtual_book(
                 operation=lambda d, v: d.post_data(v, b),
             )
     return (b, params, source)
-
-
-def save_pdf_from_workbook_and_structure(
-    b: bytes,
-    report_structure: ReportStructure,
-    source: DaoSource,
-    params: dict,
-    save: bool,
-):
-    assert report_structure is not None
-    if save:
-        convert(
-            io.BytesIO(b),
-            base_params=params,
-            source=source,
-        )
