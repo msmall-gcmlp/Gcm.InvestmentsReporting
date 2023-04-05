@@ -43,9 +43,7 @@ class ReportConstructorActivity(BaseActivity):
     def parg_type(self):
         return ReportingParsedArgs
 
-    def construct_meta(
-        self, **kwargs
-    ) -> Tuple[ReportStructure, ReportMeta]:
+    def construct_meta(self) -> Tuple[ReportStructure, ReportMeta]:
         # below will fail if something went wrong in the parser
         report: ReportStructure = get_report_class_by_name(
             self.pargs.ReportName
