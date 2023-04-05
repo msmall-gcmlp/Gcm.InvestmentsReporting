@@ -242,7 +242,7 @@ class ReportStructure(SerializableBase):
         )
         return (
             AzureDataLakeDao.create_blob_params(
-                output_loc, metadata=self.metadata()
+                output_loc, metadata=self.storage_account_metadata()
             ),
             source,
         )
@@ -310,8 +310,9 @@ class ReportStructure(SerializableBase):
     def report_name_metadata(self):
         return self.report_name.name
 
-    def metadata(self) -> dict:
+    def storage_account_metadata(self) -> dict:
         # these are starting to become arbitrary
+        # TODO: make a specific dataclass (instead of dict)
         class_type = ReportStructure.gcm_metadata
         val = {
             class_type.gcm_report_name: self.report_name_metadata(),
