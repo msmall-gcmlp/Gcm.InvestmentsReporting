@@ -4,7 +4,7 @@ from .components.report_component_base import (
     ReportComponentBase,
 )
 from openpyxl import Workbook
-from typing import List
+from typing import List, Optional
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
@@ -247,7 +247,7 @@ class ReportStructure(SerializableBase):
             source,
         )
 
-    def get_template(self) -> Workbook:
+    def get_template(self) -> Optional[Workbook]:
         dao: DaoRunner = Scenario.get_attribute("dao")
         try:
             params = AzureDataLakeDao.create_blob_params(
