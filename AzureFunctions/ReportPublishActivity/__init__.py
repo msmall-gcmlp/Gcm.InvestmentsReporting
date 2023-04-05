@@ -88,7 +88,9 @@ class ReportPublishActivity(BaseActivity):
             template = self.get_template(report_structure)
             if template is None:
                 # no template, get standard template
-                raise NotImplementedError("Must Have a Template (for now!)")
+                raise NotImplementedError(
+                    "Must Have a Template (for now!)"
+                )
             else:
                 template: Workbook = template
                 final_template = (
