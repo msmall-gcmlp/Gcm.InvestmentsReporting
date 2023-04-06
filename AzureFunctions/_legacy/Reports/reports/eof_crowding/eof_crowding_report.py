@@ -106,7 +106,7 @@ def _calculate_rolling_betas(eof_returns, pm_returns, hf_factor_returns, factor)
     eof_betas = Analytics().compute_trailing_beta(ror=eof[['EOF']],
                                                   benchmark_ror=eof[[factor]],
                                                   window=100,
-                                                  as_of_date=eof.index.max(),
+                                                  as_of_date=eof.index.max().date(),
                                                   periodicity=Periodicity.Daily,
                                                   include_history=True)
 
@@ -114,7 +114,7 @@ def _calculate_rolling_betas(eof_returns, pm_returns, hf_factor_returns, factor)
     pm_betas = Analytics().compute_trailing_beta(ror=pms[pm_returns.columns],
                                                  benchmark_ror=pms[[factor]],
                                                  window=100,
-                                                 as_of_date=eof.index.max(),
+                                                 as_of_date=eof.index.max().date(),
                                                  periodicity=Periodicity.Daily,
                                                  include_history=True)
 
