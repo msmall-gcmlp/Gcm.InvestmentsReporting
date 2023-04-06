@@ -4,7 +4,7 @@ import datetime as dt
 import pandas as pd
 import ast
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from _legacy.Reports.reports.performance_quality.peer_conditional_excess_returns import \
+from gcm.inv.models.ars_peer_analysis.peer_conditional_excess_returns import \
     generate_peer_conditional_excess_returns, calculate_rolling_excess_returns
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,

@@ -45,12 +45,15 @@ def _fund_file_path(fund_name, as_of_date):
 
 
 def _filter_fund_set(inv_group_ids=None):
-    fund_dimn = InvestmentGroup(investment_group_ids=inv_group_ids).get_dimensions(
-        exclude_gcm_portfolios=True,
-        include_filters=dict(status=["EMM"]),
-        exclude_filters=dict(strategy=["Other", "Aggregated Prior Period Adjustment",
-                                       "Uninvested"]),
-    )
+    if inv_group_ids is None:
+        fund_dimn = InvestmentGroup(investment_group_ids=None).get_dimensions(
+            exclude_gcm_portfolios=True,
+            include_filters=dict(status=["EMM"]),
+            exclude_filters=dict(strategy=["Other", "Aggregated Prior Period Adjustment",
+                                           "Uninvested"]),
+        )
+    else:
+        fund_dimn = InvestmentGroup(investment_group_ids=inv_group_ids).get_dimensions()
     return fund_dimn
 
 
@@ -75,18 +78,18 @@ def _subset_fund_dimn(fund_dimn):
     return fund_dimn
 
 
-def _get_emm_dimn(as_of_date, inv_group_ids=None):
-    emms = _subset_fund_dimn(fund_dimn=_filter_fund_set(inv_group_ids=inv_group_ids))
-    ig = InvestmentGroup(investment_group_ids=emms['InvestmentGroupId'].tolist())
+def _get_fund_dimn(as_of_date, inv_group_ids=None):
+    funds = _subset_fund_dimn(fund_dimn=_filter_fund_set(inv_group_ids=inv_group_ids))
+    ig = InvestmentGroup(investment_group_ids=funds['InvestmentGroupId'].tolist())
     allocs = ig.get_firmwide_allocation(start_date=as_of_date, end_date=as_of_date)
 
-    emms = emms.merge(allocs[['InvestmentGroupName', 'EndingBalance']], on='InvestmentGroupName', how='left')
-    emms = emms[['InvestmentGroupName', 'EurekahedgeBenchmark', 'ReportingPeerGroup', 'EndingBalance']]
-    emms.rename(columns={'EndingBalance': 'FirmwideAllocation'}, inplace=True)
-    emms['FirmwideAllocation'] = emms['FirmwideAllocation'] / 1_000_000
-    emms = emms.set_index('InvestmentGroupName')
-    emms = emms.replace('GCM ', '', regex=True).replace('EHI100 ', '', regex=True)
-    return emms
+    funds = funds.merge(allocs[['InvestmentGroupName', 'EndingBalance']], on='InvestmentGroupName', how='left')
+    funds = funds[['InvestmentGroupName', 'EurekahedgeBenchmark', 'ReportingPeerGroup', 'EndingBalance']]
+    funds.rename(columns={'EndingBalance': 'FirmwideAllocation'}, inplace=True)
+    funds['FirmwideAllocation'] = funds['FirmwideAllocation'] / 1_000_000
+    funds = funds.set_index('InvestmentGroupName')
+    funds = funds.replace('GCM ', '', regex=True).replace('EHI100 ', '', regex=True)
+    return funds
 
 
 def _pivot_and_reindex(data, level_1_cols, level_2_cols):
@@ -288,14 +291,15 @@ def _get_performance_quality_metrics(runner, emm_dimn, as_of_date):
     return stats
 
 
-def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date):
+def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date, inv_group_ids=None):
     with Scenario(dao=runner, as_of_date=date).context():
-        emm_dimn = _get_emm_dimn(as_of_date=date)
-        peer_rankings = _get_peer_rankings(runner=runner, as_of_date=date, emm_dimn=emm_dimn)
+        fund_dimn = _get_fund_dimn(as_of_date=date, inv_group_ids=inv_group_ids)
+
+        peer_rankings = _get_peer_rankings(runner=runner, as_of_date=date, emm_dimn=fund_dimn)
         lagged_date = pd.to_datetime(date - pd.tseries.offsets.MonthEnd(3)).date()
-        peer_rankings_lag = _get_peer_rankings(runner=runner, as_of_date=lagged_date, emm_dimn=emm_dimn)
-        pq_stats = _get_performance_quality_metrics(runner=runner, emm_dimn=emm_dimn, as_of_date=date)
-        final_summary = _generate_final_summary(emm_dimn=emm_dimn,
+        peer_rankings_lag = _get_peer_rankings(runner=runner, as_of_date=lagged_date, emm_dimn=fund_dimn)
+        pq_stats = _get_performance_quality_metrics(runner=runner, emm_dimn=fund_dimn, as_of_date=date)
+        final_summary = _generate_final_summary(emm_dimn=fund_dimn,
                                                 pq_stats=pq_stats,
                                                 peer_rankings=peer_rankings,
                                                 peer_rankings_lag=peer_rankings_lag)
@@ -308,20 +312,23 @@ if __name__ == "__main__":
         config_params={
             DaoRunnerConfigArgs.dao_global_envs.name: {
                 DaoSource.DataLake.name: {
-                    "Environment": "dev",
-                    "Subscription": "nonprd",
+                    "Environment": "prd",
+                    "Subscription": "prd",
                 },
                 DaoSource.InvestmentsDwh.name: {
-                    "Environment": "dev",
-                    "Subscription": "nonprd",
+                    "Environment": "prd",
+                    "Subscription": "prd",
                 },
                 DaoSource.PubDwh.name: {
-                    "Environment": "dev",
-                    "Subscription": "nonprd",
+                    "Environment": "prd",
+                    "Subscription": "prd",
                 },
             }
         },
     )
     date = dt.date(2022, 12, 31)
-    # TODO move this to InvestmentsModel
-    report_data = generate_xpfund_pq_report_data(runner=dao_runner, date=date)
+    # inv_group_ids = [19717, 20292, 20319, 31378, 89745, 43058, 51810, 86478, 87478, 89809] <- ESG Prd Ids
+    inv_group_ids = None
+    report_data = generate_xpfund_pq_report_data(runner=dao_runner,
+                                                 date=date,
+                                                 inv_group_ids=inv_group_ids)

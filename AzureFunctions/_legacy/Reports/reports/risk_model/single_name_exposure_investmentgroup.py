@@ -138,7 +138,7 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
                 "header_info": [
                     self._get_investment_group_name[0],
                     'ARS',
-                    self._as_of_date,
+                    datetime.date.today()
                 ]
             })
 

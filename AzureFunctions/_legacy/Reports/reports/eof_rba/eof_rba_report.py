@@ -9,7 +9,7 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
-    AggregateInterval,
+    AggregateInterval, ReportVertical,
 )
 from _legacy.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
@@ -375,11 +375,14 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
                 entity_type=ReportingEntityTypes.manager_fund_group,
                 entity_name="Equity Opps Fund Ltd",
                 entity_display_name="EOF",
-                entity_ids=[19163],
+                entity_ids=[640],
                 entity_source=DaoSource.PubDwh,
                 report_name="RBA_" + self._periodicity.value + "TD",
                 report_type=ReportType.Risk,
                 aggregate_intervals=AggregateInterval.MTD,
+                report_vertical=ReportVertical.ARS,
+                report_frequency="Monthly",
+                # output_dir="eof/",
                 output_dir="cleansed/investmentsreporting/printedexcels/",
                 report_output_source=DaoSource.DataLake,
             )
@@ -424,11 +427,18 @@ if __name__ == "__main__":
                     "Environment": "prd",
                     "Subscription": "prd",
                 },
+                DaoSource.ReportingStorage.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
             }
         },
     )
 
-    as_of_date = dt.date(2022, 8, 31)
+    as_of_date = dt.date(2023, 3, 13)
 
     with Scenario(dao=runner, as_of_date=as_of_date, periodicity=PeriodicROR.ITD).context():
-        eof_rba = EofReturnBasedAttributionReport().execute()
+        EofReturnBasedAttributionReport().execute()
+
+    with Scenario(dao=runner, as_of_date=as_of_date, periodicity=PeriodicROR.YTD).context():
+        EofReturnBasedAttributionReport().execute()
