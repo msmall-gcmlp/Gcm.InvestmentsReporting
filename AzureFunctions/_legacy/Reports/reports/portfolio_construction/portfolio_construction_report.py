@@ -26,6 +26,7 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                                                       optim_config_name=optim_config_name,
                                                       rf=rf)
 
+        # TODO need to properly order strategy_allocation
         excel_data = {
             "objective_measures": portfolio_metrics.objective_measures.to_frame(),
             "distribution_of_returns": portfolio_metrics.outcomes_distribution.to_frame(),
