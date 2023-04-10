@@ -59,10 +59,10 @@ class BaselReportData(ReportingRunnerBase):
                     }
                 )
                 result_df = pd.concat([result_df, prodsum_df.T], axis=1)
-                result = result.append(result_df)
+                result = pd.concat([result, result_df])
         result.drop(columns=["PctNav"], inplace=True)
         portfolio_exp.drop(columns=["PctNav"], inplace=True)
-        portfolio_exp = portfolio_exp.append(result)
+        portfolio_exp = pd.concat([portfolio_exp, result])
 
         return portfolio_exp
 

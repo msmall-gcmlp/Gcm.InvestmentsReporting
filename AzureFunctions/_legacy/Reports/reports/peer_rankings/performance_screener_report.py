@@ -3,7 +3,7 @@ import logging
 import datetime as dt
 import numpy as np
 from functools import cached_property
-from gcm.Dao.DaoRunner import DaoRunner
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
@@ -46,6 +46,32 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         self._strategy_benchmark = StrategyBenchmark()
         self._peer_group = peer_group
         self._summary_data_location = "raw/investmentsreporting/summarydata/ars_performance_screener"
+        self._runner = DaoRunner(
+            container_lambda=lambda b, i: b.config.from_dict(i),
+            config_params={
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.DataLake.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.PubDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.InvestmentsDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.DataLake_Blob.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.ReportingStorage.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                }
+            })
 
     @cached_property
     def _constituents(self):
@@ -82,12 +108,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         inv_group = InvestmentGroup(investment_group_ids=ids)
         abs_bmrk_returns = inv_group.get_absolute_benchmark_returns(start_date=self._start_date,
                                                                     end_date=self._end_date)
-        abs_bmrk_returns = AggregateFromDaily().transform(
-            data=abs_bmrk_returns,
-            method="geometric",
-            period=Periodicity.Monthly,
-            first_of_day=True
-        )
+        abs_bmrk_returns = abs_bmrk_returns.dropna()
         group_dimensions = inv_group.get_dimensions()
         id_name_map = dict(zip(group_dimensions['InvestmentGroupId'], group_dimensions['InvestmentGroupName']))
         abs_bmrk_returns.columns = [id_name_map.get(item, item) for item in abs_bmrk_returns.columns]
@@ -145,7 +166,13 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         return alt_soft_entities
 
     def _get_peer_constituents(self):
-        constituents = self._strategy_benchmark.get_altsoft_peer_constituents(peer_names=self._peer_group)
+        if self._peer_group == 'GCM Diversifying Strategies':
+            peers = ["GCM Macro ex. CTA",
+                     "GCM Quant with CTA",
+                     "GCM Relative Value"]
+        else:
+            peers = self._peer_group
+        constituents = self._strategy_benchmark.get_altsoft_peer_constituents(peer_names=peers)
         ids = constituents['InvestmentGroupId']
         investment_group = InvestmentGroup(investment_group_ids=ids)
         dimensions = investment_group.get_dimensions()
@@ -599,7 +626,7 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         entity_name = self._peer_group.replace("/", "").replace("GCM ", "") + ' Peer'
 
-        with Scenario(runner=DaoRunner(), as_of_date=as_of_date).context():
+        with Scenario(dao_runner=self._runner, as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
                 template="ARS_Performance_Screener_Template.xlsx",
@@ -668,42 +695,45 @@ if __name__ == "__main__":
                    "GCM Utilities",
                    ]
 
-    peer_groups = ["GCM TMT"]
+    peer_groups = ["GCM Diversifying Strategies",
+                   "GCM Macro ex. CTA",
+                   "GCM Quant with CTA",
+                   "GCM Relative Value"
+                   ]
 
-    # runner = DaoRunner(
-    #         container_lambda=lambda b, i: b.config.from_dict(i),
-    #         config_params={
-    #             DaoRunnerConfigArgs.dao_global_envs.name: {
-    #                 DaoSource.DataLake.name: {
-    #                     "Environment": "prd",
-    #                     "Subscription": "prd",
-    #                 },
-    #                 DaoSource.PubDwh.name: {
-    #                     "Environment": "prd",
-    #                     "Subscription": "prd",
-    #                 },
-    #                 DaoSource.InvestmentsDwh.name: {
-    #                     "Environment": "prd",
-    #                     "Subscription": "prd",
-    #                 },
-    #                 DaoSource.DataLake_Blob.name: {
-    #                     "Environment": "prd",
-    #                     "Subscription": "prd",
-    #                 },
-    #                 DaoSource.ReportingStorage.name: {
-    #                     "Environment": "prd",
-    #                     "Subscription": "prd",
-    #                 },
-    #             }
-    #         })
+    runner = DaoRunner(
+            container_lambda=lambda b, i: b.config.from_dict(i),
+            config_params={
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.DataLake.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.PubDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.InvestmentsDwh.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.DataLake_Blob.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                    DaoSource.ReportingStorage.name: {
+                        "Environment": "prd",
+                        "Subscription": "prd",
+                    },
+                }
+            })
 
-    runner = DaoRunner()
+    # runner = DaoRunner()
 
-    as_of_dates = pd.date_range(dt.date(2019, 12, 31), dt.date(2022, 9, 30), freq='Q').tolist()
+    as_of_dates = pd.date_range(dt.date(2019, 12, 31), dt.date(2022, 12, 31), freq='Q').tolist()
     as_of_dates = pd.to_datetime(as_of_dates).date.tolist()
 
     for peer_group in peer_groups:
-        as_of_dates = [dt.date(2022, 12, 31)]
         for as_of_date in as_of_dates:
             with Scenario(dao=runner, as_of_date=as_of_date).context():
                 PerformanceScreenerReport(peer_group=peer_group).execute()

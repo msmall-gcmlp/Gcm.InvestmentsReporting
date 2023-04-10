@@ -157,6 +157,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
     @cached_property
     def _peer_arb_mapping(self):
+        # TODO replace with peer_group_arb_mapping used in InvestmentsModels
         peer_arb_mapping = pd.read_csv(os.path.dirname(__file__) + "/peer_group_to_arb_mapping.csv")
         peer_arb_mapping.loc[peer_arb_mapping['ReportingPeerGroup'] == 'GCM Macro', 'Ticker'] = 'MOVE Index'
         return peer_arb_mapping
