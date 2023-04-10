@@ -1290,7 +1290,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         rolling_fund_returns = self._analytics.compute_trailing_return(ror=fund_returns,
                                                                        window=36,
-                                                                       as_of_date=excess_return.index.max(),
+                                                                       as_of_date=excess_return.index.max().date(),
                                                                        method='geometric',
                                                                        periodicity=Periodicity.Monthly,
                                                                        annualize=True,
