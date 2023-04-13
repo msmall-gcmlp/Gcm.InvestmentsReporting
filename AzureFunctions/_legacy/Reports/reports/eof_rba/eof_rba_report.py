@@ -44,7 +44,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         elif self._period == 'YTD':
             start_date = dt.date(self._as_of_date.year, 1, 1)
         elif self._period == 'TTM':
-            start_date = self._as_of_date - relativedelta(years=1) + BDay(1)
+            start_date = (self._as_of_date - relativedelta(years=1) + BDay(1)).date()
         return start_date
 
     @property
