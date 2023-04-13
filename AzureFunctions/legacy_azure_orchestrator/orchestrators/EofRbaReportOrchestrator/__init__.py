@@ -10,13 +10,19 @@ def orchestrator_function(
     client_input = LegacyReportingOrchParsedArgs.parse_client_inputs(
         context
     )
+
     params = client_input["params"]
-    activity_params = []
-    for periodicity in ["ITD", "YTD"]:
-        params.update({"run": "EofRbaReport"})
-        params.update({"periodicity": periodicity})
-        period_params = {"params": params, "data": {}}
-        activity_params.append(
-            ActivityParams("EofRbaReportActivity", period_params)
-        )
-    return LegacyTasks(ActivitySet(activity_params=activity_params))
+    params = {
+        "params": {
+            "run": "EofRbaReport",
+            "as_of_date": params["as_of_date"],
+        },
+    }
+
+    return LegacyTasks(
+        [
+            ActivitySet(
+                [ActivityParams("EofRbaReportActivity", params)]
+            )
+        ]
+    )
