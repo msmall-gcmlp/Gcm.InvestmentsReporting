@@ -210,6 +210,7 @@ class EofLiquidityReport(ReportingRunnerBase):
                                         )
         input_data = {
             "header_info": header_info,
+            "header_info2": header_info,
             "Style_Shock_dn": style_factor_shock_dn,
             "Industry_Shock_dn": industry_factor_shock_dn,
             "Regional_Shock_dn": region_factor_shock_dn,
@@ -272,8 +273,8 @@ if __name__ == "__main__":
                 "Subscription": "prd",
             },
             DaoSource.ReportingStorage.name: {
-                "Environment": "prd",
-                "Subscription": "prd",
+                "Environment": "dev",
+                "Subscription": "nonprd",
             },
         }
     }
