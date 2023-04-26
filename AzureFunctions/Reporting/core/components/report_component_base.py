@@ -1,10 +1,12 @@
 from abc import abstractproperty
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
+from enum import auto
 from ..serializable_base import SerializableBase
 
 
 class ReportComponentType(ExtendedEnum):
-    ReportTable = 0
+    ReportTable = auto()
+    ReportWorkBook = auto()
 
 
 class ReportComponentBase(SerializableBase):

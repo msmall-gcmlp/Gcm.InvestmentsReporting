@@ -72,3 +72,7 @@ pytest
 # Additional notes
 - The package name will come put to be gcm-investmentsreporting but the python module name is gcm.investmentsreporting
   So you will `pip install gcm-investmentsreporting` but `from gcm.investmentsreporting import say_hello` when using it in other code bases.
+
+
+# how to clean
+black --line-length 75  C:\Code\Reporting\Gcm.InvestmentsReporting\AzureFunctions\DurableFunctionsHttpStart\ C:\Code\Reporting\Gcm.InvestmentsReporting\AzureFunctions\EntityExtractActivity\ C:\Code\Reporting\Gcm.InvestmentsReporting\AzureFunctions\ReportCopyActivity\ C:\Code\Reporting\Gcm.InvestmentsReporting\AzureFunctions\ReportCopyOrchestrator\ C:\Code\Reporting\Gcm.InvestmentsReporting\AzureFunctions\Reporting C:\Code\Reporting\Gcm.InvestmentsReporting\AzureFunctions\ReportOrchestrator\ C:\Code\Reporting\Gcm.InvestmentsReporting\AzureFunctions\ReportPublishActivity\ C:\Code\Reporting\Gcm.InvestmentsReporting\AzureFunctions\ReportRunnerOrchestrator\ C:\Code\Reporting\Gcm.InvestmentsReporting\AzureFunctions\Tests\test_report_structure\ C:\Code\Reporting\Gcm.InvestmentsReporting\AzureFunctions\utils
