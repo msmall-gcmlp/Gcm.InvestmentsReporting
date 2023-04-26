@@ -18,7 +18,7 @@ from gcm.inv.scenario import Scenario
 import datetime as dt
 
 
-# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&entity_domain=%27InvestmentManager%27&EntityNames=ExampleManagerName
+# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
 
 class PvmManagerTrackRecordReport(ReportStructure):
