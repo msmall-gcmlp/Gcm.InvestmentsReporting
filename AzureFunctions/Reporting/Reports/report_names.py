@@ -12,3 +12,4 @@ class ReportNames(ExtendedEnum):
     Sample_Ars_Portfolio_Report = auto()
     AggregatedPortolioFundAttributeReport = auto()
     PvmManagerTrackRecordReport = auto()
+    PvmInvestmentTrackRecordReport = auto()

@@ -2,8 +2,9 @@ from ....core.report_structure import (
     ReportStructure,
     ReportMeta,
     AvailableMetas,
+    EntityStandardNames,
 )
-from gcm.Dao.DaoRunner import DaoRunner, AzureDataLakeDao
+from gcm.Dao.DaoRunner import AzureDataLakeDao
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from ....core.report_structure import (
     ReportType,
@@ -12,10 +13,15 @@ from ....core.report_structure import (
 )
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ....core.components.report_table import ReportTable
+from ....core.components.report_workbook_handler import (
+    ReportWorkBookHandler,
+)
 import pandas as pd
 from ...report_names import ReportNames
-from gcm.inv.scenario import Scenario
-import datetime as dt
+import copy
+from ..investment_reports.pvm_investment_trackrecord_report import (
+    PvmInvestmentTrackRecordReport,
+)
 
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
@@ -33,7 +39,7 @@ class PvmManagerTrackRecordReport(ReportStructure):
             zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
             sources="investmentsreporting",
             entity="exceltemplates",
-            path=["MyFancyTemplate.xlsx"],
+            path=["PvmManagerTrackRecordTemplate.xlsx"],
         )
 
     @classmethod
@@ -54,22 +60,7 @@ class PvmManagerTrackRecordReport(ReportStructure):
         )
 
     def assign_components(self):
-        dao: DaoRunner = Scenario.get_attribute("dao")
-        as_of_date: dt.date = Scenario.get_attribute("as_of_date")
-        assert as_of_date is not None
-        domain = self.report_meta.entity_domain
-        entity_info: pd.DataFrame = self.report_meta.entity_info
-        aggregate_interval: AggregateInterval = Scenario.get_attribute(
-            "aggregate_interval"
-        )
-        if aggregate_interval == AggregateInterval.ITD:
-            # do something!
-            pass
-        assert entity_info is not None
-        if domain == EntityDomainTypes.InvestmentManager:
-            print("wooo!")
-        assert dao is not None
-        return [
+        tables = [
             ReportTable(
                 "MyComponent",
                 pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
@@ -79,3 +70,22 @@ class PvmManagerTrackRecordReport(ReportStructure):
                 pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
             ),
         ]
+        name = "Test"
+        wb_handler = ReportWorkBookHandler(
+            name, tables, self.excel_template_location
+        )
+        child_type = EntityDomainTypes.Investment
+        children = self.get_direct_children_of_type(child_type.name)
+        final_list = [wb_handler]
+        for g, n in children.groupby(EntityStandardNames.EntityName):
+            meta = copy.deepcopy(self.report_meta)
+            meta.entity_domain = child_type
+            meta.entity_info = n
+            this_report = PvmInvestmentTrackRecordReport(meta)
+            wb = ReportWorkBookHandler(
+                g,
+                this_report.components,
+                this_report.excel_template_location,
+            )
+            final_list.append(wb)
+        return final_list

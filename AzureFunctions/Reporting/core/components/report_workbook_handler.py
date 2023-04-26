@@ -17,7 +17,7 @@ class ReportWorkBookHandler(ReportComponentBase):
 
     @property
     def component_type(self) -> ReportComponentType:
-        return ReportComponentType.ReportTable
+        return ReportComponentType.ReportWorkBookHandler
 
     @staticmethod
     def from_dict(d: dict, **kwargs) -> "ReportWorkBookHandler":

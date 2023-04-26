@@ -3,6 +3,10 @@ from abc import abstractmethod, abstractproperty, abstractclassmethod
 from .components.report_component_base import (
     ReportComponentBase,
 )
+from gcm.inv.entityhierarchy.NodeHierarchy import (
+    NodeHierarchyDomain,
+    Standards as EntityStandardNames,
+)
 from openpyxl import Workbook
 from typing import List, Optional
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
@@ -305,6 +309,100 @@ class ReportStructure(SerializableBase):
             ):
                 # TODO: figure this out with team
                 return None
+        return None
+
+    @property
+    def related_entities(
+        self,
+    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        __name = "_related_entities"
+        __ifc = getattr(self, __name, None)
+        if __ifc is None:
+            domain = self.report_meta.entity_domain
+            entity_info: pd.DataFrame = self.report_meta.entity_info
+            if (
+                domain != EntityDomainTypes.NONE
+                and entity_info.shape[0] > 0
+            ):
+                current_entity_name: List[str] = (
+                    entity_info[EntityStandardNames.EntityName]
+                    .drop_duplicates()
+                    .to_list()
+                )
+                [
+                    edges,
+                    vertex,
+                    sources,
+                ] = NodeHierarchyDomain().get_edges_and_vertex(
+                    domain, current_entity_name
+                )
+                assert (
+                    edges is not None
+                    and vertex is not None
+                    and sources is not None
+                )
+                val = [edges, vertex, sources]
+                setattr(self, __name, val)
+        return getattr(self, __name, None)
+
+    def get_direct_children_of_type(
+        self, children_domain_type: str
+    ) -> pd.DataFrame:
+        vals = self.related_entities
+        if vals is not None:
+            [
+                edges,
+                vertex,
+                sources,
+            ] = vals
+            entity_info: pd.DataFrame = self.report_meta.entity_info
+            parent_id = list(
+                set(entity_info[EntityStandardNames.NodeId].to_list())
+            )
+            children: pd.DataFrame = vertex[
+                vertex[EntityStandardNames.EntityDomain]
+                == children_domain_type
+            ].rename(
+                columns={
+                    EntityStandardNames.NodeId: EntityStandardNames.Child_NodeId
+                }
+            )
+
+            children = pd.merge(
+                edges[
+                    edges[EntityStandardNames.Parent_NodeId].isin(
+                        parent_id
+                    )
+                ],
+                children,
+                on=EntityStandardNames.Child_NodeId,
+            )
+            # clean up
+            children.rename(
+                columns={
+                    EntityStandardNames.Child_NodeId: EntityStandardNames.NodeId
+                },
+                inplace=True,
+            )
+            temp_sources = sources[
+                sources[EntityStandardNames.EntityDomain]
+                == children_domain_type
+            ]
+            temp_sources[
+                temp_sources[EntityStandardNames.EntityId].isin(
+                    children[EntityStandardNames.EntityId].to_list()
+                )
+            ]
+            entity_info_children = pd.merge(
+                temp_sources,
+                children,
+                on=[
+                    EntityStandardNames.EntityDomain,
+                    EntityStandardNames.EntityId,
+                ],
+            )
+            # merge against sources
+            return entity_info_children
         return None
 
     def report_name_metadata(self):

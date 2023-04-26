@@ -11,8 +11,11 @@ from .entity_reports.xentity_reports.ars_bba_report import (
 from .entity_reports.vertical_reports.ars_pfund_attributes.aggregated_pfund_attribute_report import (
     AggregatedPortolioFundAttributeReport,
 )
-from .entity_reports.investment_manager.pvm_manager_trackrecord_report import (
+from .entity_reports.investment_manager_reports.pvm_manager_trackrecord_report import (
     PvmManagerTrackRecordReport,
+)
+from .entity_reports.investment_reports.pvm_investment_trackrecord_report import (
+    PvmInvestmentTrackRecordReport,
 )
 from .report_names import ReportNames
 from ..core.report_structure import (
@@ -43,6 +46,8 @@ def get_report_class_by_name(name: ReportNames):
         return AggregatedPortolioFundAttributeReport
     if name == ReportNames.PvmManagerTrackRecordReport:
         return PvmManagerTrackRecordReport
+    if name == ReportNames.PvmInvestmentTrackRecordReport:
+        return PvmInvestmentTrackRecordReport
     else:
         raise NotImplementedError()
 
