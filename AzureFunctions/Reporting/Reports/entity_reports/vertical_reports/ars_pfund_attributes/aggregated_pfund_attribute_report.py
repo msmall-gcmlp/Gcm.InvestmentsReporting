@@ -12,9 +12,7 @@ from .....core.report_structure import (
     Scenario,
 )
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
-from .....core.components.report_table import ReportTable
 from ....report_names import ReportNames
-from .construct_data import BbaReport
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=AggregatedPortolioFundAttributeReport&frequency=Monthly&save=True
 
@@ -52,9 +50,6 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
             path=[file],
         )
 
-    def get_entity_metadata(self) -> dict:
-        return {"Entity": "ARS - FIRM"}
-
     def report_name_metadata(self):
         return "ARS Portfolio Fund Attributes"
 
@@ -62,9 +57,9 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
         with Scenario(
             runner=Scenario.get_attribute("dao"),
         ).context():
-            report = BbaReport()
-            d = report.generate_pfund_attributes()
+            # report = BbaReport()
+            #  d = report.generate_pfund_attributes()
             final = []
-            for k, v in d.items():
-                final.append(ReportTable(k, v))
+            # for k, v in d.items():
+            # final.append(ReportTable(k, v))
             return final

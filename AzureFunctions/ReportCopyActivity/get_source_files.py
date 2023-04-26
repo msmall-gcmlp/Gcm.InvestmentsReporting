@@ -101,6 +101,8 @@ def save_file_streams(params, stream_dict):
         runner.execute(
             params=target_params,
             source=DaoSource.ReportingStorage,
-            operation=lambda dao, params: dao.post_data(params, stream_dict[name]["data"]),
+            operation=lambda dao, params: dao.post_data(
+                params, stream_dict[name]["data"]
+            ),
         )
     return True

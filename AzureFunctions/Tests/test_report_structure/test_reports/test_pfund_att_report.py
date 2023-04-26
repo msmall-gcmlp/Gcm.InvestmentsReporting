@@ -47,22 +47,22 @@ class TestPFundAttReport(object):
             entity_info: pd.DataFrame = EntityDomain.merge_ref_and_sources(
                 r, s
             )
-            class_structure = AggregatedPortolioFundAttributeReport
-            this_meta = ReportMeta(
-                type=ReportType.Performance,
-                interval=Scenario.get_attribute("aggregate_interval"),
-                consumer=ReportConsumer(
-                    horizontal=[ReportConsumer.Horizontal.PM],
-                    vertical=ReportConsumer.Vertical.ARS,
-                ),
-                frequency=Frequency(
-                    FrequencyType.Monthly,
-                    Scenario.get_attribute("as_of_date"),
-                ),
-                entity_domain=domain,
-                entity_info=entity_info,
+            this_report = AggregatedPortolioFundAttributeReport(
+                ReportMeta(
+                    type=ReportType.Performance,
+                    interval=Scenario.get_attribute("aggregate_interval"),
+                    consumer=ReportConsumer(
+                        horizontal=[ReportConsumer.Horizontal.PM],
+                        vertical=ReportConsumer.Vertical.ARS,
+                    ),
+                    frequency=Frequency(
+                        FrequencyType.Monthly,
+                        Scenario.get_attribute("as_of_date"),
+                    ),
+                    entity_domain=domain,
+                    entity_info=entity_info,
+                )
             )
-            this_report = class_structure(this_meta)
             template = this_report.get_template()
             virtual_workbook = (
                 save_report_structure_to_excel_return_virtual_book(

@@ -5,7 +5,9 @@ import azure.durable_functions as df
 
 def orchestrator_function(context: df.DurableOrchestrationContext):
     requestBody = context.get_input()
-    get_file_list = yield context.call_activity("ReportCopyActivity", requestBody)
+    get_file_list = yield context.call_activity(
+        "ReportCopyActivity", requestBody
+    )
     return get_file_list
 
 
