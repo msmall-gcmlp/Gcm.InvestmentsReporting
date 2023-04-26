@@ -1,15 +1,18 @@
 import openpyxl
 from copy import copy
+from openpyxl.worksheet.worksheet import Worksheet
 
 
-def copy_sheet(source_sheet, target_sheet):
+def copy_sheet(source_sheet: Worksheet, target_sheet: Worksheet):
     copy_cells(
         source_sheet, target_sheet
     )  # copy all the cel values and styles
     copy_sheet_attributes(source_sheet, target_sheet)
 
 
-def copy_sheet_attributes(source_sheet, target_sheet):
+def copy_sheet_attributes(
+    source_sheet: Worksheet, target_sheet: Worksheet
+):
     if isinstance(
         source_sheet, openpyxl.worksheet._read_only.ReadOnlyWorksheet
     ):
@@ -20,6 +23,9 @@ def copy_sheet_attributes(source_sheet, target_sheet):
     target_sheet.page_margins = copy(source_sheet.page_margins)
     target_sheet.freeze_panes = copy(source_sheet.freeze_panes)
     target_sheet._images = copy(source_sheet._images)
+    target_sheet.sheet_view.showGridLines = copy(
+        source_sheet.show_gridlines
+    )
 
     # set row dimensions
     # So you cannot copy the row_dimensions attribute.

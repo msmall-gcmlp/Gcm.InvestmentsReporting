@@ -22,10 +22,13 @@ import datetime as dt
 
 
 class PvmInvestmentTrackRecordReport(ReportStructure):
-    def __init__(self, report_meta: ReportMeta):
+    def __init__(
+        self, report_meta: ReportMeta, investment_manager_name: None
+    ):
         super().__init__(
             ReportNames.PvmInvestmentTrackRecordReport, report_meta
         )
+        self._investment_manager_name = investment_manager_name
 
     @property
     def excel_template_location(self):
@@ -53,18 +56,13 @@ class PvmInvestmentTrackRecordReport(ReportStructure):
             ],
         )
 
+    @property
+    def investment_manager_name(self):
+        return self._investment_manager_name
+
     def assign_components(self):
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
         assert as_of_date is not None
-        # domain = self.report_meta.entity_domain
-        # entity_info: pd.DataFrame = self.report_meta.entity_info
-        # aggregate_interval: AggregateInterval = Scenario.get_attribute(
-        #     "aggregate_interval"
-        # )
-        # if aggregate_interval == AggregateInterval.ITD:
-        #     # do something!
-        #     pass
-
         tables = [
             ReportTable(
                 "MyComponent",

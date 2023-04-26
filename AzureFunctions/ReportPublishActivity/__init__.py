@@ -198,13 +198,6 @@ class ReportPublishActivity(BaseActivity):
                     merged.create_sheet(target_sheet_name)
                     ws2: Worksheet = merged[target_sheet_name]
                     copy_sheet(source_sheet, ws2)
-                    # for row in merge_sheet.iter_rows():
-                    #     for cell in row:
-                    #         col_letter = get_column_letter(cell.column)
-                    #         cell_coord = f"{col_letter}{cell.row}"
-                    #         cell_value = cell.value
-                    #         ws2[cell_coord].value = cell_value
-                    #         ws2[cell_coord]._style = cell._style
                     ws_count = ws_count + 1
             wb_count = wb_count + 1
         return merged

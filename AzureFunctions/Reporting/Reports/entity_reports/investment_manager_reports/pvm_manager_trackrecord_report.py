@@ -42,6 +42,20 @@ class PvmManagerTrackRecordReport(ReportStructure):
             path=["PvmManagerTrackRecordTemplate.xlsx"],
         )
 
+    @property
+    def manager_name(self):
+        __name = "__inv_mang_name"
+        _ifc = getattr(self, __name, None)
+        if _ifc is None:
+            manager_name: pd.DataFrame = self.report_meta.entity_info[
+                [EntityStandardNames.EntityName]
+            ].drop_duplicates()
+            manager_name = "_".join(
+                manager_name[EntityStandardNames.EntityName].to_list()
+            )
+            setattr(self, __name, manager_name)
+        return getattr(self, __name, None)
+
     @classmethod
     def available_metas(cls):
         return AvailableMetas(
@@ -60,17 +74,14 @@ class PvmManagerTrackRecordReport(ReportStructure):
         )
 
     def assign_components(self):
+
         tables = [
             ReportTable(
-                "MyComponent",
-                pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
-            ),
-            ReportTable(
-                "MyComponent_2",
-                pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
+                "manager_name", pd.DataFrame({"m_name": [self.manager_name]})
             ),
         ]
-        name = "Test"
+
+        name = f"ManagerTR_{self.manager_name}"
         wb_handler = ReportWorkBookHandler(
             name, tables, self.excel_template_location
         )
@@ -81,7 +92,7 @@ class PvmManagerTrackRecordReport(ReportStructure):
             meta = copy.deepcopy(self.report_meta)
             meta.entity_domain = child_type
             meta.entity_info = n
-            this_report = PvmInvestmentTrackRecordReport(meta)
+            this_report = PvmInvestmentTrackRecordReport(meta, self.manager_name)
             wb = ReportWorkBookHandler(
                 g,
                 this_report.components,
