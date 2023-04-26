@@ -84,7 +84,7 @@ class ReportConstructorActivity(BaseActivity):
         )
 
     def activity(self, **kwargs):
-        [report_structure, meta] = self.construct_meta(**kwargs)
+        [report_structure, meta] = self.construct_meta()
         validate_meta(report_meta=meta, report_structure=report_structure)
         report: ReportStructure = report_structure(meta)
         j = report.to_json()
