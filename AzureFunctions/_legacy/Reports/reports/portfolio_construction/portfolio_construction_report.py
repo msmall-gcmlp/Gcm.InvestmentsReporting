@@ -97,11 +97,11 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                                                           optim_config_name=optim_config_name,
                                                           rf=rf) for k in weights.columns}
 
-        metrics = {key: None for key in [f.name for f in fields(portfolio_metrics['Current'])]}
+        metrics = {key: None for key in [f.name for f in portfolio_metrics['Current'].metrics.__attrs_attrs__]}
         for m in metrics.keys():
-            metrics[m] = pd.concat([getattr(portfolio_metrics['Current'], m),
-                                    getattr(portfolio_metrics['Planned'], m),
-                                    getattr(portfolio_metrics['Optimized'], m)], axis=1)
+            metrics[m] = pd.concat([getattr(portfolio_metrics['Current'].metrics, m),
+                                    getattr(portfolio_metrics['Planned'].metrics, m),
+                                    getattr(portfolio_metrics['Optimized'].metrics, m)], axis=1)
             metrics[m].columns = weights.columns
         return metrics
 
@@ -117,6 +117,139 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         )
         return header_info
 
+    @staticmethod
+    def _summarize_formal_mandate(obs_cons):
+        if obs_cons.scenario_index == 704:
+            max_beta = 0.25
+
+        mandate = pd.DataFrame(
+            {
+                "mandate": [
+                    "Broad Mandate",
+                    "N/A",
+                    max_beta,
+                    obs_cons.maxFundCount
+                ]
+            },
+            index=['MandateType', 'PerformanceObjective', 'BetaLimit', 'MaxFundCount']
+        )
+        return mandate
+
+    @staticmethod
+    def _summarize_liquidity_cons(obs_cons):
+        liquidity_cons = pd.DataFrame(
+            {
+                "frequency": [
+                    'Monthly',
+                    'Quarterly',
+                    'Semiannual',
+                    'Annual',
+                    'TwoYears',
+                    'Other',
+                ],
+                "liquidity_cons": [
+                    obs_cons.liquidityConstraints.monthly,
+                    obs_cons.liquidityConstraints.quarterly,
+                    obs_cons.liquidityConstraints.semiannual,
+                    obs_cons.liquidityConstraints.annual,
+                    obs_cons.liquidityConstraints.twoYears,
+                    obs_cons.liquidityConstraints.other,
+                ],
+            }
+        )
+        liquidity_cons = liquidity_cons.ffill().fillna(0)
+        slf_budget = 1 - liquidity_cons[liquidity_cons['frequency'] == 'Other']['liquidity_cons'].iloc[0]
+        slf_budget = pd.DataFrame({'frequency': ['SLF Budget'], 'liquidity_cons': [slf_budget]})
+        liquidity_cons = pd.concat([liquidity_cons[liquidity_cons['frequency'] != 'Other'], slf_budget], axis=0)
+        liquidity_cons = liquidity_cons.set_index('frequency')
+        return liquidity_cons
+
+    @staticmethod
+    def _summarize_portfolio_fees(obs_cons):
+        fees = pd.DataFrame(
+            {
+                "fee_terms": [
+                    obs_cons.fees.mgmtFee,
+                    obs_cons.fees.incentiveFee,
+                    obs_cons.fees.hurdleRate,
+                ]
+            },
+            index=['MgmtFee', 'IncentiveFee', 'HurdleRate']
+        )
+        return fees
+
+    @staticmethod
+    def _summarize_stress_limits(obs_cons):
+        if obs_cons.scenario_index == 704:
+            mkt_selloff = 375
+            growth_selloff = 300
+            credit_liquidity = 400
+            expected_shortfall = 800
+
+        stress_limits = pd.DataFrame(
+            {
+                "stress_limits": [
+                    mkt_selloff,
+                    growth_selloff,
+                    credit_liquidity,
+                    expected_shortfall,
+                ]
+            },
+            index=['MktSelloff', 'GrowthSelloff', 'CreditLiquidity', 'ExpectedShortfall']
+        )
+        return stress_limits
+
+    @staticmethod
+    def _summarize_position_limits(obs_cons):
+        stress_limits = pd.DataFrame(
+            {
+                "stress_limits": [
+                    0.03,
+                    obs_cons.maxLeverage if obs_cons.maxLeverage is not None else "Unconstrained",
+                    obs_cons.minMaterialNonZero
+                ]
+            },
+            index=['SingleName', 'MaxGrossExposure', 'MinMaterialAllocation']
+        )
+        return stress_limits
+
+    @staticmethod
+    def _summarize_rebalancing_limits(obs_cons):
+        rebalance_limits = pd.DataFrame(
+            {
+                "rebalancing_limits": [
+                    "No",
+                    "Blank Slate",
+                ]
+            },
+            index=['ReallocateScarceCapacity', 'BlankSlateOrRebal']
+        )
+        return rebalance_limits
+
+    def _summarize_obs_and_cons(self, weights, optim_config_name, rf):
+        metrics = collect_portfolio_metrics(runner=self._runner,
+                                            weights=weights['Current'],
+                                            optim_config_name=optim_config_name,
+                                            rf=rf)
+        obs_cons = metrics.obs_cons
+        formal_mandate = self._summarize_formal_mandate(obs_cons)
+        liquidity_cons = self._summarize_liquidity_cons(obs_cons)
+        fees = self._summarize_portfolio_fees(obs_cons)
+        target_return = pd.DataFrame({'target_return': [obs_cons.target_return]})
+        stress_scenario_limits = self._summarize_stress_limits(obs_cons)
+        position_limits = self._summarize_position_limits(obs_cons)
+        rebalancing_limits = self._summarize_rebalancing_limits(obs_cons)
+        obs_cons_summary = dict({
+            "formal_mandate": formal_mandate,
+            "liquidity_cons": liquidity_cons,
+            "fee_terms": fees,
+            "target_return": target_return,
+            "stress_limits": stress_scenario_limits,
+            "position_limits": position_limits,
+            "rebalancing_limits": rebalancing_limits
+        })
+        return obs_cons_summary
+
     def generate_excel_report(self, weights, optim_config_name, rf):
         acronym = 'Sample'
 
@@ -124,12 +257,20 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         weights = weights.rename(columns={'InvestmentGroupName': 'Fund'}).set_index('Fund')
         weights.drop(columns={"InvestmentGroupId"}, inplace=True)
 
+        obs_cons = self._summarize_obs_and_cons(weights=weights, optim_config_name=optim_config_name, rf=rf)
         metrics = self._combine_metrics_across_weights(weights=weights, optim_config_name=optim_config_name, rf=rf)
         allocation_summary = self._format_allocations_summary(weights=weights, metrics=metrics)
 
         # TODO need to properly order strategy_allocation
         excel_data = {
             "header_info": self._format_header_info(acronym=acronym),
+            "formal_mandate": obs_cons['formal_mandate'],
+            "fee_terms": obs_cons['fee_terms'],
+            "liquidity_constraints": obs_cons['liquidity_cons'],
+            "target_return": obs_cons['target_return'],
+            "stress_limits": obs_cons['stress_limits'],
+            "position_limits": obs_cons['position_limits'],
+            "rebalancing_limits": obs_cons["rebalancing_limits"],
             "objective_measures": metrics['objective_measures'],
             "distribution_of_returns": metrics['outcomes_distribution'],
             "exp_risk_adj_performance": metrics['risk_adj_performance'],
@@ -167,7 +308,7 @@ if __name__ == "__main__":
     weights = pd.read_csv('test_weights.csv').fillna(0)
     weights = weights[weights.iloc[:, 2:].max(axis=1) > 0]
 
-    with Scenario(dao=DaoRunner(), as_of_date=dt.date(2023, 2, 28)).context():
+    with Scenario(dao=DaoRunner(), as_of_date=dt.date(2023, 5, 1)).context():
         PortfolioConstructionReport().execute(weights=weights,
-                                              optim_config_name='manager_inputs_2023_04_24',
+                                              optim_config_name='ANCHOR4_default_2023-05-01',
                                               rf=0.04)

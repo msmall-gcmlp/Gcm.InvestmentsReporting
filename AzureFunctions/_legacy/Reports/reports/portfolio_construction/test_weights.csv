@@ -2,28 +2,23 @@ InvestmentGroupId,InvestmentGroupName,Current,Planned,Optimized
 6374,Apollo Credit Strategies Fund,0,0,0
 11153,Bayview MSR,0,0,0
 15119,Brigade Structured Credit,0.02,0.02,0.02
-16657,Canyon VRF,0,0,0
-17154,Carronade Capital,0,0.02,0.02
-24618,Diameter Main Fund,0,0,0
+16657,Canyon VRF,0,0.02,0.02
+24618,Diameter Main Fund,0,0.05,0.05
 30869,Fidera,0,0.03,0.03
 50620,Lynrock Lake,0.03,0.03,0.03
-51321,Magnetar Constellation,0,0,0
+51321,Magnetar Constellation,0.02,0.02,0.02
 92405,ReadyState,0,0,0
-68568,Redwood,0,0.03,0.03
-72658,Sculptor Credit Opps,0,0,0
+72658,Sculptor Credit Opps,0,0.03,0.03
 74463,Silver Point,0,0,0.06
 75495,Sona Credit,0,0,0
-97960,Stone Ridge Opp Fund,0.02,0.02,0.02
 84579,Varadero,0,0,0
-97859,Waterfall Eden,0,0.05,0.05
 8651,Aspex,0.04,0.04,0.04
 93767,Avala,0,0,0
 9863,Avidity,0,0,0
 12939,BlackRock Strategic,0.02,0.02,0.02
 14713,Braidwell,0,0,0
-16415,Candlestick,0,0,0
+16415,Candlestick,0.03,0.03,0.03
 19238,Citadel Global Equities,0,0,0
-19974,Coatue,0.03,0.03,0.03
 23319,D1 Capital,0.1,0.08,0.06
 24015,Deep Track,0,0,0
 94914,Forest Avenue Capital,0,0,0
@@ -46,8 +41,7 @@ InvestmentGroupId,InvestmentGroupName,Current,Planned,Optimized
 87316,Whale Rock Hybrid Long/Short,0,0,0
 88149,Woodline Partners,0.06,0.06,0.06
 4344,Alphadyne Global Rates II,0.02,0.02,0.02
-90009,Brevan Howard Master,0.06,0.06,0.06
-16921,Capula Tactical Macro,0,0,0
+16921,Capula Tactical Macro,0.06,0.06,0.06
 27812,Element,0.04,0.02,0.04
 69939,Rokos,0,0.02,0.04
 9077,Atlas Enhanced Fund,0.04,0.02,0
