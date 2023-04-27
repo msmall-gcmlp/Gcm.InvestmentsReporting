@@ -13,7 +13,6 @@ from _legacy.core.ReportStructure.report_structure import (
 from gcm.Dao.DaoRunner import DaoRunner
 from gcm.inv.scenario import Scenario
 from gcm.inv.models.portfolio_construction.portfolio_metrics.portfolio_metrics import collect_portfolio_metrics
-from dataclasses import fields
 
 
 class PortfolioConstructionReport(ReportingRunnerBase):
