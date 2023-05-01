@@ -1,17 +1,11 @@
 from ....core.report_structure import (
-    ReportStructure,
     ReportMeta,
-    AvailableMetas,
     EntityStandardNames,
 )
 from gcm.Dao.DaoRunner import AzureDataLakeDao
-from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from ....core.report_structure import (
-    ReportType,
-    ReportConsumer,
     EntityDomainTypes,
 )
-from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ....core.components.report_table import ReportTable
 from ....core.components.report_workbook_handler import (
     ReportWorkBookHandler,
@@ -22,15 +16,14 @@ import copy
 from ..investment_reports.pvm_investment_trackrecord_report import (
     PvmInvestmentTrackRecordReport,
 )
-from .pvm_track_record_handler import (
-    TrackRecordManagerProvider,
-    TrackRecordHandler,
+from ..PvmTrackRecord.base_pvm_tr_report import (
+    BasePvmTrackRecordReport,
 )
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
 
-class PvmManagerTrackRecordReport(ReportStructure):
+class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
     def __init__(self, report_meta: ReportMeta):
         super().__init__(
             ReportNames.PvmManagerTrackRecordReport, report_meta
@@ -47,7 +40,7 @@ class PvmManagerTrackRecordReport(ReportStructure):
 
     @property
     def manager_name(self):
-        __name = "__inv_mang_name"
+        __name = "__inv_manager_name"
         _ifc = getattr(self, __name, None)
         if _ifc is None:
             manager_name: pd.DataFrame = self.report_meta.entity_info[
@@ -59,35 +52,13 @@ class PvmManagerTrackRecordReport(ReportStructure):
             setattr(self, __name, manager_name)
         return getattr(self, __name, None)
 
-    @property
-    def manager_handler(self) -> TrackRecordHandler:
-        __name = "__manager_handler"
-        __ifc = getattr(self, __name, None)
-        if __ifc is None:
-            manager_handler = (
-                TrackRecordManagerProvider().get_manager_tr_info(
-                    self.manager_name
-                )
-            )
-            setattr(self, __name, manager_handler)
-        return getattr(self, __name, None)
-
     @classmethod
     def available_metas(cls):
-        return AvailableMetas(
-            report_type=ReportType.Performance,
-            frequencies=[
-                Frequency(FrequencyType.Once),
-            ],
-            aggregate_intervals=[AggregateInterval.ITD],
-            consumer=ReportConsumer(
-                horizontal=[ReportConsumer.Horizontal.IC],
-                vertical=ReportConsumer.Vertical.PEREI,
-            ),
-            entity_groups=[
-                EntityDomainTypes.InvestmentManager,
-            ],
-        )
+        base = super().available_metas()
+        base.entity_groups = [
+            EntityDomainTypes.InvestmentManager,
+        ]
+        return base
 
     def assign_components(self):
 

@@ -1,18 +1,14 @@
 from ....core.report_structure import (
-    ReportStructure,
     ReportMeta,
-    AvailableMetas,
 )
+from ..PvmTrackRecord.base_pvm_tr_report import BasePvmTrackRecordReport
 from gcm.Dao.DaoRunner import AzureDataLakeDao
-from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from ....core.report_structure import (
-    ReportType,
-    ReportConsumer,
     EntityDomainTypes,
+    Standards as EntityDomainStandards,
 )
 from ....core.components.report_table import ReportTable
 import pandas as pd
-from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ...report_names import ReportNames
 from gcm.inv.scenario import Scenario
 import datetime as dt
@@ -21,9 +17,9 @@ import datetime as dt
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
 
-class PvmInvestmentTrackRecordReport(ReportStructure):
+class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def __init__(
-        self, report_meta: ReportMeta, investment_manager_name: None
+        self, report_meta: ReportMeta, investment_manager_name=None
     ):
         super().__init__(
             ReportNames.PvmInvestmentTrackRecordReport, report_meta
@@ -41,23 +37,29 @@ class PvmInvestmentTrackRecordReport(ReportStructure):
 
     @classmethod
     def available_metas(cls):
-        return AvailableMetas(
-            report_type=ReportType.Performance,
-            frequencies=[
-                Frequency(FrequencyType.Once),
-            ],
-            aggregate_intervals=[AggregateInterval.ITD],
-            consumer=ReportConsumer(
-                horizontal=[ReportConsumer.Horizontal.IC],
-                vertical=ReportConsumer.Vertical.PEREI,
-            ),
-            entity_groups=[
-                EntityDomainTypes.Investment,
-            ],
-        )
+        base = super().available_metas()
+        base.entity_groups = [
+            EntityDomainTypes.Investment,
+        ]
+        return base
 
     @property
-    def investment_manager_name(self):
+    def manager_name(self):
+        if self._investment_manager_name is None:
+            # time to do acrobatics....
+            e = self.related_entities
+            manager_data = e.get_entities_directly_related_by_name(
+                EntityDomainTypes.InvestmentManager, False
+            )
+            managers = (
+                manager_data[EntityDomainStandards.EntityName]
+                .drop_duplicates()
+                .to_list()
+            )
+            if len(managers) == 1:
+                self._investment_manager_name = managers[0]
+            else:
+                raise RuntimeError("More than one manager")
         return self._investment_manager_name
 
     def assign_components(self):
