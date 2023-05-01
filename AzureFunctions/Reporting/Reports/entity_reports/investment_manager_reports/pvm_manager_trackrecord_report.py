@@ -53,12 +53,8 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         return getattr(self, __name, None)
 
     @classmethod
-    def available_metas(cls):
-        base = super().available_metas()
-        base.entity_groups = [
-            EntityDomainTypes.InvestmentManager,
-        ]
-        return base
+    def level(cls):
+        return EntityDomainTypes.InvestmentManager
 
     def assign_components(self):
 

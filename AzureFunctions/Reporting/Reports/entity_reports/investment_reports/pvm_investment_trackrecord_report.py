@@ -36,12 +36,8 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         )
 
     @classmethod
-    def available_metas(cls):
-        base = super().available_metas()
-        base.entity_groups = [
-            EntityDomainTypes.Investment,
-        ]
-        return base
+    def level(cls):
+        return EntityDomainTypes.InvestmentManager
 
     @property
     def manager_name(self):
