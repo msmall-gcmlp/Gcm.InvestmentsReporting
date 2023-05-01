@@ -12,9 +12,7 @@ import pandas as pd
 from ...report_names import ReportNames
 from gcm.inv.scenario import Scenario
 import datetime as dt
-
-
-# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
+from .get_data_for_investments import get_positions
 
 
 class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
@@ -42,18 +40,18 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def net_cashflows(self) -> pd.DataFrame:
         pass
 
-    def gross_cashflows(self) -> pd.DataFrame:
+    def position_cashflows(self) -> pd.DataFrame:
         pass
 
     @property
-    def positions(self) -> pd.DataFrame:
+    def position_list(self) -> pd.DataFrame:
         __name = "__positions"
         if getattr(self, __name, None) is None:
-            struct = self.manager_handler.manager_hierarchy_structure
-            assets = struct.get_entities_directly_related_by_name(
-                EntityDomainTypes.Asset, down=True
+            df = get_positions(
+                self.manager_handler.manager_hierarchy_structure,
+                self.report_meta.entity_info,
             )
-            assert assets is not None
+            setattr(self, __name, df)
         return getattr(self, __name, None)
 
     @property
@@ -78,7 +76,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def assign_components(self):
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
         assert as_of_date is not None
-        positions = self.positions
+        positions = self.position_list
         assert positions is not None
         tables = [
             ReportTable(

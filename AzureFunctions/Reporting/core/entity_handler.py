@@ -67,14 +67,18 @@ class HierarchyHandler(object):
         return getattr(self, __name, None)
 
     def get_entities_directly_related_by_name(
-        self, neighbor_domain_type: EntityDomainTypes, down=True
+        self,
+        neighbor_domain_type: EntityDomainTypes,
+        starting_node_id: List[int] = None,
+        down=True,
     ) -> pd.DataFrame:
         item = self.hierarchy_down if down else self.hierarchy_up
         # changed data type. handle accordingly
         [edges, vertex, sources] = [item.edges, item.vertex, item.sources]
-        this_id = list(
-            set(self.entity_info[EntityStandardNames.NodeId].to_list())
-        )
+        if starting_node_id is None:
+            starting_node_id = list(
+                set(self.entity_info[EntityStandardNames.NodeId].to_list())
+            )
         remap = (
             EntityStandardNames.Child_NodeId
             if down
@@ -90,7 +94,7 @@ class HierarchyHandler(object):
             else EntityStandardNames.Child_NodeId
         )
         neighbors_of_type = pd.merge(
-            edges[edges[graby_by].isin(this_id)],
+            edges[edges[graby_by].isin(starting_node_id)],
             neighbors_of_type,
             on=remap,
         )
