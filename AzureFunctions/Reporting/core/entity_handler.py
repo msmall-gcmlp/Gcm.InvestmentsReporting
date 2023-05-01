@@ -58,9 +58,9 @@ class HierarchyUpAndDown(object):
     def get_entities_directly_related_by_name(
         self, neighbor_domain_type: EntityDomainTypes, down=True
     ) -> pd.DataFrame:
-        [edges, vertex, sources,] = (
-            self.hierarchy_down if down else self.hierarchy_up
-        )
+        item = self.hierarchy_down if down else self.hierarchy_up
+        # changed data type. handle accordingly
+        [edges, vertex, sources] = [item.edges, item.vertex, item.sources]
         entity_info: pd.DataFrame = self.report_meta.entity_info
         this_id = list(
             set(entity_info[EntityStandardNames.NodeId].to_list())
