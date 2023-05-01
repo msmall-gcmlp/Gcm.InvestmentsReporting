@@ -77,7 +77,8 @@ class PvmManagerTrackRecordReport(ReportStructure):
 
         tables = [
             ReportTable(
-                "manager_name", pd.DataFrame({"m_name": [self.manager_name]})
+                "manager_name",
+                pd.DataFrame({"m_name": [self.manager_name]}),
             ),
         ]
 
@@ -92,7 +93,9 @@ class PvmManagerTrackRecordReport(ReportStructure):
             meta = copy.deepcopy(self.report_meta)
             meta.entity_domain = child_type
             meta.entity_info = n
-            this_report = PvmInvestmentTrackRecordReport(meta, self.manager_name)
+            this_report = PvmInvestmentTrackRecordReport(
+                meta, self.manager_name
+            )
             wb = ReportWorkBookHandler(
                 g,
                 this_report.components,

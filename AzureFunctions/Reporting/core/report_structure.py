@@ -312,10 +312,10 @@ class ReportStructure(SerializableBase):
         return None
 
     @property
-    def related_entities(
+    def related_children_entities(
         self,
     ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        __name = "_related_entities"
+        __name = "_related_children_entities"
         __ifc = getattr(self, __name, None)
         if __ifc is None:
             domain = self.report_meta.entity_domain
@@ -348,7 +348,7 @@ class ReportStructure(SerializableBase):
     def get_direct_children_of_type(
         self, children_domain_type: str
     ) -> pd.DataFrame:
-        vals = self.related_entities
+        vals = self.related_children_entities
         if vals is not None:
             [
                 edges,
