@@ -3,6 +3,8 @@ from gcm.inv.entityhierarchy.NodeHierarchy import (
     EntityDomainTypes,
     List,
     Standards as EntityStandardNames,
+    EntityDomain,
+    get_domain,
 )
 import pandas as pd
 
@@ -31,7 +33,7 @@ class HierarchyUpAndDown(object):
         __if = getattr(self, __name, None)
         if __if is None:
             val = HierarchyUpAndDown.get_hierarchy(
-                self.domain, self.name, True
+                self.domain, [self.name], True
             )
             val = HierarchyUpAndDown.HierarchyStruct(
                 val[0], val[1], val[2]
@@ -47,12 +49,27 @@ class HierarchyUpAndDown(object):
         __if = getattr(self, __name, None)
         if __if is None:
             val = HierarchyUpAndDown.get_hierarchy(
-                self.domain, self.name, False
+                self.domain, [self.name], False
             )
             val = HierarchyUpAndDown.HierarchyStruct(
                 val[0], val[1], val[2]
             )
             setattr(self, __name, val)
+        return getattr(self, __name, None)
+
+    @property
+    def entity_info(self):
+        __name = "__info_entity"
+        __if = getattr(self, __name, None)
+        if __if is None:
+            entity_domain: EntityDomain = get_domain(
+                self.domain
+            )
+            [entities, sources] = entity_domain.get_by_entity_names(
+                [self.name],
+            )
+            merged = EntityDomain.merge_ref_and_sources(entities, sources)
+            setattr(self, __name, merged)
         return getattr(self, __name, None)
 
     def get_entities_directly_related_by_name(
@@ -61,9 +78,8 @@ class HierarchyUpAndDown(object):
         item = self.hierarchy_down if down else self.hierarchy_up
         # changed data type. handle accordingly
         [edges, vertex, sources] = [item.edges, item.vertex, item.sources]
-        entity_info: pd.DataFrame = self.report_meta.entity_info
         this_id = list(
-            set(entity_info[EntityStandardNames.NodeId].to_list())
+            set(self.entity_info[EntityStandardNames.NodeId].to_list())
         )
         remap = (
             EntityStandardNames.Child_NodeId
