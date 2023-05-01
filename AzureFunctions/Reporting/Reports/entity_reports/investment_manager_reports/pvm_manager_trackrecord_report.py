@@ -87,7 +87,11 @@ class PvmManagerTrackRecordReport(ReportStructure):
             name, tables, self.excel_template_location
         )
         child_type = EntityDomainTypes.Investment
-        children = self.get_direct_children_of_type(child_type.name)
+        children = (
+            self.related_entities.get_entities_directly_related_by_name(
+                child_type
+            )
+        )
         final_list = [wb_handler]
         for g, n in children.groupby(EntityStandardNames.EntityName):
             meta = copy.deepcopy(self.report_meta)
