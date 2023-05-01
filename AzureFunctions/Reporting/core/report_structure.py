@@ -6,7 +6,7 @@ from .components.report_component_base import (
 from gcm.inv.entityhierarchy.NodeHierarchy import (
     Standards as EntityStandardNames,
 )
-from .entity_handler import HierarchyUpAndDown
+from .entity_handler import HierarchyHandler
 from openpyxl import Workbook
 from typing import List, Optional
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
@@ -314,7 +314,7 @@ class ReportStructure(SerializableBase):
     @property
     def related_entities(
         self,
-    ) -> HierarchyUpAndDown:
+    ) -> HierarchyHandler:
         __name = "_related_children_entities"
         __ifc = getattr(self, __name, None)
         if __ifc is None:
@@ -329,7 +329,7 @@ class ReportStructure(SerializableBase):
                     .drop_duplicates()
                     .to_list()
                 )[0]
-                val = HierarchyUpAndDown(domain, current_entity_name)
+                val = HierarchyHandler(domain, current_entity_name)
                 setattr(self, __name, val)
         return getattr(self, __name, None)
 

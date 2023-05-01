@@ -22,7 +22,10 @@ import copy
 from ..investment_reports.pvm_investment_trackrecord_report import (
     PvmInvestmentTrackRecordReport,
 )
-
+from .pvm_track_record_handler import (
+    TrackRecordManagerProvider,
+    TrackRecordHandler,
+)
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
@@ -56,6 +59,19 @@ class PvmManagerTrackRecordReport(ReportStructure):
             setattr(self, __name, manager_name)
         return getattr(self, __name, None)
 
+    @property
+    def manager_handler(self) -> TrackRecordHandler:
+        __name = "__manager_handler"
+        __ifc = getattr(self, __name, None)
+        if __ifc is None:
+            manager_handler = (
+                TrackRecordManagerProvider().get_manager_tr_info(
+                    self.manager_name
+                )
+            )
+            setattr(self, __name, manager_handler)
+        return getattr(self, __name, None)
+
     @classmethod
     def available_metas(cls):
         return AvailableMetas(
@@ -87,10 +103,9 @@ class PvmManagerTrackRecordReport(ReportStructure):
             name, tables, self.excel_template_location
         )
         child_type = EntityDomainTypes.Investment
-        children = (
-            self.related_entities.get_entities_directly_related_by_name(
-                child_type
-            )
+        structure = self.manager_handler.manager_hierarchy_structure
+        children = structure.get_entities_directly_related_by_name(
+            child_type
         )
         final_list = [wb_handler]
         for g, n in children.groupby(EntityStandardNames.EntityName):

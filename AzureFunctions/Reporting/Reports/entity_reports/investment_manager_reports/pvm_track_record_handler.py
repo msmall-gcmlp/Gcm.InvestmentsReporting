@@ -1,5 +1,5 @@
 from gcm.inv.utils.misc.table_cache_base import Singleton
-import pandas as pd
+from ....core.entity_handler import HierarchyHandler, EntityDomainTypes
 
 
 class TrackRecordHandler(object):
@@ -7,11 +7,17 @@ class TrackRecordHandler(object):
         self.manager_name = manager_name
 
     @property
-    def manager_hierarchy_structure(self) -> pd.DataFrame:
+    def manager_hierarchy_structure(self) -> HierarchyHandler:
         __name = "__this_manager_struct"
         _item = getattr(self, __name, None)
         if _item is None:
-            pass
+            setattr(
+                self,
+                __name,
+                HierarchyHandler(
+                    EntityDomainTypes.InvestmentManager, self.manager_name
+                ),
+            )
         return getattr(self, __name, None)
 
 

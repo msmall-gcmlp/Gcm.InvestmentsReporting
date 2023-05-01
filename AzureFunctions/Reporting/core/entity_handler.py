@@ -9,7 +9,7 @@ from gcm.inv.entityhierarchy.NodeHierarchy import (
 import pandas as pd
 
 
-class HierarchyUpAndDown(object):
+class HierarchyHandler(object):
     def __init__(self, domain: EntityDomainTypes, entity_name: str):
         self.domain = domain
         self.name = entity_name
@@ -32,12 +32,10 @@ class HierarchyUpAndDown(object):
         __name = "__h_down"
         __if = getattr(self, __name, None)
         if __if is None:
-            val = HierarchyUpAndDown.get_hierarchy(
+            val = HierarchyHandler.get_hierarchy(
                 self.domain, [self.name], True
             )
-            val = HierarchyUpAndDown.HierarchyStruct(
-                val[0], val[1], val[2]
-            )
+            val = HierarchyHandler.HierarchyStruct(val[0], val[1], val[2])
             setattr(self, __name, val)
         return getattr(self, __name, None)
 
@@ -48,12 +46,10 @@ class HierarchyUpAndDown(object):
         __name = "__h_up"
         __if = getattr(self, __name, None)
         if __if is None:
-            val = HierarchyUpAndDown.get_hierarchy(
+            val = HierarchyHandler.get_hierarchy(
                 self.domain, [self.name], False
             )
-            val = HierarchyUpAndDown.HierarchyStruct(
-                val[0], val[1], val[2]
-            )
+            val = HierarchyHandler.HierarchyStruct(val[0], val[1], val[2])
             setattr(self, __name, val)
         return getattr(self, __name, None)
 
