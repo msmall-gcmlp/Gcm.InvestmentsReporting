@@ -86,7 +86,7 @@ class HierarchyUpAndDown(object):
         )
         neighbors_of_type: pd.DataFrame = vertex[
             vertex[EntityStandardNames.EntityDomain]
-            == neighbor_domain_type
+            == neighbor_domain_type.name
         ].rename(columns={EntityStandardNames.NodeId: remap})
         graby_by = (
             EntityStandardNames.Parent_NodeId
@@ -105,7 +105,7 @@ class HierarchyUpAndDown(object):
         )
         temp_sources = sources[
             sources[EntityStandardNames.EntityDomain]
-            == neighbor_domain_type
+            == neighbor_domain_type.name
         ]
         temp_sources[
             temp_sources[EntityStandardNames.EntityId].isin(
