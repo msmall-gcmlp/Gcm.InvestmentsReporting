@@ -56,36 +56,62 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
     def level(cls):
         return EntityDomainTypes.InvestmentManager
 
-    def assign_components(self):
+    @property
+    def child_type(self):
+        return EntityDomainTypes.Investment
 
+    @property
+    def children(self) -> pd.DataFrame:
+        __name = "__investment_children"
+        _ifc = getattr(self, __name, None)
+        if _ifc is None:
+            structure = self.manager_handler.manager_hierarchy_structure
+            children = structure.get_entities_directly_related_by_name(
+                self.child_type
+            )
+            setattr(self, __name, children)
+        return getattr(self, __name, None)
+
+    @property
+    def children_reports(
+        self,
+    ) -> dict[str, PvmInvestmentTrackRecordReport]:
+        __name = "__children_report_dict"
+        if getattr(self, __name, None) is None:
+            cach_dict = {}
+            for g, n in self.children.groupby(
+                EntityStandardNames.EntityName
+            ):
+                meta = copy.deepcopy(self.report_meta)
+                meta.entity_domain = self.child_type
+                meta.entity_info = n
+                this_report = PvmInvestmentTrackRecordReport(
+                    meta, self.manager_name
+                )
+                cach_dict[g] = this_report
+            setattr(self, __name, cach_dict)
+        return getattr(self, __name, None)
+
+    def assign_components(self):
         tables = [
             ReportTable(
                 "manager_name",
                 pd.DataFrame({"m_name": [self.manager_name]}),
             ),
         ]
-
         name = f"ManagerTR_{self.manager_name}"
         wb_handler = ReportWorkBookHandler(
             name, tables, self.excel_template_location
         )
-        child_type = EntityDomainTypes.Investment
-        structure = self.manager_handler.manager_hierarchy_structure
-        children = structure.get_entities_directly_related_by_name(
-            child_type
-        )
+
         final_list = [wb_handler]
-        for g, n in children.groupby(EntityStandardNames.EntityName):
-            meta = copy.deepcopy(self.report_meta)
-            meta.entity_domain = child_type
-            meta.entity_info = n
-            this_report = PvmInvestmentTrackRecordReport(
-                meta, self.manager_name
+        children_in_order = [
+            ReportWorkBookHandler(
+                k,
+                self.children_reports[k].components,
+                self.children_reports[k].excel_template_location,
             )
-            wb = ReportWorkBookHandler(
-                g,
-                this_report.components,
-                this_report.excel_template_location,
-            )
-            final_list.append(wb)
+            for k in self.children_reports
+        ]
+        final_list = final_list + children_in_order
         return final_list

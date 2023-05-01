@@ -39,6 +39,23 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def level(cls):
         return EntityDomainTypes.InvestmentManager
 
+    def net_cashflows(self) -> pd.DataFrame:
+        pass
+
+    def gross_cashflows(self) -> pd.DataFrame:
+        pass
+
+    @property
+    def positions(self) -> pd.DataFrame:
+        __name = "__positions"
+        if getattr(self, __name, None) is None:
+            struct = self.manager_handler.manager_hierarchy_structure
+            assets = struct.get_entities_directly_related_by_name(
+                EntityDomainTypes.Asset, down=True
+            )
+            assert assets is not None
+        return getattr(self, __name, None)
+
     @property
     def manager_name(self):
         if self._investment_manager_name is None:
@@ -61,6 +78,8 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def assign_components(self):
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
         assert as_of_date is not None
+        positions = self.positions
+        assert positions is not None
         tables = [
             ReportTable(
                 "MyComponent",
@@ -72,10 +91,3 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             ),
         ]
         return tables
-        # name = "Test"
-        # manager_data = ReportWorkBookHandler(
-        #     name, tables, self.excel_template_location
-        # )
-        # # now get the investments managed by this manager
-
-        # return [manager_data]
