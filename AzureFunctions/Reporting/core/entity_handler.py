@@ -62,9 +62,7 @@ class HierarchyUpAndDown(object):
         __name = "__info_entity"
         __if = getattr(self, __name, None)
         if __if is None:
-            entity_domain: EntityDomain = get_domain(
-                self.domain
-            )
+            entity_domain: EntityDomain = get_domain(self.domain)
             [entities, sources] = entity_domain.get_by_entity_names(
                 [self.name],
             )
