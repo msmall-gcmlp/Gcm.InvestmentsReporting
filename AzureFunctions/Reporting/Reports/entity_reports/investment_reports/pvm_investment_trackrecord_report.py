@@ -13,7 +13,7 @@ from ...report_names import ReportNames
 from gcm.inv.scenario import Scenario
 import datetime as dt
 from .data_handler.get_positions import get_positions
-from .data_handler.get_position_cfs import get_position_cfs
+from .data_handler.get_cfs import get_cfs
 
 
 class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
@@ -38,17 +38,42 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def level(cls):
         return EntityDomainTypes.InvestmentManager
 
+    @property
     def net_cashflows(self) -> pd.DataFrame:
-        pass
+        __name = "__investment_cfs"
+        if getattr(self, __name, None is None):
+            as_of_date: dt.date = Scenario.get_attribute("as_of_date")
+            entity_info = self.report_meta.entity_info
+            sources = entity_info[
+                [
+                    EntityDomainStandards.SourceName,
+                    EntityDomainStandards.ExternalId,
+                ]
+            ]
+            f_sources = sources[
+                sources[EntityDomainStandards.SourceName] == "IDW.PVM.TR"
+            ]
+            investment_ids = [
+                int(x)
+                for x in f_sources[EntityDomainStandards.ExternalId]
+                .drop_duplicates()
+                .to_list()
+            ]
+            cfs = get_cfs(
+                investment_ids, as_of_date=as_of_date, cf_type="Investment"
+            )
+            setattr(self, __name, cfs)
+        return getattr(self, __name, None is None)
 
     @property
     def position_cashflows(self) -> pd.DataFrame:
         __name = "__pos_cfs"
         if getattr(self, __name, None is None):
             as_of_date: dt.date = Scenario.get_attribute("as_of_date")
-            cfs = get_position_cfs(
+            cfs = get_cfs(
                 self.position_list["PositionId"].to_list(),
                 as_of_date=as_of_date,
+                cf_type="Position",
             )
             setattr(self, __name, cfs)
         return getattr(self, __name, None is None)
@@ -84,8 +109,6 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         return self._investment_manager_name
 
     def assign_components(self):
-
-        assert as_of_date is not None
         positions = self.position_list
         assert positions is not None
         tables = [
