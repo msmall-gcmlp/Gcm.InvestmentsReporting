@@ -3,6 +3,7 @@ from ......core.entity_handler import (
     HierarchyHandler,
     EntityDomainTypes,
     EntityStandardNames,
+    List,
 )
 import pandas as pd
 from .gets.get_cfs import get_cfs
@@ -28,6 +29,7 @@ class TrackRecordHandler(object):
             )
         return getattr(self, __name, None)
 
+    @property
     def all_net_cfs(self) -> pd.DataFrame:
         __name = "_all_net_cfs"
         _item = getattr(self, __name, None)
@@ -62,12 +64,16 @@ class TrackRecordHandler(object):
             inv_entity_info = self.manager_hierarchy_structure.get_entities_directly_related_by_name(
                 EntityDomainTypes.Investment
             )
-            position_list = get_positions(
-                self.manager_hierarchy_structure, inv_entity_info
+            position_list: List[int] = (
+                get_positions(
+                    self.manager_hierarchy_structure, inv_entity_info
+                )["PositionId"]
+                .drop_duplicates()
+                .to_list()
             )
             df = get_cfs(position_list, "Position")
             # merge against position and Asset Id
-            final_df = get_position_map(df)
+            final_df = get_position_map(df, position_list)
             setattr(self, __name, final_df)
         return getattr(self, __name, None)
 

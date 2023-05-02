@@ -8,6 +8,7 @@ from .....core.report_structure import (
     ReportType,
     ReportConsumer,
     EntityDomainTypes,
+    EntityStandardNames,
 )
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ....report_names import ReportNames
@@ -24,6 +25,8 @@ class BasePvmTrackRecordReport(ReportStructure):
     def __init__(self, r_type: ReportNames, report_meta: ReportMeta):
         super().__init__(r_type, report_meta)
 
+    IDW_PVM_TR = "IDW.PVM.TR"
+
     @abstractproperty
     def manager_name(self) -> str:
         raise NotImplementedError()
@@ -39,6 +42,31 @@ class BasePvmTrackRecordReport(ReportStructure):
                 )
             )
             setattr(self, __name, manager_handler)
+        return getattr(self, __name, None)
+
+    @property
+    def idw_pvm_tr_id(self):
+        __name = "__idw_pvm_tr_id"
+        if getattr(self, __name, None) is None:
+            info = self.report_meta.entity_info
+            info = info[
+                [
+                    EntityStandardNames.SourceName,
+                    EntityStandardNames.ExternalId,
+                ]
+            ]
+            info = info[
+                info[EntityStandardNames.SourceName]
+                == BasePvmTrackRecordReport.IDW_PVM_TR
+            ]
+            id_list = [
+                int(x)
+                for x in info[EntityStandardNames.ExternalId]
+                .drop_duplicates()
+                .to_list()
+            ]
+            assert len(id_list) == 1
+            setattr(self, __name, id_list[0])
         return getattr(self, __name, None)
 
     @abstractclassmethod

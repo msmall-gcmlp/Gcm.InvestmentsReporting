@@ -12,11 +12,6 @@ from ....core.report_structure import (
 from ....core.components.report_table import ReportTable
 import pandas as pd
 from ...report_names import ReportNames
-from gcm.inv.scenario import Scenario
-import datetime as dt
-
-# from ..utils.PvmTrackRecord.data_handler.get_positions import get_positions
-# from ..utils.PvmTrackRecord.data_handler.get_cfs import get_cfs
 
 
 class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
@@ -45,7 +40,8 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def net_cashflows(self) -> pd.DataFrame:
         __name = "__investment_cfs"
         if getattr(self, __name, None is None):
-            cfs = None
+            cfs = self.manager_handler.all_net_cfs
+            cfs = cfs[cfs["InvestmentId"] == self.idw_pvm_tr_id]
             setattr(self, __name, cfs)
         return getattr(self, __name, None is None)
 
@@ -53,8 +49,8 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def position_cashflows(self) -> pd.DataFrame:
         __name = "__pos_cfs"
         if getattr(self, __name, None is None):
-            as_of_date: dt.date = Scenario.get_attribute("as_of_date")
-            cfs = self.manager_handler.all_position_cfs()
+            cfs = self.manager_handler.all_position_cfs
+            cfs = cfs[cfs["InvestmentId"] == self.idw_pvm_tr_id]
             setattr(self, __name, cfs)
         return getattr(self, __name, None is None)
 
