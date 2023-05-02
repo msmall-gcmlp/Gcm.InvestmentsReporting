@@ -11,7 +11,7 @@ from .....core.report_structure import (
 )
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ....report_names import ReportNames
-from .pvm_track_record_handler import (
+from ..PvmTrackRecord.data_handler.pvm_track_record_handler import (
     TrackRecordHandler,
     TrackRecordManagerProvider,
 )

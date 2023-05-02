@@ -59,3 +59,4 @@ class TestPvmManagerTrReport(object):
                 )
             )
             assert this_report is not None
+            this_report.components is not None

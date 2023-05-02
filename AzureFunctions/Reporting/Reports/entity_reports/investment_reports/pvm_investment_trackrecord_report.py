@@ -14,8 +14,9 @@ import pandas as pd
 from ...report_names import ReportNames
 from gcm.inv.scenario import Scenario
 import datetime as dt
-from ..utils.PvmTrackRecord.get_positions import get_positions
-from ..utils.PvmTrackRecord.get_cfs import get_cfs
+
+# from ..utils.PvmTrackRecord.data_handler.get_positions import get_positions
+# from ..utils.PvmTrackRecord.data_handler.get_cfs import get_cfs
 
 
 class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
@@ -53,24 +54,9 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         __name = "__pos_cfs"
         if getattr(self, __name, None is None):
             as_of_date: dt.date = Scenario.get_attribute("as_of_date")
-            cfs = get_cfs(
-                self.position_list["PositionId"].to_list(),
-                as_of_date=as_of_date,
-                cf_type="Position",
-            )
+            cfs = self.manager_handler.all_position_cfs()
             setattr(self, __name, cfs)
         return getattr(self, __name, None is None)
-
-    @property
-    def position_list(self) -> pd.DataFrame:
-        __name = "__positions"
-        if getattr(self, __name, None) is None:
-            df = get_positions(
-                self.manager_handler.manager_hierarchy_structure,
-                self.report_meta.entity_info,
-            )
-            setattr(self, __name, df)
-        return getattr(self, __name, None)
 
     @property
     def manager_name(self):
@@ -92,11 +78,9 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         return self._investment_manager_name
 
     def assign_components(self):
-        positions = self.position_list
         pos = self.position_cashflows
         cf = self.net_cashflows
         assert pos is not None and cf is not None
-        assert positions is not None
         tables = [
             ReportTable(
                 "MyComponent",

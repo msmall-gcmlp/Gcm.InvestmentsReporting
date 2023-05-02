@@ -1,12 +1,13 @@
 from gcm.inv.utils.misc.table_cache_base import Singleton
-from .....core.entity_handler import (
+from ......core.entity_handler import (
     HierarchyHandler,
     EntityDomainTypes,
     EntityStandardNames,
 )
 import pandas as pd
-from .get_cfs import get_cfs
-from .get_positions import get_positions
+from .gets.get_cfs import get_cfs
+from .gets.get_positions import get_positions
+from .gets.get_position_map import get_position_map
 
 
 class TrackRecordHandler(object):
@@ -53,6 +54,7 @@ class TrackRecordHandler(object):
             setattr(self, __name, df)
         return getattr(self, __name, None)
 
+    @property
     def all_position_cfs(self) -> pd.DataFrame:
         __name = "_all_position_cfs"
         _item = getattr(self, __name, None)
@@ -65,8 +67,8 @@ class TrackRecordHandler(object):
             )
             df = get_cfs(position_list, "Position")
             # merge against position and Asset Id
-
-            setattr(self, __name, df)
+            final_df = get_position_map(df)
+            setattr(self, __name, final_df)
         return getattr(self, __name, None)
 
 
