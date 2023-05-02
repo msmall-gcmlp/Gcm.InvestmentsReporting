@@ -1,5 +1,5 @@
-from ....core.entity_handler import HierarchyHandler
-from ....core.report_structure import (
+from .....core.entity_handler import HierarchyHandler
+from .....core.report_structure import (
     EntityDomainTypes,
     Standards as EntityDomainStandards,
     DaoSource,

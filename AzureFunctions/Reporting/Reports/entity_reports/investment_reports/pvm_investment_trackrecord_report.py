@@ -12,7 +12,8 @@ import pandas as pd
 from ...report_names import ReportNames
 from gcm.inv.scenario import Scenario
 import datetime as dt
-from .get_data_for_investments import get_positions
+from .data_handler.get_positions import get_positions
+from .data_handler.get_position_cfs import get_position_cfs
 
 
 class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
@@ -40,8 +41,17 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def net_cashflows(self) -> pd.DataFrame:
         pass
 
+    @property
     def position_cashflows(self) -> pd.DataFrame:
-        pass
+        __name = "__pos_cfs"
+        if getattr(self, __name, None is None):
+            as_of_date: dt.date = Scenario.get_attribute("as_of_date")
+            cfs = get_position_cfs(
+                self.position_list["PositionId"].to_list(),
+                as_of_date=as_of_date,
+            )
+            setattr(self, __name, cfs)
+        return getattr(self, __name, None is None)
 
     @property
     def position_list(self) -> pd.DataFrame:
@@ -74,7 +84,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         return self._investment_manager_name
 
     def assign_components(self):
-        as_of_date: dt.date = Scenario.get_attribute("as_of_date")
+
         assert as_of_date is not None
         positions = self.position_list
         assert positions is not None
