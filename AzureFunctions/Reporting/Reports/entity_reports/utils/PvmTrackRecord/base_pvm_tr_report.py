@@ -25,7 +25,7 @@ class BasePvmTrackRecordReport(ReportStructure):
     def __init__(self, r_type: ReportNames, report_meta: ReportMeta):
         super().__init__(r_type, report_meta)
 
-    IDW_PVM_TR = "IDW.PVM.TR"
+    __IDW_PVM_TR = "IDW.PVM.TR"
 
     @abstractproperty
     def manager_name(self) -> str:
@@ -45,7 +45,7 @@ class BasePvmTrackRecordReport(ReportStructure):
         return getattr(self, __name, None)
 
     @property
-    def idw_pvm_tr_id(self):
+    def idw_pvm_tr_id(self) -> int:
         __name = "__idw_pvm_tr_id"
         if getattr(self, __name, None) is None:
             info = self.report_meta.entity_info
@@ -57,7 +57,7 @@ class BasePvmTrackRecordReport(ReportStructure):
             ]
             info = info[
                 info[EntityStandardNames.SourceName]
-                == BasePvmTrackRecordReport.IDW_PVM_TR
+                == BasePvmTrackRecordReport.__IDW_PVM_TR
             ]
             id_list = [
                 int(x)

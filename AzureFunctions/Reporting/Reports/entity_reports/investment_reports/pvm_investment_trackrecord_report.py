@@ -32,16 +32,19 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             path=["PvmInvestmentTrackRecordTemplate.xlsx"],
         )
 
+    def filter_by_inv_id(self, df: pd.DataFrame):
+        return df[df["InvestmentId"] == self.idw_pvm_tr_id]
+
     @classmethod
     def level(cls):
-        return EntityDomainTypes.InvestmentManager
+        return EntityDomainTypes.Investment
 
     @property
     def net_cashflows(self) -> pd.DataFrame:
         __name = "__investment_cfs"
         if getattr(self, __name, None is None):
             cfs = self.manager_handler.all_net_cfs
-            cfs = cfs[cfs["InvestmentId"] == self.idw_pvm_tr_id]
+            cfs = self.filter_by_inv_id(cfs)
             setattr(self, __name, cfs)
         return getattr(self, __name, None is None)
 
@@ -50,7 +53,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         __name = "__pos_cfs"
         if getattr(self, __name, None is None):
             cfs = self.manager_handler.all_position_cfs
-            cfs = cfs[cfs["InvestmentId"] == self.idw_pvm_tr_id]
+            cfs = self.filter_by_inv_id(cfs)
             setattr(self, __name, cfs)
         return getattr(self, __name, None is None)
 
