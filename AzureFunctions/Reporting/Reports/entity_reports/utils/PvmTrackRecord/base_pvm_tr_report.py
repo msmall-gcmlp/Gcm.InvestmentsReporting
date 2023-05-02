@@ -1,16 +1,16 @@
-from ....core.report_structure import (
+from .....core.report_structure import (
     ReportStructure,
     ReportMeta,
     AvailableMetas,
 )
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
-from ....core.report_structure import (
+from .....core.report_structure import (
     ReportType,
     ReportConsumer,
     EntityDomainTypes,
 )
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
-from ...report_names import ReportNames
+from ....report_names import ReportNames
 from .pvm_track_record_handler import (
     TrackRecordHandler,
     TrackRecordManagerProvider,

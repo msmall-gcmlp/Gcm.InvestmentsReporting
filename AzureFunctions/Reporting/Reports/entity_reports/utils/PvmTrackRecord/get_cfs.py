@@ -1,7 +1,5 @@
 from typing import List
-import datetime as dt
 from gcm.inv.scenario import Scenario, DaoRunner
-from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from gcm.inv.utils.DaoUtils.query_utils import (
     Query,
     DeclarativeMeta,
@@ -10,13 +8,7 @@ from gcm.inv.utils.DaoUtils.query_utils import (
 from gcm.Dao.DaoSources import DaoSource
 
 
-def get_cfs(
-    ids: List[int],
-    as_of_date: dt.date,
-    cf_type="Position",
-    aggregate_interval=AggregateInterval.ITD,
-    scenario_name="Base",
-):
+def get_cfs(ids: List[int], cf_type="Position"):
     runner: DaoRunner = Scenario.get_attribute("dao")
     assert runner is not None
 
@@ -35,5 +27,4 @@ def get_cfs(
         source=DaoSource.InvestmentsDwh,
         operation=lambda d, pp: d.get_data(pp),
     )
-    df = df[df['AsOfDate'] == as_of_date]
     return df

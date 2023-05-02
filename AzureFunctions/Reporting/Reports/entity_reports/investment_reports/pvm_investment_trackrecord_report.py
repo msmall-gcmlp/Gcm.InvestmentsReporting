@@ -1,7 +1,9 @@
 from ....core.report_structure import (
     ReportMeta,
 )
-from ..PvmTrackRecord.base_pvm_tr_report import BasePvmTrackRecordReport
+from ..utils.PvmTrackRecord.base_pvm_tr_report import (
+    BasePvmTrackRecordReport,
+)
 from gcm.Dao.DaoRunner import AzureDataLakeDao
 from ....core.report_structure import (
     EntityDomainTypes,
@@ -12,8 +14,8 @@ import pandas as pd
 from ...report_names import ReportNames
 from gcm.inv.scenario import Scenario
 import datetime as dt
-from .data_handler.get_positions import get_positions
-from .data_handler.get_cfs import get_cfs
+from ..utils.PvmTrackRecord.get_positions import get_positions
+from ..utils.PvmTrackRecord.get_cfs import get_cfs
 
 
 class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
@@ -42,26 +44,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def net_cashflows(self) -> pd.DataFrame:
         __name = "__investment_cfs"
         if getattr(self, __name, None is None):
-            as_of_date: dt.date = Scenario.get_attribute("as_of_date")
-            entity_info = self.report_meta.entity_info
-            sources = entity_info[
-                [
-                    EntityDomainStandards.SourceName,
-                    EntityDomainStandards.ExternalId,
-                ]
-            ]
-            f_sources = sources[
-                sources[EntityDomainStandards.SourceName] == "IDW.PVM.TR"
-            ]
-            investment_ids = [
-                int(x)
-                for x in f_sources[EntityDomainStandards.ExternalId]
-                .drop_duplicates()
-                .to_list()
-            ]
-            cfs = get_cfs(
-                investment_ids, as_of_date=as_of_date, cf_type="Investment"
-            )
+            cfs = None
             setattr(self, __name, cfs)
         return getattr(self, __name, None is None)
 
