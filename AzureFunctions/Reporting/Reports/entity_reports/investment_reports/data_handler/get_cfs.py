@@ -22,7 +22,6 @@ def get_cfs(
 
     def oper(query: Query, item: dict[str, DeclarativeMeta]):
         query = filter_many(query, item, f"{cf_type}Id", ids)
-        query = query.filter(item.AsOfDate == as_of_date)
         # TODO: handle aggregate_interval and scenario for projected CFs
         return query
 
@@ -36,4 +35,5 @@ def get_cfs(
         source=DaoSource.InvestmentsDwh,
         operation=lambda d, pp: d.get_data(pp),
     )
+    df = df[df['AsOfDate'] == as_of_date]
     return df

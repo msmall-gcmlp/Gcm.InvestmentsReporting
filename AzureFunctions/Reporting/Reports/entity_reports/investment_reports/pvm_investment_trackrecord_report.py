@@ -110,6 +110,9 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
 
     def assign_components(self):
         positions = self.position_list
+        pos = self.position_cashflows
+        cf = self.net_cashflows
+        assert pos is not None and cf is not None
         assert positions is not None
         tables = [
             ReportTable(
