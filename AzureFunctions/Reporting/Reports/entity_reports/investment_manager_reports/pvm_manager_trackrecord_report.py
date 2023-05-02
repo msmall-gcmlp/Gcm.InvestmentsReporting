@@ -16,7 +16,7 @@ import copy
 from ..investment_reports.pvm_investment_trackrecord_report import (
     PvmInvestmentTrackRecordReport,
 )
-from ..PvmTrackRecord.base_pvm_tr_report import (
+from ..utils.PvmTrackRecord.base_pvm_tr_report import (
     BasePvmTrackRecordReport,
 )
 
