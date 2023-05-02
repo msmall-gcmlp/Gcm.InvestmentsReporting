@@ -21,7 +21,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         super().__init__(
             ReportNames.PvmInvestmentTrackRecordReport, report_meta
         )
-        self._investment_manager_name = investment_manager_name
+        self.___investment_manager_name = investment_manager_name
 
     @property
     def excel_template_location(self):
@@ -59,7 +59,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
 
     @property
     def manager_name(self):
-        if self._investment_manager_name is None:
+        if self.___investment_manager_name is None:
             # time to do acrobatics....
             e = self.related_entities
             manager_data = e.get_entities_directly_related_by_name(
@@ -71,10 +71,10 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
                 .to_list()
             )
             if len(managers) == 1:
-                self._investment_manager_name = managers[0]
+                self.___investment_manager_name = managers[0]
             else:
                 raise RuntimeError("More than one manager")
-        return self._investment_manager_name
+        return self.___investment_manager_name
 
     def assign_components(self):
         pos = self.position_cashflows
