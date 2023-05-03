@@ -11,7 +11,7 @@ from openpyxl import Workbook
 from typing import List, Optional
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
-from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
+from gcm.inv.utils.date.Frequency import Frequency, FrequencyType, Calendar
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain.entity_domain_types import (
     EntityDomainTypes,
 )
@@ -138,9 +138,11 @@ class AvailableMetas(object):
     def __init__(
         self,
         report_type: ReportType,
-        frequencies: List[Frequency],
         aggregate_intervals: List[AggregateInterval],
         consumer: ReportConsumer,
+        frequencies: List[Frequency] = [
+            Frequency(FrequencyType.Once, Calendar.AllDays)
+        ],
         entity_groups: List[EntityDomainTypes] = None,
     ):
         self.report_type = report_type
