@@ -10,6 +10,11 @@ from .....core.report_structure import (
     ReportConsumer,
     EntityDomainTypes,
     Scenario,
+    EntityStandardNames,
+)
+from .....core.components.report_table import ReportTable
+from ......_legacy.Reports.reports.brinson_based_attribution.bba_report import (
+    BbaReport,
 )
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ....report_names import ReportNames
@@ -57,9 +62,23 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
         with Scenario(
             runner=Scenario.get_attribute("dao"),
         ).context():
-            # report = BbaReport()
-            #  d = report.generate_pfund_attributes()
+            assert (
+                self.report_meta.entity_domain
+                == EntityDomainTypes.Vertical
+            )
+            assert all(
+                [
+                    x == "ARS"
+                    for x in self.report_meta.entity_info[
+                        EntityStandardNames.EntityName
+                    ]
+                    .drop_duplicates()
+                    .to_list()
+                ]
+            )
+            report = BbaReport()
+            d = report.generate_pfund_attributes()
             final = []
-            # for k, v in d.items():
-            # final.append(ReportTable(k, v))
+            for k, v in d.items():
+                final.append(ReportTable(k, v))
             return final
