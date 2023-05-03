@@ -66,18 +66,20 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
                 self.report_meta.entity_domain
                 == EntityDomainTypes.Vertical
             )
-            assert all(
-                [
-                    x == "ARS"
-                    for x in self.report_meta.entity_info[
-                        EntityStandardNames.EntityName
-                    ]
-                    .drop_duplicates()
-                    .to_list()
+            names = [
+                x
+                for x in self.report_meta.entity_info[
+                    EntityStandardNames.EntityName
                 ]
-            )
+                .drop_duplicates()
+                .to_list()
+            ]
+            assert all([x == "ARS" for x in names] and len(names) == 1)
             report = BbaReport()
-            d = report.generate_pfund_attributes()
+            this_passed_vertical_name = names[0]
+            d: dict = report.generate_pfund_attributes(
+                this_passed_vertical_name
+            )
             final = []
             for k, v in d.items():
                 final.append(ReportTable(k, v))

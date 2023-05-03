@@ -1595,8 +1595,6 @@ class BbaReport(ReportingRunnerBase):
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
                 aggregate_intervals=AggregateInterval.MTD,
-                # output_dir="cleansed/investmentsreporting/printedexcels/",
-                # report_output_source=DaoSource.DataLake,
             )
 
         logging.info("Excel stored to DataLake for: " + acronym)
@@ -1653,15 +1651,11 @@ class BbaReport(ReportingRunnerBase):
                     entity_type=ReportingEntityTypes.cross_entity,
                     entity_name="Firm",
                     entity_display_name="Firm",
-                    # entity_ids=[000000],
-                    # entity_source=DaoSource.PubDwh,
                     report_name="ARS Portfolio Fund Attributes",
                     report_type=ReportType.Performance,
                     report_vertical=ReportVertical.FirmWide,
                     report_frequency="Monthly",
                     aggregate_intervals=AggregateInterval.MTD,
-                    # output_dir="cleansed/investmentsreporting/printedexcels/",
-                    # report_output_source=DaoSource.DataLake,
                 )
 
             logging.info("Excel stored to DataLake for: " + "Firm")
