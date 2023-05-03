@@ -58,7 +58,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         return getattr(self, __name, None is None)
 
     @property
-    def manager_name(self):
+    def manager_name(self) -> str:
         if self.___investment_manager_name is None:
             # time to do acrobatics....
             e = self.related_entities
