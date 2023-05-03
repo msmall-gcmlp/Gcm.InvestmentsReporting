@@ -13,9 +13,10 @@ from .....core.report_structure import (
     EntityStandardNames,
 )
 from .....core.components.report_table import ReportTable
-from ......_legacy.Reports.reports.brinson_based_attribution.bba_report import (
+from _legacy.Reports.reports.brinson_based_attribution.bba_report import (
     BbaReport,
 )
+
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ....report_names import ReportNames
 
@@ -74,7 +75,7 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
                 .drop_duplicates()
                 .to_list()
             ]
-            assert all([x == "ARS" for x in names] and len(names) == 1)
+            assert all([x == "ARS" for x in names]) and len(names) == 1
             report = BbaReport()
             this_passed_vertical_name = names[0]
             d: dict = report.generate_pfund_attributes(
