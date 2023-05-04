@@ -48,8 +48,8 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             ],
             aggregate_intervals=[AggregateInterval.Multi],
             consumer=ReportConsumer(
-                horizontal=[ReportConsumer.Horizontal.PM],
-                vertical=ReportConsumer.Vertical.ARS,
+                horizontal=[ReportConsumer.Horizontal.FIRM],
+                vertical=ReportConsumer.Vertical.PEREI,
             ),
             entity_groups=[
                 EntityDomainTypes.Portfolio,

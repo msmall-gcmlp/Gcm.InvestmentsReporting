@@ -245,8 +245,7 @@ def get_performance_report_dict(
         "FormatType": ordered_rpt_items[ordered_rpt_items.Layer == 1][
             ["DisplayName"]
         ]
-        .drop_duplicates()
-        .reset_index(),
+        .drop_duplicates(),
         "FormatSector": ordered_rpt_items[ordered_rpt_items.Layer == 2][
             ["DisplayName"]
         ].drop_duplicates(),
