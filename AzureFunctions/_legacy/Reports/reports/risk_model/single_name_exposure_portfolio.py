@@ -210,7 +210,7 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         portfolio_allocation_longs = portfolio_allocation[portfolio_allocation['IssuerSum'] >= 0.0]
         portfolio_allocation_shorts = portfolio_allocation[portfolio_allocation['IssuerSum'] < 0.0]
         portfolio_allocation_shorts.sort_values(by='IssuerSum', ascending=True, inplace=True)
-        excluded_max_row = 10 + excluded_managers.shape[0]
+        excluded_max_row = 11 + excluded_managers.shape[0]
         excludedr_max_column = 'D'
         print_areas = {
                        'ExcludedManagers': 'B1:' + excludedr_max_column + str(excluded_max_row)}
@@ -225,6 +225,7 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
             "portfolio_allocation_longs": portfolio_allocation_longs,
             "portfolio_allocation_shorts": portfolio_allocation_shorts,
             "excluded_managers": excluded_managers[['InvestmentGroupName', 'OpeningBalance', 'PctNav']],
+            "total_excluded_allocation": pd.DataFrame([excluded_managers[['OpeningBalance', 'PctNav']].sum()])
 
         }
 
@@ -296,7 +297,7 @@ if __name__ == "__main__":
         },
     )
 
-    end_date = dt.date(2022, 12, 31)
+    end_date = dt.date(2023, 2, 28)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNamePortfolioReport().execute()

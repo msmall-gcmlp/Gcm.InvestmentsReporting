@@ -19,6 +19,18 @@ from _legacy.core.ReportStructure.report_structure import (
 )
 from sqlalchemy import func, and_
 from gcm.inv.dataprovider.utilities import filter_many
+# TODO: Make sure to change back to prd
+runner_prd = DaoRunner(
+    container_lambda=lambda b, i: b.config.from_dict(i),
+    config_params={
+        DaoRunnerConfigArgs.dao_global_envs.name: {
+            DaoSource.InvestmentsDwh.name: {
+                "Environment": "prd",
+                "Subscription": "prd",
+            },
+        }
+    },
+)
 
 
 class SingleNameEquityExposureSummary(ReportingRunnerBase):
@@ -131,6 +143,67 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
                           how='inner', on=['InvestmentGroupId'])
         return result
 
+    def get_vol(self, as_of_date, runner):
+
+        def _create_query(session, items):
+            return session.query(
+                items["AnalyticsData.SecurityStandaloneRisk"].HoldingDate.label("Date"),
+                items["AnalyticsData.SecurityStandaloneRisk"].SecurityId,
+                items["AnalyticsData.SecurityStandaloneRisk"].TotalRisk,
+                items["AnalyticsData.SecurityStandaloneRisk"].SpecificResidualRisk,
+                items["AnalyticsData.SecurityDimn"].Name.label("SecurityName"),
+                items["AnalyticsData.IssuerDimn"].Name.label("Issuer"),
+            ).select_from(items["AnalyticsData.SecurityStandaloneRisk"])
+
+        def _build_filters(session, items, as_of_date):
+            query = _create_query(session, items)
+
+            query = query.join(
+                items["AnalyticsData.SecurityDimn"],
+                and_(
+                    items["AnalyticsData.SecurityStandaloneRisk"].SecurityId == items[
+                        "AnalyticsData.SecurityDimn"].Id,
+                ),
+                isouter=True,
+            )
+            query = query.join(
+                items["AnalyticsData.IssuerDimn"],
+                and_(
+                    items["AnalyticsData.SecurityDimn"].IssuerId == items[
+                        "AnalyticsData.IssuerDimn"].Id,
+                ),
+                isouter=True,
+            )
+            query = query.filter(items["AnalyticsData.SecurityStandaloneRisk"].HoldingDate == as_of_date)
+            query = query.filter(items["AnalyticsData.SecurityDimn"].InstrumentType == 'Equity Security')
+            return query
+
+        result = runner.execute(
+            params={
+                "tables": [
+                    {
+                        "schema": "AnalyticsData",
+                        "table": "SecurityStandaloneRisk",
+                    },
+                    {
+                        "schema": "AnalyticsData",
+                        "table": "SecurityDimn",
+                    },
+                    {
+                        "schema": "AnalyticsData",
+                        "table": "IssuerDimn",
+                    }
+
+                ],
+                "operation": lambda session, items: _build_filters(session, items,
+                                                                   as_of_date=as_of_date),
+            },
+            source=DaoSource.InvestmentsDwh,
+            operation=lambda dao, params: dao.get_data(params),
+        )
+        return result
+
+
     def build_single_name_summary(self, usage_limit=0.03):
         single_name = self.get_single_nam_equity_exposure(investment_group_id=self._inv_group_ids,
                                                           as_of_date=self._as_of_date)
@@ -149,7 +222,7 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         portfolio_level['Issuerbalance'] = (portfolio_level['OpeningBalance'] * portfolio_level['ExpNav']) / 1000
 
         # get funds  per portfolio
-        portfolio_level = portfolio_level.groupby(['Acronym', 'Issuer', 'Sector'])['IssuerNav', 'Issuerbalance'].sum().reset_index()
+        portfolio_level = portfolio_level[['Acronym', 'Issuer', 'Sector','IssuerNav', 'Issuerbalance']].groupby(['Acronym', 'Issuer', 'Sector']).sum().reset_index()
         portfolio_level.sort_values(['Acronym', 'IssuerNav'], ascending=[True, False], inplace=True)
         # group_porrtfolios = portfolio_level.groupby(portfolio_level['Acronym'])
         #(portfolio_level['IssuerNav'] >= 0.015).groupby(portfolio_level['Acronym'])
@@ -174,6 +247,7 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
             end_date=self._end_date,)
         firm_wide_holdings['AsOfDate'] = firm_wide_holdings['Date'].apply(lambda x: x.strftime('%Y-%m'))
         total_balance = firm_wide_holdings['OpeningBalance'].sum()
+
         firm_wide_holdings['PctNav'] = firm_wide_holdings['OpeningBalance'] / total_balance
         firm_wide = pd.merge(single_name_exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'ExpNav']],
                              firm_wide_holdings,
@@ -191,7 +265,14 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         largest_firm_wide_level = firm_wide.groupby(['Issuer']).head(3).reset_index(drop=True)
         largest_firm_wide_level = largest_firm_wide_level.groupby(['Issuer', 'Sector', 'Issuer_allocation', 'IssuerSum'])['InvestmentGroupName'].agg(
             ', '.join).reset_index()
-        largest_firm_wide_level = largest_firm_wide_level[['Issuer', 'InvestmentGroupName', 'Sector', 'Issuer_allocation', 'IssuerSum']]
+        vol = self._investment_group.normalize_issuers(self.get_vol(as_of_date=self._as_of_date, runner=runner_prd))
+        vol['TotalRisk'] = vol['TotalRisk'] / 100
+        vol['SpecificResidualRisk'] = vol['SpecificResidualRisk'] / 100
+        vol = vol[['TotalRisk', 'SpecificResidualRisk', 'Issuer']].groupby(['Issuer']).mean().reset_index()
+        largest_firm_wide_level = pd.merge(largest_firm_wide_level, vol[['TotalRisk', 'SpecificResidualRisk', 'Issuer']], how='left', on='Issuer')
+        largest_firm_wide_level = largest_firm_wide_level[['Issuer', 'InvestmentGroupName', 'Sector',
+                                                           'TotalRisk', 'SpecificResidualRisk', 'Issuer_allocation',
+                                                           'IssuerSum']]
         largest_firm_wide_level.sort_values(['IssuerSum'], ascending=False, inplace=True)
         return [largest_portfolio_level_long, largest_firm_wide_level, largest_portfolio_level_short]
 
@@ -295,7 +376,7 @@ if __name__ == "__main__":
         },
     )
 
-    end_date = dt.date(2022, 12, 31)
+    end_date = dt.date(2023, 2, 28)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNameEquityExposureSummary().execute()
