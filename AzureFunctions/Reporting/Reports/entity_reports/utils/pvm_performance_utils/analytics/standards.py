@@ -411,7 +411,7 @@ def get_ks_pme_rpt(
             starting_investment["TransactionType"] = "Capital Call"
 
             fund_cf_filtered = fund_cf[
-                fund_cf.TransactionDate >= pd.to_datetime(start_date)
+                fund_cf.apply(lambda x: pd.Timestamp(x)) >= pd.to_datetime(start_date)
             ]
             fund_cf_filtered = pd.concat(
                 [starting_investment, fund_cf_filtered]
