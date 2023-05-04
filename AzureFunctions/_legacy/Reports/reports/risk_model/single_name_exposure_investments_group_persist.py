@@ -107,8 +107,6 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
 
         SingleNameEquityExposureInvestmentsGroupPersist.delete_rows(runner=runner, as_of_date=self._end_date)
 
-
-
         SqlBulkInsert().execute(
             runner=runner,
             df=exposure_to_save,

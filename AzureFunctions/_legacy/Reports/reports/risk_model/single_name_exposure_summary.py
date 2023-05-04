@@ -222,7 +222,8 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         portfolio_level['Issuerbalance'] = (portfolio_level['OpeningBalance'] * portfolio_level['ExpNav']) / 1000
 
         # get funds  per portfolio
-        portfolio_level = portfolio_level[['Acronym', 'Issuer', 'Sector','IssuerNav', 'Issuerbalance']].groupby(['Acronym', 'Issuer', 'Sector']).sum().reset_index()
+        portfolio_level = portfolio_level[['Acronym', 'Issuer', 'Sector',
+                                           'IssuerNav', 'Issuerbalance']].groupby(['Acronym', 'Issuer', 'Sector']).sum().reset_index()
         portfolio_level.sort_values(['Acronym', 'IssuerNav'], ascending=[True, False], inplace=True)
         # group_porrtfolios = portfolio_level.groupby(portfolio_level['Acronym'])
         #(portfolio_level['IssuerNav'] >= 0.015).groupby(portfolio_level['Acronym'])
