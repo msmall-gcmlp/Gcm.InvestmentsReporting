@@ -18,6 +18,7 @@ from enum import Enum, auto
 import datetime as dt
 import numpy as np
 from .analytics import get_performance_report_dict
+from functools import cached_property
 
 
 class PvmPerfomanceHelperSingleton(metaclass=Singleton):
@@ -26,29 +27,17 @@ class PvmPerfomanceHelperSingleton(metaclass=Singleton):
     def __init__(self):
         pass
 
-    @property
+    @cached_property
     def all_operational_series(self):
-        _name = "__all_os_for_known_portfolios"
-        if getattr(self, _name, None) is None:
-            df = get_all_os_for_all_portfolios()
-            setattr(self, _name, df)
-        return getattr(self, _name, df)
+        return get_all_os_for_all_portfolios()
 
-    @property
+    @cached_property
     def usd_conversion_table(self) -> pd.DataFrame:
-        _name = "__usd_convers"
-        if getattr(self, _name, None) is None:
-            df = get_to_usd_fx_rates()
-            setattr(self, _name, df)
-        return getattr(self, _name, None)
+        return get_to_usd_fx_rates()
 
-    @property
+    @cached_property
     def all_deal_attributes(self) -> pd.DataFrame:
-        __name = "__all_deal_attributes"
-        if getattr(self, __name, None) is None:
-            df = get_all_deal_attributes()
-            setattr(self, __name, df)
-        return getattr(self, __name, None)
+        return get_all_deal_attributes()
 
 
 class PvmPerformanceHelper(object):

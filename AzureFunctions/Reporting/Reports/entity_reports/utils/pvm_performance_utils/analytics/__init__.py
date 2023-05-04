@@ -244,8 +244,7 @@ def get_performance_report_dict(
         "Data": formatted_rslt,
         "FormatType": ordered_rpt_items[ordered_rpt_items.Layer == 1][
             ["DisplayName"]
-        ]
-        .drop_duplicates(),
+        ].drop_duplicates(),
         "FormatSector": ordered_rpt_items[ordered_rpt_items.Layer == 2][
             ["DisplayName"]
         ].drop_duplicates(),
