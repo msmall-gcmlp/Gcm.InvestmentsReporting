@@ -26,7 +26,7 @@ class TestPerformanceBreakDown(object):
         return entity_info
 
     def test_basic_helper_object(self):
-        as_of_date = dt.date(2022, 6, 30)
+        as_of_date = dt.date(2022, 12, 31)
         with Scenario(
             as_of_date=as_of_date,
             aggregate_interval=AggregateInterval.ITD,

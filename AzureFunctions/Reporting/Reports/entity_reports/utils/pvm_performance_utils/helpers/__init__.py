@@ -17,7 +17,7 @@ def get_ilevel_cfs(os_list: List[str]) -> pd.DataFrame:
     runner: DaoRunner = Scenario.get_attribute("dao")
     assert runner is not None
 
-    def oper(query: Query, item: dict[str, DeclarativeMeta]):
+    def oper(query: Query, item: DeclarativeMeta):
         query = filter_many(query, item, f"OwnerName", os_list)
         # TODO: handle aggregate_interval and scenario for projected CFs
         return query

@@ -9,7 +9,7 @@ from pandas._libs.tslibs.offsets import MonthEnd
 from pyxirr import xirr
 from gcm.Dao.DaoRunner import DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
-from gcm.inv.reporting.core.reporting_runner_base import (
+from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 from underwriting_packet import RunPeracs

@@ -16,7 +16,8 @@ from gcm.inv.utils.misc.table_cache_base import Singleton
 from typing import List
 from enum import Enum, auto
 import datetime as dt
-from .analytics import get_twror_by_industry_rpt
+import numpy as np
+from .analytics import get_performance_report_dict
 
 
 class PvmPerfomanceHelperSingleton(metaclass=Singleton):
@@ -52,7 +53,7 @@ class PvmPerfomanceHelperSingleton(metaclass=Singleton):
 
 class PvmPerformanceHelper(object):
     def __init__(
-        self, entity_domain: EntityDomainTypes, entity_info: pd.DataFrame
+            self, entity_domain: EntityDomainTypes, entity_info: pd.DataFrame
     ):
         self.entity_domain = entity_domain
         self.entity_info = entity_info
@@ -68,16 +69,100 @@ class PvmPerformanceHelper(object):
         RMV = auto()
 
     def get_cfs_of_type(
-        self,
-        as_of_date: dt.date,
-        cf_type: "Cf_Filter_Type" = Cf_Filter_Type.AllCashflows,
-        reporting_type: "ReportedCfType" = ReportedCfType.RMV,
+            self,
+            as_of_date: dt.date,
+            cf_type: "Cf_Filter_Type" = Cf_Filter_Type.AllCashflows,
+            reporting_type: "ReportedCfType" = ReportedCfType.RMV,
     ) -> pd.DataFrame:
-        raw_cfs = self.associated_raw_ilevel_cfs_and_deal_data
-        # TODO: do stuff
+        # TODO: below is auto converted to USD. Make it more dynamic
+        raw_df = self.converted_usd_ilevel_cfs
+        raw_df = raw_df[raw_df.TransactionDate <= as_of_date]
+        max_nav_date = (
+            raw_df[raw_df.TransactionType == "Net Asset Value"]
+                .groupby(["OwnerName", "InvestmentName"])
+                .TransactionDate.max()
+                .reset_index()
+                .rename(columns={"TransactionDate": "MaxNavDate"})
+        )
+        raw_df = raw_df.merge(
+            max_nav_date,
+            how="left",
+            left_on=["OwnerName", "InvestmentName"],
+            right_on=["OwnerName", "InvestmentName"],
+        )
         if cf_type == PvmPerformanceHelper.Cf_Filter_Type.AllCashflows:
-            # filter
-            return raw_cfs
+            return raw_df
+        if cf_type == PvmPerformanceHelper.Cf_Filter_Type.IrrCashflows:
+            irr_cf = raw_df[raw_df.TransactionDate <= raw_df.MaxNavDate]
+            irr_cf = irr_cf[irr_cf.TransactionType.isin(['Contributions - Investments and Expenses',
+                                                         'Distributions - Recallable',
+                                                         'Distributions - Return of Cost',
+                                                         'Distributions - Gain/(Loss)',
+                                                         'Distributions - Outside Interest',
+                                                         'Distributions - Dividends and Interest',
+                                                         'Contributions - Outside Expenses',
+                                                         'Contributions - Contra Contributions',
+                                                         'Contributions - Inside Expenses (DNAU)',
+                                                         'Distributions - Escrow Receivables'])]
+            irr_cf["TransactionType"] = np.where(
+                irr_cf.TransactionType.str.contains("Contributions -"),
+                "Contributions",
+                irr_cf.TransactionType,
+            )
+            irr_cf["TransactionType"] = np.where(
+                irr_cf.TransactionType.str.contains("Distributions -"),
+                "Distributions",
+                irr_cf.TransactionType,
+            )
+            irr_cf.BaseAmount = irr_cf.BaseAmount * -1
+            latest_reported_nav = raw_df[
+                (raw_df.TransactionDate == raw_df.MaxNavDate) & (raw_df.TransactionType == 'Net Asset Value')]
+            irr_cf_rslt = pd.concat([irr_cf, latest_reported_nav]).sort_values('TransactionDate').reset_index(drop=True)
+            return irr_cf_rslt
+        if cf_type == PvmPerformanceHelper.Cf_Filter_Type.NavTimeSeries:
+            nav_df = raw_df[raw_df.TransactionType == 'Net Asset Value'].sort_values('TransactionDate').reset_index(
+                drop=True)
+            return nav_df
+        if cf_type == PvmPerformanceHelper.Cf_Filter_Type.CommitmentSeries:
+            commitment_df = raw_df[raw_df.TransactionType.isin(['Contributions - Investments and Expenses',
+                                                                'Distributions - Recallable',
+                                                                'Contributions - Contra Contributions',
+                                                                'Contributions - Outside Expenses (AU)',
+                                                                'Unfunded Commitment Without Modification',
+                                                                'Local Discounted Commitments (For USD Holdings in Foreign Portfolios'])].rename(
+                columns={'BaseAmount': 'Commitment'})
+            unfunded = commitment_df[
+                (
+                        commitment_df.TransactionType
+                        == "Unfunded Commitment Without Modification"
+                )
+                & (commitment_df.TransactionDate == as_of_date)
+                ]
+            funded = commitment_df[
+                commitment_df.TransactionType
+                != "Unfunded Commitment Without Modification"
+                ]
+            funded = (
+                funded[["OwnerName", "InvestmentName", "Commitment"]]
+                    .groupby(["OwnerName", "InvestmentName"])
+                    .sum()
+                    .reset_index()
+            )
+
+            commitment_df = pd.concat(
+                [unfunded[["OwnerName", "InvestmentName", "Commitment"]], funded]
+            )
+            commitment_df = commitment_df.groupby(["OwnerName", "InvestmentName"]).sum().reset_index()
+            commitment_df_rslt = commitment_df.merge(
+                self.this_entities_related_deal_info,
+                how="left",
+                left_on=["OwnerName", "InvestmentName"],
+                right_on=["OsTicker", "ReportingName"],
+            )
+            assert len(commitment_df) == len(commitment_df_rslt)
+
+            return commitment_df_rslt
+
         raise NotImplementedError()
 
     @property
@@ -107,8 +192,8 @@ class PvmPerformanceHelper(object):
             self.related_operational_series[
                 PvmPerfomanceHelperSingleton._OS_Series_Identifier
             ]
-            .drop_duplicates()
-            .to_list()
+                .drop_duplicates()
+                .to_list()
         )
         return os_list
 
@@ -124,6 +209,7 @@ class PvmPerformanceHelper(object):
                 left_on=["OwnerName", "InvestmentName"],
                 right_on=["OsTicker", "ReportingName"],
             )
+            assert len(rslt) == len(df)
             setattr(self, __name, rslt)
         return getattr(self, __name, None)
 
@@ -145,6 +231,7 @@ class PvmPerformanceHelper(object):
         if getattr(self, __name, None) is None:
             df = PvmPerfomanceHelperSingleton().all_deal_attributes
             filtered = df[df["OsTicker"].isin(self.os_tickers)]
+            filtered['Portfolio'] = self.top_line_owner
             setattr(self, __name, filtered)
         return getattr(self, __name, None)
 
@@ -170,6 +257,15 @@ class PvmPerformanceHelper(object):
         return getattr(self, __name, None)
 
     @property
+    def trailing_periods(self, as_of_date) -> dict:
+        return {'QTD': 1,
+                'YTD': int(as_of_date.month / 3),
+                'TTM': 4,
+                '3Y': 12,
+                '5Y': 20,
+                'ITD': 'ITD'}
+
+    @property
     def attributes_needed(self) -> List[str]:
         if self.entity_domain in [
             EntityDomainTypes.InvestmentManager,
@@ -178,8 +274,7 @@ class PvmPerformanceHelper(object):
             return [
                 "Name",
                 "PredominantInvestmentType",
-                "PredominantSector",
-                "PredominantRealizationTypeCategory",
+                "PredominantSector"
             ]
 
     @property
@@ -189,8 +284,8 @@ class PvmPerformanceHelper(object):
             if self.entity_domain == EntityDomainTypes.Portfolio:
                 tickers = (
                     self.related_operational_series["PortfolioTicker"]
-                    .drop_duplicates()
-                    .to_list()
+                        .drop_duplicates()
+                        .to_list()
                 )
                 assert len(tickers) == 1
                 setattr(self, __name, tickers[0])
@@ -199,10 +294,8 @@ class PvmPerformanceHelper(object):
         return getattr(self, __name, None)
 
     def generate_components_for_this_entity(
-        self, as_of_date: dt.date
+            self, as_of_date: dt.date
     ) -> dict[str, pd.DataFrame]:
-        # lets start testing
-        full_cfs = self.converted_usd_ilevel_cfs
         reporting_type = PvmPerformanceHelper.ReportedCfType.RMV
         irr_cfs = self.get_cfs_of_type(
             as_of_date,
@@ -214,13 +307,28 @@ class PvmPerformanceHelper(object):
             PvmPerformanceHelper.Cf_Filter_Type.NavTimeSeries,
             reporting_type,
         )
-        data = get_twror_by_industry_rpt(
+        full_cfs = pd.concat([irr_cfs[irr_cfs.TransactionType != 'Net Asset Value'], nav_df])
+        commitment_df = self.get_cfs_of_type(
+            as_of_date,
+            PvmPerformanceHelper.Cf_Filter_Type.CommitmentSeries,
+            reporting_type,
+        )
+        # was having issue getting trailing_periods property to work, temp solution
+        tmp_trailing_period = {'QTD': 1,
+                               'YTD': int(as_of_date.month / 3),
+                               'TTM': 4,
+                               '3Y': 12,
+                               '5Y': 20,
+                               'ITD': 'ITD'}
+        data = get_performance_report_dict(
             owner=self.top_line_owner,
             list_to_iterate=self.recursion_iterate_controller,
             irr_cfs=irr_cfs,
             full_cfs=full_cfs,
             nav_df=nav_df,
+            commitment_df=commitment_df,
             as_of_date=as_of_date,
             _attributes_needed=self.attributes_needed,
+            _trailing_periods=tmp_trailing_period
         )
         return data
