@@ -22,7 +22,7 @@ def format_performance_report(
     list_to_iterate: List[List[str]],
     full_cfs: pd.DataFrame,
     _attributes_needed: List[str],
-):
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     # report specific formatting
     attrib = full_cfs[_attributes_needed].drop_duplicates()
     attrib["Portfolio"] = owner
@@ -238,13 +238,15 @@ def get_performance_report_dict(
         full_cfs=full_cfs,
         _attributes_needed=_attributes_needed,
     )
-
+    ordered_rpt_items.reset_index(inplace=True, drop=True)
     # ordered_rpt_items layers are not dynamic. will fail if not 3 layers in this case
     input_data = {
         "Data": formatted_rslt,
         "FormatType": ordered_rpt_items[ordered_rpt_items.Layer == 1][
             ["DisplayName"]
-        ].drop_duplicates(),
+        ]
+        .drop_duplicates()
+        .reset_index(),
         "FormatSector": ordered_rpt_items[ordered_rpt_items.Layer == 2][
             ["DisplayName"]
         ].drop_duplicates(),

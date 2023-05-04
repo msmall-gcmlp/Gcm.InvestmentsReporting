@@ -57,8 +57,10 @@ class ReportPublishActivity(BaseActivity):
             return None
 
     @staticmethod
-    def print_report_to_template(wb: Workbook, struct: ReportStructure):
-        ReportPublishActivity.print_tables_to_range(
+    def print_report_to_template(
+        wb: Workbook, struct: ReportStructure
+    ) -> Workbook:
+        return ReportPublishActivity.print_tables_to_range(
             wb, [x for x in struct.components if type(x) == ReportTable]
         )
 

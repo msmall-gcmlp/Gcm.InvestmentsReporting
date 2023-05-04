@@ -11,7 +11,7 @@ from ....core.report_structure import (
     FrequencyType,
     AggregateInterval,
     ReportConsumer,
-    Calendar
+    Calendar,
 )
 from ....core.components.report_table import ReportTable
 from typing import List
