@@ -12,7 +12,7 @@ from ....core.report_structure import (
 from ....core.components.report_table import ReportTable
 import pandas as pd
 from ...report_names import ReportNames
-from ..utils.pvm_track_record.investment_container import (
+from ..utils.pvm_track_record.data_handler.investment_container import (
     InvestmentContainerBase,
 )
 from ..utils.pvm_track_record.data_handler.pvm_track_record_handler import (
