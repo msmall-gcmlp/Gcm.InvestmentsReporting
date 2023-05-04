@@ -4,7 +4,6 @@ import pyxirr as xirr
 import numpy as np
 from gcm.inv.scenario import Scenario, DaoRunner
 from gcm.Dao.DaoSources import DaoSource
-from datetime import relativedelta
 
 
 def __runner() -> DaoRunner:
