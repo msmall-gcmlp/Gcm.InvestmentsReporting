@@ -13,8 +13,10 @@ from gcm.inv.utils.DaoUtils.query_utils import (
 import datetime as dt
 from functools import reduce
 
+
 def __runner() -> DaoRunner:
     return Scenario.get_attribute("dao")
+
 
 def discount_table(
     dates_cashflows,
@@ -117,13 +119,19 @@ def discount_table(
     df_cf = df_cf[df_cf["Date"] <= NAV_date].copy()
     return df_cf.copy()
 
+
 def get_investment_sector_benchmark(df):
     df_bmark_mapped = df.copy()
     # only SPXT currently per Amy
     df_bmark_mapped["BenchmarkTicker"] = "SPXT Index"
 
     def oper(query: Query, item: DeclarativeMeta):
-        query = filter_many(query, item, f"Ticker", list(df_bmark_mapped.BenchmarkTicker.unique()))
+        query = filter_many(
+            query,
+            item,
+            f"Ticker",
+            list(df_bmark_mapped.BenchmarkTicker.unique()),
+        )
         return query
 
     p = {
@@ -136,38 +144,43 @@ def get_investment_sector_benchmark(df):
         source=DaoSource.InvestmentsDwh,
         operation=lambda d, pp: d.get_data(pp),
     )
-    index_prices_rslt = index_prices[['Ticker', 'Date', 'PxLast']].pivot(
-        index="Date", columns="Ticker", values="PxLast"
-    ).reset_index()
+    index_prices_rslt = (
+        index_prices[["Ticker", "Date", "PxLast"]]
+        .pivot(index="Date", columns="Ticker", values="PxLast")
+        .reset_index()
+    )
 
     return df_bmark_mapped, index_prices_rslt
 
 
-def format_and_get_pme_bmarks(df: pd.DataFrame,
-                                _attributes_needed: List[str]):
+def format_and_get_pme_bmarks(
+    df: pd.DataFrame, _attributes_needed: List[str]
+):
     # prep data
     fund_cf = df[
         _attributes_needed
         + ["TransactionDate", "TransactionType", "BaseAmount"]
     ]
-    #TODO: really need to standardize transaction type tags or use enums
-    fund_cf.TransactionType = np.select([
-        (fund_cf.TransactionType == "Distributions"),
-        (fund_cf.TransactionType == "Contributions"),
-        (fund_cf.TransactionType == "Net Asset Value"),
-    ], ["Distribution", "Capital Call", "Value"])
+    # TODO: really need to standardize transaction type tags or use enums
+    fund_cf.TransactionType = np.select(
+        [
+            (fund_cf.TransactionType == "Distributions"),
+            (fund_cf.TransactionType == "Contributions"),
+            (fund_cf.TransactionType == "Net Asset Value"),
+        ],
+        ["Distribution", "Capital Call", "Value"],
+    )
 
     # get index prices
     fund_cf_bmark, index_prices = get_investment_sector_benchmark(fund_cf)
     return fund_cf_bmark, index_prices
 
+
 def get_alpha_discount_table(fund_df, fund_cf, index_prices):
     discount_table_rslt = pd.DataFrame()
     for idx in range(0, len(fund_df)):
         print(fund_df.Name[idx])
-        single_fund = fund_cf[
-            fund_cf["Name"] == fund_df.Name[idx]
-        ].copy()
+        single_fund = fund_cf[fund_cf["Name"] == fund_df.Name[idx]].copy()
         single_fund_group_sum = (
             single_fund.groupby(
                 ["Name", "TransactionDate", "TransactionType"]
@@ -232,6 +245,7 @@ def get_alpha_discount_table(fund_df, fund_cf, index_prices):
         )
     return discount_table_rslt
 
+
 def nearest(series, lookup, debug=False):
     if debug == True:
         print(
@@ -242,6 +256,7 @@ def nearest(series, lookup, debug=False):
         )
     return series.iloc[(series - lookup).abs().argsort()[0]]
 
+
 def get_direct_alpha_rpt(
     as_of_date: dt.date,
     df: pd.DataFrame,
@@ -251,7 +266,9 @@ def get_direct_alpha_rpt(
     _trailing_periods: dict,
 ):
     # bmark assignment is always at investment level
-    fund_cf, index_prices = format_and_get_pme_bmarks(df, _attributes_needed)
+    fund_cf, index_prices = format_and_get_pme_bmarks(
+        df, _attributes_needed
+    )
     fund_df = (
         fund_cf[_attributes_needed + ["BenchmarkTicker"]]
         .drop_duplicates()
@@ -273,9 +290,7 @@ def get_direct_alpha_rpt(
 
             if trailing_period != "ITD":
                 start_date = as_of_date + relativedelta(
-                    months=(
-                        _trailing_periods.get(trailing_period) * -3
-                    ),
+                    months=(_trailing_periods.get(trailing_period) * -3),
                     days=1,
                 )
                 starting_investment = nav_df[
@@ -291,14 +306,16 @@ def get_direct_alpha_rpt(
 
                 index_start_value = index_prices[
                     pd.to_datetime(index_prices.Date)
-                    == pd.to_datetime(nearest(index_prices.Date, start_date))
+                    == pd.to_datetime(
+                        nearest(index_prices.Date, start_date)
+                    )
                 ].iloc[0]
 
                 index_end_value = index_prices[
                     pd.to_datetime(index_prices.Date)
-                    == pd.to_datetime(nearest(
-                        index_prices.Date, as_of_date
-                    ))
+                    == pd.to_datetime(
+                        nearest(index_prices.Date, as_of_date)
+                    )
                 ].iloc[0]
 
                 initial_fv_factor = (
@@ -307,10 +324,11 @@ def get_direct_alpha_rpt(
                 starting_investment["Discounted"] = (
                     starting_investment.BaseAmount * initial_fv_factor
                 )
-                starting_investment['Date'] = pd.to_datetime(start_date)
+                starting_investment["Date"] = pd.to_datetime(start_date)
 
                 grouped_filtered = discount_df[
-                    pd.to_datetime(discount_df.Date) >= pd.to_datetime(start_date)
+                    pd.to_datetime(discount_df.Date)
+                    >= pd.to_datetime(start_date)
                 ]
                 grouped_filtered = pd.concat(
                     [starting_investment, grouped_filtered]
@@ -323,9 +341,7 @@ def get_direct_alpha_rpt(
             discount_df_with_attrib = grouped_filtered[
                 ["Name", "Date", "Discounted"]
             ].merge(
-                df[
-                    _attributes_needed + ["Portfolio"]
-                ].drop_duplicates(),
+                df[_attributes_needed + ["Portfolio"]].drop_duplicates(),
                 how="left",
                 left_on="Name",
                 right_on="Name",
@@ -372,15 +388,19 @@ def get_direct_alpha_rpt(
 
     return result, discount_df
 
+
 def get_ks_pme_rpt(
-        as_of_date: dt.date,
-        df: pd.DataFrame,
-        nav_df: pd.DataFrame,
-        list_to_iterate: List[List[str]],
-        _attributes_needed: List[str],
-        _trailing_periods: dict) -> pd.DataFrame:
+    as_of_date: dt.date,
+    df: pd.DataFrame,
+    nav_df: pd.DataFrame,
+    list_to_iterate: List[List[str]],
+    _attributes_needed: List[str],
+    _trailing_periods: dict,
+) -> pd.DataFrame:
     # bmark assignment is always at investment level
-    fund_cf, index_prices = format_and_get_pme_bmarks(df, _attributes_needed)
+    fund_cf, index_prices = format_and_get_pme_bmarks(
+        df, _attributes_needed
+    )
     fund_df = (
         fund_cf[_attributes_needed + ["BenchmarkTicker"]]
         .drop_duplicates()
@@ -393,9 +413,7 @@ def get_ks_pme_rpt(
             continue
         if trailing_period != "ITD":
             start_date = as_of_date + relativedelta(
-                months=(
-                    _trailing_periods.get(trailing_period) * -3
-                ),
+                months=(_trailing_periods.get(trailing_period) * -3),
                 days=1,
             )
             starting_investment = nav_df[
@@ -408,7 +426,9 @@ def get_ks_pme_rpt(
             starting_investment["TransactionType"] = "Capital Call"
 
             fund_cf_filtered = fund_cf[
-                fund_cf.TransactionDate.apply(lambda x: pd.Timestamp(x) >= pd.to_datetime(start_date))
+                fund_cf.TransactionDate.apply(
+                    lambda x: pd.Timestamp(x) >= pd.to_datetime(start_date)
+                )
             ]
             fund_cf_filtered = pd.concat(
                 [starting_investment, fund_cf_filtered]
@@ -425,9 +445,7 @@ def get_ks_pme_rpt(
         if len(fv_cashflows_df) == 0:
             continue
         fv_cashflows_df_with_attrib = fv_cashflows_df.merge(
-            df[
-                _attributes_needed + ["Portfolio"]
-            ].drop_duplicates(),
+            df[_attributes_needed + ["Portfolio"]].drop_duplicates(),
             how="left",
             left_on="Name",
             right_on="Name",
@@ -447,16 +465,14 @@ def get_ks_pme_rpt(
                     )
                 )
 
-                fv_cashflows_df_with_attrib = (
-                    fv_cashflows_df_with_attrib[
-                        fv_cashflows_df_with_attrib.apply(
-                            lambda x: "_".join(
-                                [str(x[i]) for i in group_cols]
-                            ),
-                            axis=1,
-                        ).isin(full_period_groups)
-                    ]
-                )
+                fv_cashflows_df_with_attrib = fv_cashflows_df_with_attrib[
+                    fv_cashflows_df_with_attrib.apply(
+                        lambda x: "_".join(
+                            [str(x[i]) for i in group_cols]
+                        ),
+                        axis=1,
+                    ).isin(full_period_groups)
+                ]
 
             rslt = (
                 fv_cashflows_df_with_attrib.groupby(group_cols)
@@ -472,36 +488,32 @@ def get_ks_pme_rpt(
             )
             rslt["Period"] = trailing_period
 
-            result = pd.concat([result, rslt])[
-                ["Name", "KsPme", "Period"]
-            ]
+            result = pd.concat([result, rslt])[["Name", "KsPme", "Period"]]
 
     return result
 
-def get_fv_cashflow_df(fund_df: pd.DataFrame,
-                       fund_cf: pd.DataFrame,
-                       index_prices: pd.DataFrame):
+
+def get_fv_cashflow_df(
+    fund_df: pd.DataFrame,
+    fund_cf: pd.DataFrame,
+    index_prices: pd.DataFrame,
+):
     fv_cashflows_df = pd.DataFrame()
     for idx in range(0, len(fund_df)):
         print(fund_df.Name[idx])
 
-        single_fund = fund_cf[
-            fund_cf["Name"] == fund_df.Name[idx]
-        ].copy()
+        single_fund = fund_cf[fund_cf["Name"] == fund_df.Name[idx]].copy()
         if len(single_fund) <= 1:
             continue
-        if (
-            len(single_fund[single_fund.TransactionType == "Value"])
-            == 0
-        ):
+        if len(single_fund[single_fund.TransactionType == "Value"]) == 0:
             continue
         if len(single_fund.TransactionDate.unique()) < 2:
             continue
         single_fund_group_sum = (
             single_fund.groupby(
                 ["Name", "TransactionDate", "TransactionType"]
-            ).BaseAmount
-            .sum()
+            )
+            .BaseAmount.sum()
             .reset_index()
         )
         max_nav_date = single_fund_group_sum[
@@ -556,9 +568,7 @@ def get_fv_cashflow_df(fund_df: pd.DataFrame,
         )
         index_value = fund_specific_index[
             fund_specific_index.Date
-            == nearest(
-                fund_specific_index.Date, max_nav_date
-            )
+            == nearest(fund_specific_index.Date, max_nav_date)
         ][fund_df.BenchmarkTicker[idx]].iloc[0]
         discounted_NAV = total_nav / index_value.squeeze()
         fv_cashflows_df = pd.concat(
@@ -575,6 +585,7 @@ def get_fv_cashflow_df(fund_df: pd.DataFrame,
             ]
         )
     return fv_cashflows_df
+
 
 def KS_PME(
     dates_cashflows,
@@ -617,9 +628,7 @@ def KS_PME(
                 sum_fv_distributions + abs(cf["Amount"]) / index_value
             )
         elif cf["Type"] == "Capital Call":
-            sum_fv_calls = (
-                sum_fv_calls + abs(cf["Amount"]) / index_value
-            )
+            sum_fv_calls = sum_fv_calls + abs(cf["Amount"]) / index_value
             # Now, let us also consider the nav
     if auto_NAV == True:
         # Let us find the nav
@@ -640,12 +649,15 @@ def KS_PME(
     else:
         return [sum_fv_distributions, sum_fv_calls]
 
-def get_ror_ctr_df_rpt(as_of_date: dt.date,
-                       df: pd.DataFrame,
-                       owner: str,
-                       list_to_iterate: List[List[str]],
-                       _attributes_needed: List[str],
-                       _trailing_periods: dict) -> pd.DataFrame:
+
+def get_ror_ctr_df_rpt(
+    as_of_date: dt.date,
+    df: pd.DataFrame,
+    owner: str,
+    list_to_iterate: List[List[str]],
+    _attributes_needed: List[str],
+    _trailing_periods: dict,
+) -> pd.DataFrame:
     ror_ctr_df = pd.concat(
         [
             get_ror_ctr(
@@ -653,7 +665,7 @@ def get_ror_ctr_df_rpt(as_of_date: dt.date,
                 df=df,
                 group_cols=i,
                 trailing_periods=_trailing_periods,
-                _attributes_needed=_attributes_needed
+                _attributes_needed=_attributes_needed,
             )
             for i in list_to_iterate
         ]
@@ -663,25 +675,28 @@ def get_ror_ctr_df_rpt(as_of_date: dt.date,
         sub = ror_ctr_df[ror_ctr_df.Period == i]
         for x in sub.group_cols.unique():
             subb = sub[sub.group_cols == x]
-            ctr_total = sub[
-                sub.Name == owner
-            ].AnnRor.squeeze() / sum(subb[~subb.Ctr.isnull()].Ctr)
+            ctr_total = sub[sub.Name == owner].AnnRor.squeeze() / sum(
+                subb[~subb.Ctr.isnull()].Ctr
+            )
             subb["Ctr"] = subb.Ctr * ctr_total.squeeze()
             result = pd.concat([result, subb])[
                 ["Name", "AnnRor", "Ctr", "Period"]
             ]
     return result
 
-def get_ror_ctr(as_of_date: dt.date,
-                df: pd.DataFrame,
-                group_cols: List[str],
-                _attributes_needed: List[str],
-                trailing_periods: dict):
+
+def get_ror_ctr(
+    as_of_date: dt.date,
+    df: pd.DataFrame,
+    group_cols: List[str],
+    _attributes_needed: List[str],
+    trailing_periods: dict,
+):
     rors = calc_tw_ror(
         df=df,
         group_cols=group_cols,
         _attributes_needed=_attributes_needed,
-        return_support_data=True
+        return_support_data=True,
     )
     if len(rors) == 0:
         return pd.DataFrame(
@@ -690,9 +705,11 @@ def get_ror_ctr(as_of_date: dt.date,
 
     ann_ror = ann_return(
         as_of_date=as_of_date,
-        return_df=rors.pivot_table(index="Date", columns="Name", values="Ror"),
+        return_df=rors.pivot_table(
+            index="Date", columns="Name", values="Ror"
+        ),
         trailing_periods=trailing_periods,
-        freq=4
+        freq=4,
     )
 
     ctr = get_ctrs(
@@ -712,9 +729,10 @@ def get_ror_ctr(as_of_date: dt.date,
     result["group_cols"] = str(group_cols)
     return result
 
-def get_ctrs(as_of_date: dt.date,
-             ctrs: pd.DataFrame,
-             trailing_periods: dict):
+
+def get_ctrs(
+    as_of_date: dt.date, ctrs: pd.DataFrame, trailing_periods: dict
+):
     def safe_division(numerator, denominator):
         """Return 0 if denominator is 0."""
         return denominator and numerator / denominator
@@ -723,13 +741,10 @@ def get_ctrs(as_of_date: dt.date,
     for trailing_period in trailing_periods.keys():
         if trailing_period != "ITD":
             start_date = as_of_date + relativedelta(
-                months=-3
-                * (trailing_periods.get(trailing_period)),
+                months=-3 * (trailing_periods.get(trailing_period)),
                 days=1,
             )
-            ctr = calc_ctr(
-                ctrs.loc[start_date:as_of_date]
-            )
+            ctr = calc_ctr(ctrs.loc[start_date:as_of_date])
             ctr.AnnCtr = ctr[["Ctr", "NoObs"]].apply(
                 lambda row: (1 + row["Ctr"])
                 ** (safe_division(4, row["NoObs"]))
@@ -750,6 +765,7 @@ def get_ctrs(as_of_date: dt.date,
         result = pd.concat([result, ctr])
     return result
 
+
 def calc_ctr(df: pd.DataFrame):
     result = pd.DataFrame(columns=["Ctr", "NoObs"], index=df.columns)
     rors = df.sum(axis=1)
@@ -763,22 +779,19 @@ def calc_ctr(df: pd.DataFrame):
             res += c * (1 + ror_to_date[idx - 1])
             idx += 1
         result.loc[col, "Ctr"] = res
-        result.loc[col, "NoObs"] = len(
-            df.loc[:, col][df.loc[:, col] != 0]
-        )
+        result.loc[col, "NoObs"] = len(df.loc[:, col][df.loc[:, col] != 0])
 
     return result
 
+
 def ann_return(
-        as_of_date: dt.date,
-        return_df: pd.DataFrame,
-        trailing_periods: dict,
-        freq=4,
-        return_NoObs=True
+    as_of_date: dt.date,
+    return_df: pd.DataFrame,
+    trailing_periods: dict,
+    freq=4,
+    return_NoObs=True,
 ):
-    trailing_periods_obs = [
-       trailing_periods[x] for x in trailing_periods
-    ]
+    trailing_periods_obs = [trailing_periods[x] for x in trailing_periods]
     result = pd.DataFrame()
     for i in return_df.columns:
         returns = return_df[[i]]
@@ -810,9 +823,7 @@ def ann_return(
                     start_date = as_of_date + relativedelta(
                         months=-3 * (trailing_period), days=1
                     )
-                    return_sub = returns.loc[
-                        start_date : as_of_date
-                    ]
+                    return_sub = returns.loc[start_date:as_of_date]
             else:
                 return_sub = returns
             if len(return_sub) <= 4:
@@ -821,8 +832,7 @@ def ann_return(
                 )
             else:
                 ann_return = pd.DataFrame(
-                    return_sub.add(1).prod()
-                    ** (freq / len(return_sub))
+                    return_sub.add(1).prod() ** (freq / len(return_sub))
                     - 1
                 )
             ann_return["NoObs"] = len(return_sub)
@@ -836,10 +846,12 @@ def ann_return(
     else:
         return result.drop(columns=["NoObs"])
 
+
 def get_last_day_of_prior_quarter(p_date):
     return dt.date(
         p_date.year, 3 * ((p_date.month - 1) // 3) + 1, 1
     ) + dt.timedelta(days=-1)
+
 
 def get_last_day_of_the_quarter(p_date):
     quarter = (p_date.month - 1) // 3 + 1
@@ -847,10 +859,13 @@ def get_last_day_of_the_quarter(p_date):
         p_date.year + 3 * quarter // 12, 3 * quarter % 12 + 1, 1
     ) + dt.timedelta(days=-1)
 
-def calc_tw_ror(df: pd.DataFrame,
-                group_cols: List[str],
-                _attributes_needed: List[str],
-                return_support_data=False):
+
+def calc_tw_ror(
+    df: pd.DataFrame,
+    group_cols: List[str],
+    _attributes_needed: List[str],
+    return_support_data=False,
+):
     df = df[df.TransactionDate <= df.MaxNavDate]
     df = df.sort_values("TransactionDate")
     df["lastq"] = df.TransactionDate.apply(
@@ -859,9 +874,7 @@ def calc_tw_ror(df: pd.DataFrame,
     df["thisq"] = df.TransactionDate.apply(
         lambda row: get_last_day_of_the_quarter(row)
     )
-    df["DateDiff"] = (df.thisq - df.TransactionDate) + dt.timedelta(
-        days=1
-    )
+    df["DateDiff"] = (df.thisq - df.TransactionDate) + dt.timedelta(days=1)
     df["TotalDays"] = df.thisq - df.lastq
 
     df["Weight"] = df.DateDiff / df.TotalDays
@@ -985,13 +998,15 @@ def calc_tw_ror(df: pd.DataFrame,
     else:
         return rslt[["Date", "Name", "Ror", "Alloc", "Ctr"]]
 
+
 def get_horizon_irr_df_rpt(
-        as_of_date: dt.date,
-        df: pd.DataFrame,
-        nav_df: pd.DataFrame,
-        list_to_iterate: List[List[str]],
-        _attributes_needed: List[str],
-        _trailing_periods: dict) -> pd.DataFrame:
+    as_of_date: dt.date,
+    df: pd.DataFrame,
+    nav_df: pd.DataFrame,
+    list_to_iterate: List[List[str]],
+    _attributes_needed: List[str],
+    _trailing_periods: dict,
+) -> pd.DataFrame:
     result = pd.DataFrame()
     for trailing_period in list(_trailing_periods.keys()):
         print(trailing_period)
@@ -999,9 +1014,7 @@ def get_horizon_irr_df_rpt(
             continue
         if trailing_period != "ITD":
             start_date = as_of_date + relativedelta(
-                months=(
-                    _trailing_periods.get(trailing_period) * -3
-                ),
+                months=(_trailing_periods.get(trailing_period) * -3),
                 days=1,
             )
             starting_investment = nav_df[
@@ -1015,7 +1028,8 @@ def get_horizon_irr_df_rpt(
             starting_investment["TransactionType"] = "Contributions"
 
             fund_cf_filtered = df[
-                pd.to_datetime(df.TransactionDate) >= pd.to_datetime(start_date)
+                pd.to_datetime(df.TransactionDate)
+                >= pd.to_datetime(start_date)
             ]
             fund_cf_filtered = pd.concat(
                 [starting_investment, fund_cf_filtered]
@@ -1047,17 +1061,15 @@ def get_horizon_irr_df_rpt(
                 ]
 
             irr_data = calc_irr(
-                cf=fund_cf_filtered,
-                group_cols=group_cols
+                cf=fund_cf_filtered, group_cols=group_cols
             )[["Name", "GrossIrr"]]
             irr_data["Period"] = trailing_period
             result = pd.concat([result, irr_data])
 
     return result
 
-def calc_irr(cf: pd.DataFrame,
-             group_cols=List[str],
-             type="Gross"):
+
+def calc_irr(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
     # all funds/deals in cfs dataframe are what the result will reflect (i.e. do filtering beforehand)
     if len(cf) == 0:
         return pd.DataFrame(columns=["Name", type + "Irr"])
@@ -1066,7 +1078,8 @@ def calc_irr(cf: pd.DataFrame,
             cf[["TransactionDate", "BaseAmount"]]
             .groupby("TransactionDate")
             .sum()
-            .reset_index(drop=True).squeeze()
+            .reset_index(drop=True)
+            .squeeze()
         )
     else:
         irr = cf.groupby(group_cols)[
@@ -1078,13 +1091,15 @@ def calc_irr(cf: pd.DataFrame,
         )
     return irr
 
+
 def get_horizon_tvpi_df_rpt(
-        as_of_date: dt.date,
-        df: pd.DataFrame,
-        nav_df: pd.DataFrame,
-        list_to_iterate: List[List[str]],
-        _attributes_needed: List[str],
-        _trailing_periods: dict) -> pd.DataFrame:
+    as_of_date: dt.date,
+    df: pd.DataFrame,
+    nav_df: pd.DataFrame,
+    list_to_iterate: List[List[str]],
+    _attributes_needed: List[str],
+    _trailing_periods: dict,
+) -> pd.DataFrame:
     result = pd.DataFrame()
     for trailing_period in list(_trailing_periods.keys()):
         print(trailing_period)
@@ -1092,9 +1107,7 @@ def get_horizon_tvpi_df_rpt(
             continue
         if trailing_period != "ITD":
             start_date = as_of_date + relativedelta(
-                months=(
-                    _trailing_periods.get(trailing_period) * -3
-                ),
+                months=(_trailing_periods.get(trailing_period) * -3),
                 days=1,
             )
             starting_investment = nav_df[
@@ -1108,7 +1121,8 @@ def get_horizon_tvpi_df_rpt(
             starting_investment["TransactionType"] = "Contributions"
 
             fund_cf_filtered = df[
-                pd.to_datetime(df.TransactionDate) >= pd.to_datetime(start_date)
+                pd.to_datetime(df.TransactionDate)
+                >= pd.to_datetime(start_date)
             ]
             fund_cf_filtered = pd.concat(
                 [starting_investment, fund_cf_filtered]
@@ -1147,23 +1161,17 @@ def get_horizon_tvpi_df_rpt(
 
     return result
 
-def calc_multiple(
-        cf: pd.DataFrame,
-        group_cols=List[str],
-        type="Gross"):
+
+def calc_multiple(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
 
     # all funds/deals in cfs dataframe are what the result will reflect (i.e. do filtering beforehand)
     if len(cf) == 0:
         return pd.DataFrame(columns=["Name", type + "Multiple"])
     if group_cols is None:
         multiple = cf[
-            cf.TransactionType.isin(
-                ["Distributions", "Net Asset Value"]
-            )
+            cf.TransactionType.isin(["Distributions", "Net Asset Value"])
         ].BaseAmount.sum() / abs(
-            cf[
-                cf.TransactionType.isin(["Contributions"])
-            ].BaseAmount.sum()
+            cf[cf.TransactionType.isin(["Contributions"])].BaseAmount.sum()
         )
     else:
         multiple = (
@@ -1187,24 +1195,30 @@ def calc_multiple(
         )
     return multiple
 
-def get_sum_df_rpt(df: pd.DataFrame,
-                   list_to_iterate: List[List[str]],
-                   sum_col: str):
+
+def get_sum_df_rpt(
+    df: pd.DataFrame, list_to_iterate: List[List[str]], sum_col: str
+):
     sum_df = pd.concat(
-        [calc_sum(df, group_cols=i, sum_col=sum_col) for i in list_to_iterate]
+        [
+            calc_sum(df, group_cols=i, sum_col=sum_col)
+            for i in list_to_iterate
+        ]
     )
     return sum_df
 
-def calc_sum(df: pd.DataFrame,
-             group_cols: List[str],
-             sum_col: str):
+
+def calc_sum(df: pd.DataFrame, group_cols: List[str], sum_col: str):
     rslt = df.groupby(group_cols)[sum_col].sum().reset_index()
     rslt["Name"] = rslt.apply(
         lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
     )
     return rslt
 
-def get_holding_periods_rpt(df, discount_df, list_to_iterate, _attributes_needed):
+
+def get_holding_periods_rpt(
+    df, discount_df, list_to_iterate, _attributes_needed
+):
     max_nav_date = (
         df[df.TransactionType == "Net Asset Value"]
         .groupby(["Name"])
@@ -1225,10 +1239,7 @@ def get_holding_periods_rpt(df, discount_df, list_to_iterate, _attributes_needed
     ) / pd.Timedelta("365 days")
 
     rslt = pd.concat(
-        [
-            calc_duration(discount_df, group_cols=i)
-            for i in list_to_iterate
-        ]
+        [calc_duration(discount_df, group_cols=i) for i in list_to_iterate]
     )
     rslt = rslt[["Name", "Duration"]]
 
@@ -1236,13 +1247,19 @@ def get_holding_periods_rpt(df, discount_df, list_to_iterate, _attributes_needed
     rslt["NoObs"] = "Incep"
     return rslt, max_nav_date
 
+
 def pivot_trailing_period_df(df):
     df_melted = pd.melt(df, id_vars=["Name", "Period"])
     df_melted = df_melted.pivot_table(
         index="Name", columns=["Period", "variable"], values=["value"]
     ).reset_index()
-    df_melted.columns = df_melted.columns.map('_'.join).str.strip('_').str.replace('value_', '')
+    df_melted.columns = (
+        df_melted.columns.map("_".join)
+        .str.strip("_")
+        .str.replace("value_", "")
+    )
     return df_melted
+
 
 def calc_duration(discount_df, group_cols):
     def convert_back_to_date(date):
@@ -1253,7 +1270,11 @@ def calc_duration(discount_df, group_cols):
             return dt.date.fromordinal(int(date))
 
     def convert_timedelta_to_years(date_diff):
-        return None if date_diff is None or date_diff is np.nan else date_diff.days / 365
+        return (
+            None
+            if date_diff is None or date_diff is np.nan
+            else date_diff.days / 365
+        )
 
     group_cols_extended = group_cols.copy()
     group_cols_extended.extend(["Date", "Type"])
@@ -1277,9 +1298,7 @@ def calc_duration(discount_df, group_cols):
         outflows.groupby(group_cols).DurationCtr.sum()
         / outflows.groupby(group_cols).Discounted.sum()
     ).reset_index()
-    outflows["avg_outflow_date"] = outflows[0].apply(
-        convert_back_to_date
-    )
+    outflows["avg_outflow_date"] = outflows[0].apply(convert_back_to_date)
 
     inflows.drop(0, inplace=True, axis=1)
     outflows.drop(0, inplace=True, axis=1)
@@ -1295,6 +1314,7 @@ def calc_duration(discount_df, group_cols):
         lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
     )
     return df_dates
+
 
 def recurse_down_order(
     df: pd.DataFrame,
@@ -1312,13 +1332,10 @@ def recurse_down_order(
                 {
                     "DisplayName": [name],
                     "Layer": [depth],
-                    "Name": [
-                        group.reset_index()["Group" + str(depth)][0]
-                    ],
+                    "Name": [group.reset_index()["Group" + str(depth)][0]],
                     "Description": [
                         group.reset_index()[
-                            "Group"
-                            + str(depth - 1 if depth != 0 else 0)
+                            "Group" + str(depth - 1 if depth != 0 else 0)
                         ][0]
                     ],
                     "Counter": [counter],
@@ -1348,4 +1365,3 @@ def recurse_down_order(
     if len(final_df_cache) > 0:
         return pd.concat(final_df_cache), counter
     return None, counter
-

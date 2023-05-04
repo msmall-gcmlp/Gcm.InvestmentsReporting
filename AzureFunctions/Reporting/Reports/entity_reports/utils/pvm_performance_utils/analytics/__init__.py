@@ -16,12 +16,13 @@ def __trailing_periods(as_of_date: dt.date):
         "Incep": "Incep",
     }
 
+
 def format_performance_report(
-        owner: str,
-        list_of_rpt_dfs: List[pd.DataFrame],
-        list_to_iterate: List[List[str]],
-        full_cfs: pd.DataFrame,
-        _attributes_needed: List[str]
+    owner: str,
+    list_of_rpt_dfs: List[pd.DataFrame],
+    list_to_iterate: List[List[str]],
+    full_cfs: pd.DataFrame,
+    _attributes_needed: List[str],
 ):
     # report specific formatting
     attrib = full_cfs[_attributes_needed].drop_duplicates()
@@ -38,8 +39,8 @@ def format_performance_report(
         [
             col_name
             for col_name in attrib.columns[
-            attrib.columns.str.contains("Group")
-        ]
+                attrib.columns.str.contains("Group")
+            ]
         ]
     )
 
@@ -69,8 +70,8 @@ def format_performance_report(
                 (attrib.PredominantInvestmentType == "Primary Fund"),
                 (attrib.PredominantInvestmentType == "Secondary"),
                 (
-                        attrib.PredominantInvestmentType
-                        == "Co-investment/Direct"
+                    attrib.PredominantInvestmentType
+                    == "Co-investment/Direct"
                 ),
             ],
             [1, 2, 3],
@@ -133,16 +134,17 @@ def format_performance_report(
 
     return rslt, ordered_rpt_items
 
+
 def get_performance_report_dict(
-        owner: str,
-        list_to_iterate: List[List[str]],
-        full_cfs: pd.DataFrame,
-        irr_cfs: pd.DataFrame,
-        commitment_df: pd.DataFrame,
-        nav_df: pd.DataFrame,
-        as_of_date: dt.date,
-        _attributes_needed: List[str],
-        _trailing_periods: dict
+    owner: str,
+    list_to_iterate: List[List[str]],
+    full_cfs: pd.DataFrame,
+    irr_cfs: pd.DataFrame,
+    commitment_df: pd.DataFrame,
+    nav_df: pd.DataFrame,
+    as_of_date: dt.date,
+    _attributes_needed: List[str],
+    _trailing_periods: dict,
 ) -> dict[str, pd.DataFrame]:
     direct_alpha, discount_df = get_direct_alpha_rpt(
         as_of_date=as_of_date,
@@ -150,7 +152,7 @@ def get_performance_report_dict(
         nav_df=nav_df,
         list_to_iterate=list_to_iterate,
         _attributes_needed=_attributes_needed,
-        _trailing_periods=_trailing_periods
+        _trailing_periods=_trailing_periods,
     )
     ks_pme = get_ks_pme_rpt(
         as_of_date=as_of_date,
@@ -158,7 +160,7 @@ def get_performance_report_dict(
         nav_df=nav_df,
         list_to_iterate=list_to_iterate,
         _attributes_needed=_attributes_needed,
-        _trailing_periods=_trailing_periods
+        _trailing_periods=_trailing_periods,
     )
     ror_ctr_df = get_ror_ctr_df_rpt(
         as_of_date=as_of_date,
@@ -166,7 +168,7 @@ def get_performance_report_dict(
         owner=owner,
         list_to_iterate=list_to_iterate,
         _attributes_needed=_attributes_needed,
-        _trailing_periods=_trailing_periods
+        _trailing_periods=_trailing_periods,
     )
 
     horizon_irr = get_horizon_irr_df_rpt(
@@ -175,7 +177,7 @@ def get_performance_report_dict(
         nav_df=nav_df,
         list_to_iterate=list_to_iterate,
         _attributes_needed=_attributes_needed,
-        _trailing_periods=_trailing_periods
+        _trailing_periods=_trailing_periods,
     )
     horizon_multiple = get_horizon_tvpi_df_rpt(
         as_of_date=as_of_date,
@@ -183,19 +185,17 @@ def get_performance_report_dict(
         nav_df=nav_df,
         list_to_iterate=list_to_iterate,
         _attributes_needed=_attributes_needed,
-        _trailing_periods=_trailing_periods
+        _trailing_periods=_trailing_periods,
     )
 
-    commitment_df = get_sum_df_rpt(commitment_df, list_to_iterate, 'Commitment')[
-        ["Name", "Commitment"]
-    ]
+    commitment_df = get_sum_df_rpt(
+        commitment_df, list_to_iterate, "Commitment"
+    )[["Name", "Commitment"]]
 
     nav = irr_cfs[irr_cfs.TransactionType == "Net Asset Value"].rename(
         columns={"BaseAmount": "Nav"}
     )
-    nav_df = get_sum_df_rpt(nav, list_to_iterate, 'Nav')[
-        ["Name", "Nav"]
-    ]
+    nav_df = get_sum_df_rpt(nav, list_to_iterate, "Nav")[["Name", "Nav"]]
 
     discount_df_with_attrib = discount_df[
         ["Name", "Date", "Discounted", "Type"]
@@ -208,7 +208,10 @@ def get_performance_report_dict(
     assert len(discount_df) == len(discount_df_with_attrib)
 
     holding_period_df, max_nav_date = get_holding_periods_rpt(
-        irr_cfs, discount_df_with_attrib, list_to_iterate, _attributes_needed
+        irr_cfs,
+        discount_df_with_attrib,
+        list_to_iterate,
+        _attributes_needed,
     )
 
     ror_ctr_melted = pivot_trailing_period_df(ror_ctr_df)
@@ -234,7 +237,8 @@ def get_performance_report_dict(
         owner=owner,
         list_to_iterate=list_to_iterate,
         full_cfs=full_cfs,
-        _attributes_needed=_attributes_needed)
+        _attributes_needed=_attributes_needed,
+    )
 
     # ordered_rpt_items layers are not dynamic. will fail if not 3 layers in this case
     input_data = {
