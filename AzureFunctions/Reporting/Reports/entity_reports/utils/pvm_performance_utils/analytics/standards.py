@@ -124,7 +124,7 @@ def get_investment_sector_benchmark(df):
     df_bmark_mapped["BenchmarkTicker"] = "SPXT Index"
 
     def oper(query: Query, item: DeclarativeMeta):
-        query = filter_many(query, item, f"OwnerName", list(df_bmark_mapped.BenchmarkTicker.unique()))
+        query = filter_many(query, item, f"Ticker", list(df_bmark_mapped.BenchmarkTicker.unique()))
         return query
 
     p = {
@@ -252,7 +252,7 @@ def get_direct_alpha_rpt(
     _trailing_periods: dict,
 ):
     # bmark assignment is always at investment level
-    fund_cf, index_prices = format_and_get_pme_bmarks(df)
+    fund_cf, index_prices = format_and_get_pme_bmarks(df, _attributes_needed)
     fund_df = (
         fund_cf[_attributes_needed + ["BenchmarkTicker"]]
         .drop_duplicates()
@@ -380,7 +380,7 @@ def get_ks_pme_rpt(
         _attributes_needed: List[str],
         _trailing_periods: dict) -> pd.DataFrame:
     # bmark assignment is always at investment level
-    fund_cf, index_prices = format_and_get_pme_bmarks(df)
+    fund_cf, index_prices = format_and_get_pme_bmarks(df, _attributes_needed)
     fund_df = (
         fund_cf[_attributes_needed + ["BenchmarkTicker"]]
         .drop_duplicates()
