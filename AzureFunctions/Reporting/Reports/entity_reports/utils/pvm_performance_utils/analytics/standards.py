@@ -279,28 +279,26 @@ def get_direct_alpha_rpt(
                     days=1,
                 )
                 starting_investment = nav_df[
-                    nav_df.TransactionDate
+                    pd.to_datetime(nav_df.TransactionDate)
                     == pd.to_datetime(start_date + relativedelta(days=-1))
                 ]
                 if len(starting_investment) == 0:
                     continue
 
-                # starting_investment = starting_investment.groupby(group_cols).BaseAmount.sum().reset_index()
                 starting_investment.BaseAmount = (
                     starting_investment.BaseAmount * -1
                 )
-                starting_investment["Date"] = pd.to_datetime(start_date)
 
                 index_start_value = index_prices[
-                    index_prices.Date
-                    == nearest(index_prices.Date, start_date)
+                    pd.to_datetime(index_prices.Date)
+                    == pd.to_datetime(nearest(index_prices.Date, start_date))
                 ].iloc[0]
 
                 index_end_value = index_prices[
-                    index_prices.Date
-                    == nearest(
+                    pd.to_datetime(index_prices.Date)
+                    == pd.to_datetime(nearest(
                         index_prices.Date, as_of_date
-                    )
+                    ))
                 ].iloc[0]
 
                 initial_fv_factor = (
@@ -309,9 +307,10 @@ def get_direct_alpha_rpt(
                 starting_investment["Discounted"] = (
                     starting_investment.BaseAmount * initial_fv_factor
                 )
+                starting_investment['Date'] = pd.to_datetime(start_date)
 
                 grouped_filtered = discount_df[
-                    discount_df.Date >= pd.to_datetime(start_date)
+                    pd.to_datetime(discount_df.Date) >= pd.to_datetime(start_date)
                 ]
                 grouped_filtered = pd.concat(
                     [starting_investment, grouped_filtered]
@@ -400,18 +399,16 @@ def get_ks_pme_rpt(
                 days=1,
             )
             starting_investment = nav_df[
-                nav_df.TransactionDate
+                pd.to_datetime(nav_df.TransactionDate)
                 == pd.to_datetime(start_date + relativedelta(days=-1))
             ]
-            # starting_investment = starting_investment.groupby(group_cols).BaseAmount.sum().reset_index()
             starting_investment.BaseAmount = (
                 starting_investment.BaseAmount * -1
             )
-            starting_investment["Date"] = pd.to_datetime(start_date)
             starting_investment["TransactionType"] = "Capital Call"
 
             fund_cf_filtered = fund_cf[
-                fund_cf.apply(lambda x: pd.Timestamp(x)) >= pd.to_datetime(start_date)
+                fund_cf.TransactionDate.apply(lambda x: pd.Timestamp(x) >= pd.to_datetime(start_date))
             ]
             fund_cf_filtered = pd.concat(
                 [starting_investment, fund_cf_filtered]
@@ -491,7 +488,6 @@ def get_fv_cashflow_df(fund_df: pd.DataFrame,
         single_fund = fund_cf[
             fund_cf["Name"] == fund_df.Name[idx]
         ].copy()
-        # if len(single_fund) <= 1 or (single_fund.BaseAmount.sum() <= 1) & (single_fund.BaseAmount.sum() >= -1):
         if len(single_fund) <= 1:
             continue
         if (
@@ -504,7 +500,7 @@ def get_fv_cashflow_df(fund_df: pd.DataFrame,
         single_fund_group_sum = (
             single_fund.groupby(
                 ["Name", "TransactionDate", "TransactionType"]
-            )
+            ).BaseAmount
             .sum()
             .reset_index()
         )
@@ -1009,18 +1005,17 @@ def get_horizon_irr_df_rpt(
                 days=1,
             )
             starting_investment = nav_df[
-                nav_df.TransactionDate
+                pd.to_datetime(nav_df.TransactionDate)
                 == pd.to_datetime(start_date + relativedelta(days=-1))
             ]
             # starting_investment = starting_investment.groupby(group_cols).BaseAmount.sum().reset_index()
             starting_investment.BaseAmount = (
                 starting_investment.BaseAmount * -1
             )
-            starting_investment["Date"] = pd.to_datetime(start_date)
             starting_investment["TransactionType"] = "Contributions"
 
             fund_cf_filtered = df[
-                df.TransactionDate >= pd.to_datetime(start_date)
+                pd.to_datetime(df.TransactionDate) >= pd.to_datetime(start_date)
             ]
             fund_cf_filtered = pd.concat(
                 [starting_investment, fund_cf_filtered]
@@ -1103,18 +1098,17 @@ def get_horizon_tvpi_df_rpt(
                 days=1,
             )
             starting_investment = nav_df[
-                nav_df.TransactionDate
+                pd.to_datetime(nav_df.TransactionDate)
                 == pd.to_datetime(start_date + relativedelta(days=-1))
             ]
             # starting_investment = starting_investment.groupby(group_cols).BaseAmount.sum().reset_index()
             starting_investment.BaseAmount = (
                 starting_investment.BaseAmount * -1
             )
-            starting_investment["Date"] = pd.to_datetime(start_date)
             starting_investment["TransactionType"] = "Contributions"
 
             fund_cf_filtered = df[
-                df.TransactionDate >= pd.to_datetime(start_date)
+                pd.to_datetime(df.TransactionDate) >= pd.to_datetime(start_date)
             ]
             fund_cf_filtered = pd.concat(
                 [starting_investment, fund_cf_filtered]
@@ -1193,14 +1187,18 @@ def calc_multiple(
         )
     return multiple
 
-def get_sum_df_rpt(df, list_to_iterate):
+def get_sum_df_rpt(df: pd.DataFrame,
+                   list_to_iterate: List[List[str]],
+                   sum_col: str):
     sum_df = pd.concat(
-        [calc_sum(df, group_cols=i) for i in list_to_iterate]
+        [calc_sum(df, group_cols=i, sum_col=sum_col) for i in list_to_iterate]
     )
     return sum_df
 
-def calc_sum(df, group_cols):
-    rslt = df.groupby(group_cols).sum().reset_index()
+def calc_sum(df: pd.DataFrame,
+             group_cols: List[str],
+             sum_col: str):
+    rslt = df.groupby(group_cols)[sum_col].sum().reset_index()
     rslt["Name"] = rslt.apply(
         lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
     )
@@ -1243,6 +1241,7 @@ def pivot_trailing_period_df(df):
     df_melted = df_melted.pivot_table(
         index="Name", columns=["Period", "variable"], values=["value"]
     ).reset_index()
+    df_melted.columns = df_melted.columns.map('_'.join).str.strip('_').str.replace('value_', '')
     return df_melted
 
 def calc_duration(discount_df, group_cols):
@@ -1254,7 +1253,7 @@ def calc_duration(discount_df, group_cols):
             return dt.date.fromordinal(int(date))
 
     def convert_timedelta_to_years(date_diff):
-        return None if date_diff is None else date_diff.days / 365
+        return None if date_diff is None or date_diff is np.nan else date_diff.days / 365
 
     group_cols_extended = group_cols.copy()
     group_cols_extended.extend(["Date", "Type"])
@@ -1309,8 +1308,6 @@ def recurse_down_order(
             group_by_list[depth], sort=False
         )
         for name, group in current_grouping_struct:
-            if depth == 4:
-                print("smart guy")
             simple_frame = pd.DataFrame(
                 {
                     "DisplayName": [name],

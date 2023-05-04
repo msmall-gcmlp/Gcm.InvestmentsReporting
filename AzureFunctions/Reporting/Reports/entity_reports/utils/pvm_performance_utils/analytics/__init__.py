@@ -68,14 +68,14 @@ def get_twror_by_industry_rpt(
         _trailing_periods=_trailing_periods
     )
 
-    commitment_df = get_sum_df_rpt(commitment_df, list_to_iterate)[
+    commitment_df = get_sum_df_rpt(commitment_df, list_to_iterate, 'Commitment')[
         ["Name", "Commitment"]
     ]
 
     nav = irr_cfs[irr_cfs.TransactionType == "Net Asset Value"].rename(
         columns={"BaseAmount": "Nav"}
     )
-    nav_df = get_sum_df_rpt(nav, list_to_iterate)[
+    nav_df = get_sum_df_rpt(nav, list_to_iterate, 'Nav')[
         ["Name", "Nav"]
     ]
 
@@ -189,35 +189,34 @@ def get_twror_by_industry_rpt(
         by=["Counter", "Commitment"], ascending=[False, False]
     )
 
-    # TODO how to reorder multiindex columns?
     columns = [
         "DisplayName",
         "MaxNavDate",
         "Duration",
         "Commitment",
         "Nav",
-        ("value", "ITD", "KsPme"),
-        ("value", "ITD", "DirectAlpha"),
-        ("value", "ITD", "GrossMultiple"),
-        ("value", "ITD", "GrossIrr"),
-        ("value", "ITD", "AnnRor"),
-        ("value", "ITD", "Ctr"),
-        ("value", "5Y", "KsPme"),
-        ("value", "5Y", "DirectAlpha"),
-        ("value", "5Y", "GrossMultiple"),
-        ("value", "5Y", "GrossIrr"),
-        ("value", "5Y", "AnnRor"),
-        ("value", "5Y", "Ctr"),
-        ("value", "3Y", "KsPme"),
-        ("value", "3Y", "DirectAlpha"),
-        ("value", "3Y", "GrossMultiple"),
-        ("value", "3Y", "GrossIrr"),
-        ("value", "3Y", "AnnRor"),
-        ("value", "3Y", "Ctr"),
-        ("value", "TTM", "AnnRor"),
-        ("value", "TTM", "Ctr"),
-        ("value", "QTD", "AnnRor"),
-        ("value", "QTD", "Ctr"),
+        "ITD_KsPme",
+        "ITD_DirectAlpha",
+        "ITD_GrossMultiple",
+        "ITD_GrossIrr",
+        "ITD_AnnRor",
+        "ITD_Ctr",
+        "5Y_KsPme",
+        "5Y_DirectAlpha",
+        "5Y_GrossMultiple",
+        "5Y_GrossIrr",
+        "5Y_AnnRor",
+        "5Y_Ctr",
+        "3Y_KsPme",
+        "3Y_DirectAlpha",
+        "3Y_GrossMultiple",
+        "3Y_GrossIrr",
+        "3Y_AnnRor",
+        "3Y_Ctr",
+        "TTM_AnnRor",
+        "TTM_Ctr",
+        "QTD_AnnRor",
+        "QTD_Ctr",
     ]
     for col in columns:
         if col not in list(rslt.columns):
