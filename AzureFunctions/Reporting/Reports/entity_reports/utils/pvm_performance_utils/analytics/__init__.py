@@ -69,14 +69,14 @@ def get_twror_by_industry_rpt(
     )
 
     commitment_df = get_sum_df_rpt(commitment_df, list_to_iterate)[
-        ["Name", "Commitment", "NoObs"]
+        ["Name", "Commitment"]
     ]
 
     nav = irr_cfs[irr_cfs.TransactionType == "Net Asset Value"].rename(
         columns={"BaseAmount": "Nav"}
     )
     nav_df = get_sum_df_rpt(nav, list_to_iterate)[
-        ["Name", "Nav", "NoObs"]
+        ["Name", "Nav"]
     ]
 
     discount_df_with_attrib = discount_df[
@@ -196,12 +196,12 @@ def get_twror_by_industry_rpt(
         "Duration",
         "Commitment",
         "Nav",
-        ("value", "Incep", "KsPme"),
-        ("value", "Incep", "DirectAlpha"),
-        ("value", "Incep", "GrossMultiple"),
-        ("value", "Incep", "GrossIrr"),
-        ("value", "Incep", "AnnRor"),
-        ("value", "Incep", "Ctr"),
+        ("value", "ITD", "KsPme"),
+        ("value", "ITD", "DirectAlpha"),
+        ("value", "ITD", "GrossMultiple"),
+        ("value", "ITD", "GrossIrr"),
+        ("value", "ITD", "AnnRor"),
+        ("value", "ITD", "Ctr"),
         ("value", "5Y", "KsPme"),
         ("value", "5Y", "DirectAlpha"),
         ("value", "5Y", "GrossMultiple"),

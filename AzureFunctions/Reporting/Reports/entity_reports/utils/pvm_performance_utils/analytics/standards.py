@@ -1197,7 +1197,6 @@ def get_sum_df_rpt(df, list_to_iterate):
     sum_df = pd.concat(
         [calc_sum(df, group_cols=i) for i in list_to_iterate]
     )
-    sum_df["NoObs"] = "Incep"
     return sum_df
 
 def calc_sum(df, group_cols):
