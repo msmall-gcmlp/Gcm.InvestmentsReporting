@@ -7,6 +7,7 @@ from gcm.inv.entityhierarchy.NodeHierarchy import (
     get_domain,
 )
 import pandas as pd
+from functools import cached_property
 
 
 class HierarchyHandler(object):
@@ -25,46 +26,34 @@ class HierarchyHandler(object):
             self.vertex = vertex
             self.sources = sources
 
-    @property
+    @cached_property
     def hierarchy_down(
         self,
     ) -> "HierarchyStruct":
-        __name = "__h_down"
-        __if = getattr(self, __name, None)
-        if __if is None:
-            val = HierarchyHandler.get_hierarchy(
-                self.domain, [self.name], True
-            )
-            val = HierarchyHandler.HierarchyStruct(val[0], val[1], val[2])
-            setattr(self, __name, val)
-        return getattr(self, __name, None)
+        val = HierarchyHandler.get_hierarchy(
+            self.domain, [self.name], True
+        )
+        val = HierarchyHandler.HierarchyStruct(val[0], val[1], val[2])
+        return val
 
-    @property
+    @cached_property
     def hierarchy_up(
         self,
     ) -> "HierarchyStruct":
-        __name = "__h_up"
-        __if = getattr(self, __name, None)
-        if __if is None:
-            val = HierarchyHandler.get_hierarchy(
-                self.domain, [self.name], False
-            )
-            val = HierarchyHandler.HierarchyStruct(val[0], val[1], val[2])
-            setattr(self, __name, val)
-        return getattr(self, __name, None)
+        val = HierarchyHandler.get_hierarchy(
+            self.domain, [self.name], False
+        )
+        val = HierarchyHandler.HierarchyStruct(val[0], val[1], val[2])
+        return val
 
-    @property
+    @cached_property
     def entity_info(self):
-        __name = "__info_entity"
-        __if = getattr(self, __name, None)
-        if __if is None:
-            entity_domain: EntityDomain = get_domain(self.domain)
-            [entities, sources] = entity_domain.get_by_entity_names(
-                [self.name],
-            )
-            merged = EntityDomain.merge_ref_and_sources(entities, sources)
-            setattr(self, __name, merged)
-        return getattr(self, __name, None)
+        entity_domain: EntityDomain = get_domain(self.domain)
+        [entities, sources] = entity_domain.get_by_entity_names(
+            [self.name],
+        )
+        merged = EntityDomain.merge_ref_and_sources(entities, sources)
+        return merged
 
     def get_entities_directly_related_by_name(
         self,

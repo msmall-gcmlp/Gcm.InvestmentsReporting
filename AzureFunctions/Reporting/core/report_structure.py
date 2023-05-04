@@ -31,6 +31,7 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
 )
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
+from functools import cached_property
 
 
 class ReportingBlob(ExtendedEnum):
@@ -313,27 +314,22 @@ class ReportStructure(SerializableBase):
                 return None
         return None
 
-    @property
+    @cached_property
     def related_entities(
         self,
     ) -> HierarchyHandler:
-        __name = "_related_children_entities"
-        __ifc = getattr(self, __name, None)
-        if __ifc is None:
-            domain = self.report_meta.entity_domain
-            entity_info: pd.DataFrame = self.report_meta.entity_info
-            if (
-                domain != EntityDomainTypes.NONE
-                and entity_info.shape[0] > 0
-            ):
-                current_entity_name: str = (
-                    entity_info[EntityStandardNames.EntityName]
-                    .drop_duplicates()
-                    .to_list()
-                )[0]
-                val = HierarchyHandler(domain, current_entity_name)
-                setattr(self, __name, val)
-        return getattr(self, __name, None)
+        domain = self.report_meta.entity_domain
+        entity_info: pd.DataFrame = self.report_meta.entity_info
+        if domain != EntityDomainTypes.NONE and entity_info.shape[0] > 0:
+            current_entity_name: str = (
+                entity_info[EntityStandardNames.EntityName]
+                .drop_duplicates()
+                .to_list()
+            )[0]
+            val = HierarchyHandler(domain, current_entity_name)
+            return val
+        else:
+            return None
 
     def report_name_metadata(self):
         return self.report_name.name
