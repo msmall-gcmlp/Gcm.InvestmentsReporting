@@ -12,11 +12,12 @@ from .....core.report_structure import (
 )
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ....report_names import ReportNames
-from ..PvmTrackRecord.data_handler.pvm_track_record_handler import (
+from ..pvm_track_record.data_handler.pvm_track_record_handler import (
     TrackRecordHandler,
-    TrackRecordManagerProvider,
+    TrackRecordManagerSingletonProvider,
 )
 from abc import abstractclassmethod, abstractproperty
+from functools import cached_property
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
@@ -33,41 +34,35 @@ class BasePvmTrackRecordReport(ReportStructure):
 
     @property
     def manager_handler(self) -> TrackRecordHandler:
-        __name = "__manager_handler"
-        __ifc = getattr(self, __name, None)
-        if __ifc is None:
-            manager_handler = (
-                TrackRecordManagerProvider().get_manager_tr_info(
-                    self.manager_name
-                )
+        # doesn't need to be cached as is already accessing singleton
+        manager_handler = (
+            TrackRecordManagerSingletonProvider().get_manager_tr_info(
+                self.manager_name
             )
-            setattr(self, __name, manager_handler)
-        return getattr(self, __name, None)
+        )
+        return manager_handler
 
-    @property
+    @cached_property
     def idw_pvm_tr_id(self) -> int:
-        __name = "__idw_pvm_tr_id"
-        if getattr(self, __name, None) is None:
-            info = self.report_meta.entity_info
-            info = info[
-                [
-                    EntityStandardNames.SourceName,
-                    EntityStandardNames.ExternalId,
-                ]
+        info = self.report_meta.entity_info
+        info = info[
+            [
+                EntityStandardNames.SourceName,
+                EntityStandardNames.ExternalId,
             ]
-            info = info[
-                info[EntityStandardNames.SourceName]
-                == BasePvmTrackRecordReport.__IDW_PVM_TR
-            ]
-            id_list = [
-                int(x)
-                for x in info[EntityStandardNames.ExternalId]
-                .drop_duplicates()
-                .to_list()
-            ]
-            assert len(id_list) == 1
-            setattr(self, __name, id_list[0])
-        return getattr(self, __name, None)
+        ]
+        info = info[
+            info[EntityStandardNames.SourceName]
+            == BasePvmTrackRecordReport.__IDW_PVM_TR
+        ]
+        id_list = [
+            int(x)
+            for x in info[EntityStandardNames.ExternalId]
+            .drop_duplicates()
+            .to_list()
+        ]
+        assert len(id_list) == 1
+        return id_list[0]
 
     @abstractclassmethod
     def level(cls) -> EntityDomainTypes:

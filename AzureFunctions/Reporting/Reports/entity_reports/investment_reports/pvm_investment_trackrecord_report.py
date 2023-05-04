@@ -1,7 +1,7 @@
 from ....core.report_structure import (
     ReportMeta,
 )
-from ..utils.PvmTrackRecord.base_pvm_tr_report import (
+from ..utils.pvm_track_record.base_pvm_tr_report import (
     BasePvmTrackRecordReport,
 )
 from gcm.Dao.DaoRunner import AzureDataLakeDao
@@ -12,6 +12,13 @@ from ....core.report_structure import (
 from ....core.components.report_table import ReportTable
 import pandas as pd
 from ...report_names import ReportNames
+from ..utils.pvm_track_record.data_handler.investment_container import (
+    InvestmentContainerBase,
+)
+from ..utils.pvm_track_record.data_handler.pvm_track_record_handler import (
+    TrackRecordHandler,
+)
+from functools import cached_property
 
 
 class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
@@ -23,6 +30,30 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         )
         self.___investment_manager_name = investment_manager_name
 
+    class InvestmentContainer(InvestmentContainerBase):
+        def __init__(
+            self, manager_handler: TrackRecordHandler, idw_pvm_tr_id: int
+        ):
+            super().__init__()
+            self.manager_handler = manager_handler
+            self.idw_pvm_tr_id = idw_pvm_tr_id
+
+        def filter_by_inv_id(self, df: pd.DataFrame):
+            return df[df["InvestmentId"] == self.idw_pvm_tr_id]
+
+        @cached_property
+        def net_cashflows(self) -> pd.DataFrame:
+            cfs = self.manager_handler.all_net_cfs
+            cfs = self.filter_by_inv_id(cfs)
+            return cfs
+
+        @cached_property
+        def gross_cashflows(self) -> pd.DataFrame:
+
+            cfs = self.manager_handler.all_position_cfs
+            cfs = self.filter_by_inv_id(cfs)
+            return cfs
+
     @property
     def excel_template_location(self):
         return AzureDataLakeDao.BlobFileStructure(
@@ -32,30 +63,15 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             path=["PvmInvestmentTrackRecordTemplate.xlsx"],
         )
 
-    def filter_by_inv_id(self, df: pd.DataFrame):
-        return df[df["InvestmentId"] == self.idw_pvm_tr_id]
+    @cached_property
+    def investment_handler(self) -> InvestmentContainer:
+        return PvmInvestmentTrackRecordReport.InvestmentContainer(
+            self.manager_handler, self.idw_pvm_tr_id
+        )
 
     @classmethod
     def level(cls):
         return EntityDomainTypes.Investment
-
-    @property
-    def net_cashflows(self) -> pd.DataFrame:
-        __name = "__investment_cfs"
-        if getattr(self, __name, None is None):
-            cfs = self.manager_handler.all_net_cfs
-            cfs = self.filter_by_inv_id(cfs)
-            setattr(self, __name, cfs)
-        return getattr(self, __name, None is None)
-
-    @property
-    def position_cashflows(self) -> pd.DataFrame:
-        __name = "__pos_cfs"
-        if getattr(self, __name, None is None):
-            cfs = self.manager_handler.all_position_cfs
-            cfs = self.filter_by_inv_id(cfs)
-            setattr(self, __name, cfs)
-        return getattr(self, __name, None is None)
 
     @property
     def manager_name(self) -> str:
@@ -77,8 +93,8 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         return self.___investment_manager_name
 
     def assign_components(self):
-        pos = self.position_cashflows
-        cf = self.net_cashflows
+        pos = self.investment_handler.net_cashflows
+        cf = self.investment_handler.gross_cashflows
         assert pos is not None and cf is not None
         tables = [
             ReportTable(

@@ -16,9 +16,10 @@ import copy
 from ..investment_reports.pvm_investment_trackrecord_report import (
     PvmInvestmentTrackRecordReport,
 )
-from ..utils.PvmTrackRecord.base_pvm_tr_report import (
+from ..utils.pvm_track_record.base_pvm_tr_report import (
     BasePvmTrackRecordReport,
 )
+from functools import cached_property
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
@@ -38,19 +39,15 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             path=["PvmManagerTrackRecordTemplate.xlsx"],
         )
 
-    @property
+    @cached_property
     def manager_name(self):
-        __name = "__inv_manager_name"
-        _ifc = getattr(self, __name, None)
-        if _ifc is None:
-            manager_name: pd.DataFrame = self.report_meta.entity_info[
-                [EntityStandardNames.EntityName]
-            ].drop_duplicates()
-            manager_name = "_".join(
-                manager_name[EntityStandardNames.EntityName].to_list()
-            )
-            setattr(self, __name, manager_name)
-        return getattr(self, __name, None)
+        manager_name: pd.DataFrame = self.report_meta.entity_info[
+            [EntityStandardNames.EntityName]
+        ].drop_duplicates()
+        manager_name = "_".join(
+            manager_name[EntityStandardNames.EntityName].to_list()
+        )
+        return manager_name
 
     @classmethod
     def level(cls):
@@ -60,37 +57,28 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
     def child_type(self):
         return EntityDomainTypes.Investment
 
-    @property
+    @cached_property
     def children(self) -> pd.DataFrame:
-        __name = "__investment_children"
-        _ifc = getattr(self, __name, None)
-        if _ifc is None:
-            structure = self.manager_handler.manager_hierarchy_structure
-            children = structure.get_entities_directly_related_by_name(
-                self.child_type
-            )
-            setattr(self, __name, children)
-        return getattr(self, __name, None)
+        structure = self.manager_handler.manager_hierarchy_structure
+        children = structure.get_entities_directly_related_by_name(
+            self.child_type
+        )
+        return children
 
-    @property
+    @cached_property
     def children_reports(
         self,
     ) -> dict[str, PvmInvestmentTrackRecordReport]:
-        __name = "__children_report_dict"
-        if getattr(self, __name, None) is None:
-            cach_dict = {}
-            for g, n in self.children.groupby(
-                EntityStandardNames.EntityName
-            ):
-                meta = copy.deepcopy(self.report_meta)
-                meta.entity_domain = self.child_type
-                meta.entity_info = n
-                this_report = PvmInvestmentTrackRecordReport(
-                    meta, self.manager_name
-                )
-                cach_dict[g] = this_report
-            setattr(self, __name, cach_dict)
-        return getattr(self, __name, None)
+        cach_dict = {}
+        for g, n in self.children.groupby(EntityStandardNames.EntityName):
+            meta = copy.deepcopy(self.report_meta)
+            meta.entity_domain = self.child_type
+            meta.entity_info = n
+            this_report = PvmInvestmentTrackRecordReport(
+                meta, self.manager_name
+            )
+            cach_dict[g] = this_report
+        return cach_dict
 
     def assign_components(self):
         tables = [
