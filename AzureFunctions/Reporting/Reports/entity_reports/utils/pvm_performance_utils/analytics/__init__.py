@@ -43,6 +43,7 @@ def get_twror_by_industry_rpt(
         _trailing_periods=_trailing_periods
     )
     ror_ctr_df = get_ror_ctr_df_rpt(
+        as_of_date=as_of_date,
         df=full_cfs,
         owner=owner,
         list_to_iterate=list_to_iterate,

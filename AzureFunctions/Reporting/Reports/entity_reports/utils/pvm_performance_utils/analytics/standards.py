@@ -17,7 +17,6 @@ def __runner() -> DaoRunner:
     return Scenario.get_attribute("dao")
 
 def discount_table(
-    self,
     dates_cashflows,
     cashflows,
     cashflows_type,
@@ -60,7 +59,7 @@ def discount_table(
         )
         NAV_date = NAV_record["Date"].iloc[0]
         NAV_index_value = index[
-            _dates_index == self.nearest(_dates_index, NAV_date)
+            _dates_index == nearest(_dates_index, NAV_date)
         ].iloc[0]
         df_cf["Status"] = "Active"
     else:  # Not liquidated
@@ -73,7 +72,7 @@ def discount_table(
         NAV_record["Amount"].iloc[0] = 0  # force a 0 value
         NAV_date = NAV_record["Date"].iloc[0]
         NAV_index_value = index[
-            _dates_index == self.nearest(_dates_index, NAV_date)
+            _dates_index == nearest(_dates_index, NAV_date)
         ].iloc[0]
         df_cf["Status"] = "Liquidated"
     # Iterate and assign to table
@@ -84,7 +83,7 @@ def discount_table(
     df_cf["FV_Factor"] = 0
     for idx, cf in df_cf.iterrows():
         # Let us find the closest index value to the current date
-        index_date = self.nearest(_dates_index, cf["Date"])
+        index_date = nearest(_dates_index, cf["Date"])
         index_value = index[_dates_index == index_date].iloc[0]
         df_cf.loc[idx, "Index"] = index_value
         df_cf.loc[idx, "Index_date"] = index_date
@@ -220,16 +219,16 @@ def get_alpha_discount_table(fund_df, fund_cf, index_prices):
             == single_fund.TransactionDate.max()
         )
 
-        discount_table = discount_table(
+        discount_table_df = discount_table(
             dates_cashflows=single_fund_group_sum["TransactionDate"],
             cashflows=single_fund_group_sum["BaseAmount"],
             cashflows_type=single_fund_group_sum["TransactionType"],
             dates_index=fund_specific_index.iloc[:, 0],
             index=fund_specific_index.iloc[:, 1],
         )
-        discount_table["Name"] = fund_df.Name[idx]
+        discount_table_df["Name"] = fund_df.Name[idx]
         discount_table_rslt = pd.concat(
-            [discount_table_rslt, discount_table]
+            [discount_table_rslt, discount_table_df]
         )
     return discount_table_rslt
 
@@ -266,6 +265,8 @@ def get_direct_alpha_rpt(
     result = pd.DataFrame()
     for group_cols in list_to_iterate:
         for trailing_period in list(_trailing_periods.keys()):
+            if trailing_period in ["YTD", "QTD", "TTM"]:
+                continue
             print(f"{group_cols} -  {trailing_period}")
             group_cols_date = group_cols.copy()
             group_cols_date.extend(["Date"])
@@ -580,7 +581,6 @@ def get_fv_cashflow_df(fund_df: pd.DataFrame,
     return fv_cashflows_df
 
 def KS_PME(
-    self,
     dates_cashflows,
     cashflows,
     cashflows_type,
@@ -614,7 +614,7 @@ def KS_PME(
     for idx, cf in df_cf.iterrows():
         # Let us find the closest index value to the current date
         index_value = index[
-            _dates_index == self.nearest(_dates_index, cf["Date"])
+            _dates_index == nearest(_dates_index, cf["Date"])
         ].iloc[0]
         if cf["Type"] == "Distribution":
             sum_fv_distributions = (
@@ -634,7 +634,7 @@ def KS_PME(
         )
         index_value = index[
             _dates_index
-            == self.nearest(_dates_index, NAV_record["Date"].iloc[0])
+            == nearest(_dates_index, NAV_record["Date"].iloc[0])
         ].iloc[0]
         discounted_NAV = (
             NAV_record["Amount"].iloc[0] / index_value
@@ -689,7 +689,7 @@ def get_ror_ctr(as_of_date: dt.date,
     )
     if len(rors) == 0:
         return pd.DataFrame(
-            columns=["Name", "Period", "AnnRor", "Ctr"]
+            columns=["Name", "Period", "AnnRor", "Ctr", "group_cols"]
         )
 
     ann_ror = ann_return(
@@ -700,6 +700,7 @@ def get_ror_ctr(as_of_date: dt.date,
     )
 
     ctr = get_ctrs(
+        as_of_date=as_of_date,
         ctrs=rors.pivot_table(
             index="Date", columns="Name", values="Ctr"
         ).fillna(0),
@@ -854,21 +855,7 @@ def calc_tw_ror(df: pd.DataFrame,
                 group_cols: List[str],
                 _attributes_needed: List[str],
                 return_support_data=False):
-    max_nav_date = (
-        df[df.TransactionType == "Net Asset Value"]
-        .groupby(["OwnerName", "InvestmentName"])
-        .TransactionDate.max()
-        .reset_index()
-        .rename(columns={"TransactionDate": "MaxNavDate"})
-    )
-    df = df.merge(
-        max_nav_date,
-        how="left",
-        left_on=["OwnerName", "InvestmentName"],
-        right_on=["OwnerName", "InvestmentName"],
-    )
     df = df[df.TransactionDate <= df.MaxNavDate]
-
     df = df.sort_values("TransactionDate")
     df["lastq"] = df.TransactionDate.apply(
         lambda row: get_last_day_of_prior_quarter(row)
@@ -894,8 +881,8 @@ def calc_tw_ror(df: pd.DataFrame,
         nav[
             _attributes_needed
             + [
-                "Owner",
-                "Investment",
+                "OwnerName",
+                "InvestmentName",
                 "PredominantStrategy",
                 "thisq",
                 "Nav",
@@ -1068,6 +1055,7 @@ def get_horizon_irr_df_rpt(
                 cf=fund_cf_filtered,
                 group_cols=group_cols
             )[["Name", "GrossIrr"]]
+            irr_data["NoObs"] = trailing_period
             result = pd.concat([result, irr_data])
 
     return result
@@ -1084,13 +1072,6 @@ def calc_irr(cf: pd.DataFrame,
             .groupby("TransactionDate")
             .sum()
             .reset_index(drop=True).squeeze()
-        )
-        irr = cf.groupby(group_cols)[
-            ["TransactionDate", "BaseAmount"]
-        ].apply(xirr, silent=True)
-        irr = irr.reset_index().rename(columns={0: type + "Irr"})
-        irr["Name"] = irr.apply(
-            lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
         )
     else:
         irr = cf.groupby(group_cols)[
@@ -1168,7 +1149,6 @@ def get_horizon_tvpi_df_rpt(
                 fund_cf_filtered, group_cols=group_cols
             )[["Name", "GrossMultiple"]]
             multiple_df["NoObs"] = trailing_period
-
             result = pd.concat([result, multiple_df])
 
     return result
