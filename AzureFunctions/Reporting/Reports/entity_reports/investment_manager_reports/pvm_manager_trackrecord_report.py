@@ -47,6 +47,7 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         manager_name = "_".join(
             manager_name[EntityStandardNames.EntityName].to_list()
         )
+        return manager_name
 
     @classmethod
     def level(cls):

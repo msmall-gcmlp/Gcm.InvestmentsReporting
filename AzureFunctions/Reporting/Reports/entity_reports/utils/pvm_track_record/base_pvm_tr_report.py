@@ -14,7 +14,7 @@ from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ....report_names import ReportNames
 from ..pvm_track_record.data_handler.pvm_track_record_handler import (
     TrackRecordHandler,
-    TrackRecordManagerProvider,
+    TrackRecordManagerSingletonProvider,
 )
 from abc import abstractclassmethod, abstractproperty
 from functools import cached_property
@@ -32,10 +32,13 @@ class BasePvmTrackRecordReport(ReportStructure):
     def manager_name(self) -> str:
         raise NotImplementedError()
 
-    @cached_property
+    @property
     def manager_handler(self) -> TrackRecordHandler:
-        manager_handler = TrackRecordManagerProvider().get_manager_tr_info(
-            self.manager_name
+        # doesn't need to be cached as is already accessing singleton
+        manager_handler = (
+            TrackRecordManagerSingletonProvider().get_manager_tr_info(
+                self.manager_name
+            )
         )
         return manager_handler
 

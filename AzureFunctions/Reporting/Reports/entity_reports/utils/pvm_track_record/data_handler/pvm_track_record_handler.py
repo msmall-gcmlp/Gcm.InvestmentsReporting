@@ -18,10 +18,8 @@ class TrackRecordHandler(object):
 
     @cached_property
     def manager_hierarchy_structure(self) -> HierarchyHandler:
-        return (
-            HierarchyHandler(
-                EntityDomainTypes.InvestmentManager, self.manager_name
-            ),
+        return HierarchyHandler(
+            EntityDomainTypes.InvestmentManager, self.manager_name
         )
 
     @cached_property
@@ -66,7 +64,7 @@ class TrackRecordHandler(object):
         return final_df
 
 
-class TrackRecordManagerProvider(metaclass=Singleton):
+class TrackRecordManagerSingletonProvider(metaclass=Singleton):
     def __init__(self):
         self._cache = {}
 
