@@ -1,6 +1,8 @@
 import datetime as dt
-from typing import List
+from typing import List, Tuple, Any
 import pandas as pd
+from pandas import DataFrame
+
 from .standards import *
 
 
@@ -14,8 +16,124 @@ def __trailing_periods(as_of_date: dt.date):
         "Incep": "Incep",
     }
 
+def format_performance_report(
+        owner: str,
+        list_of_rpt_dfs: List[pd.DataFrame],
+        list_to_iterate: List[List[str]],
+        full_cfs: pd.DataFrame,
+        _attributes_needed: List[str]
+):
+    # report specific formatting
+    attrib = full_cfs[_attributes_needed].drop_duplicates()
+    attrib["Portfolio"] = owner
 
-def get_twror_by_industry_rpt(
+    for group in range(0, len(list_to_iterate)):
+        attrib["Group" + str(group)] = attrib.apply(
+            lambda x: "_".join(
+                [str(x[i]) for i in list_to_iterate[group]]
+            ),
+            axis=1,
+        )
+    attrib = attrib.sort_values(
+        [
+            col_name
+            for col_name in attrib.columns[
+            attrib.columns.str.contains("Group")
+        ]
+        ]
+    )
+
+    if "PredominantSector" in attrib.columns:
+        attrib.PredominantSector = attrib.PredominantSector.str.replace(
+            "FUNDS-", ""
+        )
+        attrib.PredominantSector = attrib.PredominantSector.str.replace(
+            "COS-", ""
+        )
+    if "PredominantRealizationTypeCategory" in attrib.columns:
+        attrib.PredominantRealizationTypeCategory = (
+            attrib.PredominantRealizationTypeCategory.str.replace(
+                "Realized & Partially/Substantially Realized",
+                "Realized & Partial",
+            )
+        )
+        attrib.PredominantRealizationTypeCategory = np.where(
+            attrib.PredominantRealizationTypeCategory.isnull(),
+            "Not Tagged",
+            attrib.PredominantRealizationTypeCategory,
+        )
+
+    if "PredominantInvestmentType" in attrib.columns:
+        attrib["Order"] = np.select(
+            [
+                (attrib.PredominantInvestmentType == "Primary Fund"),
+                (attrib.PredominantInvestmentType == "Secondary"),
+                (
+                        attrib.PredominantInvestmentType
+                        == "Co-investment/Direct"
+                ),
+            ],
+            [1, 2, 3],
+        )
+        attrib = attrib.sort_values("Order")
+
+    ordered_recursion = [
+        item for sublist in list_to_iterate for item in sublist
+    ]
+    ordered_recursion = [
+        ordered_recursion[i]
+        for i in range(len(ordered_recursion))
+        if i == ordered_recursion.index(ordered_recursion[i])
+    ]
+    ordered_rpt_items, counter_df = recurse_down_order(
+        attrib, group_by_list=ordered_recursion, depth=0, counter=0
+    )
+    rslt = reduce(
+        lambda left, right: pd.merge(
+            left, right, on=["Name"], how="outer"
+        ),
+        [ordered_rpt_items] + list_of_rpt_dfs,
+    )
+    rslt = rslt.sort_values(
+        by=["Counter", "Commitment"], ascending=[False, False]
+    )
+    columns = [
+        "DisplayName",
+        "MaxNavDate",
+        "Duration",
+        "Commitment",
+        "Nav",
+        "ITD_KsPme",
+        "ITD_DirectAlpha",
+        "ITD_GrossMultiple",
+        "ITD_GrossIrr",
+        "ITD_AnnRor",
+        "ITD_Ctr",
+        "5Y_KsPme",
+        "5Y_DirectAlpha",
+        "5Y_GrossMultiple",
+        "5Y_GrossIrr",
+        "5Y_AnnRor",
+        "5Y_Ctr",
+        "3Y_KsPme",
+        "3Y_DirectAlpha",
+        "3Y_GrossMultiple",
+        "3Y_GrossIrr",
+        "3Y_AnnRor",
+        "3Y_Ctr",
+        "TTM_AnnRor",
+        "TTM_Ctr",
+        "QTD_AnnRor",
+        "QTD_Ctr",
+    ]
+    for col in columns:
+        if col not in list(rslt.columns):
+            rslt[col] = None
+    rslt = rslt[columns]
+
+    return rslt, ordered_rpt_items
+
+def get_performance_report_dict(
         owner: str,
         list_to_iterate: List[List[str]],
         full_cfs: pd.DataFrame,
@@ -96,137 +214,31 @@ def get_twror_by_industry_rpt(
     ror_ctr_melted = pivot_trailing_period_df(ror_ctr_df)
     ks_pme_melted = pivot_trailing_period_df(ks_pme)
     direct_alpha_melted = pivot_trailing_period_df(direct_alpha)
-    irr_melted = pivot_trailing_period_df(
-        horizon_irr.rename(columns={"NoObs": "Period"})
-    )
-    multiple_melted = pivot_trailing_period_df(
-        horizon_multiple.rename(columns={"NoObs": "Period"})
-    )
+    irr_melted = pivot_trailing_period_df(horizon_irr)
+    multiple_melted = pivot_trailing_period_df(horizon_multiple)
 
     # report specific formatting
-    attrib = full_cfs[_attributes_needed].drop_duplicates()
-    attrib["Portfolio"] = owner
-
-    for group in range(0, len(list_to_iterate)):
-        attrib["Group" + str(group)] = attrib.apply(
-            lambda x: "_".join(
-                [str(x[i]) for i in list_to_iterate[group]]
-            ),
-            axis=1,
-        )
-    attrib = attrib.sort_values(
-        [
-            col_name
-            for col_name in attrib.columns[
-                attrib.columns.str.contains("Group")
-            ]
-        ]
-    )
-
-    if "PredominantSector" in attrib.columns:
-        attrib.PredominantSector = attrib.PredominantSector.str.replace(
-            "FUNDS-", ""
-        )
-        attrib.PredominantSector = attrib.PredominantSector.str.replace(
-            "COS-", ""
-        )
-    if "PredominantRealizationTypeCategory" in attrib.columns:
-        attrib.PredominantRealizationTypeCategory = (
-            attrib.PredominantRealizationTypeCategory.str.replace(
-                "Realized & Partially/Substantially Realized",
-                "Realized & Partial",
-            )
-        )
-        attrib.PredominantRealizationTypeCategory = np.where(
-            attrib.PredominantRealizationTypeCategory.isnull(),
-            "Not Tagged",
-            attrib.PredominantRealizationTypeCategory,
-        )
-
-    if "PredominantInvestmentType" in attrib.columns:
-        attrib["Order"] = np.select(
-            [
-                (attrib.PredominantInvestmentType == "Primary Fund"),
-                (attrib.PredominantInvestmentType == "Secondary"),
-                (
-                    attrib.PredominantInvestmentType
-                    == "Co-investment/Direct"
-                ),
-            ],
-            [1, 2, 3],
-        )
-        attrib = attrib.sort_values("Order")
-
-    ordered_recursion = [
-        item for sublist in list_to_iterate for item in sublist
+    list_of_rpt_dfs = [
+        commitment_df,
+        holding_period_df,
+        max_nav_date,
+        nav_df,
+        irr_melted,
+        multiple_melted,
+        ks_pme_melted,
+        direct_alpha_melted,
+        ror_ctr_melted,
     ]
-    ordered_recursion = [
-        ordered_recursion[i]
-        for i in range(len(ordered_recursion))
-        if i == ordered_recursion.index(ordered_recursion[i])
-    ]
-    ordered_rpt_items, counter_df = recurse_down_order(
-        attrib, group_by_list=ordered_recursion, depth=0, counter=0
-    )
-    rslt = reduce(
-        lambda left, right: pd.merge(
-            left, right, on=["Name"], how="outer"
-        ),
-        [
-            ordered_rpt_items,
-            commitment_df,
-            holding_period_df,
-            max_nav_date,
-            nav_df,
-            irr_melted,
-            multiple_melted,
-            ks_pme_melted,
-            direct_alpha_melted,
-            ror_ctr_melted,
-        ],
-    )
-    rslt = rslt.sort_values(
-        by=["Counter", "Commitment"], ascending=[False, False]
-    )
-
-    columns = [
-        "DisplayName",
-        "MaxNavDate",
-        "Duration",
-        "Commitment",
-        "Nav",
-        "ITD_KsPme",
-        "ITD_DirectAlpha",
-        "ITD_GrossMultiple",
-        "ITD_GrossIrr",
-        "ITD_AnnRor",
-        "ITD_Ctr",
-        "5Y_KsPme",
-        "5Y_DirectAlpha",
-        "5Y_GrossMultiple",
-        "5Y_GrossIrr",
-        "5Y_AnnRor",
-        "5Y_Ctr",
-        "3Y_KsPme",
-        "3Y_DirectAlpha",
-        "3Y_GrossMultiple",
-        "3Y_GrossIrr",
-        "3Y_AnnRor",
-        "3Y_Ctr",
-        "TTM_AnnRor",
-        "TTM_Ctr",
-        "QTD_AnnRor",
-        "QTD_Ctr",
-    ]
-    for col in columns:
-        if col not in list(rslt.columns):
-            rslt[col] = None
-    rslt = rslt[columns]
-
+    formatted_rslt, ordered_rpt_items = format_performance_report(
+        list_of_rpt_dfs=list_of_rpt_dfs,
+        owner=owner,
+        list_to_iterate=list_to_iterate,
+        full_cfs=full_cfs,
+        _attributes_needed=_attributes_needed)
 
     # ordered_rpt_items layers are not dynamic. will fail if not 3 layers in this case
     input_data = {
-        "Data": rslt,
+        "Data": formatted_rslt,
         "FormatType": ordered_rpt_items[ordered_rpt_items.Layer == 1][
             ["DisplayName"]
         ].drop_duplicates(),

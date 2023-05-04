@@ -17,7 +17,7 @@ from typing import List
 from enum import Enum, auto
 import datetime as dt
 import numpy as np
-from .analytics import get_twror_by_industry_rpt
+from .analytics import get_performance_report_dict
 
 
 class PvmPerfomanceHelperSingleton(metaclass=Singleton):
@@ -313,13 +313,14 @@ class PvmPerformanceHelper(object):
             PvmPerformanceHelper.Cf_Filter_Type.CommitmentSeries,
             reporting_type,
         )
+        # was having issue getting trailing_periods property to work, temp solution
         tmp_trailing_period = {'QTD': 1,
                                'YTD': int(as_of_date.month / 3),
                                'TTM': 4,
                                '3Y': 12,
                                '5Y': 20,
                                'ITD': 'ITD'}
-        data = get_twror_by_industry_rpt(
+        data = get_performance_report_dict(
             owner=self.top_line_owner,
             list_to_iterate=self.recursion_iterate_controller,
             irr_cfs=irr_cfs,

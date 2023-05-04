@@ -1050,7 +1050,7 @@ def get_horizon_irr_df_rpt(
                 cf=fund_cf_filtered,
                 group_cols=group_cols
             )[["Name", "GrossIrr"]]
-            irr_data["NoObs"] = trailing_period
+            irr_data["Period"] = trailing_period
             result = pd.concat([result, irr_data])
 
     return result
@@ -1142,7 +1142,7 @@ def get_horizon_tvpi_df_rpt(
             multiple_df = calc_multiple(
                 fund_cf_filtered, group_cols=group_cols
             )[["Name", "GrossMultiple"]]
-            multiple_df["NoObs"] = trailing_period
+            multiple_df["Period"] = trailing_period
             result = pd.concat([result, multiple_df])
 
     return result
