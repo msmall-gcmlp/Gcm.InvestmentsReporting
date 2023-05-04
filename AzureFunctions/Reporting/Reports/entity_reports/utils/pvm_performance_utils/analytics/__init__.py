@@ -1,20 +1,19 @@
 import datetime as dt
-from typing import List, Tuple, Any
+from typing import List
 import pandas as pd
-from pandas import DataFrame
-
-from .standards import *
-
-
-def __trailing_periods(as_of_date: dt.date):
-    return {
-        "QTD": 1,
-        "YTD": int(as_of_date.month / 3),
-        "TTM": 4,
-        "3Y": 12,
-        "5Y": 20,
-        "Incep": "Incep",
-    }
+from functools import reduce
+import numpy as np
+from .standards import (
+    get_holding_periods_rpt,
+    recurse_down_order,
+    pivot_trailing_period_df,
+    get_direct_alpha_rpt,
+    get_sum_df_rpt,
+    get_ks_pme_rpt,
+    get_ror_ctr_df_rpt,
+    get_horizon_irr_df_rpt,
+    get_horizon_tvpi_df_rpt,
+)
 
 
 def format_performance_report(

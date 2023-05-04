@@ -11,7 +11,6 @@ from gcm.inv.utils.DaoUtils.query_utils import (
     filter_many,
 )
 import datetime as dt
-from functools import reduce
 
 
 def __runner() -> DaoRunner:
@@ -129,7 +128,7 @@ def get_investment_sector_benchmark(df):
         query = filter_many(
             query,
             item,
-            f"Ticker",
+            "Ticker",
             list(df_bmark_mapped.BenchmarkTicker.unique()),
         )
         return query
@@ -246,8 +245,8 @@ def get_alpha_discount_table(fund_df, fund_cf, index_prices):
     return discount_table_rslt
 
 
-def nearest(series, lookup, debug=False):
-    if debug == True:
+def nearest(series: pd.Series, lookup: dt.date, debug=False):
+    if debug:
         print(
             "lookup: "
             + str(lookup)
@@ -630,7 +629,7 @@ def KS_PME(
         elif cf["Type"] == "Capital Call":
             sum_fv_calls = sum_fv_calls + abs(cf["Amount"]) / index_value
             # Now, let us also consider the nav
-    if auto_NAV == True:
+    if auto_NAV:
         # Let us find the nav
         NAV_record = (
             df_cf[df_cf["Type"] == "Value"]

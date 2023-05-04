@@ -15,7 +15,7 @@ def get_position_map(
     runner: DaoRunner = Scenario.get_attribute("dao")
 
     def oper(query: Query, item: dict[str, DeclarativeMeta]):
-        query = filter_many(query, item, f"PositionId", position_list)
+        query = filter_many(query, item, "PositionId", position_list)
         query = query.with_entities(
             item.PositionId, item.AssetId, item.InvestmentId
         )

@@ -1,7 +1,6 @@
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain import (
     pd,
 )
-from gcm.inv.utils.DaoUtils.query_utils import filter_many
 from typing import List
 from gcm.inv.scenario import Scenario, DaoRunner
 from gcm.inv.utils.DaoUtils.query_utils import (
@@ -18,12 +17,12 @@ def get_ilevel_cfs(os_list: List[str]) -> pd.DataFrame:
     assert runner is not None
 
     def oper(query: Query, item: DeclarativeMeta):
-        query = filter_many(query, item, f"OwnerName", os_list)
+        query = filter_many(query, item, "OwnerName", os_list)
         # TODO: handle aggregate_interval and scenario for projected CFs
         return query
 
     p = {
-        "table": f"vExtendedCollapsedCashflows",
+        "table": "vExtendedCollapsedCashflows",
         "schema": "iLevel",
         "operation": lambda query, items: oper(query, items),
     }
