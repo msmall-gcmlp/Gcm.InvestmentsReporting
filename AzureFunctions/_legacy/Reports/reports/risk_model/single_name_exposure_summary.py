@@ -203,7 +203,6 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         )
         return result
 
-
     def build_single_name_summary(self, usage_limit=0.03):
         single_name = self.get_single_nam_equity_exposure(investment_group_id=self._inv_group_ids,
                                                           as_of_date=self._as_of_date)
