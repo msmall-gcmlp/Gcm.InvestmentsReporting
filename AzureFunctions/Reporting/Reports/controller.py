@@ -17,6 +17,9 @@ from .entity_reports.investment_manager_reports.pvm_manager_trackrecord_report i
 from .entity_reports.investment_reports.pvm_investment_trackrecord_report import (
     PvmInvestmentTrackRecordReport,
 )
+from .entity_reports.xentity_reports.pvm_portfolio_performance_report import (
+    PvmPerformanceBreakoutReport,
+)
 from .report_names import ReportNames
 from ..core.report_structure import (
     ReportStructure,
@@ -48,6 +51,8 @@ def get_report_class_by_name(name: ReportNames):
         return PvmManagerTrackRecordReport
     if name == ReportNames.PvmInvestmentTrackRecordReport:
         return PvmInvestmentTrackRecordReport
+    if name == ReportNames.PvmPerformanceBreakoutReport:
+        return PvmPerformanceBreakoutReport
     else:
         raise NotImplementedError()
 

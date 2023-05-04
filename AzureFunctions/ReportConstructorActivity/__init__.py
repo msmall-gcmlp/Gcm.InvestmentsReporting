@@ -57,6 +57,8 @@ class ReportConstructorActivity(BaseActivity):
         # TODO: speed this up and make better
         frequency_type: FrequencyType = Scenario.get_attribute("frequency")
         frequencies: List[Frequency] = available_metas.frequencies
+        # set default to first by definition
+        final_freq = frequencies[0]
         for f in frequencies:
             if BusinessCalendar().is_business_day(as_of_date, f.calendar):
                 final_freq = Frequency(frequency_type, f.calendar)
@@ -85,7 +87,7 @@ class ReportConstructorActivity(BaseActivity):
 
     def activity(self, **kwargs):
         [report_structure, meta] = self.construct_meta()
-        validate_meta(report_meta=meta, report_structure=report_structure)
+        validate_meta(report_meta=meta, report_structure=report_structure, strict=False)
         report: ReportStructure = report_structure(meta)
         j = report.to_json()
         dao: DaoRunner = Scenario.get_attribute("dao")
