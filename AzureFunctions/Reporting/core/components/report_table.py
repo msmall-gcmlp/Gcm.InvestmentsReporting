@@ -1,7 +1,6 @@
 from .report_component_base import (
     ReportComponentBase,
     ReportComponentType,
-    SerializableBase,
 )
 import pandas as pd
 import json
@@ -20,21 +19,9 @@ class ReportTable(ReportComponentBase):
             render_params = ReportTable.ReportTableRenderParams()
             self.render_params = render_params
 
-    class ReportTableRenderParams(SerializableBase):
+    class ReportTableRenderParams(ReportComponentBase.RendererParams):
         def __init__(self, trim_range=False):
             self.trim_range = trim_range
-
-        def to_dict(self, **kwargs) -> dict:
-            d = {}
-            d["trim_range"] = self.trim_range
-            return d
-
-        @staticmethod
-        def from_dict(d: dict):
-            if d is not None and len(d) > 0:
-                trim: bool = d["trim_range"]
-                return ReportTable.ReportTableRenderParams(trim)
-            return None
 
     @property
     def component_type(self) -> ReportComponentType:
