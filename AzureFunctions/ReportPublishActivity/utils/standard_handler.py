@@ -16,6 +16,7 @@ from ...utils.conversion_tools.combine_excel import copy_sheet
 from typing import List
 from ...utils.conversion_tools.convert_excel_to_pdf import convert
 import io
+from ...Reporting.core.components.report_worksheet import ReportWorksheet
 
 
 def get_template(
@@ -33,6 +34,27 @@ def get_template(
         TabularDataOutputTypes.ExcelWorkBook, params
     )
     return excel
+
+
+def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
+    # to do: handle all the permutation combinations of a worksheet rendering
+    # need to decide if we always need to wrap tables in a worksheet.
+
+    this_sheet_name = sheet.worksheet_name
+    assert this_sheet_name is not None
+
+    # TODO: David to tackle this as well
+    # check if rendering settings are not empty:
+    if bool(sheet.render_params.hide_columns):
+        raise NotImplementedError()
+    if bool(sheet.render_params.print_region):
+        raise NotImplementedError()
+
+    # if any embedded tables in a worksheet
+    if len(sheet.report_tables) > 0:
+        for t in sheet.report_tables:
+            wb = print_table_component(wb, t)
+    return wb
 
 
 def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
@@ -74,6 +96,8 @@ def generate_workbook(handler: ReportWorkBookHandler) -> Workbook:
     wb = get_template(handler.template_location)
     for table in handler.report_tables:
         wb = print_table_component(wb, table)
+    for ws in handler.report_sheets:
+        render_worksheet(wb, ws)
     return wb
 
 
