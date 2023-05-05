@@ -19,6 +19,9 @@ from ..utils.pvm_track_record.data_handler.pvm_track_record_handler import (
     TrackRecordHandler,
 )
 from functools import cached_property
+from ....core.components.report_workbook_handler import (
+    ReportWorkBookHandler,
+)
 
 
 class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
@@ -106,4 +109,10 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
                 pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
             ),
         ]
-        return tables
+        return [
+            ReportWorkBookHandler(
+                f"{self.manager_name}_{self.idw_pvm_tr_id}_Report",
+                tables,
+                self.excel_template_location,
+            )
+        ]

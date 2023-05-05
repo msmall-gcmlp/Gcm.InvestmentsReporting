@@ -16,7 +16,9 @@ import pandas as pd
 from ...report_names import ReportNames
 from gcm.inv.scenario import Scenario
 import datetime as dt
-
+from ....core.components.report_workbook_handler import (
+    ReportWorkBookHandler,
+)
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=AggregatedPortolioFundAttributeReport&frequency=Monthly&save=True&aggregate_interval=MTD&entity_domain='Portfolio'
 
@@ -76,12 +78,18 @@ class SampleArsPortfolioReport(ReportStructure):
             print("wooo!")
         assert dao is not None
         return [
-            ReportTable(
-                "MyComponent",
-                pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
-            ),
-            ReportTable(
-                "MyComponent_2",
-                pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
-            ),
+            ReportWorkBookHandler(
+                "testing",
+                [
+                    ReportTable(
+                        "MyComponent",
+                        pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
+                    ),
+                    ReportTable(
+                        "MyComponent_2",
+                        pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
+                    ),
+                ],
+                self.excel_template_location,
+            )
         ]

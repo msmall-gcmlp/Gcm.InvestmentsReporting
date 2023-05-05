@@ -17,7 +17,7 @@ class ReportTable(ReportComponentBase):
         self.df = df
         if render_params is None:
             render_params = ReportTable.ReportTableRenderParams()
-            self.render_params = render_params
+        self.render_params = render_params
 
     class ReportTableRenderParams(ReportComponentBase.RendererParams):
         def __init__(self, trim_range=False):
@@ -29,7 +29,7 @@ class ReportTable(ReportComponentBase):
 
     @staticmethod
     def from_dict(d: dict, **kwargs) -> "ReportTable":
-        name = (d["component_name"],)
+        name = d["component_name"]
         df = pd.read_json(d["df"])
         r: ReportTable.ReportTableRenderParams = None
         if "renderer" in d:

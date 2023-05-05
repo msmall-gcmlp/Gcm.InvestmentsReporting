@@ -1,6 +1,7 @@
 from .report_component_base import ReportComponentBase, ReportComponentType
 from .report_table import ReportTable
 from .report_workbook_handler import ReportWorkBookHandler
+from .report_worksheet import ReportWorksheet
 
 
 def get_component_by_type(t: ReportComponentType) -> ReportComponentBase:
@@ -8,6 +9,8 @@ def get_component_by_type(t: ReportComponentType) -> ReportComponentBase:
         return ReportTable
     if t == ReportComponentType.ReportWorkBookHandler:
         return ReportWorkBookHandler
+    if t == ReportComponentType.ReportWorksheet:
+        return ReportWorksheet
 
 
 def convert_component_from_dict(i: dict) -> ReportComponentBase:

@@ -7,6 +7,7 @@ from ..serializable_base import SerializableBase
 class ReportComponentType(ExtendedEnum):
     ReportTable = auto()
     ReportWorkBookHandler = auto()
+    ReportWorksheet = auto()
 
 
 class ReportComponentBase(SerializableBase):

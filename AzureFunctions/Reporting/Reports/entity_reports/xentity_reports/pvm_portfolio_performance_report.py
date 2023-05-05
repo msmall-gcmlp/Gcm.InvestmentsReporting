@@ -21,6 +21,9 @@ from ..utils.pvm_performance_utils.pvm_performance_helper import (
 )
 from gcm.inv.scenario import Scenario
 import datetime as dt
+from ....core.components.report_workbook_handler import (
+    ReportWorkBookHandler,
+)
 
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-12-31&ReportName=PvmPerformanceBreakoutReport&frequency=Quarterly&save=True&aggregate_interval=Multi&EntityDomainTypes=Portfolio&EntityNames=[%22The%20Consolidated%20Edison%20Pension%20Plan%20Master%20Trust%20-%20GCM%20PE%20Account%22]
@@ -57,7 +60,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             ],
         )
 
-    def assign_components(self):
+    def assign_components(self) -> List[ReportWorkBookHandler]:
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
         domain = self.report_meta.entity_domain
         entity_info = self.report_meta.entity_info
@@ -69,4 +72,9 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         for k, v in final_data.items():
             this_table = ReportTable(k, v)
             tables.append(this_table)
-        return tables
+        workbook = ReportWorkBookHandler(
+            f"{self.report_meta.entity_domain.name}_Perf",
+            tables,
+            self.excel_template_location,
+        )
+        return [workbook]

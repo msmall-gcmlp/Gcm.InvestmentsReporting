@@ -16,9 +16,13 @@ from .....core.components.report_table import ReportTable
 from _legacy.Reports.reports.brinson_based_attribution.bba_report import (
     BbaReport,
 )
-
+from .....core.components.report_workbook_handler import (
+    ReportWorkBookHandler,
+)
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ....report_names import ReportNames
+from typing import List
+
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=AggregatedPortolioFundAttributeReport&frequency=Monthly&save=True
 
@@ -59,7 +63,7 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
     def report_name_metadata(self):
         return "ARS Portfolio Fund Attributes"
 
-    def assign_components(self):
+    def assign_components(self) -> List[ReportWorkBookHandler]:
         with Scenario(
             runner=Scenario.get_attribute("dao"),
         ).context():
@@ -84,4 +88,8 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
             final = []
             for k, v in d.items():
                 final.append(ReportTable(k, v))
-            return final
+            return [
+                ReportWorkBookHandler(
+                    "BBA_Test", final, self.excel_template_location
+                )
+            ]

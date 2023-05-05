@@ -20,6 +20,7 @@ from ..utils.pvm_track_record.base_pvm_tr_report import (
     BasePvmTrackRecordReport,
 )
 from functools import cached_property
+from typing import List
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
@@ -93,13 +94,7 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         )
 
         final_list = [wb_handler]
-        children_in_order = [
-            ReportWorkBookHandler(
-                k,
-                self.children_reports[k].components,
-                self.children_reports[k].excel_template_location,
-            )
-            for k in self.children_reports
-        ]
-        final_list = final_list + children_in_order
+        for k, v in self.children_reports.items():
+            components: List[ReportWorkBookHandler] = v.components
+            final_list = final_list + components
         return final_list
