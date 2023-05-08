@@ -47,7 +47,7 @@ class ReportPublishActivity(BaseActivity):
                 report_structure=report_structure, print_pdf=True
             )
             params_vals.append(output)
-        return params_vals
+        return json.dumps(params_vals)
 
 
 def main(context):

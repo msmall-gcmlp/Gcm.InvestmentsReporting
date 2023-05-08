@@ -1,4 +1,3 @@
-import json
 from gcm.inv.scenario import Scenario, DaoRunner
 from gcm.Dao.DaoRunner import DaoSource
 from Reporting.core.report_structure import ReportStructure
@@ -15,7 +14,6 @@ from .standard_handler import (
 
 
 def print(report_structure: ReportStructure, print_pdf: bool = True):
-    params_vals = []
     dao: DaoRunner = Scenario.get_attribute("dao")
     assert report_structure is not None
     [params, source] = report_structure.save_params()
@@ -40,13 +38,9 @@ def print(report_structure: ReportStructure, print_pdf: bool = True):
             "metadata",
         ]
     }
-    params_vals.append(params)
     known_components: List[
         ReportWorkBookHandler
     ] = report_structure.components
-    assert all(
-        [type(x) == ReportWorkBookHandler for x in known_components]
-    )
     wbs: List[Workbook] = []
     for k in known_components:
         wb = generate_workbook(k)
@@ -60,4 +54,4 @@ def print(report_structure: ReportStructure, print_pdf: bool = True):
         Scenario.get_attribute("save"),
         print_pdf,
     )
-    return json.dumps(params_vals)
+    return params
