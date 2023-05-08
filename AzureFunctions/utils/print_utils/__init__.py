@@ -45,7 +45,7 @@ def print(report_structure: ReportStructure, print_pdf: bool = True):
     for k in known_components:
         wb = generate_workbook(k)
         wbs.append(wb)
-    final_wb = merge_files(wbs)
+    final_wb: Workbook = merge_files(wbs) if len(wbs) > 1 else wbs[0]
     print_excel_report(
         final_wb,
         dao,
