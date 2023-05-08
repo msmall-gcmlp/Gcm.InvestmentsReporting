@@ -219,6 +219,7 @@ class ReportStructure(SerializableBase):
         ]
         return "_".join(s)
 
+    @cached_property
     def report_file_xlsx_name(self):
         file_name = self.base_file_name
         file_name = f"{file_name}.xlsx"
@@ -228,6 +229,7 @@ class ReportStructure(SerializableBase):
     def available_metas(cls, **kwargs) -> AvailableMetas:
         raise NotImplementedError()
 
+    @cached_property
     def save_params(self) -> tuple[dict, DaoSource]:
         date: dt.date = Scenario.get_attribute("as_of_date")
         date_str = date.strftime("%Y_%m_%d")
@@ -251,7 +253,7 @@ class ReportStructure(SerializableBase):
                 sources=self.report_meta.type.name,
                 entity=date_str,
                 path=[
-                    self.report_file_xlsx_name(),
+                    self.report_file_xlsx_name,
                 ],
             ),
             DaoSource.ReportingStorage,

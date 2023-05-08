@@ -19,6 +19,7 @@ from Reporting.core.report_structure import (
     FrequencyType,
     ReportType,
     ReportConsumer,
+    Calendar
 )
 from utils.print_utils import print
 
@@ -75,7 +76,38 @@ class TestPerformanceBreakDown(object):
                     ),
                     frequency=Frequency(
                         FrequencyType.Once,
-                        Scenario.get_attribute("as_of_date"),
+                        Calendar.AllDays
+                    ),
+                    entity_domain=domain,
+                    entity_info=info,
+                )
+            )
+            output = print(report_structure=this_report, print_pdf=False)
+            assert output is not None
+
+    def test_render_single_mgr_report(self):
+        as_of_date = dt.date(2022, 12, 31)
+        with Scenario(
+            as_of_date=as_of_date,
+            aggregate_interval=AggregateInterval.ITD,
+            save=True,
+        ).context():
+            mgr_name = "Trive Capital Management, LLC"
+            domain = EntityDomainTypes.InvestmentManager
+            info = TestPerformanceBreakDown.get_entity(
+                domain=domain, name=mgr_name
+            )
+            this_report = PvmPerformanceBreakoutReport(
+                ReportMeta(
+                    type=ReportType.Performance,
+                    interval=Scenario.get_attribute("aggregate_interval"),
+                    consumer=ReportConsumer(
+                        horizontal=[ReportConsumer.Horizontal.IC],
+                        vertical=ReportConsumer.Vertical.PEREI,
+                    ),
+                    frequency=Frequency(
+                        FrequencyType.Once,
+                        Calendar.AllDays
                     ),
                     entity_domain=domain,
                     entity_info=info,

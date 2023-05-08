@@ -16,7 +16,7 @@ from .standard_handler import (
 def print(report_structure: ReportStructure, print_pdf: bool = True):
     dao: DaoRunner = Scenario.get_attribute("dao")
     assert report_structure is not None
-    [params, source] = report_structure.save_params()
+    [params, source] = report_structure.save_params
 
     # TODO: Not sure why this happens with ReportingStorage
     f_s = "filesystem_name"
