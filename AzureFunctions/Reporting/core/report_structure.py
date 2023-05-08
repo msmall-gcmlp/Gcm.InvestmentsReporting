@@ -15,6 +15,7 @@ from gcm.inv.utils.date.Frequency import Frequency, FrequencyType, Calendar
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain.entity_domain_types import (
     EntityDomainTypes,
 )
+import re
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain import Standards
 import json
 from gcm.inv.scenario import Scenario
@@ -197,6 +198,9 @@ class ReportStructure(SerializableBase):
                     if domain in ReportStructure._display_mapping_dict
                     else domain.name.upper()
                 )
+                # Keep alpha numeric and spaces
+                regex = re.compile("[^A-Za-z0-9 ]+")
+                entity_name = regex.sub("", entity_name)
             else:
                 raise RuntimeError(
                     "More than one entity. Can't construct file name"
