@@ -7,16 +7,16 @@ from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
 from openpyxl.worksheet.worksheet import Worksheet
 from gcm.Dao.DaoRunner import DaoSource
 from openpyxl import Workbook
-from ...utils.conversion_tools.excel_io import ExcelIO
-from ...Reporting.core.components.report_table import ReportTable
-from ...Reporting.core.components.report_workbook_handler import (
+from ..conversion_tools.excel_io import ExcelIO
+from Reporting.core.components.report_table import ReportTable
+from Reporting.core.components.report_workbook_handler import (
     ReportWorkBookHandler,
 )
-from ...utils.conversion_tools.combine_excel import copy_sheet
+from ..conversion_tools.combine_excel import copy_sheet
 from typing import List
-from ...utils.conversion_tools.convert_excel_to_pdf import convert
+from ..conversion_tools.convert_excel_to_pdf import convert
 import io
-from ...Reporting.core.components.report_worksheet import ReportWorksheet
+from Reporting.core.components.report_worksheet import ReportWorksheet
 
 
 def get_template(
@@ -108,6 +108,7 @@ def print_excel_report(
     source: DaoSource,
     params: dict,
     save: bool,
+    print_pdf: bool = True,
 ) -> dict:
     if save:
         wb_stream = io.BytesIO()

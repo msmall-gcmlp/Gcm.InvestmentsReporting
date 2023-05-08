@@ -20,9 +20,7 @@ from Reporting.core.report_structure import (
     ReportType,
     ReportConsumer,
 )
-from utils.conversion_tools.report_structure_to_excel import (
-    save_report_structure_to_excel_return_virtual_book,
-)
+from utils.print_utils import print
 
 
 class TestPerformanceBreakDown(object):
@@ -83,10 +81,5 @@ class TestPerformanceBreakDown(object):
                     entity_info=info,
                 )
             )
-            template = this_report.get_template()
-            virtual_workbook = (
-                save_report_structure_to_excel_return_virtual_book(
-                    template, this_report, Scenario.get_attribute("save")
-                )
-            )
-            assert virtual_workbook is not None
+            output = print(report_structure=this_report, print_pdf=False)
+            assert output is not None
