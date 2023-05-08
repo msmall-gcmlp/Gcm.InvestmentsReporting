@@ -13,6 +13,7 @@ from .standards import (
     get_ror_ctr_df_rpt,
     get_horizon_irr_df_rpt,
     get_horizon_tvpi_df_rpt,
+    get_dpi_df_rpt
 )
 
 
@@ -107,6 +108,7 @@ def format_performance_report(
         "ITD_DirectAlpha",
         "ITD_GrossMultiple",
         "ITD_GrossIrr",
+        "GrossDpi",
         "ITD_AnnRor",
         "ITD_Ctr",
         "5Y_KsPme",
@@ -186,6 +188,11 @@ def get_performance_report_dict(
         _attributes_needed=_attributes_needed,
         _trailing_periods=_trailing_periods,
     )
+    dpi_rslt = get_dpi_df_rpt(
+        df=irr_cfs,
+        list_to_iterate=list_to_iterate,
+        _attributes_needed=_attributes_needed,
+    )
 
     commitment_df = get_sum_df_rpt(
         commitment_df, list_to_iterate, "Commitment"
@@ -230,6 +237,7 @@ def get_performance_report_dict(
         ks_pme_melted,
         direct_alpha_melted,
         ror_ctr_melted,
+        dpi_rslt
     ]
     formatted_rslt, ordered_rpt_items = format_performance_report(
         list_of_rpt_dfs=list_of_rpt_dfs,

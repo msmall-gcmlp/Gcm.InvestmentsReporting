@@ -1160,6 +1160,18 @@ def get_horizon_tvpi_df_rpt(
 
     return result
 
+def get_dpi_df_rpt(
+    df: pd.DataFrame,
+    list_to_iterate: List[List[str]],
+    _attributes_needed: List[str]
+) -> pd.DataFrame:
+    dpi_df = pd.concat(
+        [
+            calc_dpi(df, group_cols=i)
+            for i in list_to_iterate
+        ]
+    )
+    return dpi_df
 
 def calc_multiple(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
 
@@ -1194,6 +1206,37 @@ def calc_multiple(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
         )
     return multiple
 
+def calc_dpi(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
+    # all funds/deals in cfs dataframe are what the result will reflect (i.e. do filtering beforehand)
+    if len(cf) == 0:
+        return pd.DataFrame(columns=["Name", type + "Dpi"])
+    if group_cols is None:
+        dpi = cf[
+            cf.TransactionType.isin(["Distributions"])
+        ].BaseAmount.sum() / abs(
+            cf[cf.TransactionType.isin(["Contributions"])].BaseAmount.sum()
+        )
+    else:
+        dpi = (
+            cf[
+                cf.TransactionType.isin(
+                    ["Distributions", "Net Asset Value"]
+                )
+            ]
+            .groupby(group_cols)
+            .BaseAmount.sum()
+            / cf[cf.TransactionType.isin(["Contributions"])]
+            .groupby(group_cols)
+            .BaseAmount.sum()
+            .abs()
+        )
+        dpi = dpi.reset_index().rename(
+            columns={"BaseAmount": type + "Dpi"}
+        )
+        dpi["Name"] = dpi.apply(
+            lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
+        )
+    return dpi
 
 def get_sum_df_rpt(
     df: pd.DataFrame, list_to_iterate: List[List[str]], sum_col: str

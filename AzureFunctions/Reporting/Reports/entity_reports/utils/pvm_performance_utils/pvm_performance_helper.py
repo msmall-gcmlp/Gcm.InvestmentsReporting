@@ -11,6 +11,7 @@ from .helpers import (
 from .helpers.singleton_helpers import (
     get_all_os_for_all_portfolios,
     get_all_deal_attributes,
+    get_all_manager_holdings
 )
 from gcm.inv.utils.misc.table_cache_base import Singleton
 from typing import List
@@ -30,6 +31,10 @@ class PvmPerfomanceHelperSingleton(metaclass=Singleton):
     @cached_property
     def all_operational_series(self):
         return get_all_os_for_all_portfolios()
+
+    @cached_property
+    def all_manager_holdings(self):
+        return get_all_manager_holdings()
 
     @cached_property
     def usd_conversion_table(self) -> pd.DataFrame:
@@ -66,6 +71,9 @@ class PvmPerformanceHelper(object):
         # TODO: below is auto converted to USD. Make it more dynamic
         raw_df = self.converted_usd_ilevel_cfs
         raw_df = raw_df[raw_df.TransactionDate <= as_of_date]
+        if self.entity_domain == EntityDomainTypes.InvestmentManager:
+            raw_df = raw_df[raw_df.InvestmentName.isin(self.related_mgr_holdings.HoldingName)]
+            raw_df = raw_df[raw_df.InvestmentName != 'Peak Rock Capital Credit Fund II LP']
         max_nav_date = (
             raw_df[raw_df.TransactionType == "Net Asset Value"]
             .groupby(["OwnerName", "InvestmentName"])
@@ -200,7 +208,32 @@ class PvmPerformanceHelper(object):
                     )
                 ]
             elif self.entity_domain == EntityDomainTypes.InvestmentManager:
-                raise NotImplementedError()
+                df = PvmPerfomanceHelperSingleton().all_manager_holdings[
+                    PvmPerfomanceHelperSingleton().all_manager_holdings[f"{self.entity_domain.name}Name"].isin(
+                        self.entity_info[
+                            EntityStandardNames.EntityName
+                        ].to_list()
+                    )
+                ]
+            setattr(self, __name, df)
+        return getattr(self, __name, None)
+
+    @property
+    def related_mgr_holdings(self) -> pd.DataFrame:
+        __name = "__related_mgr_holdings"
+        _item = getattr(self, __name, None)
+        if _item is None:
+            # do work to get series
+            df: pd.DataFrame = None
+            all_mgrs = PvmPerfomanceHelperSingleton().all_manager_holdings
+            if self.entity_domain == EntityDomainTypes.InvestmentManager:
+                df = all_mgrs[
+                    all_mgrs.InvestmentManagerName.isin(
+                        self.entity_info[
+                            EntityStandardNames.EntityName
+                        ].to_list()
+                    )
+                ]
             setattr(self, __name, df)
         return getattr(self, __name, None)
 
@@ -263,6 +296,8 @@ class PvmPerformanceHelper(object):
                     ["Portfolio"],
                     ["PredominantInvestmentType"],
                     ["PredominantInvestmentType", "PredominantSector"],
+                    ["PredominantInvestmentType", "PredominantSector", "PredominantRealizationTypeCategory"],
+                    ["Name"]
                 ]
             elif self.entity_domain == EntityDomainTypes.Portfolio:
                 list_of_items = [
@@ -287,14 +322,18 @@ class PvmPerformanceHelper(object):
 
     @property
     def attributes_needed(self) -> List[str]:
-        if self.entity_domain in [
-            EntityDomainTypes.InvestmentManager,
-            EntityDomainTypes.Portfolio,
-        ]:
+        if self.entity_domain == EntityDomainTypes.Portfolio:
             return [
                 "Name",
                 "PredominantInvestmentType",
                 "PredominantSector",
+            ]
+        elif self.entity_domain == EntityDomainTypes.InvestmentManager:
+            return [
+                "Name",
+                "PredominantInvestmentType",
+                "PredominantSector",
+                "PredominantRealizationTypeCategory"
             ]
 
     @property
@@ -310,7 +349,13 @@ class PvmPerformanceHelper(object):
                 assert len(tickers) == 1
                 setattr(self, __name, tickers[0])
             elif self.entity_domain == EntityDomainTypes.InvestmentManager:
-                raise NotImplementedError()
+                tickers = (
+                    self.related_mgr_holdings["InvestmentManagerName"]
+                        .drop_duplicates()
+                        .to_list()
+                )
+                assert len(tickers) == 1
+                setattr(self, __name, tickers[0])
         return getattr(self, __name, None)
 
     def generate_components_for_this_entity(
