@@ -3,7 +3,7 @@ import azure.functions as func
 import azure.durable_functions as df
 from ..utils.reporting_parsed_args import (
     ReportingParsedArgs,
-    EntityParsedArgs,
+    ExtendedEntityPargs,
 )
 from gcm.inv.utils.azure.durable_functions.parg_serialization import (
     serialize_pargs,
@@ -21,7 +21,7 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
     client = df.DurableOrchestrationClient(starter)
 
     function_name = req.route_params["functionName"]
-    pargs: EntityParsedArgs = None
+    pargs: ExtendedEntityPargs = None
     params = req.params
     body = req.get_body().decode()
     requestBody = json.loads("{ }" if body == "" else body)

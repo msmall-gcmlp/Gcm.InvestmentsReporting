@@ -96,8 +96,9 @@ def generate_workbook(handler: ReportWorkBookHandler) -> Workbook:
     wb = get_template(handler.template_location)
     for table in handler.report_tables:
         wb = print_table_component(wb, table)
-    for ws in handler.report_sheets:
-        render_worksheet(wb, ws)
+    if handler.report_sheets is not None:
+        for ws in handler.report_sheets:
+            wb = render_worksheet(wb, ws)
     return wb
 
 
@@ -107,7 +108,7 @@ def print_excel_report(
     source: DaoSource,
     params: dict,
     save: bool,
-):
+) -> dict:
     if save:
         wb_stream = io.BytesIO()
         wb.save(wb_stream)
@@ -122,3 +123,4 @@ def print_excel_report(
             base_params=params,
             source=source,
         )
+    return params

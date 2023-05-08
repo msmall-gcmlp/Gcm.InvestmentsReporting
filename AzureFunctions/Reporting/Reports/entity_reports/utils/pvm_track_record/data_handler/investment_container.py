@@ -7,9 +7,25 @@ class InvestmentContainerBase(object):
         pass
 
     @abstractproperty
-    def net_cashflows(self) -> pd.DataFrame:
+    def investment_cashflows(self) -> pd.DataFrame:
         raise NotImplementedError()
 
     @abstractproperty
-    def gross_cashflows(self) -> pd.DataFrame:
+    def investment_dimn(self) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    @abstractproperty
+    def investment_fact(self) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    @abstractproperty
+    def position_cashflows(self) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    @abstractproperty
+    def position_dimn(self) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    @abstractproperty
+    def asset_dimn(self) -> pd.DataFrame:
         raise NotImplementedError()

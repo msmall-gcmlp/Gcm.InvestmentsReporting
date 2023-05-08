@@ -1,7 +1,7 @@
-from gcm.inv.entityhierarchy.az_func.entity_extract_activity_base import (
-    EntityExtractActivityBase,
+from gcm.inv.dataprovider.entity_provider.azure_extension.extended_entity_activity import (
+    ExtendedEntityExtractActivity,
 )
 
 
 def main(context):
-    return EntityExtractActivityBase().execute(context=context)
+    return ExtendedEntityExtractActivity().execute(context=context)

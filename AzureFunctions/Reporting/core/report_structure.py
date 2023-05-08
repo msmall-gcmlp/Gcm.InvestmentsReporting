@@ -167,7 +167,8 @@ class ReportStructure(SerializableBase):
         EntityDomainTypes.NONE: "XENTITY",
     }
 
-    def report_file_xlsx_name(self):
+    @cached_property
+    def base_file_name(self):
         report_name = self.report_name.name
         entity_name: str = None
         entity_type_display: str = None
@@ -212,7 +213,11 @@ class ReportStructure(SerializableBase):
             ]
             if x is not None
         ]
-        file_name = f'{"_".join(s)}.xlsx'
+        return "_".join(s)
+
+    def report_file_xlsx_name(self):
+        file_name = self.base_file_name
+        file_name = f"{file_name}.xlsx"
         return file_name
 
     @abstractclassmethod
@@ -278,7 +283,7 @@ class ReportStructure(SerializableBase):
 
     @property
     def base_json_name(self) -> str:
-        return f'{self.report_name.name}_{Scenario.get_attribute("as_of_date").strftime("%Y-%m-%d")}.json'
+        return f"{self.base_file_name}.json"
 
     @property
     def components(self) -> List[ReportComponentBase]:
