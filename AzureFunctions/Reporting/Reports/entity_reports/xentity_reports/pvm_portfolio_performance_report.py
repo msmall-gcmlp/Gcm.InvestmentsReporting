@@ -26,7 +26,10 @@ from ....core.components.report_workbook_handler import (
 )
 
 
-# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-12-31&ReportName=PvmPerformanceBreakoutReport&frequency=Quarterly&save=True&aggregate_interval=Multi&EntityDomainTypes=Portfolio&EntityNames=[%22The%20Consolidated%20Edison%20Pension%20Plan%20Master%20Trust%20-%20GCM%20PE%20Account%22]
+# Run all PEREI entities:
+# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-12-31&ReportName=PvmPerformanceBreakoutReport&test=True&frequency=Quarterly&save=True&aggregate_interval=Multi&EntityDomainTypes=Portfolio&GetBy=PEREI_Entities
+# Run a single entity:
+# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-12-31&ReportName=PvmPerformanceBreakoutReport&test=True&frequency=Quarterly&save=True&aggregate_interval=Multi&EntityDomainTypes=Portfolio&EntityNames=[%22The%20Consolidated%20Edison%20Pension%20Plan%20Master%20Trust%20-%20GCM%20PE%20Account%22]
 class PvmPerformanceBreakoutReport(ReportStructure):
     def __init__(self, report_meta: ReportMeta):
         super().__init__(
