@@ -25,6 +25,10 @@ class InvestmentContainerBase(object):
     @abstractproperty
     def position_dimn(self) -> pd.DataFrame:
         raise NotImplementedError()
+    
+    @abstractproperty
+    def position_fact(self) -> pd.DataFrame:
+        raise NotImplementedError()
 
     @abstractproperty
     def asset_dimn(self) -> pd.DataFrame:

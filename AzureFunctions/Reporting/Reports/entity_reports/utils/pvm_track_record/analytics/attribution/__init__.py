@@ -33,7 +33,7 @@ class PvmTrackRecordAttribution(object):
         self, run_attribution_levels_by: List[str]
     ) -> AttributionResults:
         position_cashflows: List[pd.DataFrame] = [
-            x.gross_cashflows for x in self.investments
+            x.position_cashflows for x in self.investments
         ]
         position_cashflows = pd.concat(position_cashflows)
 
