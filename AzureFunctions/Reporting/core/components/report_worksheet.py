@@ -28,9 +28,9 @@ class ReportWorksheet(ReportComponentBase):
     class ReportWorkSheetRenderer(ReportComponentBase.RendererParams):
         def __init__(
             self,
-            hide_columns: dict = {},
-            print_region: dict = {},
-            trim_region: List[str] = None,
+            hide_columns: List[str] = None,
+            print_region: List[str] = None,
+            trim_region: str = None,
         ):
             self.hide_columns = hide_columns
             self.print_region = print_region

@@ -82,17 +82,17 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         sheet_name = 'Industry Breakdown'
         primary_df = [x.df for x in tables if x.component_name == 'Data'][0]
 
-        # trim all regions for this sheet
+        # trim rows for all regions in this sheet
         regions_to_trim: List[str] = [x.component_name for x in tables]
 
         # 20 = number of header rows before primary_df range starts
-        print_region = {sheet_name: "B1:AC" + str(len(primary_df) + 20)}
+        print_region = "B1:AC" + str(len(primary_df) + 20)
         # identifying hide_columns could be more generic, not worth it currently
         hide_columns = {}
         if primary_df.loc[0, '3Y_AnnRor'] is None:
-            hide_columns = {sheet_name: ['M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X']}
+            hide_columns = ['M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X']
         elif primary_df.loc[0, '5Y_AnnRor'] is None:
-            hide_columns = {sheet_name: ['M', 'N', 'O', 'P', 'Q', 'R']}
+            hide_columns = ['M', 'N', 'O', 'P', 'Q', 'R']
 
         this_worksheet = ReportWorksheet(
             sheet_name,

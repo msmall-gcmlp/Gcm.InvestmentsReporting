@@ -82,7 +82,6 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
 
     return wb
 
-
 def _get_sheet_new_row_heights(sheet, trim_rows, default_height=14.5):
     row_heights = pd.DataFrame()
     for i in range(0, sheet.max_row):
