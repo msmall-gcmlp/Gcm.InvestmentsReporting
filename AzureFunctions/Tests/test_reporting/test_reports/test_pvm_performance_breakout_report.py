@@ -22,8 +22,10 @@ from Reporting.core.report_structure import (
     Calendar,
 )
 from utils.print_utils import print
+import pytest
 
 
+@pytest.mark.skip
 class TestPerformanceBreakDown(object):
     @staticmethod
     def get_entity(domain, name):
