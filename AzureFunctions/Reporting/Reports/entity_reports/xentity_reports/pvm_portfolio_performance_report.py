@@ -43,7 +43,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
             sources="investmentsreporting",
             entity="exceltemplates",
-            path=["TWROR_Template_threey_test.xlsx"],
+            path=["TWROR_Template_threey.xlsx"],
         )
 
     @classmethod
@@ -77,13 +77,30 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             this_table = ReportTable(k, v)
             tables.append(this_table)
 
+        # below is this-report specific logic to derive render params
+        # other reports may use different logic
+        sheet_name = 'Industry Breakdown'
+        primary_df = [x.df for x in tables if x.component_name == 'Data'][0]
+
+        # trim all regions for this sheet
         regions_to_trim: List[str] = [x.component_name for x in tables]
 
+        # 20 = number of header rows before primary_df range starts
+        print_region = {sheet_name: "B1:AC" + str(len(primary_df) + 20)}
+        # identifying hide_columns could be more generic, not worth it currently
+        hide_columns = {}
+        if primary_df.loc[0, '3Y_AnnRor'] is None:
+            hide_columns = {sheet_name: ['M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X']}
+        elif primary_df.loc[0, '5Y_AnnRor'] is None:
+            hide_columns = {sheet_name: ['M', 'N', 'O', 'P', 'Q', 'R']}
+
         this_worksheet = ReportWorksheet(
-            "Industry Breakdown",
+            sheet_name,
             report_tables=tables,
             render_params=ReportWorksheet.ReportWorkSheetRenderer(
-                trim_region=regions_to_trim
+                trim_region=regions_to_trim,
+                print_region=print_region,
+                hide_columns=hide_columns
             ),
         )
         workbook = ReportWorkBookHandler(
