@@ -22,6 +22,7 @@ from .....core.components.report_workbook_handler import (
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
 from ....report_names import ReportNames
 from typing import List
+from .....core.components.report_worksheet import ReportWorksheet
 
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=AggregatedPortolioFundAttributeReport&frequency=Monthly&save=True
@@ -88,8 +89,9 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
             final = []
             for k, v in d.items():
                 final.append(ReportTable(k, v))
+            sheet = ReportWorksheet("Test", report_tables=final)
             return [
                 ReportWorkBookHandler(
-                    "BBA_Test", final, self.excel_template_location
+                    "BBA_Test", [sheet], self.excel_template_location
                 )
             ]

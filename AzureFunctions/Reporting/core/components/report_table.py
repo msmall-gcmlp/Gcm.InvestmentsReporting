@@ -20,8 +20,8 @@ class ReportTable(ReportComponentBase):
         self.render_params = render_params
 
     class ReportTableRenderParams(ReportComponentBase.RendererParams):
-        def __init__(self, trim_range=False):
-            self.trim_range = trim_range
+        def __init__(self):
+            pass
 
     @property
     def component_type(self) -> ReportComponentType:

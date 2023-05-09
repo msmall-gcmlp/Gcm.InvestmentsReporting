@@ -22,7 +22,6 @@ from Reporting.core.report_structure import (
     Calendar,
 )
 from utils.print_utils import print
-import pytest
 
 
 class TestPerformanceBreakDown(object):

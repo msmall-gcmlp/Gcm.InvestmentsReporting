@@ -18,7 +18,6 @@ from typing import List
 from enum import Enum, auto
 import datetime as dt
 import numpy as np
-from .analytics import get_performance_report_dict
 from functools import cached_property
 
 

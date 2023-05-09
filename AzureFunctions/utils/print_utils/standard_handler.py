@@ -52,56 +52,89 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
         raise NotImplementedError()
 
     # if any embedded tables in a worksheet
-    if len(sheet.report_tables) > 0:
+    trim_rows: List[int] = []
+    if sheet.report_tables is not None and len(sheet.report_tables) > 0:
         for t in sheet.report_tables:
             wb = print_table_component(wb, t)
+            if sheet.render_params.trim_region is not None:
+                if t.component_name in sheet.render_params.trim_region:
+                    trim_rows = trim_rows + return_trim_rows(
+                        sheet.worksheet_name, t, wb=wb
+                    )
+    if len(trim_rows) > 0:
+        # sort descending so you delete from bottom to top
+        # DONOT CHANGE
+        trim_rows.sort(reverse=True)
+        for r in trim_rows:
+            wb[sheet.worksheet_name].delete_rows(r)
     return wb
+
+
+def return_trim_rows(
+    target_sheetname: str, k: ReportTable, wb: Workbook
+) -> List[int]:
+    # the the range in question must be a rectangle
+    # (i.e. someone can't just ctrl-clicked a bunch of random cells)
+    address = list(wb.defined_names[k.component_name].destinations)
+    list_of_numbers = []
+    rows_to_delete = []
+    for sheetname, cell_address in address:
+        assert target_sheetname == sheetname
+        cell_address = cell_address.replace("$", "")
+        for el in re.split("(\d+)", cell_address):
+            try:
+                list_of_numbers.append(int(el))
+            except ValueError:
+                pass
+        # override wb:
+    rectangle_check = list(dict.fromkeys(list_of_numbers))
+    if len(rectangle_check) == 2:
+        named_range_range = range(list_of_numbers[0], list_of_numbers[1])
+        if len(named_range_range) != len(k.df):
+            # no trimming to be done as length of dataframe is the same size as
+            # named range region pass
+            rows_to_delete.extend(
+                list(
+                    range(
+                        list_of_numbers[0] + len(k.df),
+                        list_of_numbers[1] + 1,
+                    )
+                )
+            )
+            return rows_to_delete
+    else:
+        return []
+
 
 def _get_sheet_row_heights(sheet, default_height):
     import pandas as pd
+
     row_heights = pd.DataFrame()
     for i in range(0, sheet.max_row):
-        row_heights = pd.concat([row_heights,
-                                 pd.DataFrame({'row': [i + 1],
-                                               'height': [sheet.row_dimensions[i + 1]. \
-                                              height]})])
+        row_heights = pd.concat(
+            [
+                row_heights,
+                pd.DataFrame(
+                    {
+                        "row": [i + 1],
+                        "height": [sheet.row_dimensions[i + 1].height],
+                    }
+                ),
+            ]
+        )
     return row_heights.fillna(default_height)
+
 
 def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
     if k.component_name in wb.defined_names:
         address = list(wb.defined_names[k.component_name].destinations)
-        list_of_numbers = []
-        rows_to_delete = []
-        sheetname_cache = []
         for sheetname, cell_address in address:
-            sheetname_cache.append(sheetname)
             cell_address = cell_address.replace("$", "")
-            for el in re.split("(\d+)", cell_address):
-                try:
-                    list_of_numbers.append(int(el))
-                except ValueError:
-                    pass
-            #override wb:
-            wb = ExcelIO.write_dataframe_to_xl(wb, k.df, sheetname, cell_address )
-        sheetname_cache = list(set(sheetname_cache))
-        if k.render_params.trim_range:
-            assert len(sheetname_cache) == 1
-            target_sheetname = sheetname_cache[0]
-            # the the range in question must be a rectangle
-            # (i.e. someone can't just ctrl-clicked a bunch of random cells)
-            rectangle_check = list(dict.fromkeys(list_of_numbers))
-            if len(rectangle_check) == 2:
-                named_range_range = range(list_of_numbers[0], list_of_numbers[1])
-                if len(named_range_range) != len(k.df):
-                    # no trimming to be done as length of dataframe is the same size as
-                    # named range region pass
-                    rows_to_delete.extend(list(range(list_of_numbers[0] + len(k.df), list_of_numbers[1] + 1)))
-                    if len(rows_to_delete) > 0:
-                        for r in reversed(rows_to_delete):
-                            wb[target_sheetname].delete_rows(r)
-            return wb
-
-
+            # override wb:
+            wb = ExcelIO.write_dataframe_to_xl(
+                wb, k.df, sheetname, cell_address
+            )
+        return wb
 
 
 def merge_files(wb_list: List[Workbook]):
@@ -123,8 +156,6 @@ def merge_files(wb_list: List[Workbook]):
 
 def generate_workbook(handler: ReportWorkBookHandler) -> Workbook:
     wb = get_template(handler.template_location)
-    for table in handler.report_tables:
-        wb = print_table_component(wb, table)
     if handler.report_sheets is not None:
         for ws in handler.report_sheets:
             wb = render_worksheet(wb, ws)

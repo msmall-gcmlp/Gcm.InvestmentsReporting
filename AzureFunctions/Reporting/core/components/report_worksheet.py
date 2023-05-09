@@ -18,7 +18,7 @@ class ReportWorksheet(ReportComponentBase):
         super().__init__(worksheet_name)
         if render_params is None:
             render_params = ReportWorksheet.ReportWorkSheetRenderer()
-            self.render_params = render_params
+        self.render_params = render_params
         self.report_tables = report_tables
 
     @property
@@ -27,10 +27,14 @@ class ReportWorksheet(ReportComponentBase):
 
     class ReportWorkSheetRenderer(ReportComponentBase.RendererParams):
         def __init__(
-            self, hide_columns: dict = {}, print_region: dict = {}
+            self,
+            hide_columns: dict = {},
+            print_region: dict = {},
+            trim_region: List[str] = None,
         ):
             self.hide_columns = hide_columns
             self.print_region = print_region
+            self.trim_region = trim_region
 
     @property
     def component_type(self) -> ReportComponentType:

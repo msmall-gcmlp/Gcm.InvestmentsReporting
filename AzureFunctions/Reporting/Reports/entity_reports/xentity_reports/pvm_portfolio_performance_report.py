@@ -24,6 +24,7 @@ import datetime as dt
 from ....core.components.report_workbook_handler import (
     ReportWorkBookHandler,
 )
+from ....core.components.report_worksheet import ReportWorksheet
 
 
 # Run all PEREI entities:
@@ -73,13 +74,21 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         )
         tables: List[ReportTable] = []
         for k, v in final_data.items():
-            this_table = ReportTable(
-                k, v, ReportTable.ReportTableRenderParams(trim_range=True)
-            )
+            this_table = ReportTable(k, v)
             tables.append(this_table)
+
+        regions_to_trim: List[str] = [x.component_name for x in tables]
+
+        this_worksheet = ReportWorksheet(
+            "Industry Breakdown",
+            report_tables=tables,
+            render_params=ReportWorksheet.ReportWorkSheetRenderer(
+                trim_region=regions_to_trim
+            ),
+        )
         workbook = ReportWorkBookHandler(
             f"{self.report_meta.entity_domain.name}_Perf",
-            tables,
-            self.excel_template_location,
+            template_location=self.excel_template_location,
+            report_sheets=[this_worksheet],
         )
         return [workbook]
