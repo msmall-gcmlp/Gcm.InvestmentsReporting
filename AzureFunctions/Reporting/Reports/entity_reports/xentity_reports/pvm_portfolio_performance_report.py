@@ -73,7 +73,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         )
         tables: List[ReportTable] = []
         for k, v in final_data.items():
-            this_table = ReportTable(k, v)
+            this_table = ReportTable(k, v, ReportTable.ReportTableRenderParams(trim_range=True))
             tables.append(this_table)
         workbook = ReportWorkBookHandler(
             f"{self.report_meta.entity_domain.name}_Perf",

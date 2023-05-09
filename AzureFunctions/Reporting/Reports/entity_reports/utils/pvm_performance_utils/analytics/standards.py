@@ -1220,7 +1220,7 @@ def calc_dpi(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
         dpi = (
             cf[
                 cf.TransactionType.isin(
-                    ["Distributions", "Net Asset Value"]
+                    ["Distributions"]
                 )
             ]
             .groupby(group_cols)

@@ -16,6 +16,7 @@ from ..conversion_tools.combine_excel import copy_sheet
 from typing import List
 from ..conversion_tools.convert_excel_to_pdf import convert
 import io
+import re
 from Reporting.core.components.report_worksheet import ReportWorksheet
 
 
@@ -56,6 +57,15 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
             wb = print_table_component(wb, t)
     return wb
 
+def _get_sheet_row_heights(sheet, default_height):
+    import pandas as pd
+    row_heights = pd.DataFrame()
+    for i in range(0, sheet.max_row):
+        row_heights = pd.concat([row_heights,
+                                 pd.DataFrame({'row': [i + 1],
+                                               'height': [sheet.row_dimensions[i + 1]. \
+                                              height]})])
+    return row_heights.fillna(default_height)
 
 def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
     if k.component_name in wb.defined_names:
@@ -66,12 +76,33 @@ def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
             wb = ExcelIO.write_dataframe_to_xl(
                 wb, k.df, sheetname, cell_address
             )
-    if k.render_params.trim_range:
-        # TODO: David to complete
-        # in this case, we want to trim the named range
-        # as the number of rows in the DF of a given component
-        # is lmore than the range defined in the named range region
-        raise NotImplementedError()
+            if k.render_params.trim_range:
+                # TODO: David to complete
+                # in this case, we want to trim the named range
+                # as the number of rows in the DF of a given component
+                # is more than the range defined in the named range region
+                rows_to_delete = []
+                list_of_numbers = []
+                for number in re.split("(\d+)", cell_address):
+                    try:
+                        list_of_numbers.append(int(number))
+                    except ValueError:
+                        pass
+                if len(list(dict.fromkeys(list_of_numbers))) != 2:
+                    return wb
+                if len(range(list_of_numbers[0], list_of_numbers[1])) == len(k.df):
+                    return wb
+                rows_to_delete.extend(list(range(list_of_numbers[0] + len(k.df),
+                                                 list_of_numbers[1] + 1)))
+                if rows_to_delete is not None and len(rows_to_delete) > 0:
+                    for deleted_row in reversed(rows_to_delete):
+                        wb[sheetname].delete_rows(deleted_row)
+                    # have to reset row heights after deleting rows
+                    row_heights = _get_sheet_row_heights(wb[sheetname], 14.5)
+                    new_row_heights = list(row_heights[~row_heights.row.isin(rows_to_delete)].height)
+                    for i in range(0, len(new_row_heights)):
+                        # [i + 1] - because the lines are numbered starting at 1
+                        wb[sheetname].row_dimensions[i + 1].height = new_row_heights[i]
     return wb
 
 
