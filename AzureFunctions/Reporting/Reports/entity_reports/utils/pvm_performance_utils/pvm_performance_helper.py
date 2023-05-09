@@ -11,7 +11,7 @@ from .helpers import (
 from .helpers.singleton_helpers import (
     get_all_os_for_all_portfolios,
     get_all_deal_attributes,
-    get_all_manager_holdings
+    get_all_manager_holdings,
 )
 from gcm.inv.utils.misc.table_cache_base import Singleton
 from typing import List
@@ -72,8 +72,15 @@ class PvmPerformanceHelper(object):
         raw_df = self.converted_usd_ilevel_cfs
         raw_df = raw_df[raw_df.TransactionDate <= as_of_date]
         if self.entity_domain == EntityDomainTypes.InvestmentManager:
-            raw_df = raw_df[raw_df.InvestmentName.isin(self.related_mgr_holdings.HoldingName)]
-            raw_df = raw_df[raw_df.InvestmentName != 'Peak Rock Capital Credit Fund II LP']
+            raw_df = raw_df[
+                raw_df.InvestmentName.isin(
+                    self.related_mgr_holdings.HoldingName
+                )
+            ]
+            raw_df = raw_df[
+                raw_df.InvestmentName
+                != "Peak Rock Capital Credit Fund II LP"
+            ]
         max_nav_date = (
             raw_df[raw_df.TransactionType == "Net Asset Value"]
             .groupby(["OwnerName", "InvestmentName"])
@@ -209,7 +216,9 @@ class PvmPerformanceHelper(object):
                 ]
             elif self.entity_domain == EntityDomainTypes.InvestmentManager:
                 df = PvmPerfomanceHelperSingleton().all_manager_holdings[
-                    PvmPerfomanceHelperSingleton().all_manager_holdings[f"{self.entity_domain.name}Name"].isin(
+                    PvmPerfomanceHelperSingleton()
+                    .all_manager_holdings[f"{self.entity_domain.name}Name"]
+                    .isin(
                         self.entity_info[
                             EntityStandardNames.EntityName
                         ].to_list()
@@ -296,8 +305,12 @@ class PvmPerformanceHelper(object):
                     ["Portfolio"],
                     ["PredominantInvestmentType"],
                     ["PredominantInvestmentType", "PredominantSector"],
-                    ["PredominantInvestmentType", "PredominantSector", "PredominantRealizationTypeCategory"],
-                    ["Name"]
+                    [
+                        "PredominantInvestmentType",
+                        "PredominantSector",
+                        "PredominantRealizationTypeCategory",
+                    ],
+                    ["Name"],
                 ]
             elif self.entity_domain == EntityDomainTypes.Portfolio:
                 list_of_items = [
@@ -333,7 +346,7 @@ class PvmPerformanceHelper(object):
                 "Name",
                 "PredominantInvestmentType",
                 "PredominantSector",
-                "PredominantRealizationTypeCategory"
+                "PredominantRealizationTypeCategory",
             ]
 
     @property
@@ -351,8 +364,8 @@ class PvmPerformanceHelper(object):
             elif self.entity_domain == EntityDomainTypes.InvestmentManager:
                 tickers = (
                     self.related_mgr_holdings["InvestmentManagerName"]
-                        .drop_duplicates()
-                        .to_list()
+                    .drop_duplicates()
+                    .to_list()
                 )
                 assert len(tickers) == 1
                 setattr(self, __name, tickers[0])

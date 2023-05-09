@@ -19,7 +19,7 @@ from Reporting.core.report_structure import (
     FrequencyType,
     ReportType,
     ReportConsumer,
-    Calendar
+    Calendar,
 )
 from utils.print_utils import print
 
@@ -75,8 +75,7 @@ class TestPerformanceBreakDown(object):
                         vertical=ReportConsumer.Vertical.PEREI,
                     ),
                     frequency=Frequency(
-                        FrequencyType.Once,
-                        Calendar.AllDays
+                        FrequencyType.Once, Calendar.AllDays
                     ),
                     entity_domain=domain,
                     entity_info=info,
@@ -106,8 +105,7 @@ class TestPerformanceBreakDown(object):
                         vertical=ReportConsumer.Vertical.PEREI,
                     ),
                     frequency=Frequency(
-                        FrequencyType.Once,
-                        Calendar.AllDays
+                        FrequencyType.Once, Calendar.AllDays
                     ),
                     entity_domain=domain,
                     entity_info=info,

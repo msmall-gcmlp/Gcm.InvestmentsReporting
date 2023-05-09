@@ -1160,18 +1160,17 @@ def get_horizon_tvpi_df_rpt(
 
     return result
 
+
 def get_dpi_df_rpt(
     df: pd.DataFrame,
     list_to_iterate: List[List[str]],
-    _attributes_needed: List[str]
+    _attributes_needed: List[str],
 ) -> pd.DataFrame:
     dpi_df = pd.concat(
-        [
-            calc_dpi(df, group_cols=i)
-            for i in list_to_iterate
-        ]
+        [calc_dpi(df, group_cols=i) for i in list_to_iterate]
     )
     return dpi_df
+
 
 def calc_multiple(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
 
@@ -1206,6 +1205,7 @@ def calc_multiple(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
         )
     return multiple
 
+
 def calc_dpi(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
     # all funds/deals in cfs dataframe are what the result will reflect (i.e. do filtering beforehand)
     if len(cf) == 0:
@@ -1237,6 +1237,7 @@ def calc_dpi(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
             lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
         )
     return dpi
+
 
 def get_sum_df_rpt(
     df: pd.DataFrame, list_to_iterate: List[List[str]], sum_col: str

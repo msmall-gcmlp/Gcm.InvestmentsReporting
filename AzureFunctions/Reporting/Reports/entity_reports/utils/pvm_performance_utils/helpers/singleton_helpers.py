@@ -34,6 +34,7 @@ def get_all_os_for_all_portfolios() -> pd.DataFrame:
     )
     return portfolios
 
+
 def get_all_manager_holdings() -> pd.DataFrame:
     def my_dao_operation(dao, params):
         raw = """
@@ -64,6 +65,7 @@ def get_all_manager_holdings() -> pd.DataFrame:
         operation=my_dao_operation,
     )
     return manager_df
+
 
 def get_all_deal_attributes() -> pd.DataFrame:
     def my_dao_operation(dao, params):

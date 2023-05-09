@@ -13,7 +13,7 @@ from .standards import (
     get_ror_ctr_df_rpt,
     get_horizon_irr_df_rpt,
     get_horizon_tvpi_df_rpt,
-    get_dpi_df_rpt
+    get_dpi_df_rpt,
 )
 
 
@@ -237,7 +237,7 @@ def get_performance_report_dict(
         ks_pme_melted,
         direct_alpha_melted,
         ror_ctr_melted,
-        dpi_rslt
+        dpi_rslt,
     ]
     formatted_rslt, ordered_rpt_items = format_performance_report(
         list_of_rpt_dfs=list_of_rpt_dfs,
