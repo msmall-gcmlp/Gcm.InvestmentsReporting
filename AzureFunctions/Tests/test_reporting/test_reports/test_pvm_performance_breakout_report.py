@@ -81,7 +81,7 @@ class TestPerformanceBreakDown(object):
                     entity_info=info,
                 )
             )
-            output = print(report_structure=this_report, print_pdf=False)
+            output = print(report_structure=this_report, print_pdf=True)
             assert output is not None
 
     def test_render_single_mgr_report(self):

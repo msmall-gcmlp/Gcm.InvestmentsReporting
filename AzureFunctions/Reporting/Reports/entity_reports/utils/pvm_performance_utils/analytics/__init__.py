@@ -132,6 +132,7 @@ def format_performance_report(
         if col not in list(rslt.columns):
             rslt[col] = None
     rslt = rslt[columns]
+    rslt = rslt[~rslt.DisplayName.isnull()]
 
     return rslt, ordered_rpt_items
 
@@ -246,19 +247,23 @@ def get_performance_report_dict(
         full_cfs=full_cfs,
         _attributes_needed=_attributes_needed,
     )
+    # 'FormatType' named_range should be Group1,
+    # 'FormatSector' named_range should be Group2,
+    # 1:n number of groups should be dynamic
     ordered_rpt_items.reset_index(inplace=True, drop=True)
-    # ordered_rpt_items layers are not dynamic. will fail if not 3 layers in this case
-    input_data = {
-        "Data": formatted_rslt,
-        "FormatType": ordered_rpt_items[ordered_rpt_items.Layer == 1][
-            ["DisplayName"]
-        ].drop_duplicates(),
-        "FormatSector": ordered_rpt_items[ordered_rpt_items.Layer == 2][
-            ["DisplayName"]
-        ].drop_duplicates(),
-        "GroupThree": ordered_rpt_items[ordered_rpt_items.Layer == 3][
-            ["DisplayName"]
-        ].drop_duplicates(),
-    }
+    input_data = {"Data": formatted_rslt}
+
+    group_range_map = {1: 'FormatType',
+                       2: 'FormatSector',
+                       3: 'GroupThree'}
+    for group_number in ordered_rpt_items.Layer.unique():
+        if group_number == ordered_rpt_items.Layer.min() or group_number == ordered_rpt_items.Layer.max():
+            continue
+        else:
+            input_data.update(
+                {
+                    group_range_map[group_number]:
+                        ordered_rpt_items[ordered_rpt_items.Layer == group_number][
+                            ["DisplayName"]]})
 
     return input_data
