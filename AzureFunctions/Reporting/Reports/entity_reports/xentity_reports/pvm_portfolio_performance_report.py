@@ -42,7 +42,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
             sources="investmentsreporting",
             entity="exceltemplates",
-            path=["TWROR_Template_threey.xlsx"],
+            path=["TWROR_Template_threey_test.xlsx"],
         )
 
     @classmethod
