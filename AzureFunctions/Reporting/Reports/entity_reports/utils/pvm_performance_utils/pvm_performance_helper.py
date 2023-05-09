@@ -72,12 +72,29 @@ class PvmPerformanceHelper(object):
         raw_df = self.converted_usd_ilevel_cfs
         raw_df = raw_df[raw_df.TransactionDate <= as_of_date]
         if self.entity_domain == EntityDomainTypes.InvestmentManager:
-            raw_df = raw_df[raw_df.InvestmentName.isin(self.related_mgr_holdings.HoldingName)]
-            raw_df = raw_df[~raw_df.InvestmentName.isin(['Peak Rock Capital Credit Fund II LP',
-                                                        'Peak Rock Capital Credit Fund II-A LP'])]
-            raw_df = raw_df[raw_df.PredominantInvestmentType != 'Co-investment/Direct']
-            tmp_scale = pd.read_csv('C:/Tmp/pvm_mgr_multiplier.csv')
-            raw_df = raw_df.merge(tmp_scale, how='left', left_on='InvestmentName', right_on='HoldingName')
+            raw_df = raw_df[
+                raw_df.InvestmentName.isin(
+                    self.related_mgr_holdings.HoldingName
+                )
+            ]
+            raw_df = raw_df[
+                ~raw_df.InvestmentName.isin(
+                    [
+                        "Peak Rock Capital Credit Fund II LP",
+                        "Peak Rock Capital Credit Fund II-A LP",
+                    ]
+                )
+            ]
+            raw_df = raw_df[
+                raw_df.PredominantInvestmentType != "Co-investment/Direct"
+            ]
+            tmp_scale = pd.read_csv("C:/Tmp/pvm_mgr_multiplier.csv")
+            raw_df = raw_df.merge(
+                tmp_scale,
+                how="left",
+                left_on="InvestmentName",
+                right_on="HoldingName",
+            )
             assert len(raw_df[raw_df.multiplier.isnull()]) == 0
             # tmp = raw_df[raw_df.multiplier.isnull()]
             raw_df.BaseAmount = raw_df.BaseAmount * raw_df.multiplier
@@ -414,7 +431,9 @@ class PvmPerformanceHelper(object):
         #     _attributes_needed=self.attributes_needed,
         #     _trailing_periods=tmp_trailing_period,
         # )
-        data = {'df_one' : pd.DataFrame({'col1': range(0, 50)}),
-                'df_two' : pd.DataFrame({'col1': range(0, 30)}),
-                'df_three' : pd.DataFrame({'col1': range(0, 10)})}
+        data = {
+            "df_one": pd.DataFrame({"col1": range(0, 20)}),
+            "df_two": pd.DataFrame({"col1": range(0, 18)}),
+            "df_three": pd.DataFrame({"col1": range(0, 10)}),
+        }
         return data

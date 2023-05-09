@@ -95,48 +95,13 @@ def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
                 if len(named_range_range) != len(k.df):
                     # no trimming to be done as length of dataframe is the same size as
                     # named range region pass
-                    rows_to_delete.extend(list(range(list_of_numbers[0] + len(k.df), list_of_numbers[1] + 1,)))
+                    rows_to_delete.extend(list(range(list_of_numbers[0] + len(k.df), list_of_numbers[1] + 1)))
                     if len(rows_to_delete) > 0:
-                        wb[target_sheetname].delete_rows(rows_to_delete)
+                        for r in reversed(rows_to_delete):
+                            wb[target_sheetname].delete_rows(r)
             return wb
 
-# def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
-#     if k.component_name in wb.defined_names:
-#         address = list(wb.defined_names[k.component_name].destinations)
-#         for sheetname, cell_address in address:
-#             cell_address = cell_address.replace("$", "")
-#             # override wb:
-#             wb = ExcelIO.write_dataframe_to_xl(
-#                 wb, k.df, sheetname, cell_address
-#             )
-#             if k.render_params.trim_range:
-#                 # TODO: David to complete
-#                 # in this case, we want to trim the named range
-#                 # as the number of rows in the DF of a given component
-#                 # is more than the range defined in the named range region
-#                 rows_to_delete = []
-#                 list_of_numbers = []
-#                 for number in re.split("(\d+)", cell_address):
-#                     try:
-#                         list_of_numbers.append(int(number))
-#                     except ValueError:
-#                         pass
-#                 if len(list(dict.fromkeys(list_of_numbers))) != 2:
-#                     return wb
-#                 if len(range(list_of_numbers[0], list_of_numbers[1])) == len(k.df):
-#                     return wb
-#                 rows_to_delete.extend(list(range(list_of_numbers[0] + len(k.df),
-#                                                  list_of_numbers[1] + 1)))
-#                 if rows_to_delete is not None and len(rows_to_delete) > 0:
-#                     for deleted_row in reversed(rows_to_delete):
-#                         wb[sheetname].delete_rows(deleted_row)
-#                     # have to reset row heights after deleting rows
-#                     row_heights = _get_sheet_row_heights(wb[sheetname], 14.5)
-#                     new_row_heights = list(row_heights[~row_heights.row.isin(rows_to_delete)].height)
-#                     for i in range(0, len(new_row_heights)):
-#                         # [i + 1] - because the lines are numbered starting at 1
-#                         wb[sheetname].row_dimensions[i + 1].height = new_row_heights[i]
-#     return wb
+
 
 
 def merge_files(wb_list: List[Workbook]):

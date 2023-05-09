@@ -1218,11 +1218,7 @@ def calc_dpi(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
         )
     else:
         dpi = (
-            cf[
-                cf.TransactionType.isin(
-                    ["Distributions"]
-                )
-            ]
+            cf[cf.TransactionType.isin(["Distributions"])]
             .groupby(group_cols)
             .BaseAmount.sum()
             / cf[cf.TransactionType.isin(["Contributions"])]
