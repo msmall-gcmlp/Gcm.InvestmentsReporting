@@ -315,13 +315,41 @@ class ReportStructure(SerializableBase):
         gcm_target_audience = "gcm_target_audience"
         gcm_modified_date = "gcm_modified_date"
 
-    def get_entity_metadata(self) -> dict:
+    def get_reportinghub_entity_metadata(self) -> dict:
         if self.report_meta.entity_domain is not None:
             if (
                 self.report_meta.entity_info is not None
                 and type(self.report_meta.entity_info) == pd.DataFrame
             ):
-                # TODO: figure this out with team
+                # if this is a PVM MED entity (or any ARS MED entity),
+                # prioritize the MED ID as the Entity Tag
+                # If is ARS entity, establish tags in pre-defined location
+                # as given by Mark / Armando for RH integration
+                # Else
+                # Take the internal EntityId from IDW
+                available_sources_for_this_entity = list(
+                    [
+                        str(x)
+                        for x in self.report_meta.entity_info[
+                            Standards.SourceName
+                        ].unique()
+                    ]
+                )
+                if any(
+                    [
+                        x.upper() == "PVM.MED"
+                        for x in available_sources_for_this_entity
+                    ]
+                ):
+                    pass
+                elif any(
+                    [
+                        x.upper() in ["ALTSOFT.PUB", "PUB.INVESTMENTDIMN"]
+                        for x in available_sources_for_this_entity
+                    ]
+                ):
+                    pass
+
                 return None
         return None
 
@@ -370,7 +398,7 @@ class ReportStructure(SerializableBase):
                 "%Y-%m-%d"
             ),
         }
-        entity_metadata = self.get_entity_metadata()
+        entity_metadata = self.get_reportinghub_entity_metadata()
         val: dict = (
             val if entity_metadata is None else (val | entity_metadata)
         )

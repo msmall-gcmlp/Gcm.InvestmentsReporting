@@ -98,6 +98,8 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         # similarly, setting up report dictionary of df metric-to-excel column
         # would be better for determining columns to hide
         hide_columns = []
+
+        # TODO: check portfolio inception date to set these dynamically
         if primary_df.loc[0, "3Y_AnnRor"] is None:
             # hide 3Y and 5Y columns
             hide_columns = [
