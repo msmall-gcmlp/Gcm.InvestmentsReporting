@@ -38,6 +38,39 @@ def get_template(
     return excel
 
 
+def _trim_and_resize_rows(
+    trim_rows: List[int], wb: Workbook, sheet: ReportWorksheet
+) -> Workbook:
+    for r in trim_rows:
+        wb[sheet.worksheet_name].delete_rows(r)
+        # have to reset row heights after deleting rows
+        new_row_heights = _get_sheet_new_row_heights(
+            wb[sheet.worksheet_name], trim_rows, 14.5
+        )
+        for i in range(0, len(new_row_heights)):
+            # [i + 1] - because excel rows are numbered starting at 1
+            wb[sheet.worksheet_name].row_dimensions[
+                i + 1
+            ].height = new_row_heights[i]
+    return wb
+
+
+def _generate_ws_level_trim_rows(
+    wb: Workbook, sheet: ReportWorksheet
+) -> List[int]:
+    # trim_rows is a list of integers for excel rows to delete
+    # blank rows within excel named ranges are deleted
+    trim_rows = []
+    for t in sheet.report_tables:
+        if t.component_name in sheet.render_params.trim_region:
+            for j in return_trim_rows(t, wb=wb):
+                trim_rows.append(j)
+                # rows have to be deleted in descending excel row order
+    trim_rows = [x for x in set(trim_rows) if x is not None]
+    trim_rows.sort(reverse=True)
+    return trim_rows
+
+
 def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
     # to do: handle all the permutation combinations of a worksheet rendering
     # need to decide if we always need to wrap tables in a worksheet.
@@ -50,38 +83,12 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
 
     # next check format conditions
     if bool(sheet.render_params.trim_region):
-        # trim_rows is a list of integers for excel rows to delete
-        # blank rows within excel named ranges are deleted
-        # trim_rows: List[int] = [
-        #     j
-        #     for t in sheet.report_tables
-        #     for j in return_trim_rows(t, wb=wb)
-        #     if t.component_name in sheet.render_params.trim_region
-        # ]
-        trim_rows = []
-        for t in sheet.report_tables:
-            if t.component_name in sheet.render_params.trim_region:
-                for j in return_trim_rows(t, wb=wb):
-                    trim_rows.append(j)
-                    # rows have to be deleted in descending excel row order
 
-        trim_rows = [x for x in set(trim_rows) if x is not None]
-        trim_rows.sort(reverse=True)
+        trim_rows = _generate_ws_level_trim_rows(wb, sheet)
         if len(trim_rows) > 0:
-
-            # delete rows
-            for r in trim_rows:
-                wb[sheet.worksheet_name].delete_rows(r)
-
-            # have to reset row heights after deleting rows
-            new_row_heights = _get_sheet_new_row_heights(
-                wb[sheet.worksheet_name], trim_rows, 14.5
+            wb = _trim_and_resize_rows(
+                trim_rows=trim_rows, wb=wb, sheet=sheet
             )
-            for i in range(0, len(new_row_heights)):
-                # [i + 1] - because excel rows are numbered starting at 1
-                wb[sheet.worksheet_name].row_dimensions[
-                    i + 1
-                ].height = new_row_heights[i]
 
     # hide_columns is list: ['A', 'B', 'C']
     if bool(sheet.render_params.hide_columns):
