@@ -13,7 +13,7 @@ from .helpers.singleton_helpers import (
     get_all_os_for_all_portfolios,
     get_all_deal_attributes,
     get_all_manager_holdings,
-    get_burgiss_bmark
+    get_burgiss_bmark,
 )
 from gcm.inv.utils.misc.table_cache_base import Singleton
 from typing import List
@@ -77,7 +77,11 @@ class PvmPerformanceHelper(object):
         raw_df = self.converted_usd_ilevel_cfs
         raw_df = raw_df[raw_df.TransactionDate <= as_of_date]
         if self.entity_domain == EntityDomainTypes.InvestmentManager:
-            raw_df = raw_df[raw_df.InvestmentName.isin(self.related_mgr_holdings.HoldingName)]
+            raw_df = raw_df[
+                raw_df.InvestmentName.isin(
+                    self.related_mgr_holdings.HoldingName
+                )
+            ]
 
         max_nav_date = (
             raw_df[raw_df.TransactionType == "Net Asset Value"]
@@ -214,8 +218,7 @@ class PvmPerformanceHelper(object):
                 ]
             elif self.entity_domain == EntityDomainTypes.InvestmentManager:
                 df = all_mgrs[
-                    all_mgrs[f"{self.entity_domain.name}Name"]
-                    .isin(
+                    all_mgrs[f"{self.entity_domain.name}Name"].isin(
                         self.entity_info[
                             EntityStandardNames.EntityName
                         ].to_list()
@@ -321,8 +324,8 @@ class PvmPerformanceHelper(object):
 
     @property
     def trailing_periods(self, as_of_date) -> dict:
-        #TODO: make this work so not using tmp_trailing_periods
-        #TODO: also probably should use standard trailing_period enums
+        # TODO: make this work so not using tmp_trailing_periods
+        # TODO: also probably should use standard trailing_period enums
         return {
             "QTD": 1,
             "YTD": int(as_of_date.month / 3),
@@ -370,8 +373,6 @@ class PvmPerformanceHelper(object):
                 setattr(self, __name, tickers[0])
         return getattr(self, __name, None)
 
-
-
     def generate_components_for_this_entity(
         self, as_of_date: dt.date
     ) -> dict[str, pd.DataFrame]:
@@ -416,8 +417,14 @@ class PvmPerformanceHelper(object):
         )
 
         # more to do on the below
-        report_json.update({'Date': pd.DataFrame({'Date': [as_of_date]}),
-                       'PortfolioName': pd.DataFrame({'PortfolioName': [self.top_line_owner]}, ),
-                       'benchmark_df':  PvmPerfomanceHelperSingleton().benchmark_df})
+        report_json.update(
+            {
+                "Date": pd.DataFrame({"Date": [as_of_date]}),
+                "PortfolioName": pd.DataFrame(
+                    {"PortfolioName": [self.top_line_owner]},
+                ),
+                "benchmark_df": PvmPerfomanceHelperSingleton().benchmark_df,
+            }
+        )
 
         return report_json

@@ -79,9 +79,11 @@ class PvmPerformanceBreakoutReport(ReportStructure):
 
         # below is this-report specific logic to derive render params
         # other reports may use different logic
-        sheet_name = 'Industry Breakdown'
-        primary_named_range = 'Data'
-        primary_df = [x.df for x in tables if x.component_name == primary_named_range][0]
+        sheet_name = "Industry Breakdown"
+        primary_named_range = "Data"
+        primary_df = [
+            x.df for x in tables if x.component_name == primary_named_range
+        ][0]
 
         # trim rows for all ranges in this sheet
         regions_to_trim: List[str] = [x.component_name for x in tables]
@@ -96,12 +98,25 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         # similarly, setting up report dictionary of df metric-to-excel column
         # would be better for determining columns to hide
         hide_columns = []
-        if primary_df.loc[0, '3Y_AnnRor'] is None:
+        if primary_df.loc[0, "3Y_AnnRor"] is None:
             # hide 3Y and 5Y columns
-            hide_columns = ['M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X']
-        elif primary_df.loc[0, '5Y_AnnRor'] is None:
+            hide_columns = [
+                "M",
+                "N",
+                "O",
+                "P",
+                "Q",
+                "R",
+                "S",
+                "T",
+                "U",
+                "V",
+                "W",
+                "X",
+            ]
+        elif primary_df.loc[0, "5Y_AnnRor"] is None:
             # hide 5Y columns
-            hide_columns = ['M', 'N', 'O', 'P', 'Q', 'R']
+            hide_columns = ["M", "N", "O", "P", "Q", "R"]
 
         this_worksheet = ReportWorksheet(
             sheet_name,
@@ -109,7 +124,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             render_params=ReportWorksheet.ReportWorkSheetRenderer(
                 trim_region=regions_to_trim,
                 print_region=print_region,
-                hide_columns=hide_columns
+                hide_columns=hide_columns,
             ),
         )
         workbook = ReportWorkBookHandler(
