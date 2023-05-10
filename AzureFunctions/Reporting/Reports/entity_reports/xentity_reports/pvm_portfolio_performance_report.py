@@ -133,7 +133,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             sheet_name,
             report_tables=tables,
             render_params=ReportWorksheet.ReportWorkSheetRenderer(
-                trim_region=regions_to_trim,
+                # trim_region=regions_to_trim,
                 print_region=print_region,
                 hide_columns=hide_columns,
             ),
