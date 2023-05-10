@@ -151,7 +151,6 @@ def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
             )
         return wb
 
-
 def merge_files(wb_list: List[Workbook]):
     merged = wb_list[0]
     wb_count = 0
