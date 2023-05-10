@@ -13,7 +13,9 @@ from ..Reporting.Reports.controller import (
 
 
 def main(context):
-    return ExtendedEntityExtractActivity().execute(context=context)
+    return ExtendedReportSpecificEntityExtractActivity().execute(
+        context=context
+    )
 
 
 class ExtendedReportSpecificEntityExtractActivity(
@@ -29,6 +31,6 @@ class ExtendedReportSpecificEntityExtractActivity(
     def default_get(self, domain: EntityDomainProvider) -> pd.DataFrame:
         report_name = self.pargs.ReportName
         report: ReportStructure = get_report_class_by_name(report_name)
-        func = report.standard_entity_get_callable()
+        func = report.standard_entity_get_callable(domain)
         df: pd.DataFrame = func()
         return df

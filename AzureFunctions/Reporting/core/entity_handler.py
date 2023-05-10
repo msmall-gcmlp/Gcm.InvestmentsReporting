@@ -8,6 +8,9 @@ from gcm.inv.entityhierarchy.NodeHierarchy import (
 )
 import pandas as pd
 from functools import cached_property
+from gcm.inv.utils.misc.table_cache_base import Singleton
+from gcm.inv.scenario import Scenario
+from gcm.Dao.DaoRunner import DaoRunner, DaoSource
 
 
 class HierarchyHandler(object):
@@ -146,6 +149,25 @@ class EntityReportingMetadata:
             gcm_manager_fund_group_ids = "gcm_manager_fund_group_ids"
             gcm_portfolio_ids = "gcm_portfolio_ids"
 
+    class EntityMasterSourceDimn(metaclass=Singleton):
+        def __init__(self):
+            pass
+
+        @cached_property
+        def table(self) -> pd.DataFrame:
+            dao: DaoRunner = Scenario.get_attribute("dao")
+            source_table: pd.DataFrame = dao.execute(
+                source=DaoSource.InvestmentsDwh,
+                params={"table": "SourceDimn", "schema": "EntityMaster"},
+                operation=lambda d, p: d.get_data(p),
+            )[
+                [
+                    EntityStandardNames.SourceId,
+                    EntityStandardNames.SourceName,
+                ]
+            ]
+            return source_table
+
     @classmethod
     def _generate_custom_items(
         cls,
@@ -172,7 +194,19 @@ class EntityReportingMetadata:
     @classmethod
     def generate(cls, entity_info: pd.DataFrame):
         class_type = EntityReportingMetadata.gcm_entity_metadata
-
+        if EntityStandardNames.SourceName not in entity_info.columns:
+            if EntityStandardNames.SourceId in entity_info.columns:
+                mapping = (
+                    EntityReportingMetadata.EntityMasterSourceDimn().table
+                )
+                entity_info = pd.merge(
+                    entity_info,
+                    mapping,
+                    on=[EntityStandardNames.SourceId],
+                    how="left",
+                )
+            else:
+                raise RuntimeError("No Source Name!")
         grouped_on_generic_entity = entity_info.groupby(
             [
                 EntityStandardNames.EntityName,
