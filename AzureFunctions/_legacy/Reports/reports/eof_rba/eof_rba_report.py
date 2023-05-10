@@ -67,6 +67,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             "LS_EQUITY_QUALITY_GROUP",
             "LS_EQUITY_SIZE_GROUP",
             "LS_EQUITY_RESIDUAL_VOL_GROUP",
+            "LS_EQUITY_HF_CROWDING_GROUP",
             "LS_EQUITY_OTHER",
             "NON_FACTOR_SECURITY_SELECTION_PUBLICS",
             "NON_FACTOR_OUTLIER_EFFECTS",
@@ -101,6 +102,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
                 "LS_EQUITY_QUALITY_GROUP",
                 "LS_EQUITY_SIZE_GROUP",
                 "LS_EQUITY_RESIDUAL_VOL_GROUP",
+                "LS_EQUITY_HF_CROWDING_GROUP",
                 "LS_EQUITY_OTHER",
                 "NON_FACTOR",
                 "NON_FACTOR_SECURITY_SELECTION_PUBLICS",
@@ -166,6 +168,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
                 "INDUSTRY",
                 "REGION",
                 "PUBLIC_LS",
+                "LS_EQUITY_HF_CROWDING_GROUP",
                 "NON_FACTOR",
             ]
         )
@@ -188,6 +191,16 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             wide=False,
         )
 
+        decomp_hf_crowding = self._inv_group.get_average_risk_decomp_by_group(
+            start_date=self._start_date,
+            end_date=self._end_date,
+            group_type="FactorGroup4",
+            group_filter="LS_EQUITY_HF_CROWDING_GROUP",
+            frequency=Periodicity.Daily.value,
+            window=36,
+            wide=False,
+        )
+
         decomp_fg1 = decomp_fg1.pivot(
             index="FactorGroup1",
             columns="InvestmentGroupName",
@@ -198,7 +211,14 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             columns="InvestmentGroupName",
             values="AvgRiskContrib",
         )
-        decomp = pd.concat([decomp_fg1, decomp_fg2], axis=0)
+
+        decomp_hf_crowding = decomp_hf_crowding.pivot(
+            index="FactorGroup4",
+            columns="InvestmentGroupName",
+            values="AvgRiskContrib",
+        )
+
+        decomp = pd.concat([decomp_fg1, decomp_fg2, decomp_hf_crowding], axis=0)
         decomp = factors.merge(decomp, left_index=True, right_index=True, how="left")
         decomp = decomp.fillna(0)
         decomp.index = decomp.index + "_RISK_DECOMP"
@@ -371,7 +391,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         logging.info("JSON stored to DataLake for: " + "EOF_" + self._period)
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         max_col = get_column_letter(3 + input_data.get('attribution_table').shape[1])
-        print_areas = {'RBA Summary': 'B1:' + max_col + str(53)}
+        print_areas = {'RBA Summary': 'B1:' + max_col + str(55)}
         with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
@@ -444,7 +464,7 @@ if __name__ == "__main__":
         },
     )
 
-    as_of_date = dt.date(2023, 3, 31)
+    as_of_date = dt.date(2023, 4, 30)
 
     with Scenario(dao=runner, as_of_date=as_of_date, periodicity='TTM').context():
         EofReturnBasedAttributionReport().execute()
