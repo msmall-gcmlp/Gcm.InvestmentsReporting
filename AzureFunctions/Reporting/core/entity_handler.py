@@ -192,6 +192,21 @@ class EntityReportingMetadata:
             [x.upper() in source_list for x in avail_srcs_this_entity]
         )
 
+    @staticmethod
+    def __coerce_to_int(item: object, strict=True):
+        try:
+            if type(item) == float:
+                return int(float(item))
+            if type(item) == str:
+                try:
+                    return int(item)
+                except ValueError:
+                    return EntityReportingMetadata.__coerce_to_int(
+                        float(item), strict=strict
+                    )
+        except ValueError:
+            return None if strict else item
+
     @classmethod
     def generate(cls, entity_info: pd.DataFrame):
         # if this is a PVM MED entity (or any ARS MED entity),
@@ -235,25 +250,13 @@ class EntityReportingMetadata:
                 class_type.generic_entity_name: str(n[0]),
                 class_type.generic_entity_type: entity_type,
             }
+            pub = "PUB"
             pub_med_identifiers = [
-                "ALTSOFT.PUB",
-                "PUB.INVESTMENTDIMN",
+                f"ALTSOFT.{pub}",
+                f"{pub}.INVESTMENTDIMN",
             ]
-            pvm_med_sources = ["PVM.MED"]
-
-            def __coerce_to_int(item: object, strict=True):
-                try:
-                    if type(item) == float:
-                        return int(float(item))
-                    if type(item) == str:
-                        try:
-                            return int(item)
-                        except ValueError:
-                            return __coerce_to_int(
-                                float(item), strict=strict
-                            )
-                except ValueError:
-                    return None if strict else item
+            pvm_med = "PVM.MED"
+            pvm_med_sources = [pvm_med]
 
             if EntityReportingMetadata._check_is_of_type(
                 avail_srcs_this_entity, pub_med_identifiers
@@ -274,26 +277,28 @@ class EntityReportingMetadata:
                     EntityDomainTypes.InvestmentGroup.name: sub_class.gcm_manager_fund_group_ids,
                     EntityDomainTypes.Portfolio.name: sub_class.gcm_portfolio_ids,
                 }
-                coerced_dict[class_type.generic_entity_source] = "PUB"
+                coerced_dict[class_type.generic_entity_source] = pub
                 _mapped = mapping_type[entity_type]
                 coerced_dict[_mapped] = external_ids
             elif EntityReportingMetadata._check_is_of_type(
                 avail_srcs_this_entity, pvm_med_sources
             ):
                 # TODO: change when MW / AA give us intructions:
-                external_ids = [
-                    __coerce_to_int(x)
-                    for x in (
-                        EntityReportingMetadata._generate_custom_items(
-                            g, pvm_med_sources
-                        )
+                __coerce = EntityReportingMetadata.__coerce_to_int
+                external_ids = (
+                    EntityReportingMetadata._generate_custom_items(
+                        g, pvm_med_sources
                     )
-                ]
+                )
+                external_ids = [__coerce(x) for x in external_ids]
+
                 external_ids = [
-                    x for x in set(external_ids) if x is not None
+                    x
+                    for x in set(external_ids)
+                    if x is not None and isinstance(x, int)
                 ]
                 coerced_dict[class_type.generic_entity_id] = external_ids
-                coerced_dict[class_type.generic_entity_source] = "PVM.MED"
+                coerced_dict[class_type.generic_entity_source] = pvm_med
             else:
                 coerced_dict[class_type.generic_entity_id] = [int(n[1])]
                 coerced_dict[class_type.generic_entity_source] = "IDW"

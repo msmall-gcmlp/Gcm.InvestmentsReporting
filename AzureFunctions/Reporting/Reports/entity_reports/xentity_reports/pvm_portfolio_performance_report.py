@@ -95,7 +95,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         ][0]
 
         # trim rows for all ranges in this sheet
-        regions_to_trim: List[str] = [x.component_name for x in tables]
+        # regions_to_trim: List[str] = [x.component_name for x in tables]
 
         # 19 = number of excel header rows before primary_df range starts (not scalable)
         print_region = "B1:AC" + str(len(primary_df) + 19)
@@ -111,6 +111,8 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         # TODO: check portfolio inception date to set these dynamically
         if primary_df.loc[0, "3Y_AnnRor"] is None:
             # hide 3Y and 5Y columns
+            # TODO: generic:
+            #    https://stackoverflow.com/questions/16060899/alphabet-range-in-python
             hide_columns = [
                 "M",
                 "N",
