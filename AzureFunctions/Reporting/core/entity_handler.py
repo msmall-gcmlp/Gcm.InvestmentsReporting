@@ -132,3 +132,107 @@ class HierarchyHandler(object):
         )
         val = [edges, vertex, sources]
         return val
+
+
+class EntityReportingMetadata:
+    class gcm_entity_metadata:
+        generic_entity_name = "gcm_entity_name"
+        generic_entity_id = "gcm_entity_id"
+        generic_entity_type = "gcm_entity_type"
+        generic_entity_source = "gcm_entity_source"
+
+        class gcm_ars_hardcodes:
+            gcm_manager_fund_ids = "gcm_manager_fund_ids"
+            gcm_manager_fund_group_ids = "gcm_manager_fund_group_ids"
+            gcm_portfolio_ids = "gcm_portfolio_ids"
+
+    @classmethod
+    def _generate_custom_items(
+        cls,
+        g: pd.DataFrame,
+        source_tyes: List[str],
+    ) -> List[int]:
+        external_ids = g[
+            g[EntityStandardNames.SourceName].isin(source_tyes)
+        ]
+        external_ids = list(
+            external_ids[EntityStandardNames.ExternalId].unique()
+        )
+        external_ids = [int(x) for x in external_ids]
+        return external_ids
+
+    @classmethod
+    def _check_is_of_type(
+        cls, avail_srcs_this_entity: List[str], source_list: List[str]
+    ):
+        return any(
+            [x.upper() in source_list for x in avail_srcs_this_entity]
+        )
+
+    @classmethod
+    def generate(cls, entity_info: pd.DataFrame):
+        class_type = EntityReportingMetadata.gcm_entity_metadata
+
+        grouped_on_generic_entity = entity_info.groupby(
+            [
+                EntityStandardNames.EntityName,
+                EntityStandardNames.EntityId,
+                EntityStandardNames.EntityDomain,
+            ]
+        )
+        # we should only be applying to one entity at a time
+        # who knows what people are doing on ARS side - surely something hack-y
+        assert grouped_on_generic_entity.ngroups == 1
+        for n, g in grouped_on_generic_entity:
+            entity_type = str(n[2])
+            avail_srcs_this_entity = list(
+                [
+                    str(x)
+                    for x in g[EntityStandardNames.SourceName].unique()
+                ]
+            )
+            coerced_dict = {
+                class_type.generic_entity_name: str(n[0]),
+                class_type.generic_entity_type: entity_type,
+            }
+            pub_med_identifiers = [
+                "ALTSOFT.PUB",
+                "PUB.INVESTMENTDIMN",
+            ]
+            pvm_med_sources = ["PVM.MED"]
+
+            if EntityReportingMetadata._check_is_of_type(
+                avail_srcs_this_entity, pub_med_identifiers
+            ):
+                sub_class = class_type.gcm_ars_hardcodes
+                external_ids = (
+                    EntityReportingMetadata._generate_custom_items(
+                        pub_med_identifiers
+                    )
+                )
+
+                # yeesh this is messy. But this is what reporting hub requires!
+                mapping_type = {
+                    EntityDomainTypes.Investment.name: sub_class.gcm_manager_fund_ids,
+                    EntityDomainTypes.InvestmentGroup.name: sub_class.gcm_manager_fund_group_ids,
+                    EntityDomainTypes.Portfolio.name: sub_class.gcm_portfolio_ids,
+                }
+                coerced_dict[class_type.generic_entity_source] = "PUB"
+                _mapped = mapping_type[entity_type]
+                coerced_dict[_mapped] = external_ids
+            elif EntityReportingMetadata._check_is_of_type(
+                avail_srcs_this_entity, pub_med_identifiers
+            ):
+                # TODO: change when MW / AA give us intructions:
+                external_ids = (
+                    EntityReportingMetadata._generate_custom_items(
+                        pvm_med_sources
+                    )
+                )
+                coerced_dict[class_type.generic_entity_id] = external_ids
+                coerced_dict[class_type.generic_entity_source] = "PVM"
+            else:
+                coerced_dict[class_type.generic_entity_id] = [int(n[1])]
+                coerced_dict[class_type.generic_entity_source] = "IDW"
+
+            return coerced_dict

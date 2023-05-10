@@ -6,7 +6,7 @@ from .components.report_component_base import (
 from gcm.inv.entityhierarchy.NodeHierarchy import (
     Standards as EntityStandardNames,
 )
-from .entity_handler import HierarchyHandler
+from .entity_handler import HierarchyHandler, EntityReportingMetadata
 from openpyxl import Workbook
 from typing import List, Optional
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
@@ -305,6 +305,7 @@ class ReportStructure(SerializableBase):
     def assign_components(self):
         pass
 
+    # as provided by IT
     class gcm_metadata:
         gcm_report_name = "gcm_report_name"
         gcm_as_of_date = "gcm_as_of_date"
@@ -314,6 +315,10 @@ class ReportStructure(SerializableBase):
         gcm_report_type = "gcm_report_type"
         gcm_target_audience = "gcm_target_audience"
         gcm_modified_date = "gcm_modified_date"
+
+    @staticmethod
+    def _generate_entity_metadata():
+        pass
 
     def get_reportinghub_entity_metadata(self) -> dict:
         if self.report_meta.entity_domain is not None:
@@ -327,30 +332,11 @@ class ReportStructure(SerializableBase):
                 # as given by Mark / Armando for RH integration
                 # Else
                 # Take the internal EntityId from IDW
-                available_sources_for_this_entity = list(
-                    [
-                        str(x)
-                        for x in self.report_meta.entity_info[
-                            Standards.SourceName
-                        ].unique()
-                    ]
+                entity_info = self.report_meta.entity_info
+                coerced_dict = EntityReportingMetadata.generate(
+                    entity_info
                 )
-                if any(
-                    [
-                        x.upper() == "PVM.MED"
-                        for x in available_sources_for_this_entity
-                    ]
-                ):
-                    pass
-                elif any(
-                    [
-                        x.upper() in ["ALTSOFT.PUB", "PUB.INVESTMENTDIMN"]
-                        for x in available_sources_for_this_entity
-                    ]
-                ):
-                    pass
-
-                return None
+                return coerced_dict
         return None
 
     @cached_property
