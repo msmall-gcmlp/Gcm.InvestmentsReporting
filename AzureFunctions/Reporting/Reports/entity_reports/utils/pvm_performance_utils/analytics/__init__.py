@@ -6,7 +6,6 @@ import numpy as np
 from .standards import (
     get_holding_periods_rpt,
     recurse_down_order,
-    pivot_trailing_period_df,
     get_direct_alpha_rpt,
     get_sum_df_rpt,
     get_ks_pme_rpt,
@@ -247,17 +246,20 @@ def get_performance_report_dict(
     ordered_rpt_items.reset_index(inplace=True, drop=True)
     input_data = {"Data": formatted_rslt}
 
-    group_range_map = {1: 'FormatType',
-                       2: 'FormatSector',
-                       3: 'GroupThree'}
+    group_range_map = {1: "FormatType", 2: "FormatSector", 3: "GroupThree"}
     for group_number in ordered_rpt_items.Layer.unique():
-        if group_number == ordered_rpt_items.Layer.min() or group_number == ordered_rpt_items.Layer.max():
+        if (
+            group_number == ordered_rpt_items.Layer.min()
+            or group_number == ordered_rpt_items.Layer.max()
+        ):
             continue
         else:
             input_data.update(
                 {
-                    group_range_map[group_number]:
-                        ordered_rpt_items[ordered_rpt_items.Layer == group_number][
-                            ["DisplayName"]]})
+                    group_range_map[group_number]: ordered_rpt_items[
+                        ordered_rpt_items.Layer == group_number
+                    ][["DisplayName"]]
+                }
+            )
 
     return input_data

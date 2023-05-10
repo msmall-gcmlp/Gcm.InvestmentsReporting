@@ -52,10 +52,12 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
     if bool(sheet.render_params.trim_region):
         # trim_rows is a list of integers for excel rows to delete
         # blank rows within excel named ranges are deleted
-        trim_rows: List[int] = \
-            [j for t in sheet.report_tables for j in return_trim_rows(
-                t, wb=wb
-            ) if t.component_name in sheet.render_params.trim_region]
+        trim_rows: List[int] = [
+            j
+            for t in sheet.report_tables
+            for j in return_trim_rows(t, wb=wb)
+            if t.component_name in sheet.render_params.trim_region
+        ]
         if len(trim_rows) > 0:
             # rows have to be deleted in descending excel row order
             trim_rows.sort(reverse=True)
@@ -65,12 +67,14 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
                 wb[sheet.worksheet_name].delete_rows(r)
 
             # have to reset row heights after deleting rows
-            new_row_heights = _get_sheet_new_row_heights(wb[sheet.worksheet_name],
-                                                         trim_rows,
-                                                         14.5)
+            new_row_heights = _get_sheet_new_row_heights(
+                wb[sheet.worksheet_name], trim_rows, 14.5
+            )
             for i in range(0, len(new_row_heights)):
                 # [i + 1] - because excel rows are numbered starting at 1
-                wb[sheet.worksheet_name].row_dimensions[i + 1].height = new_row_heights[i]
+                wb[sheet.worksheet_name].row_dimensions[
+                    i + 1
+                ].height = new_row_heights[i]
 
     # hide_columns is list: ['A', 'B', 'C']
     if bool(sheet.render_params.hide_columns):
@@ -79,24 +83,34 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
 
     # print_region is string: "B1:AC150"
     if bool(sheet.render_params.print_region):
-        wb[sheet.worksheet_name].print_area = sheet.render_params.print_region
+        wb[
+            sheet.worksheet_name
+        ].print_area = sheet.render_params.print_region
 
     return wb
+
 
 def _get_sheet_new_row_heights(sheet, trim_rows, default_height=14.5):
     row_heights = pd.DataFrame()
     for i in range(0, sheet.max_row):
-        row_heights = pd.concat([row_heights,
-                                 pd.DataFrame({'row': [i + 1],
-                                               'height': [sheet.row_dimensions[i + 1].
-                                              height]})]).fillna(default_height)
-    new_row_heights = list(row_heights[~row_heights.row.isin(trim_rows)].height)
+        row_heights = pd.concat(
+            [
+                row_heights,
+                pd.DataFrame(
+                    {
+                        "row": [i + 1],
+                        "height": [sheet.row_dimensions[i + 1].height],
+                    }
+                ),
+            ]
+        ).fillna(default_height)
+    new_row_heights = list(
+        row_heights[~row_heights.row.isin(trim_rows)].height
+    )
     return new_row_heights
 
 
-def return_trim_rows(
-        k: ReportTable, wb: Workbook
-) -> List[int]:
+def return_trim_rows(k: ReportTable, wb: Workbook) -> List[int]:
     # the the range in question must be a rectangle
     # (i.e. someone can't just ctrl-clicked a bunch of random cells)
     address = list(wb.defined_names[k.component_name].destinations)
@@ -163,12 +177,12 @@ def generate_workbook(handler: ReportWorkBookHandler) -> Workbook:
 
 
 def print_excel_report(
-        wb: Workbook,
-        dao: DaoRunner,
-        source: DaoSource,
-        params: dict,
-        save: bool,
-        print_pdf: bool = True,
+    wb: Workbook,
+    dao: DaoRunner,
+    source: DaoSource,
+    params: dict,
+    save: bool,
+    print_pdf: bool = True,
 ) -> dict:
     if save:
         wb_stream = io.BytesIO()

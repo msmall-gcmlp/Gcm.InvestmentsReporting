@@ -12,9 +12,12 @@ from ....core.report_structure import (
     AggregateInterval,
     ReportConsumer,
     Calendar,
+    EntityDomainProvider,
 )
+
+import pandas as pd
 from ....core.components.report_table import ReportTable
-from typing import List
+from typing import List, Callable
 from ...report_names import ReportNames
 from ..utils.pvm_performance_utils.pvm_performance_helper import (
     PvmPerformanceHelper,
@@ -64,6 +67,12 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             ],
         )
 
+    @classmethod
+    def standard_entity_get_callable(
+        cls, domain: EntityDomainProvider
+    ) -> Callable[..., pd.DataFrame]:
+        return domain.get_perei_med_entities
+
     def assign_components(self) -> List[ReportWorkBookHandler]:
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
         domain = self.report_meta.entity_domain
@@ -79,9 +88,11 @@ class PvmPerformanceBreakoutReport(ReportStructure):
 
         # below is this-report specific logic to derive render params
         # other reports may use different logic
-        sheet_name = 'Industry Breakdown'
-        primary_named_range = 'Data'
-        primary_df = [x.df for x in tables if x.component_name == primary_named_range][0]
+        sheet_name = "Industry Breakdown"
+        primary_named_range = "Data"
+        primary_df = [
+            x.df for x in tables if x.component_name == primary_named_range
+        ][0]
 
         # trim rows for all ranges in this sheet
         regions_to_trim: List[str] = [x.component_name for x in tables]
@@ -96,12 +107,27 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         # similarly, setting up report dictionary of df metric-to-excel column
         # would be better for determining columns to hide
         hide_columns = []
-        if primary_df.loc[0, '3Y_AnnRor'] is None:
+
+        # TODO: check portfolio inception date to set these dynamically
+        if primary_df.loc[0, "3Y_AnnRor"] is None:
             # hide 3Y and 5Y columns
-            hide_columns = ['M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X']
-        elif primary_df.loc[0, '5Y_AnnRor'] is None:
+            hide_columns = [
+                "M",
+                "N",
+                "O",
+                "P",
+                "Q",
+                "R",
+                "S",
+                "T",
+                "U",
+                "V",
+                "W",
+                "X",
+            ]
+        elif primary_df.loc[0, "5Y_AnnRor"] is None:
             # hide 5Y columns
-            hide_columns = ['M', 'N', 'O', 'P', 'Q', 'R']
+            hide_columns = ["M", "N", "O", "P", "Q", "R"]
 
         this_worksheet = ReportWorksheet(
             sheet_name,
@@ -109,7 +135,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             render_params=ReportWorksheet.ReportWorkSheetRenderer(
                 trim_region=regions_to_trim,
                 print_region=print_region,
-                hide_columns=hide_columns
+                hide_columns=hide_columns,
             ),
         )
         workbook = ReportWorkBookHandler(

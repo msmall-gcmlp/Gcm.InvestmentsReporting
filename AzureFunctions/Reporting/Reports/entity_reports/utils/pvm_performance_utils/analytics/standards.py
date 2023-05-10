@@ -369,8 +369,12 @@ def get_direct_alpha_rpt(
             direct_alpha_df = discount_df_with_attrib.groupby(group_cols)[
                 ["Date", "Discounted"]
             ].apply(xirr, silent=True)
-            direct_alpha_df = direct_alpha_df.reset_index().rename(columns={0: "Irr"})
-            direct_alpha_df["DirectAlpha"] = np.log(1 + direct_alpha_df.Irr)
+            direct_alpha_df = direct_alpha_df.reset_index().rename(
+                columns={0: "Irr"}
+            )
+            direct_alpha_df["DirectAlpha"] = np.log(
+                1 + direct_alpha_df.Irr
+            )
 
             direct_alpha_df["Name"] = direct_alpha_df.apply(
                 lambda x: "_".join([str(x[i]) for i in group_cols]),
@@ -485,7 +489,9 @@ def get_ks_pme_rpt(
             )
             ks_pme_df["Period"] = trailing_period
 
-            rslt = pd.concat([rslt, ks_pme_df])[["Name", "KsPme", "Period"]]
+            rslt = pd.concat([rslt, ks_pme_df])[
+                ["Name", "KsPme", "Period"]
+            ]
     result = pivot_trailing_period_df(rslt)
     return result
 

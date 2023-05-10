@@ -6,9 +6,9 @@ from .components.report_component_base import (
 from gcm.inv.entityhierarchy.NodeHierarchy import (
     Standards as EntityStandardNames,
 )
-from .entity_handler import HierarchyHandler
+from .entity_handler import HierarchyHandler, EntityReportingMetadata
 from openpyxl import Workbook
-from typing import List, Optional
+from typing import List, Optional, Callable
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType, Calendar
@@ -29,6 +29,9 @@ from gcm.Dao.DaoRunner import DaoSource, DaoRunner
 from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
     AzureDataLakeFile,
     TabularDataOutputTypes,
+)
+from gcm.inv.dataprovider.entity_provider.controller import (
+    EntityDomainProvider,
 )
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
@@ -265,6 +268,12 @@ class ReportStructure(SerializableBase):
             source,
         )
 
+    @classmethod
+    def standard_entity_get_callable(
+        cls, domain: EntityDomainProvider
+    ) -> Callable[..., pd.DataFrame]:
+        return domain.get_all
+
     def get_template(self) -> Optional[Workbook]:
         dao: DaoRunner = Scenario.get_attribute("dao")
         try:
@@ -305,6 +314,7 @@ class ReportStructure(SerializableBase):
     def assign_components(self):
         pass
 
+    # as provided by IT
     class gcm_metadata:
         gcm_report_name = "gcm_report_name"
         gcm_as_of_date = "gcm_as_of_date"
@@ -315,14 +325,27 @@ class ReportStructure(SerializableBase):
         gcm_target_audience = "gcm_target_audience"
         gcm_modified_date = "gcm_modified_date"
 
-    def get_entity_metadata(self) -> dict:
+    @staticmethod
+    def _generate_entity_metadata():
+        pass
+
+    def get_reportinghub_entity_metadata(self) -> dict:
         if self.report_meta.entity_domain is not None:
             if (
                 self.report_meta.entity_info is not None
                 and type(self.report_meta.entity_info) == pd.DataFrame
             ):
-                # TODO: figure this out with team
-                return None
+                # if this is a PVM MED entity (or any ARS MED entity),
+                # prioritize the MED ID as the Entity Tag
+                # If is ARS entity, establish tags in pre-defined location
+                # as given by Mark / Armando for RH integration
+                # Else
+                # Take the internal EntityId from IDW
+                entity_info = self.report_meta.entity_info
+                coerced_dict = EntityReportingMetadata.generate(
+                    entity_info
+                )
+                return coerced_dict
         return None
 
     @cached_property
@@ -370,7 +393,7 @@ class ReportStructure(SerializableBase):
                 "%Y-%m-%d"
             ),
         }
-        entity_metadata = self.get_entity_metadata()
+        entity_metadata = self.get_reportinghub_entity_metadata()
         val: dict = (
             val if entity_metadata is None else (val | entity_metadata)
         )
