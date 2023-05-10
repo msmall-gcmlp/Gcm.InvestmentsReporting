@@ -12,9 +12,12 @@ from ....core.report_structure import (
     AggregateInterval,
     ReportConsumer,
     Calendar,
+    EntityDomainProvider,
 )
+
+import pandas as pd
 from ....core.components.report_table import ReportTable
-from typing import List
+from typing import List, Callable
 from ...report_names import ReportNames
 from ..utils.pvm_performance_utils.pvm_performance_helper import (
     PvmPerformanceHelper,
@@ -63,6 +66,12 @@ class PvmPerformanceBreakoutReport(ReportStructure):
                 EntityDomainTypes.InvestmentManager,
             ],
         )
+
+    @classmethod
+    def standard_entity_get_callable(
+        cls, domain: EntityDomainProvider
+    ) -> Callable[..., pd.DataFrame]:
+        return domain.get_perei_med_entities
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
