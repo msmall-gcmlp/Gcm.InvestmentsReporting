@@ -66,6 +66,7 @@ def get_all_manager_holdings() -> pd.DataFrame:
     )
     return manager_df
 
+
 def get_burgiss_bmark() -> pd.DataFrame:
     def my_dao_operation(dao, params):
         # hardcoding params
@@ -89,46 +90,54 @@ def get_burgiss_bmark() -> pd.DataFrame:
         operation=my_dao_operation,
     )
     report_columns = [
-        'PME - S&P 500 (TR)',
-        'Direct Alpha - S&P 500 (TR)',
-        'TVPI',
-        'IRR',
-         'DPI',
-         'TWR - ITD',
-         'CTR - ITD',
-         'PME - S&P 500 (TR) - 5 Year',
-         'Direct Alpha - S&P 500 (TR) - 5 Year',
-         'TVPI - 5 Year',
-         'IRR - 5 Year',
-         'TWR - 5 Year',
-         'CTR - 5 Year',
-         'PME - S&P 500 (TR) - 3 Year',
-         'Direct Alpha - S&P 500 (TR) - 3 Year',
-         'TVPI - 3 Year',
-         'IRR - 3 Year',
-         'TWR - 3 Year',
-         'CTR - 3 Year',
-         'TWR - 1 Year',
-         'CTR - 1 Year',
-         'TWR - QTD',
-         'CTR - QTD'
+        "PME - S&P 500 (TR)",
+        "Direct Alpha - S&P 500 (TR)",
+        "TVPI",
+        "IRR",
+        "DPI",
+        "TWR - ITD",
+        "CTR - ITD",
+        "PME - S&P 500 (TR) - 5 Year",
+        "Direct Alpha - S&P 500 (TR) - 5 Year",
+        "TVPI - 5 Year",
+        "IRR - 5 Year",
+        "TWR - 5 Year",
+        "CTR - 5 Year",
+        "PME - S&P 500 (TR) - 3 Year",
+        "Direct Alpha - S&P 500 (TR) - 3 Year",
+        "TVPI - 3 Year",
+        "IRR - 3 Year",
+        "TWR - 3 Year",
+        "CTR - 3 Year",
+        "TWR - 1 Year",
+        "CTR - 1 Year",
+        "TWR - QTD",
+        "CTR - QTD",
     ]
-    rslt = df.set_index('Measure').T.reindex(
+    rslt = df.set_index("Measure").T.reindex(
         [
-            'Pooled', 'TopFivePercentile',
-            'TopQuartile', 'Median',
-            'BottomQuartile', 'BottomFivePercentile'])
+            "Pooled",
+            "TopFivePercentile",
+            "TopQuartile",
+            "Median",
+            "BottomQuartile",
+            "BottomFivePercentile",
+        ]
+    )
 
     for col in report_columns:
         if col not in list(rslt.columns):
             rslt[col] = None
     rslt = rslt[report_columns]
     # quick solution, should be done in dataprovider
-    rslt[rslt.columns[rslt.columns.str.contains('IRR')]] = \
-        rslt[rslt.columns[rslt.columns.str.contains('IRR')]] / 100
-    rslt[rslt.columns[rslt.columns.str.contains('Alpha')]] = \
-        rslt[rslt.columns[rslt.columns.str.contains('Alpha')]] / 100
+    rslt[rslt.columns[rslt.columns.str.contains("IRR")]] = (
+        rslt[rslt.columns[rslt.columns.str.contains("IRR")]] / 100
+    )
+    rslt[rslt.columns[rslt.columns.str.contains("Alpha")]] = (
+        rslt[rslt.columns[rslt.columns.str.contains("Alpha")]] / 100
+    )
     return rslt
+
 
 def get_all_deal_attributes() -> pd.DataFrame:
     def my_dao_operation(dao, params):
