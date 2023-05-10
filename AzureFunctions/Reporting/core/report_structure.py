@@ -263,7 +263,7 @@ class ReportStructure(SerializableBase):
         )
         return (
             AzureDataLakeDao.create_blob_params(
-                output_loc, metadata=self.storage_account_metadata()
+                output_loc, metadata=self.storage_account_metadata
             ),
             source,
         )
@@ -335,12 +335,6 @@ class ReportStructure(SerializableBase):
                 self.report_meta.entity_info is not None
                 and type(self.report_meta.entity_info) == pd.DataFrame
             ):
-                # if this is a PVM MED entity (or any ARS MED entity),
-                # prioritize the MED ID as the Entity Tag
-                # If is ARS entity, establish tags in pre-defined location
-                # as given by Mark / Armando for RH integration
-                # Else
-                # Take the internal EntityId from IDW
                 entity_info = self.report_meta.entity_info
                 coerced_dict = EntityReportingMetadata.generate(
                     entity_info
@@ -368,6 +362,7 @@ class ReportStructure(SerializableBase):
     def report_name_metadata(self):
         return self.report_name.name
 
+    @cached_property
     def storage_account_metadata(self) -> dict:
         # these are starting to become arbitrary
         # TODO: make a specific dataclass (instead of dict)
@@ -405,6 +400,7 @@ class ReportStructure(SerializableBase):
             "report_name": self.report_name.name,
             "report_meta": self.report_meta.to_dict(),
             "report_components": [c.to_dict() for c in self.components],
+            "storage_account_metadata": self.storage_account_metadata,
         }
 
     @staticmethod
@@ -418,6 +414,7 @@ class ReportStructure(SerializableBase):
         components: List[dict] = d["report_components"]
 
         report_meta: ReportMeta = ReportMeta.from_dict(d["report_meta"])
+        storage_account_metadata: dict = d["storage_account_metadata"]
         c_list = []
         for i in components:
             c_list.append(convert_component_from_dict(i))
@@ -425,4 +422,5 @@ class ReportStructure(SerializableBase):
         p.components = c_list
         p.report_meta = report_meta
         p.report_name = report_name
+        p.storage_account_metadata = storage_account_metadata
         return p

@@ -87,7 +87,11 @@ class ReportConstructorActivity(BaseActivity):
 
     def activity(self, **kwargs):
         [report_structure, meta] = self.construct_meta()
-        validate_meta(report_meta=meta, report_structure=report_structure, strict=False)
+        validate_meta(
+            report_meta=meta,
+            report_structure=report_structure,
+            strict=False,
+        )
         report: ReportStructure = report_structure(meta)
         j = report.to_json()
         dao: DaoRunner = Scenario.get_attribute("dao")
@@ -95,7 +99,9 @@ class ReportConstructorActivity(BaseActivity):
             ReportConstructorActivity.__json_location
         )
         dl_location.path.append(report.base_json_name)
-        dl_location = AzureDataLakeDao.create_blob_params(dl_location)
+        dl_location = AzureDataLakeDao.create_blob_params(
+            dl_location, metadata=report.storage_account_metadata
+        )
         dl_location = {
             key: value
             for key, value in dl_location.items()

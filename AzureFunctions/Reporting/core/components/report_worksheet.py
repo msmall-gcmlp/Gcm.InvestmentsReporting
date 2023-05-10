@@ -43,7 +43,7 @@ class ReportWorksheet(ReportComponentBase):
     @staticmethod
     def from_dict(d: dict, **kwargs) -> "ReportWorksheet":
         tables = [ReportTable.from_dict(x) for x in d["report_tables"]]
-        name = (d["component_name"],)
+        name = d["component_name"]
         r = ReportWorksheet.ReportWorkSheetRenderer.from_dict(
             json.loads(d["renderer"])
         )

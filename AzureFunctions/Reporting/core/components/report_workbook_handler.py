@@ -30,7 +30,11 @@ class ReportWorkBookHandler(ReportComponentBase):
             entity=location["entity"],
             path=location["path"],
         )
-        workbook = ReportWorkBookHandler(name, sheets, blob_loc)
+        workbook = ReportWorkBookHandler(
+            component_name=name,
+            template_location=blob_loc,
+            report_sheets=sheets,
+        )
         return workbook
 
     def to_dict(self) -> dict:

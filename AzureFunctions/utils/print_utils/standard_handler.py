@@ -194,9 +194,10 @@ def print_excel_report(
             source=source,
             operation=lambda d, v: d.post_data(v, b),
         )
-        convert(
-            io.BytesIO(b),
-            base_params=params,
-            source=source,
-        )
+        if print_pdf:
+            convert(
+                io.BytesIO(b),
+                base_params=params,
+                source=source,
+            )
     return params
