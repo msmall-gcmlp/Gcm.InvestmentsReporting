@@ -52,15 +52,22 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
     if bool(sheet.render_params.trim_region):
         # trim_rows is a list of integers for excel rows to delete
         # blank rows within excel named ranges are deleted
-        trim_rows: List[int] = [
-            j
-            for t in sheet.report_tables
-            for j in return_trim_rows(t, wb=wb)
-            if t.component_name in sheet.render_params.trim_region
-        ]
+        # trim_rows: List[int] = [
+        #     j
+        #     for t in sheet.report_tables
+        #     for j in return_trim_rows(t, wb=wb)
+        #     if t.component_name in sheet.render_params.trim_region
+        # ]
+        trim_rows = []
+        for t in sheet.report_tables:
+            if t.component_name in sheet.render_params.trim_region:
+                for j in return_trim_rows(t, wb=wb):
+                    trim_rows.append(j)
+                    # rows have to be deleted in descending excel row order
+
+        trim_rows = [x for x in set(trim_rows) if x is not None]
+        trim_rows.sort(reverse=True)
         if len(trim_rows) > 0:
-            # rows have to be deleted in descending excel row order
-            trim_rows.sort(reverse=True)
 
             # delete rows
             for r in trim_rows:

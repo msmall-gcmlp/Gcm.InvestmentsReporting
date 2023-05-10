@@ -241,6 +241,20 @@ class EntityReportingMetadata:
             ]
             pvm_med_sources = ["PVM.MED"]
 
+            def __coerce_to_int(item: object, strict=True):
+                try:
+                    if type(item) == float:
+                        return int(float(item))
+                    if type(item) == str:
+                        try:
+                            return int(item)
+                        except ValueError:
+                            return __coerce_to_int(
+                                float(item), strict=strict
+                            )
+                except ValueError:
+                    return None if strict else item
+
             if EntityReportingMetadata._check_is_of_type(
                 avail_srcs_this_entity, pub_med_identifiers
             ):
@@ -268,12 +282,15 @@ class EntityReportingMetadata:
             ):
                 # TODO: change when MW / AA give us intructions:
                 external_ids = [
-                    int(x)
+                    __coerce_to_int(x)
                     for x in (
                         EntityReportingMetadata._generate_custom_items(
                             g, pvm_med_sources
                         )
                     )
+                ]
+                external_ids = [
+                    x for x in set(external_ids) if x is not None
                 ]
                 coerced_dict[class_type.generic_entity_id] = external_ids
                 coerced_dict[class_type.generic_entity_source] = "PVM.MED"
