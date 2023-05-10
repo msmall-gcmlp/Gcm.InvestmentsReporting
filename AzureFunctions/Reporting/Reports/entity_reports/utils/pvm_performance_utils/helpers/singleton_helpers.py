@@ -66,6 +66,7 @@ def get_all_manager_holdings() -> pd.DataFrame:
     )
     return manager_df
 
+
 def get_burgiss_bmark() -> pd.DataFrame:
     def my_dao_operation(dao, params):
         # hardcoding params
