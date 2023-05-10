@@ -88,23 +88,11 @@ def get_burgiss_bmark() -> pd.DataFrame:
         source=DaoSource.InvestmentsDwh,
         operation=my_dao_operation,
     )
-    df = pd.concat([df, pd.DataFrame({'Measure': ['TVPI - 5 Year',
-                                                  'TVPI - 3 Year',
-                                                  'CTR - ITD',
-                                                  'CTR - 5 Year',
-                                                  'CTR - 3 Year',
-                                                  'CTR - 1 Year',
-                                                  'CTR - QTD',
-                                                  ]})])
-    rslt = df.set_index('Measure').T.reindex(
-        [
-            'Pooled', 'BottomFivePercentile',
-            'TopQuartile', 'Median',
-            'BottomQuartile', 'TopFivePercentile'])[
-        ['PME - S&P 500 (TR)',
-         'Direct Alpha - S&P 500 (TR)',
-         'TVPI',
-         'IRR',
+    report_columns = [
+        'PME - S&P 500 (TR)',
+        'Direct Alpha - S&P 500 (TR)',
+        'TVPI',
+        'IRR',
          'DPI',
          'TWR - ITD',
          'CTR - ITD',
@@ -124,7 +112,18 @@ def get_burgiss_bmark() -> pd.DataFrame:
          'CTR - 1 Year',
          'TWR - QTD',
          'CTR - QTD'
-         ]]
+    ]
+    rslt = df.set_index('Measure').T.reindex(
+        [
+            'Pooled', 'TopFivePercentile',
+            'TopQuartile', 'Median',
+            'BottomQuartile', 'BottomFivePercentile'])
+
+    for col in report_columns:
+        if col not in list(rslt.columns):
+            rslt[col] = None
+    rslt = rslt[report_columns]
+    # quick solution, should be done in dataprovider
     rslt[rslt.columns[rslt.columns.str.contains('IRR')]] = \
         rslt[rslt.columns[rslt.columns.str.contains('IRR')]] / 100
     rslt[rslt.columns[rslt.columns.str.contains('Alpha')]] = \
