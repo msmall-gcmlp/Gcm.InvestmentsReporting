@@ -26,6 +26,7 @@ from gcm.Dao.DaoRunner import DaoRunner, AzureDataLakeDao, DaoSource
 import json
 import pandas as pd
 import copy
+from utils.print_utils import print
 
 
 class ReportConstructorActivity(BaseActivity):
@@ -95,26 +96,45 @@ class ReportConstructorActivity(BaseActivity):
         report: ReportStructure = report_structure(meta)
         j = report.to_json()
         dao: DaoRunner = Scenario.get_attribute("dao")
-        dl_location = copy.deepcopy(
+        json_dl_location = copy.deepcopy(
             ReportConstructorActivity.__json_location
         )
-        dl_location.path.append(report.base_json_name)
-        dl_location = AzureDataLakeDao.create_blob_params(
-            dl_location, metadata=report.storage_account_metadata
+        json_dl_location.path.append(report.base_json_name)
+        json_dl_location = AzureDataLakeDao.create_blob_params(
+            json_dl_location, metadata=report.storage_account_metadata
         )
-        dl_location = {
+        json_dl_location = {
             key: value
-            for key, value in dl_location.items()
+            for key, value in json_dl_location.items()
             if key in ["filesystem_name", "file_path", "retry", "metadata"]
         }
-        if self.pargs.save:
 
+        [excel_file_locations, source] = report.save_params
+        simple_excel_loc = AzureDataLakeDao.create_blob_params(
+            excel_file_locations
+        )
+        simple_excel_loc = {
+            key: value
+            for key, value in simple_excel_loc.items()
+            if key in ["filesystem_name", "file_path", "retry", "metadata"]
+        }
+
+        file_locations = {
+            "json_location": file_locations,
+            "excel_location": {
+                "source": source.name,
+                "file": simple_excel_loc,
+            },
+        }
+
+        if self.pargs.save:
             dao.execute(
-                params=dl_location,
+                params=json_dl_location,
                 source=DaoSource.DataLake,
                 operation=lambda runner, p: runner.post_data(p, j),
             )
-        return json.dumps(dl_location)
+            print(report_structure=report, print_pdf=False)
+        return json.dumps(file_locations)
 
 
 def main(context):
