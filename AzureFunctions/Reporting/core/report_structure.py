@@ -8,7 +8,7 @@ from gcm.inv.entityhierarchy.NodeHierarchy import (
 )
 from .entity_handler import HierarchyHandler, EntityReportingMetadata
 from openpyxl import Workbook
-from typing import List, Optional
+from typing import List, Optional, Callable
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType, Calendar
@@ -29,6 +29,9 @@ from gcm.Dao.DaoRunner import DaoSource, DaoRunner
 from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
     AzureDataLakeFile,
     TabularDataOutputTypes,
+)
+from gcm.inv.dataprovider.entity_provider.controller import (
+    EntityDomainProvider,
 )
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
@@ -264,6 +267,12 @@ class ReportStructure(SerializableBase):
             ),
             source,
         )
+
+    @classmethod
+    def standard_entity_get_callable(
+        cls, domain: EntityDomainProvider
+    ) -> Callable[..., pd.DataFrame]:
+        return domain.get_all
 
     def get_template(self) -> Optional[Workbook]:
         dao: DaoRunner = Scenario.get_attribute("dao")
