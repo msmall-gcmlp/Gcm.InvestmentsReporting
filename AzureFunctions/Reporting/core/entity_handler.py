@@ -181,7 +181,6 @@ class EntityReportingMetadata:
             ]
         )
         # we should only be applying to one entity at a time
-        # who knows what people are doing on ARS side - surely something hack-y
         assert grouped_on_generic_entity.ngroups == 1
         for n, g in grouped_on_generic_entity:
             entity_type = str(n[2])
