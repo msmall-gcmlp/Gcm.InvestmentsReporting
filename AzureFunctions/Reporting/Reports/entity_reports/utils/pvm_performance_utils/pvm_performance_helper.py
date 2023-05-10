@@ -13,6 +13,7 @@ from .helpers.singleton_helpers import (
     get_all_os_for_all_portfolios,
     get_all_deal_attributes,
     get_all_manager_holdings,
+    get_burgiss_bmark
 )
 from gcm.inv.utils.misc.table_cache_base import Singleton
 from typing import List
@@ -44,6 +45,10 @@ class PvmPerfomanceHelperSingleton(metaclass=Singleton):
     def all_deal_attributes(self) -> pd.DataFrame:
         return get_all_deal_attributes()
 
+    @cached_property
+    def benchmark_df(self) -> pd.DataFrame:
+        return get_burgiss_bmark()
+
 
 class PvmPerformanceHelper(object):
     def __init__(
@@ -73,14 +78,6 @@ class PvmPerformanceHelper(object):
         raw_df = raw_df[raw_df.TransactionDate <= as_of_date]
         if self.entity_domain == EntityDomainTypes.InvestmentManager:
             raw_df = raw_df[raw_df.InvestmentName.isin(self.related_mgr_holdings.HoldingName)]
-            ### below is adhoc scaling and filters ###
-            # raw_df = raw_df[~raw_df.InvestmentName.isin(['Peak Rock Capital Credit Fund II LP',
-            #                                             'Peak Rock Capital Credit Fund II-A LP'])]
-            # raw_df = raw_df[raw_df.PredominantInvestmentType != 'Co-investment/Direct']
-            # tmp_scale = pd.read_csv('C:/Tmp/pvm_mgr_multiplier.csv')
-            # raw_df = raw_df.merge(tmp_scale, how='left', left_on='InvestmentName', right_on='HoldingName')
-            # assert len(raw_df[raw_df.multiplier.isnull()]) == 0
-            # raw_df.BaseAmount = raw_df.BaseAmount * raw_df.multiplier
 
         max_nav_date = (
             raw_df[raw_df.TransactionType == "Net Asset Value"]
@@ -204,9 +201,9 @@ class PvmPerformanceHelper(object):
         __name = "__related_os"
         _item = getattr(self, __name, None)
         if _item is None:
-            # do work to get series
             df: pd.DataFrame = None
             all_os = PvmPerfomanceHelperSingleton().all_operational_series
+            all_mgrs = PvmPerfomanceHelperSingleton().all_manager_holdings
             if self.entity_domain == EntityDomainTypes.Portfolio:
                 df = all_os[
                     all_os[f"{self.entity_domain.name}ReportingName"].isin(
@@ -216,9 +213,8 @@ class PvmPerformanceHelper(object):
                     )
                 ]
             elif self.entity_domain == EntityDomainTypes.InvestmentManager:
-                df = PvmPerfomanceHelperSingleton().all_manager_holdings[
-                    PvmPerfomanceHelperSingleton()
-                    .all_manager_holdings[f"{self.entity_domain.name}Name"]
+                df = all_mgrs[
+                    all_mgrs[f"{self.entity_domain.name}Name"]
                     .isin(
                         self.entity_info[
                             EntityStandardNames.EntityName
@@ -374,6 +370,8 @@ class PvmPerformanceHelper(object):
                 setattr(self, __name, tickers[0])
         return getattr(self, __name, None)
 
+
+
     def generate_components_for_this_entity(
         self, as_of_date: dt.date
     ) -> dict[str, pd.DataFrame]:
@@ -405,7 +403,7 @@ class PvmPerformanceHelper(object):
             "5Y": 20,
             "ITD": "ITD",
         }
-        data = get_performance_report_dict(
+        report_json = get_performance_report_dict(
             owner=self.top_line_owner,
             list_to_iterate=self.recursion_iterate_controller,
             irr_cfs=irr_cfs,
@@ -416,4 +414,10 @@ class PvmPerformanceHelper(object):
             _attributes_needed=self.attributes_needed,
             _trailing_periods=tmp_trailing_period,
         )
-        return data
+
+        # more to do on the below
+        report_json.update({'Date': pd.DataFrame({'Date': [as_of_date]}),
+                       'PortfolioName': pd.DataFrame({'PortfolioName': [self.top_line_owner]}, ),
+                       'benchmark_df':  PvmPerfomanceHelperSingleton().benchmark_df})
+
+        return report_json

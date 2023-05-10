@@ -95,7 +95,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         # rather than inferring from whether 3Y/5Y ROR exists
         # similarly, setting up report dictionary of df metric-to-excel column
         # would be better for determining columns to hide
-        hide_columns = {}
+        hide_columns = []
         if primary_df.loc[0, '3Y_AnnRor'] is None:
             # hide 3Y and 5Y columns
             hide_columns = ['M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X']
