@@ -51,6 +51,7 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
     # next check format conditions
     if bool(sheet.render_params.trim_region):
         # trim_rows is a list of integers for excel rows to delete
+        # blank rows within excel named ranges are deleted
         trim_rows: List[int] = \
             [j for t in sheet.report_tables for j in return_trim_rows(
                 t, wb=wb
@@ -68,15 +69,15 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
                                                          trim_rows,
                                                          14.5)
             for i in range(0, len(new_row_heights)):
-                # [i + 1] - because the lines are numbered starting at 1
+                # [i + 1] - because excel rows are numbered starting at 1
                 wb[sheet.worksheet_name].row_dimensions[i + 1].height = new_row_heights[i]
 
-    # hide_columns is dictionary: {sheetname: ['A', 'B', 'C']}
+    # hide_columns is list: ['A', 'B', 'C']
     if bool(sheet.render_params.hide_columns):
         for col in sheet.render_params.hide_columns:
             wb[sheet.worksheet_name].column_dimensions[col].hidden = True
 
-    # print_region is dictionary: {sheetname: "B1:AC50"}
+    # print_region is string: "B1:AC150"
     if bool(sheet.render_params.print_region):
         wb[sheet.worksheet_name].print_area = sheet.render_params.print_region
 

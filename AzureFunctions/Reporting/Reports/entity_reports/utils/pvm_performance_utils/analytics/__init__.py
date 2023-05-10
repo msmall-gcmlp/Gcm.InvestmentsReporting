@@ -221,23 +221,17 @@ def get_performance_report_dict(
         _attributes_needed,
     )
 
-    ror_ctr_melted = pivot_trailing_period_df(ror_ctr_df)
-    ks_pme_melted = pivot_trailing_period_df(ks_pme)
-    direct_alpha_melted = pivot_trailing_period_df(direct_alpha)
-    irr_melted = pivot_trailing_period_df(horizon_irr)
-    multiple_melted = pivot_trailing_period_df(horizon_multiple)
-
     # report specific formatting
     list_of_rpt_dfs = [
         commitment_df,
         holding_period_df,
         max_nav_date,
         nav_df,
-        irr_melted,
-        multiple_melted,
-        ks_pme_melted,
-        direct_alpha_melted,
-        ror_ctr_melted,
+        horizon_irr,
+        horizon_multiple,
+        ks_pme,
+        direct_alpha,
+        ror_ctr_df,
         dpi_rslt,
     ]
     formatted_rslt, ordered_rpt_items = format_performance_report(

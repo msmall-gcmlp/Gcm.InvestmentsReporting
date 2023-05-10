@@ -278,7 +278,7 @@ def get_direct_alpha_rpt(
         fund_df=fund_df, fund_cf=fund_cf, index_prices=index_prices
     )
 
-    result = pd.DataFrame()
+    rslt = pd.DataFrame()
     for group_cols in list_to_iterate:
         for trailing_period in list(_trailing_periods.keys()):
             if trailing_period in ["YTD", "QTD", "TTM"]:
@@ -348,7 +348,6 @@ def get_direct_alpha_rpt(
             assert len(grouped_filtered) == len(discount_df_with_attrib)
 
             if starting_investment is not None:
-                # TODO can be done much cleaner...
                 # filter out items that don't meet full trailing period
                 full_period_groups = list(
                     starting_investment.apply(
@@ -367,24 +366,24 @@ def get_direct_alpha_rpt(
                     ).isin(full_period_groups)
                 ]
 
-            rslt = discount_df_with_attrib.groupby(group_cols)[
+            direct_alpha_df = discount_df_with_attrib.groupby(group_cols)[
                 ["Date", "Discounted"]
             ].apply(xirr, silent=True)
-            rslt = rslt.reset_index().rename(columns={0: "Irr"})
-            rslt["DirectAlpha"] = np.log(1 + rslt.Irr)
+            direct_alpha_df = direct_alpha_df.reset_index().rename(columns={0: "Irr"})
+            direct_alpha_df["DirectAlpha"] = np.log(1 + direct_alpha_df.Irr)
 
-            rslt["Name"] = rslt.apply(
+            direct_alpha_df["Name"] = direct_alpha_df.apply(
                 lambda x: "_".join([str(x[i]) for i in group_cols]),
                 axis=1,
             )
-            rslt["Period"] = trailing_period
-            rslt = rslt[
+            direct_alpha_df["Period"] = trailing_period
+            direct_alpha_df = direct_alpha_df[
                 ["Name", "DirectAlpha", "Period"]
             ].drop_duplicates()
-            result = pd.concat([result, rslt])[
+            rslt = pd.concat([rslt, direct_alpha_df])[
                 ["Name", "DirectAlpha", "Period"]
             ]
-
+    result = pivot_trailing_period_df(rslt)
     return result, discount_df
 
 
@@ -405,7 +404,7 @@ def get_ks_pme_rpt(
         .drop_duplicates()
         .reset_index(drop=True)
     )
-    result = pd.DataFrame()
+    rslt = pd.DataFrame()
     for trailing_period in list(_trailing_periods.keys()):
         print(trailing_period)
         if trailing_period in ["YTD", "QTD", "TTM"]:
@@ -453,7 +452,6 @@ def get_ks_pme_rpt(
 
         for group_cols in list_to_iterate:
             if starting_investment is not None:
-                # TODO can be done much cleaner...
                 # filter out items that don't meet full trailing period
                 full_period_groups = list(
                     starting_investment.apply(
@@ -473,22 +471,22 @@ def get_ks_pme_rpt(
                     ).isin(full_period_groups)
                 ]
 
-            rslt = (
+            ks_pme_df = (
                 fv_cashflows_df_with_attrib.groupby(group_cols)
                 .sum()
                 .reset_index()
             )
-            rslt["KsPme"] = (
-                rslt.sum_fv_distributions + rslt.discounted_nav
-            ) / rslt.sum_fv_calls
-            rslt["Name"] = rslt.apply(
+            ks_pme_df["KsPme"] = (
+                ks_pme_df.sum_fv_distributions + ks_pme_df.discounted_nav
+            ) / ks_pme_df.sum_fv_calls
+            ks_pme_df["Name"] = ks_pme_df.apply(
                 lambda x: "_".join([str(x[i]) for i in group_cols]),
                 axis=1,
             )
-            rslt["Period"] = trailing_period
+            ks_pme_df["Period"] = trailing_period
 
-            result = pd.concat([result, rslt])[["Name", "KsPme", "Period"]]
-
+            rslt = pd.concat([rslt, ks_pme_df])[["Name", "KsPme", "Period"]]
+    result = pivot_trailing_period_df(rslt)
     return result
 
 
@@ -669,7 +667,7 @@ def get_ror_ctr_df_rpt(
             for i in list_to_iterate
         ]
     )[["Name", "AnnRor", "Ctr", "Period", "group_cols"]]
-    result = pd.DataFrame()
+    rslt = pd.DataFrame()
     for i in ror_ctr_df.Period.unique():
         sub = ror_ctr_df[ror_ctr_df.Period == i]
         for x in sub.group_cols.unique():
@@ -678,9 +676,10 @@ def get_ror_ctr_df_rpt(
                 subb[~subb.Ctr.isnull()].Ctr
             )
             subb["Ctr"] = subb.Ctr * ctr_total.squeeze()
-            result = pd.concat([result, subb])[
+            rslt = pd.concat([rslt, subb])[
                 ["Name", "AnnRor", "Ctr", "Period"]
             ]
+    result = pivot_trailing_period_df(rslt)
     return result
 
 
@@ -1006,7 +1005,7 @@ def get_horizon_irr_df_rpt(
     _attributes_needed: List[str],
     _trailing_periods: dict,
 ) -> pd.DataFrame:
-    result = pd.DataFrame()
+    rslt = pd.DataFrame()
     for trailing_period in list(_trailing_periods.keys()):
         print(trailing_period)
         if trailing_period in ["YTD", "QTD", "TTM"]:
@@ -1063,8 +1062,8 @@ def get_horizon_irr_df_rpt(
                 cf=fund_cf_filtered, group_cols=group_cols
             )[["Name", "GrossIrr"]]
             irr_data["Period"] = trailing_period
-            result = pd.concat([result, irr_data])
-
+            rslt = pd.concat([rslt, irr_data])
+    result = pivot_trailing_period_df(rslt)
     return result
 
 
@@ -1099,7 +1098,7 @@ def get_horizon_tvpi_df_rpt(
     _attributes_needed: List[str],
     _trailing_periods: dict,
 ) -> pd.DataFrame:
-    result = pd.DataFrame()
+    rslt = pd.DataFrame()
     for trailing_period in list(_trailing_periods.keys()):
         print(trailing_period)
         if trailing_period in ["YTD", "QTD", "TTM"]:
@@ -1156,8 +1155,8 @@ def get_horizon_tvpi_df_rpt(
                 fund_cf_filtered, group_cols=group_cols
             )[["Name", "GrossMultiple"]]
             multiple_df["Period"] = trailing_period
-            result = pd.concat([result, multiple_df])
-
+            rslt = pd.concat([rslt, multiple_df])
+    result = pivot_trailing_period_df(rslt)
     return result
 
 

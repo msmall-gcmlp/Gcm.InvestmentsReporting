@@ -325,6 +325,8 @@ class PvmPerformanceHelper(object):
 
     @property
     def trailing_periods(self, as_of_date) -> dict:
+        #TODO: make this work so not using tmp_trailing_periods
+        #TODO: also probably should use standard trailing_period enums
         return {
             "QTD": 1,
             "YTD": int(as_of_date.month / 3),

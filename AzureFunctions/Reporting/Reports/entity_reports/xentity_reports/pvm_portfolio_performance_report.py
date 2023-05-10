@@ -86,7 +86,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         # trim rows for all ranges in this sheet
         regions_to_trim: List[str] = [x.component_name for x in tables]
 
-        # 19 = number of header rows before primary_df range starts
+        # 19 = number of excel header rows before primary_df range starts (not scalable)
         print_region = "B1:AC" + str(len(primary_df) + 19)
 
         # identifying hide_columns could be more generic, not worth it currently
