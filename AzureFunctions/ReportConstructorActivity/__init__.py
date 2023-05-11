@@ -110,17 +110,14 @@ class ReportConstructorActivity(BaseActivity):
         }
 
         [excel_file_locations, source] = report.save_params
-        simple_excel_loc = AzureDataLakeDao.create_blob_params(
-            excel_file_locations
-        )
         simple_excel_loc = {
             key: value
-            for key, value in simple_excel_loc.items()
+            for key, value in excel_file_locations.items()
             if key in ["filesystem_name", "file_path", "retry", "metadata"]
         }
 
         file_locations = {
-            "json_location": file_locations,
+            "json_location": json_dl_location,
             "excel_location": {
                 "source": source.name,
                 "file": simple_excel_loc,

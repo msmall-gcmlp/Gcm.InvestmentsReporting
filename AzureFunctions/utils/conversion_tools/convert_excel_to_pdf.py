@@ -72,6 +72,7 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
         operation=lambda d, p: d.post_data(p, v),
     )
     logging.info(f"Exported PDF: {str(params)}")
+    return params
 
 
 def get_fonts_path() -> str:

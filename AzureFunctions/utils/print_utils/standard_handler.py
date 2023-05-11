@@ -191,6 +191,24 @@ def generate_workbook(handler: ReportWorkBookHandler) -> Workbook:
     return wb
 
 
+def print_pdf_report(
+    params: dict, source=DaoSource, b: bytes = None, wb: Workbook = None
+) -> dict:
+    if b is None:
+        if wb is not None:
+            wb_stream = io.BytesIO()
+            wb.save(wb_stream)
+            b = wb_stream.getvalue()
+        else:
+            raise RuntimeError()
+    save_params = convert(
+        io.BytesIO(b),
+        base_params=params,
+        source=source,
+    )
+    return save_params
+
+
 def print_excel_report(
     wb: Workbook,
     dao: DaoRunner,
@@ -209,9 +227,6 @@ def print_excel_report(
             operation=lambda d, v: d.post_data(v, b),
         )
         if print_pdf:
-            convert(
-                io.BytesIO(b),
-                base_params=params,
-                source=source,
-            )
+            print_pdf_report(params, source, b)
+
     return params

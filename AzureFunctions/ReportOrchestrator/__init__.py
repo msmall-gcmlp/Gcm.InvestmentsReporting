@@ -50,30 +50,11 @@ class ReportOrchestrator(BaseOrchestrator):
                 )
             ]
             data_location = yield context.task_all(provision_task)
-        file_locations = [dict(json.loads(x)) for x in data_location]
-        already_printed_excels = [
-            x for x in file_locations if "excel_location" in x
-        ]
-        json_only = [
-            x
-            for x in file_locations
-            if "json_location" in x and "excel_location" not in x
-        ]
-        if json_only is not None and len(json_only) > 0:
-            # this is now very rare
-            raw_data_locations = [json.dumps(x) for x in json_only]
-            publish_location = yield context.call_activity(
-                "ReportPublishActivity",
-                serialize_pargs(self.pargs, {"data": raw_data_locations}),
-            )
-            return publish_location
-        if (
-            already_printed_excels is None
-            and len(already_printed_excels) > 0
-        ):
-            print("TODO")
-
-        # next, execute reportrunner sub-orchestrator
+        publish_location = yield context.call_activity(
+            "ReportPublishActivity",
+            serialize_pargs(self.pargs, {"data": data_location}),
+        )
+        return publish_location
 
 
 main = df.Orchestrator.create(ReportOrchestrator.main)
