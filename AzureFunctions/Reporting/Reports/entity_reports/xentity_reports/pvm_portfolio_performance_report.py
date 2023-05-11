@@ -28,6 +28,7 @@ from ....core.components.report_workbook_handler import (
     ReportWorkBookHandler,
 )
 from ....core.components.report_worksheet import ReportWorksheet
+from gcm.inv.dataprovider.entity_provider.entity_domains.portfolio import PortfolioEntityProvider
 
 
 # Run all PEREI entities:
@@ -71,7 +72,11 @@ class PvmPerformanceBreakoutReport(ReportStructure):
     def standard_entity_get_callable(
         cls, domain: EntityDomainProvider
     ) -> Callable[..., pd.DataFrame]:
-        return domain.get_perei_med_entities
+        if domain.domain_table.domain == EntityDomainTypes.Portfolio:
+            port: PortfolioEntityProvider = domain
+            return port.get_pe_only_portfolios
+        else:
+            return domain.get_perei_med_entities
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
