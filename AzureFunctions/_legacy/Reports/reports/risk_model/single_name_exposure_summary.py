@@ -211,10 +211,12 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
                                                                                   as_of_date=self._end_date)
 
         single_name_overlaid['Sector'] = single_name_overlaid.Sector.str.title()
-        single_name_exposure = single_name_overlaid[['InvestmentGroupId', 'InvestmentGroupName', 'Issuer', 'Sector','AssetClass' ,'ExpNav', 'AsOfDate']]
+        single_name_exposure = single_name_overlaid[['InvestmentGroupId', 'InvestmentGroupName', 'Issuer', 'Sector',
+                                                     'AssetClass', 'ExpNav', 'AsOfDate']]
         # single_name_exposure['AsOfDate'] = single_name_exposure['AsOfDate'].apply(lambda x: x.strftime('%Y-%m'))
         portfolio_level = pd.merge(self._all_holdings,
-                                   single_name_exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'ExpNav', 'AsOfDate','AssetClass']],
+                                   single_name_exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'ExpNav', 'AsOfDate',
+                                                         'AssetClass']],
                                    how='inner',
                                    on=['InvestmentGroupId'])
         portfolio_level['IssuerNav'] = portfolio_level['PctNav'] * portfolio_level['ExpNav']
@@ -222,7 +224,8 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
 
         # get funds  per portfolio
         portfolio_level = portfolio_level[['Acronym', 'Issuer', 'Sector', 'AssetClass',
-                                           'IssuerNav', 'Issuerbalance']].groupby(['Acronym', 'Issuer', 'Sector','AssetClass']).sum().reset_index()
+                                           'IssuerNav', 'Issuerbalance']].groupby(['Acronym', 'Issuer',
+                                                                                   'Sector', 'AssetClass']).sum().reset_index()
         portfolio_level.sort_values(['Acronym', 'IssuerNav'], ascending=[True, False], inplace=True)
         # group_porrtfolios = portfolio_level.groupby(portfolio_level['Acronym'])
         #(portfolio_level['IssuerNav'] >= 0.015).groupby(portfolio_level['Acronym'])
@@ -269,7 +272,8 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         vol['TotalRisk'] = vol['TotalRisk'] / 100
         vol['SpecificResidualRisk'] = vol['SpecificResidualRisk'] / 100
         vol = vol[['TotalRisk', 'SpecificResidualRisk', 'Issuer']].groupby(['Issuer']).mean().reset_index()
-        largest_firm_wide_level = pd.merge(largest_firm_wide_level, vol[['TotalRisk', 'SpecificResidualRisk', 'Issuer']], how='left', on='Issuer')
+        largest_firm_wide_level = pd.merge(largest_firm_wide_level, vol[['TotalRisk', 'SpecificResidualRisk', 'Issuer']],
+                                           how='left', on='Issuer')
         largest_firm_wide_level = largest_firm_wide_level[['Issuer', 'AssetClass', 'InvestmentGroupName', 'Sector',
                                                            'TotalRisk', 'SpecificResidualRisk', 'Issuer_allocation',
                                                            'IssuerSum']]
