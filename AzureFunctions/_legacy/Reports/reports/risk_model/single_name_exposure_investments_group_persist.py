@@ -62,9 +62,9 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
     def save_single_name_exposure(self):
         # short sector name mapping
         sector_short_names = dict(
-            {'HEALTH CARE': 'Health Care', 'FINANCE': 'Finance', 'INFORMATION TECHNOLOGY': 'Info Tech',
+            {'HEALTH CARE': 'Health Care', 'FINANCIALS': 'Financials', 'INFORMATION TECHNOLOGY': 'Info Tech',
              'CONSUMER DISCRETIONARY': 'Cons Discr', 'BROAD MARKET INDICES': 'Index', 'UTILITIES': 'Utilities',
-             'Other': 'Other', 'INDUSTRIALS': 'Industrials', 'COMMUNICATION SERVICES': 'Comm Svcs', 'ENERGY': 'Energy',
+             'OTHER': 'Other', 'INDUSTRIALS': 'Industrials', 'COMMUNICATION SERVICES': 'Comm Svcs', 'ENERGY': 'Energy',
              'REAL ESTATE': 'Real Estate', 'UTILITIES AND TELECOMMUNICATIONS': 'Util & Telecomm',
              'MATERIALS': 'Materials', 'CONSUMER STAPLES': 'Cons Staples', 'CONGLOMERATES': 'Conglom',
              'COMMUNICATIONS': 'Comm Svcs'})
@@ -75,12 +75,14 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
         inv_group_dimn = self._investment_group.get_dimensions()
         single_name_exposure = pd.merge(single_name, inv_group_dimn[['InvestmentGroupName', 'InvestmentGroupId']],
                                         how='inner', on=['InvestmentGroupName'])
-        exposure_to_save = single_name_exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'Cusip', 'ExpNav', 'AsOfDate']]
+        exposure_to_save = single_name_exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'Cusip', 'AssetClass', 'ExpNav', 'AsOfDate']]
         remove_duplicated_pears = exposure_to_save[['Issuer', 'Sector']].drop_duplicates()
         dupliacted_Issuers = remove_duplicated_pears[remove_duplicated_pears[['Issuer']].duplicated()]['Issuer']
-        exposure_to_save.loc[exposure_to_save['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
-        exposure_to_save.loc[exposure_to_save['Sector'].isnull(), 'Sector'] = 'Other'
-        exposure_to_save = exposure_to_save.groupby(['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate']).sum('ExpNav').reset_index()
+        exposure_to_save.loc[exposure_to_save['Sector'].isnull(), 'Sector'] = 'OTHER'
+        exposure_to_save.loc[exposure_to_save['Sector'] == '', 'Sector'] = 'OTHER'
+        exposure_to_save.loc[exposure_to_save['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'OTHER'
+
+        exposure_to_save = exposure_to_save.groupby(['InvestmentGroupId', 'Issuer', 'Sector','AssetClass', 'AsOfDate']).sum('ExpNav').reset_index()
         exposure_to_save['Sector'] = exposure_to_save['Sector'].map(sector_short_names)
 
         dwh_subscription = os.environ.get("Subscription", "nonprd")

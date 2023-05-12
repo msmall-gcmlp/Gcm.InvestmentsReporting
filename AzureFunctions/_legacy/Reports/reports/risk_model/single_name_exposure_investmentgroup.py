@@ -130,7 +130,7 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         dupliacted_Issuers = single_name_overlaid[single_name_overlaid[['Issuer']].duplicated()]['Issuer']
         single_name_overlaid.loc[single_name_overlaid['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
         single_name_overlaid.sort_values(['ExpNav'], ascending=False, inplace=True)
-        return single_name_overlaid[['Issuer', 'Sector', 'ExpNav']]
+        return single_name_overlaid[['Issuer', 'Sector', 'ExpNav', 'AssetClass']]
 
     def get_header_info(self):
         return pd.DataFrame(
@@ -147,9 +147,18 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         header_info = self.get_header_info()
         single_name = self.build_single_name()
         single_name['Issuer'] = single_name['Issuer'].str[0:39]
-        single_name_long = single_name[single_name['ExpNav'] > 0.0]
-        single_name_short = single_name[single_name['ExpNav'] <= 0.0]
-        single_name_short.sort_values(by='ExpNav', ascending=True, inplace=True)
+        single_name_long = single_name[single_name['ExpNav'] >= 0.0]
+        single_name_long_equity = single_name_long[single_name_long['AssetClass'] == 'Equity'].drop(
+            columns=['AssetClass'])
+        single_name_long_credit = single_name_long[single_name_long['AssetClass'] == 'Credit'].drop(
+            columns=['AssetClass'])
+        single_name_short = single_name[single_name['ExpNav'] < 0.0]
+        single_name_short_equity = single_name_short[single_name_short['AssetClass'] == 'Equity'].drop(
+            columns=['AssetClass'])
+        single_name_short_credit = single_name_short[single_name_short['AssetClass'] == 'Credit'].drop(
+            columns=['AssetClass'])
+        single_name_short_equity.sort_values(by='ExpNav', ascending=True, inplace=True)
+        single_name_short_credit.sort_values(by='ExpNav', ascending=True, inplace=True)
         if single_name.empty:
             return
 
@@ -162,8 +171,13 @@ class SingleNameInvestmentGroupReport(ReportingRunnerBase):
         input_data = {
             "header_info_1": header_info,
             "header_info_2": header_info,
-            "managerlongs": single_name_long,
-            "managershorts": single_name_short,
+            "header_info_11": header_info,
+            "header_info_22": header_info,
+            "managerlongsEquity": single_name_long_equity,
+            "managerlongsCredit": single_name_long_credit,
+            "managershortsEquity": single_name_short_equity,
+            "managershorts_Credit": single_name_short_credit,
+
 
         }
 
@@ -236,7 +250,7 @@ if __name__ == "__main__":
         },
     )
 
-    end_date = dt.date(2022, 12, 31)
+    end_date = dt.date(2023, 2, 28)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNameInvestmentGroupReport().execute()
