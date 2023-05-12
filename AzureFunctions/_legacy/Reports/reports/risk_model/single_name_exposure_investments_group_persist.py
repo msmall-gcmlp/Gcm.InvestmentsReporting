@@ -82,7 +82,7 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
         exposure_to_save.loc[exposure_to_save['Sector'] == '', 'Sector'] = 'OTHER'
         exposure_to_save.loc[exposure_to_save['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'OTHER'
 
-        exposure_to_save = exposure_to_save.groupby(['InvestmentGroupId', 'Issuer', 'Sector','AssetClass', 'AsOfDate']).sum('ExpNav').reset_index()
+        exposure_to_save = exposure_to_save.groupby(['InvestmentGroupId', 'Issuer', 'Sector', 'AssetClass', 'AsOfDate']).sum('ExpNav').reset_index()
         exposure_to_save['Sector'] = exposure_to_save['Sector'].map(sector_short_names)
 
         dwh_subscription = os.environ.get("Subscription", "nonprd")
