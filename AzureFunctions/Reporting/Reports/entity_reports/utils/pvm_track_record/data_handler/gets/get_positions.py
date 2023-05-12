@@ -1,4 +1,6 @@
-from .......core.entity_handler import HierarchyHandler
+from gcm.inv.dataprovider.entity_provider.hierarchy_controller.hierarchy_handler import (
+    HierarchyHandler,
+)
 from .......core.report_structure import (
     EntityDomainTypes,
     Standards as EntityDomainStandards,

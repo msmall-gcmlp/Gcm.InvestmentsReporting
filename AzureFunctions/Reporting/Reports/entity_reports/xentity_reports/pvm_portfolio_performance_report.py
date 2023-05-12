@@ -28,7 +28,11 @@ from ....core.components.report_workbook_handler import (
     ReportWorkBookHandler,
 )
 from ....core.components.report_worksheet import ReportWorksheet
-from gcm.inv.dataprovider.entity_provider.entity_domains.portfolio import PortfolioEntityProvider
+from gcm.inv.dataprovider.entity_provider.entity_domains.portfolio import (
+    PortfolioEntityProvider,
+)
+from gcm.inv.utils.parsed_args.parsed_args import ParsedArgs
+from gcm.inv.dataprovider.entity_provider.entity_domains.synthesis_unit.type_controller import SynthesisUnitType, get_synthesis_unit_provider_by_type
 
 
 # Run all PEREI entities:
@@ -70,11 +74,15 @@ class PvmPerformanceBreakoutReport(ReportStructure):
 
     @classmethod
     def standard_entity_get_callable(
-        cls, domain: EntityDomainProvider
+        cls, domain: EntityDomainProvider, parsed_args: ParsedArgs
     ) -> Callable[..., pd.DataFrame]:
         if domain.domain_table.domain == EntityDomainTypes.Portfolio:
             port: PortfolioEntityProvider = domain
             return port.get_pe_only_portfolios
+        if domain.domain_table.domain == EntityDomainTypes.SynthesisUnit:
+            syn_unit_type = SynthesisUnitType[parsed_args.SynthesisUnitType]
+            syn_unit = get_synthesis_unit_provider_by_type(syn_unit_type)
+            return syn_unit.get_all_in_unit
         else:
             return domain.get_perei_med_entities
 

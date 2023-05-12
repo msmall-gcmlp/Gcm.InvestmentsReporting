@@ -6,7 +6,10 @@ from .components.report_component_base import (
 from gcm.inv.entityhierarchy.NodeHierarchy import (
     Standards as EntityStandardNames,
 )
-from .entity_handler import HierarchyHandler, EntityReportingMetadata
+from gcm.inv.dataprovider.entity_provider.hierarchy_controller.hierarchy_handler import (
+    HierarchyHandler,
+)
+from .entity_handler import EntityReportingMetadata
 from openpyxl import Workbook
 from typing import List, Optional, Callable
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
@@ -36,6 +39,7 @@ from gcm.inv.dataprovider.entity_provider.controller import (
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
 from functools import cached_property
+from gcm.inv.utils.parsed_args.parsed_args import ParsedArgs
 
 
 class ReportingBlob(ExtendedEnum):
@@ -270,7 +274,7 @@ class ReportStructure(SerializableBase):
 
     @classmethod
     def standard_entity_get_callable(
-        cls, domain: EntityDomainProvider
+        cls, domain: EntityDomainProvider, pargs: ParsedArgs
     ) -> Callable[..., pd.DataFrame]:
         return domain.get_all
 

@@ -1,9 +1,11 @@
 from gcm.inv.utils.misc.table_cache_base import Singleton
 from ......core.entity_handler import (
-    HierarchyHandler,
     EntityDomainTypes,
     EntityStandardNames,
     List,
+)
+from gcm.inv.dataprovider.entity_provider.hierarchy_controller.hierarchy_handler import (
+    HierarchyHandler,
 )
 from functools import cached_property
 import pandas as pd
