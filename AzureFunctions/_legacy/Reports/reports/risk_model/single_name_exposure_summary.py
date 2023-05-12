@@ -266,8 +266,9 @@ class SingleNameEquityExposureSummary(ReportingRunnerBase):
         firm_wide.sort_values(['IssuerSum', 'firmwide_pct'], ascending=False, inplace=True)
         firm_wide = firm_wide[firm_wide['InvestmentGroupName'] != 'Atlas Enhanced Fund']
         largest_firm_wide_level = firm_wide.groupby(['Issuer']).head(3).reset_index(drop=True)
-        largest_firm_wide_level = largest_firm_wide_level.groupby(['Issuer', 'Sector', 'AssetClass', 'Issuer_allocation', 'IssuerSum'])['InvestmentGroupName'].agg(
-            ', '.join).reset_index()
+        largest_firm_wide_level = largest_firm_wide_level.groupby(['Issuer', 'Sector',
+                                                                   'AssetClass', 'Issuer_allocation',
+                                                                   'IssuerSum'])['InvestmentGroupName'].agg(', '.join).reset_index()
         vol = self._investment_group.normalize_issuers(self.get_vol(as_of_date=self._as_of_date, runner=runner_prd))
         vol['TotalRisk'] = vol['TotalRisk'] / 100
         vol['SpecificResidualRisk'] = vol['SpecificResidualRisk'] / 100

@@ -193,7 +193,7 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         portfolio_balance = self._portfolio_holdings[['OpeningBalance']].sum()
         single_name['portfolio_allocation'] = (portfolio_balance[0] * single_name['IssuerSum']) / 1000
         single_name['portfolio_allocation_permanager'] = (portfolio_balance[0] * single_name['PortfolioNav']) / 1000
-        manager_allocation = single_name[['Issuer', 'InvestmentGroupName','AssetClass',
+        manager_allocation = single_name[['Issuer', 'InvestmentGroupName', 'AssetClass',
                                           'portfolio_allocation_permanager', 'PortfolioNav', 'manager_allocation_pct']].drop_duplicates()
         manager_allocation = manager_allocation[manager_allocation['InvestmentGroupName'] != 'Atlas Enhanced Fund']
         portfolio_allocation = single_name[['Issuer', 'Sector', 'portfolio_allocation', 'IssuerSum', 'AssetClass']].drop_duplicates()
