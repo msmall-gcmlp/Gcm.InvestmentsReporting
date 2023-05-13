@@ -473,10 +473,10 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
     def build_summary_table(self, rankings, stats):
         quartile_headings = pd.DataFrame({'Rank': [-100] * 4,
-                                       'Decile': [''] * 4,
-                                       'Confidence': [''] * 4,
-                                       'InvestmentGroupName': ['Quartile ' + str(x) for x in [1, 2, 3, 4]],
-                                       'Quartile': [1, 2, 3, 4]})
+                                          'Decile': [''] * 4,
+                                          'Confidence': [''] * 4,
+                                          'InvestmentGroupName': ['Quartile ' + str(x) for x in [1, 2, 3, 4]],
+                                          'Quartile': [1, 2, 3, 4]})
         rankings = pd.concat([rankings, quartile_headings])
 
         summary = rankings.merge(stats, left_on=['InvestmentGroupName'], right_index=True, how='left')
