@@ -17,6 +17,7 @@ from Reporting.core.report_structure import (
 from Reporting.Reports.entity_reports.investment_manager_reports.pvm_manager_trackrecord_report import (
     PvmManagerTrackRecordReport,
 )
+from utils.print_utils import print
 
 
 class TestPvmManagerTrReport(object):
@@ -59,4 +60,5 @@ class TestPvmManagerTrReport(object):
                 )
             )
             assert this_report is not None
-            assert this_report.components is not None
+            output = print(report_structure=this_report, print_pdf=True)
+            assert output is not None
