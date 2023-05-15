@@ -59,7 +59,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             cfs = self.manager_handler.all_position_cfs
             cfs = self.filter_by_inv_id(cfs)
             return cfs
-        
+
         @cached_property
         def position_dimn(self) -> pd.DataFrame:
             return super().position_dimn
@@ -118,7 +118,13 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
                 pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
             ),
         ]
-        worksheets = [ReportWorksheet("Sheet1", report_tables=tables)]
+        worksheets = [
+            ReportWorksheet(
+                "Sheet1",
+                report_tables=tables,
+                render_params=ReportWorksheet.ReportWorkSheetRenderer(),
+            )
+        ]
         return [
             ReportWorkBookHandler(
                 f"{self.manager_name}_{self.idw_pvm_tr_id}_Report",

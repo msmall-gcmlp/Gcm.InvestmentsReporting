@@ -99,7 +99,13 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         attribution = PvmTrackRecordAttribution(all_investments)
         attribution.net_performance_results()
         name = f"ManagerTR_{self.manager_name}"
-        worksheets = [ReportWorksheet("Sheet1", report_tables=tables)]
+        worksheets = [
+            ReportWorksheet(
+                "Sheet1",
+                report_tables=tables,
+                render_params=ReportWorksheet.ReportWorkSheetRenderer(),
+            )
+        ]
         wb_handler = ReportWorkBookHandler(
             name,
             report_sheets=worksheets,
