@@ -9,6 +9,7 @@ from gcm.inv.utils.misc.table_cache_base import Singleton
 from gcm.inv.scenario import Scenario
 from gcm.Dao.DaoRunner import DaoRunner, DaoSource
 import json
+import numpy as np
 
 
 class EntityReportingMetadata:
@@ -70,6 +71,8 @@ class EntityReportingMetadata:
         try:
             if type(item) == int:
                 return item
+            if type(item) == np.int64:
+                return int(item)
             if type(item) == float:
                 return int(float(item))
             if type(item) == str:
