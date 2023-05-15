@@ -31,6 +31,8 @@ class ExtendedReportSpecificEntityExtractActivity(
     def default_get(self, domain: EntityDomainProvider) -> pd.DataFrame:
         report_name = self.pargs.ReportName
         report: ReportStructure = get_report_class_by_name(report_name)
-        func = report.standard_entity_get_callable(domain)
+        func = report.standard_entity_get_callable(
+            domain, pargs=self.pargs
+        )
         df: pd.DataFrame = func()
         return df
