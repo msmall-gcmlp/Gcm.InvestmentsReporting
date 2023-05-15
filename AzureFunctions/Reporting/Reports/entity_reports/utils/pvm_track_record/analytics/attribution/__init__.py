@@ -2,11 +2,17 @@ from ...data_handler.investment_container import InvestmentContainerBase
 from typing import List
 from functools import cached_property
 import pandas as pd
+from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 
 
 class PvmPerformanceResults(object):
-    def __init__(self, cleaned_cashflows: pd.DataFrame):
+    def __init__(
+        self,
+        cleaned_cashflows: pd.DataFrame,
+        aggregate_interval: AggregateInterval,
+    ):
         self.cleaned_cashflows = cleaned_cashflows
+        self.aggregate_interval = aggregate_interval
 
     @cached_property
     def irr(self):
@@ -30,7 +36,9 @@ class PvmTrackRecordAttribution(object):
             pass
 
     def run_position_attribution(
-        self, run_attribution_levels_by: List[str]
+        self,
+        run_attribution_levels_by: List[str],
+        aggregate_interval: AggregateInterval,
     ) -> AttributionResults:
         position_cashflows: List[pd.DataFrame] = [
             x.position_cashflows for x in self.investments
