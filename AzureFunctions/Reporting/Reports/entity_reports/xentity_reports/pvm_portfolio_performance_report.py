@@ -73,6 +73,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             entity_groups=[
                 EntityDomainTypes.Portfolio,
                 EntityDomainTypes.InvestmentManager,
+                EntityDomainTypes.SynthesisUnit,
             ],
         )
 
@@ -95,7 +96,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             "EntityName"
         ].unique()[0]
 
-        if self.report_meta.entity_domain == SynthesisUnitType:
+        if self.report_meta.entity_domain == EntityDomainTypes.SynthesisUnit:
             # example: this is "Private Eqtuiy"
             # get all deals associated with Private Equity
             deals_within_scope: pd.DataFrame = (
