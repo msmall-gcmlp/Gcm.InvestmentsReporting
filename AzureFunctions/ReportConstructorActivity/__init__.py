@@ -2,7 +2,10 @@ from gcm.inv.utils.azure.durable_functions.base_activity import (
     BaseActivity,
 )
 import datetime as dt
-from ..Reporting.Reports.controller import get_report_class_by_name
+from ..Reporting.Reports.controller import (
+    get_report_class_by_name,
+    validate_meta,
+)
 from ..Reporting.core.report_structure import (
     AggregateInterval,
     AvailableMetas,
@@ -23,6 +26,7 @@ from gcm.Dao.DaoRunner import DaoRunner, AzureDataLakeDao, DaoSource
 import json
 import pandas as pd
 import copy
+from utils.print_utils import print
 
 
 class ReportConstructorActivity(BaseActivity):
@@ -40,42 +44,36 @@ class ReportConstructorActivity(BaseActivity):
     def parg_type(self):
         return ReportingParsedArgs
 
-    def validate(self, **kwargs) -> Tuple[ReportStructure, ReportMeta]:
+    def construct_meta(self) -> Tuple[ReportStructure, ReportMeta]:
         # below will fail if something went wrong in the parser
         report: ReportStructure = get_report_class_by_name(
             self.pargs.ReportName
         )
         available_metas: AvailableMetas = report.available_metas()
-        assert available_metas is not None
         agg: AggregateInterval = Scenario.get_attribute(
             "aggregate_interval"
         )
         agg = agg if (agg is not None) else AggregateInterval.Multi
-        assert agg in available_metas.aggregate_intervals
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
+        # TODO: speed this up and make better
         frequency_type: FrequencyType = Scenario.get_attribute("frequency")
-
-        # we MUST run on today
-        assert as_of_date is not None
         frequencies: List[Frequency] = available_metas.frequencies
-        # check if we're running on the right date?
-        final_freq: Frequency = None
+        # set default to first by definition
+        final_freq = frequencies[0]
         for f in frequencies:
             if BusinessCalendar().is_business_day(as_of_date, f.calendar):
                 final_freq = Frequency(frequency_type, f.calendar)
                 break
-        assert final_freq is not None
-        # now check entity tags:
         domain: EntityDomainTypes = Scenario.get_attribute(
             "EntityDomainTypes"
         )
         entity_info: pd.DataFrame = None
-        if available_metas.entity_groups is not None:
-            assert (
-                domain is not None
-                and domain in available_metas.entity_groups
-            )
-            entity_info = pd.read_json(json.loads(self._d)["entity"])
+        if self._d is not None:
+            dict_of_pargs = json.loads(self._d)
+            if "entity" in dict_of_pargs:
+                entity_info: pd.DataFrame = pd.read_json(
+                    dict_of_pargs["entity"]
+                )
         return (
             report,
             ReportMeta(
@@ -89,29 +87,51 @@ class ReportConstructorActivity(BaseActivity):
         )
 
     def activity(self, **kwargs):
-        [report_structure, meta] = self.validate(**kwargs)
+        [report_structure, meta] = self.construct_meta()
+        validate_meta(
+            report_meta=meta,
+            report_structure=report_structure,
+            strict=False,
+        )
         report: ReportStructure = report_structure(meta)
         j = report.to_json()
         dao: DaoRunner = Scenario.get_attribute("dao")
-
-        dl_location = copy.deepcopy(
+        json_dl_location = copy.deepcopy(
             ReportConstructorActivity.__json_location
         )
-        dl_location.path.append(report.base_json_name)
-        dl_location = AzureDataLakeDao.create_blob_params(dl_location)
-        dl_location = {
+        json_dl_location.path.append(report.base_json_name)
+        json_dl_location = AzureDataLakeDao.create_blob_params(
+            json_dl_location, metadata=report.storage_account_metadata
+        )
+        json_dl_location = {
             key: value
-            for key, value in dl_location.items()
+            for key, value in json_dl_location.items()
             if key in ["filesystem_name", "file_path", "retry", "metadata"]
         }
-        if self.pargs.save:
 
+        [excel_file_locations, source] = report.save_params
+        simple_excel_loc = {
+            key: value
+            for key, value in excel_file_locations.items()
+            if key in ["filesystem_name", "file_path", "retry", "metadata"]
+        }
+
+        file_locations = {
+            "json_location": json_dl_location,
+            "excel_location": {
+                "source": source.name,
+                "file": simple_excel_loc,
+            },
+        }
+
+        if self.pargs.save:
             dao.execute(
-                params=dl_location,
+                params=json_dl_location,
                 source=DaoSource.DataLake,
                 operation=lambda runner, p: runner.post_data(p, j),
             )
-        return json.dumps(dl_location)
+            print(report_structure=report, print_pdf=False)
+        return json.dumps(file_locations)
 
 
 def main(context):

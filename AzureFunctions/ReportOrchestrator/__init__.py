@@ -55,7 +55,6 @@ class ReportOrchestrator(BaseOrchestrator):
             serialize_pargs(self.pargs, {"data": data_location}),
         )
         return publish_location
-        # next, execute reportrunner sub-orchestrator
 
 
 main = df.Orchestrator.create(ReportOrchestrator.main)

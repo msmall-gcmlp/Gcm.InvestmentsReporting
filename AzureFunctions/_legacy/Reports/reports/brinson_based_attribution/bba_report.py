@@ -1595,75 +1595,72 @@ class BbaReport(ReportingRunnerBase):
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
                 aggregate_intervals=AggregateInterval.MTD,
-                # output_dir="cleansed/investmentsreporting/printedexcels/",
-                # report_output_source=DaoSource.DataLake,
             )
 
         logging.info("Excel stored to DataLake for: " + acronym)
 
-    def generate_pfund_attributes(self):
-        df = self._gcm[self._gcm.Date == self._report_date][["InvestmentGroupName", "InvestmentGroupId", "Strategy"]].drop_duplicates()
-        gcm_strat = InvestmentGroup(investment_group_ids=df.InvestmentGroupId.astype("int").drop_duplicates().to_list()).get_strategies()
+    def generate_pfund_attributes(self, vertical_name: str):
+        if vertical_name == "ARS":
+            df = self._gcm[self._gcm.Date == self._report_date][["InvestmentGroupName", "InvestmentGroupId", "Strategy"]].drop_duplicates()
+            gcm_strat = InvestmentGroup(investment_group_ids=df.InvestmentGroupId.astype("int").drop_duplicates().to_list()).get_strategies()
 
-        gcm_map = df.merge(gcm_strat, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
+            gcm_map = df.merge(gcm_strat, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
 
-        arbs = InvestmentGroup(
-            investment_group_ids=df.InvestmentGroupId.astype("int").drop_duplicates().to_list()
-        ).get_absolute_benchmarks()[["InvestmentGroupName", "BenchmarkName"]]
+            arbs = InvestmentGroup(
+                investment_group_ids=df.InvestmentGroupId.astype("int").drop_duplicates().to_list()
+            ).get_absolute_benchmarks()[["InvestmentGroupName", "BenchmarkName"]]
 
-        df_arb = gcm_map.merge(arbs, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
+            df_arb = gcm_map.merge(arbs, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
 
-        rpt_peer = self._strategy_benchmark.get_default_peer_benchmarks(
-            investment_group_names=df_arb.InvestmentGroupName.drop_duplicates().to_list()
-        )
-        df_arb_peer = (
-            df_arb[["InvestmentGroupName", "Strategy", "GcmStrategy", "GcmSubStrategy", "BenchmarkName"]]
-            .drop_duplicates()
-            .merge(rpt_peer, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
-        )
-
-        result = df_arb_peer[~df_arb_peer.BenchmarkName.isnull()].sort_values(["GcmStrategy", "InvestmentGroupName"])
-        # result.BenchmarkName = "'" + result.BenchmarkName.astype('str')
-        result = result[
-            [
-                "InvestmentGroupName",
-                "GcmStrategy",
-                "Strategy",
-                "EurekahedgeBenchmark",
-                "GcmSubStrategy",
-                "ReportingPeerGroup",
-                "BenchmarkName",
-            ]
-        ]
-        input_data = {
-            "attributes": result,
-            "as_of_date": pd.DataFrame(
-                {"Date": [(self._report_date.replace(day=1) + dt.timedelta(days=31)).replace(day=1) - dt.timedelta(days=1)]}
-            ),
-        }
-
-        as_of_date = dt.datetime.combine(self._report_date + MonthEnd(1), dt.datetime.min.time())
-        with Scenario(as_of_date=as_of_date).context():
-            InvestmentsReportRunner().execute(
-                data=input_data,
-                template="PFUND_Attributes_Template.xlsx",
-                save=True,
-                runner=self._runner,
-                entity_type=ReportingEntityTypes.cross_entity,
-                entity_name="Firm",
-                entity_display_name="Firm",
-                # entity_ids=[000000],
-                # entity_source=DaoSource.PubDwh,
-                report_name="ARS Portfolio Fund Attributes",
-                report_type=ReportType.Performance,
-                report_vertical=ReportVertical.FirmWide,
-                report_frequency="Monthly",
-                aggregate_intervals=AggregateInterval.MTD,
-                # output_dir="cleansed/investmentsreporting/printedexcels/",
-                # report_output_source=DaoSource.DataLake,
+            rpt_peer = self._strategy_benchmark.get_default_peer_benchmarks(
+                investment_group_names=df_arb.InvestmentGroupName.drop_duplicates().to_list()
+            )
+            df_arb_peer = (
+                df_arb[["InvestmentGroupName", "Strategy", "GcmStrategy", "GcmSubStrategy", "BenchmarkName"]]
+                .drop_duplicates()
+                .merge(rpt_peer, how="left", left_on="InvestmentGroupName", right_on="InvestmentGroupName")
             )
 
-        logging.info("Excel stored to DataLake for: " + "Firm")
+            result = df_arb_peer[~df_arb_peer.BenchmarkName.isnull()].sort_values(["GcmStrategy", "InvestmentGroupName"])
+            # result.BenchmarkName = "'" + result.BenchmarkName.astype('str')
+            result = result[
+                [
+                    "InvestmentGroupName",
+                    "GcmStrategy",
+                    "Strategy",
+                    "EurekahedgeBenchmark",
+                    "GcmSubStrategy",
+                    "ReportingPeerGroup",
+                    "BenchmarkName",
+                ]
+            ]
+            input_data = {
+                "attributes": result,
+                "as_of_date": pd.DataFrame(
+                    {"Date": [(self._report_date.replace(day=1) + dt.timedelta(days=31)).replace(day=1) - dt.timedelta(days=1)]}
+                ),
+            }
+
+            as_of_date = dt.datetime.combine(self._report_date + MonthEnd(1), dt.datetime.min.time())
+            with Scenario(as_of_date=as_of_date).context():
+                InvestmentsReportRunner().execute(
+                    data=input_data,
+                    template="PFUND_Attributes_Template.xlsx",
+                    save=True,
+                    runner=self._runner,
+                    entity_type=ReportingEntityTypes.cross_entity,
+                    entity_name="Firm",
+                    entity_display_name="Firm",
+                    report_name="ARS Portfolio Fund Attributes",
+                    report_type=ReportType.Performance,
+                    report_vertical=ReportVertical.FirmWide,
+                    report_frequency="Monthly",
+                    aggregate_intervals=AggregateInterval.MTD,
+                )
+
+            logging.info("Excel stored to DataLake for: " + "Firm")
+        else:
+            raise NotImplementedError()
 
     def run(self, **kwargs):
         self.generate_pfund_attributes()

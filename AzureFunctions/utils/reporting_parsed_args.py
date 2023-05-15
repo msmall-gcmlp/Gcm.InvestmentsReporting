@@ -1,10 +1,10 @@
-from gcm.inv.entityhierarchy.az_func.entity_extract_activity_base import (
-    EntityParsedArgs,
+from gcm.inv.dataprovider.entity_provider.azure_extension.extended_entity_pargs import (
+    ExtendedEntityPargs,
 )
 from ..Reporting.Reports.controller import ReportNames
 
 
-class ReportingParsedArgs(EntityParsedArgs):
+class ReportingParsedArgs(ExtendedEntityPargs):
     def __init__(self):
         super().__init__()
 

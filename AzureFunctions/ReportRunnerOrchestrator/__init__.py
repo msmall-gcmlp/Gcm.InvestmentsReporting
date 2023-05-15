@@ -20,11 +20,11 @@ class ReportRunnerOrchestrator(BaseOrchestrator):
 
     def orchestrate(self, context: df.DurableOrchestrationContext):
         # get report type
-        report_location = yield context.call_activity(
+        file_locations = yield context.call_activity(
             "ReportConstructorActivity",
             serialize_pargs(self.pargs, self._d),
         )
-        return report_location
+        return file_locations
 
 
 main = df.Orchestrator.create(ReportRunnerOrchestrator.main)

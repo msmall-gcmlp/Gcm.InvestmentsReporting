@@ -1,15 +1,23 @@
 from abc import abstractmethod, abstractproperty, abstractclassmethod
-
 from .components.report_component_base import (
     ReportComponentBase,
 )
-from typing import List
+from gcm.inv.entityhierarchy.NodeHierarchy import (
+    Standards as EntityStandardNames,
+)
+from gcm.inv.dataprovider.entity_provider.hierarchy_controller.hierarchy_handler import (
+    HierarchyHandler,
+)
+from .entity_handler import EntityReportingMetadata
+from openpyxl import Workbook
+from typing import List, Optional, Callable
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
-from gcm.inv.utils.date.Frequency import Frequency, FrequencyType
+from gcm.inv.utils.date.Frequency import Frequency, FrequencyType, Calendar
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain.entity_domain_types import (
     EntityDomainTypes,
 )
+import re
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain import Standards
 import json
 from gcm.inv.scenario import Scenario
@@ -19,8 +27,18 @@ import datetime as dt
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import (
     AzureDataLakeDao,
 )
-from gcm.Dao.DaoRunner import DaoSource
+from gcm.Dao.DaoRunner import DaoSource, DaoRunner
+from gcm.Dao.daos.azure_datalake.azure_datalake_file import (
+    AzureDataLakeFile,
+    TabularDataOutputTypes,
+)
+from gcm.inv.dataprovider.entity_provider.controller import (
+    EntityDomainProvider,
+)
 import pandas as pd
+from azure.core.exceptions import ResourceNotFoundError
+from functools import cached_property
+from gcm.inv.utils.parsed_args.parsed_args import ParsedArgs
 
 
 class ReportingBlob(ExtendedEnum):
@@ -49,11 +67,13 @@ class ReportConsumer(SerializableBase):
         FIRM = 5
 
     class Vertical(ExtendedEnum):
-        FIRM = 0
-        ARS = 1
-        PEREI = 2
-        SIG = 3
-        Other = 4
+        FIRM = "FIRM"
+        PE = "Private Equity"
+        Infrastructure = "Infrastructure"
+        Real_Estate = "Real Estate"
+        ARS = "ARS"
+        ARS_EOF = "ARS-EOF"
+        SIG = "SIG"
 
     def __init__(self, horizontal: List[Horizontal], vertical: Vertical):
         self.horizontal = horizontal
@@ -128,9 +148,11 @@ class AvailableMetas(object):
     def __init__(
         self,
         report_type: ReportType,
-        frequencies: List[Frequency],
         aggregate_intervals: List[AggregateInterval],
         consumer: ReportConsumer,
+        frequencies: List[Frequency] = [
+            Frequency(FrequencyType.Once, Calendar.AllDays)
+        ],
         entity_groups: List[EntityDomainTypes] = None,
     ):
         self.report_type = report_type
@@ -154,7 +176,8 @@ class ReportStructure(SerializableBase):
         EntityDomainTypes.NONE: "XENTITY",
     }
 
-    def report_file_xlsx_name(self):
+    @cached_property
+    def base_file_name(self):
         report_name = self.report_name.name
         entity_name: str = None
         entity_type_display: str = None
@@ -183,6 +206,9 @@ class ReportStructure(SerializableBase):
                     if domain in ReportStructure._display_mapping_dict
                     else domain.name.upper()
                 )
+                # Keep alpha numeric and spaces
+                regex = re.compile("[^A-Za-z0-9 ]+")
+                entity_name = regex.sub("", entity_name)
             else:
                 raise RuntimeError(
                     "More than one entity. Can't construct file name"
@@ -199,13 +225,19 @@ class ReportStructure(SerializableBase):
             ]
             if x is not None
         ]
-        file_name = f'{"_".join(s)}.xlsx'
+        return "_".join(s)
+
+    @cached_property
+    def report_file_xlsx_name(self):
+        file_name = self.base_file_name
+        file_name = f"{file_name}.xlsx"
         return file_name
 
     @abstractclassmethod
     def available_metas(cls, **kwargs) -> AvailableMetas:
         raise NotImplementedError()
 
+    @cached_property
     def save_params(self) -> tuple[dict, DaoSource]:
         date: dt.date = Scenario.get_attribute("as_of_date")
         date_str = date.strftime("%Y_%m_%d")
@@ -229,17 +261,41 @@ class ReportStructure(SerializableBase):
                 sources=self.report_meta.type.name,
                 entity=date_str,
                 path=[
-                    self.report_file_xlsx_name(),
+                    self.report_file_xlsx_name,
                 ],
             ),
             DaoSource.ReportingStorage,
         )
         return (
             AzureDataLakeDao.create_blob_params(
-                output_loc, metadata=self.metadata()
+                output_loc, metadata=self.storage_account_metadata
             ),
             source,
         )
+
+    @classmethod
+    def standard_entity_get_callable(
+        cls, domain: EntityDomainProvider, pargs: ParsedArgs
+    ) -> Callable[..., pd.DataFrame]:
+        return domain.get_all
+
+    def get_template(self) -> Optional[Workbook]:
+        dao: DaoRunner = Scenario.get_attribute("dao")
+        try:
+            params = AzureDataLakeDao.create_blob_params(
+                self.excel_template_location,
+            )
+            file: AzureDataLakeFile = dao.execute(
+                params=params,
+                source=DaoSource.DataLake,
+                operation=lambda d, p: d.get_data(p),
+            )
+            excel = file.to_tabular_data(
+                TabularDataOutputTypes.ExcelWorkBook, params
+            )
+            return excel
+        except ResourceNotFoundError:
+            return None
 
     @abstractproperty
     def excel_template_location(self):
@@ -247,7 +303,7 @@ class ReportStructure(SerializableBase):
 
     @property
     def base_json_name(self) -> str:
-        return f'{self.report_name.name}_{Scenario.get_attribute("as_of_date").strftime("%Y-%m-%d")}.json'
+        return f"{self.base_file_name}.json"
 
     @property
     def components(self) -> List[ReportComponentBase]:
@@ -263,6 +319,7 @@ class ReportStructure(SerializableBase):
     def assign_components(self):
         pass
 
+    # as provided by IT
     class gcm_metadata:
         gcm_report_name = "gcm_report_name"
         gcm_as_of_date = "gcm_as_of_date"
@@ -273,15 +330,54 @@ class ReportStructure(SerializableBase):
         gcm_target_audience = "gcm_target_audience"
         gcm_modified_date = "gcm_modified_date"
 
-    def metadata(self) -> dict:
+    @staticmethod
+    def _generate_entity_metadata():
+        pass
+
+    def get_reportinghub_entity_metadata(self) -> dict:
+        if self.report_meta.entity_domain is not None:
+            if (
+                self.report_meta.entity_info is not None
+                and type(self.report_meta.entity_info) == pd.DataFrame
+            ):
+                entity_info = self.report_meta.entity_info
+                coerced_dict = EntityReportingMetadata.generate(
+                    entity_info
+                )
+                return coerced_dict
+        return None
+
+    @cached_property
+    def related_entities(
+        self,
+    ) -> HierarchyHandler:
+        domain = self.report_meta.entity_domain
+        entity_info: pd.DataFrame = self.report_meta.entity_info
+        if domain != EntityDomainTypes.NONE and entity_info.shape[0] > 0:
+            current_entity_name: str = (
+                entity_info[EntityStandardNames.EntityName]
+                .drop_duplicates()
+                .to_list()
+            )[0]
+            val = HierarchyHandler(domain, current_entity_name)
+            return val
+        else:
+            return None
+
+    def report_name_metadata(self):
+        return self.report_name.name
+
+    @cached_property
+    def storage_account_metadata(self) -> dict:
         # these are starting to become arbitrary
+        # TODO: make a specific dataclass (instead of dict)
         class_type = ReportStructure.gcm_metadata
         val = {
-            class_type.gcm_report_name: self.report_name.name,
+            class_type.gcm_report_name: self.report_name_metadata(),
             class_type.gcm_as_of_date: Scenario.get_attribute(
                 "as_of_date"
             ).strftime("%Y-%m-%d"),
-            class_type.gcm_business_group: self.report_meta.consumer.vertical.name,
+            class_type.gcm_business_group: self.report_meta.consumer.vertical.value,
             class_type.gcm_report_frequency: self.report_meta.frequency.type.name,
             class_type.gcm_report_period: self.report_meta.interval.name,
             class_type.gcm_report_type: self.report_meta.type.value,
@@ -297,6 +393,10 @@ class ReportStructure(SerializableBase):
                 "%Y-%m-%d"
             ),
         }
+        entity_metadata = self.get_reportinghub_entity_metadata()
+        val: dict = (
+            val if entity_metadata is None else (val | entity_metadata)
+        )
         return val
 
     # serialization logic
@@ -305,6 +405,7 @@ class ReportStructure(SerializableBase):
             "report_name": self.report_name.name,
             "report_meta": self.report_meta.to_dict(),
             "report_components": [c.to_dict() for c in self.components],
+            "storage_account_metadata": self.storage_account_metadata,
         }
 
     @staticmethod
@@ -318,6 +419,7 @@ class ReportStructure(SerializableBase):
         components: List[dict] = d["report_components"]
 
         report_meta: ReportMeta = ReportMeta.from_dict(d["report_meta"])
+        storage_account_metadata: dict = d["storage_account_metadata"]
         c_list = []
         for i in components:
             c_list.append(convert_component_from_dict(i))
@@ -325,4 +427,5 @@ class ReportStructure(SerializableBase):
         p.components = c_list
         p.report_meta = report_meta
         p.report_name = report_name
+        p.storage_account_metadata = storage_account_metadata
         return p

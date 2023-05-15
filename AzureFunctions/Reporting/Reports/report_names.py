@@ -10,3 +10,10 @@ class ReportNames(ExtendedEnum):
     PeerRankingReport = auto()
     ESG_ScoreCard = auto()
     Sample_Ars_Portfolio_Report = auto()
+    AggregatedPortolioFundAttributeReport = auto()
+    BasePvmTrackRecordReport = auto()
+
+    PvmManagerTrackRecordReport = auto()
+    PvmInvestmentTrackRecordReport = auto()
+
+    PvmPerformanceBreakoutReport = auto()

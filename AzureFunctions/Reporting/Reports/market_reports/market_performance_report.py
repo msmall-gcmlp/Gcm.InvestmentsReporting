@@ -11,6 +11,9 @@ from ...core.report_structure import (
 )
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType, Calendar
 from ...core.components.report_table import ReportTable
+from ...core.components.report_workbook_handler import (
+    ReportWorkBookHandler,
+)
 import pandas as pd
 from ..report_names import ReportNames
 from gcm.inv.scenario import Scenario
@@ -26,7 +29,7 @@ class MarketPerformanceReport(ReportStructure):
             zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
             sources="investmentsreporting",
             entity="exceltemplates",
-            path=["Market Performance_Template.xlsx.xlsx"],
+            path=["Market Performance_Template.xlsx"],
         )
 
     @classmethod
@@ -47,13 +50,16 @@ class MarketPerformanceReport(ReportStructure):
     def assign_components(self):
         dao: DaoRunner = Scenario.get_attribute("dao")
         assert dao is not None
-        return [
-            ReportTable(
-                "MyComponent",
-                pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
-            ),
-            ReportTable(
-                "MyComponent_2",
-                pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
-            ),
-        ]
+        return ReportWorkBookHandler(
+            "market_report",
+            [
+                ReportTable(
+                    "MyComponent",
+                    pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
+                ),
+                ReportTable(
+                    "MyComponent_2",
+                    pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
+                ),
+            ],
+        )
