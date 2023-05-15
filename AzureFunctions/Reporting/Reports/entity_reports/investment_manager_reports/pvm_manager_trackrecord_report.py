@@ -94,7 +94,7 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         ]
         all_investments = [
             self.children_reports[k].investment_handler
-            for x in self.children_reports
+            for k in self.children_reports
         ]
         attribution = PvmTrackRecordAttribution(all_investments)
         attribution.net_performance_results()
