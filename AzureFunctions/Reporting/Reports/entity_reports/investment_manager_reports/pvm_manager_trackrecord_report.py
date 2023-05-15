@@ -9,6 +9,7 @@ from ....core.report_structure import (
 from ....core.components.report_table import ReportTable
 from ....core.components.report_workbook_handler import (
     ReportWorkBookHandler,
+    ReportWorksheet,
 )
 import pandas as pd
 from ...report_names import ReportNames
@@ -89,8 +90,11 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             ),
         ]
         name = f"ManagerTR_{self.manager_name}"
+        worksheets = [ReportWorksheet("Sheet1", report_tables=tables)]
         wb_handler = ReportWorkBookHandler(
-            name, tables, self.excel_template_location
+            name,
+            report_sheets=worksheets,
+            template_location=self.excel_template_location,
         )
 
         final_list = [wb_handler]
