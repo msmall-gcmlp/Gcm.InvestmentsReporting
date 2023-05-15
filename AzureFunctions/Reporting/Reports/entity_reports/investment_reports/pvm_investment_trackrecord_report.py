@@ -59,6 +59,10 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             cfs = self.manager_handler.all_position_cfs
             cfs = self.filter_by_inv_id(cfs)
             return cfs
+        
+        @cached_property
+        def position_dimn(self) -> pd.DataFrame:
+            return super().position_dimn
 
     @property
     def excel_template_location(self):
