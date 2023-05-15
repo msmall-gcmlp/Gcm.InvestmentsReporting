@@ -128,7 +128,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         return [
             ReportWorkBookHandler(
                 f"{self.manager_name}_{self.idw_pvm_tr_id}_Report",
-                self.excel_template_location,
+                template_location=self.excel_template_location,
                 report_sheets=worksheets,
             )
         ]

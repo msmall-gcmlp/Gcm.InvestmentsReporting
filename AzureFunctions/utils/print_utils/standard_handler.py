@@ -163,7 +163,7 @@ def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
             wb = ExcelIO.write_dataframe_to_xl(
                 wb, k.df, sheetname, cell_address
             )
-        return wb
+    return wb
 
 
 def merge_files(wb_list: List[Workbook]):
