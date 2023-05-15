@@ -78,15 +78,13 @@ class PvmPerformanceBreakoutReport(ReportStructure):
 
     @classmethod
     def standard_entity_get_callable(
-        cls, domain: EntityDomainProvider, parsed_args: ParsedArgs
+        cls, domain: EntityDomainProvider, pargs: ParsedArgs
     ) -> Callable[..., pd.DataFrame]:
         if domain.domain_table.domain == EntityDomainTypes.Portfolio:
             port: PortfolioEntityProvider = domain
             return port.get_pe_only_portfolios
         if domain.domain_table.domain == EntityDomainTypes.SynthesisUnit:
-            syn_unit_type = SynthesisUnitType[
-                parsed_args.SynthesisUnitType
-            ]
+            syn_unit_type = SynthesisUnitType[pargs.SynthesisUnitType]
             syn_unit = get_synthesis_unit_provider_by_type(syn_unit_type)
             return syn_unit.get_all_in_unit
         else:
@@ -96,10 +94,14 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         entity_name: str = self.report_meta.entity_info[
             "EntityName"
         ].unique()[0]
-        # example: this is "Private Eqtuiy"
-        # get all deals associated with Private Equity
+
         if self.report_meta.entity_domain == SynthesisUnitType:
-            PvmDealAssetClass().get_deals_for_asset_class[entity_name]
+            # example: this is "Private Eqtuiy"
+            # get all deals associated with Private Equity
+            deals_within_scope: pd.DataFrame = (
+                PvmDealAssetClass().get_deals_for_asset_class[entity_name]
+            )
+            deals_within_scope.drop_duplicates(inplace=True)
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
         domain = self.report_meta.entity_domain
         entity_info = self.report_meta.entity_info
