@@ -108,6 +108,11 @@ class PvmTrackRecordAttribution(object):
             attribute_by=run_attribution_levels_by,
         )
 
-    @property
-    def top_line_performance_statistics(self) -> PvmPerformanceResults:
-        pass
+    def net_performance_results(
+        self, aggregate_interval: AggregateInterval = AggregateInterval.ITD
+    ) -> PvmPerformanceResults:
+        net_cfs: List[pd.DataFrame] = [
+            x.investment_cashflows for x in self.investments
+        ]
+        net_cfs = pd.concat(net_cfs)
+        return PvmPerformanceResults(net_cfs, aggregate_interval)

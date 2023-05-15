@@ -23,6 +23,9 @@ from ....core.components.report_workbook_handler import (
     ReportWorkBookHandler,
 )
 from ....core.components.report_worksheet import ReportWorksheet
+from ..utils.pvm_track_record.analytics.attribution import (
+    PvmTrackRecordAttribution,
+)
 
 
 class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
@@ -96,10 +99,12 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
                 raise RuntimeError("More than one manager")
         return self.___investment_manager_name
 
+    @cached_property
+    def pvm_perfomance_results(self) -> PvmTrackRecordAttribution:
+        return PvmTrackRecordAttribution([self.investment_handler])
+
     def assign_components(self):
-        pos = self.investment_handler.net_cashflows
-        cf = self.investment_handler.gross_cashflows
-        assert pos is not None and cf is not None
+
         tables = [
             ReportTable(
                 "MyComponent",

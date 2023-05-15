@@ -22,6 +22,9 @@ from ..utils.pvm_track_record.base_pvm_tr_report import (
 )
 from functools import cached_property
 from typing import List
+from ..utils.pvm_track_record.analytics.attribution import (
+    PvmTrackRecordAttribution,
+)
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
@@ -89,6 +92,12 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
                 pd.DataFrame({"m_name": [self.manager_name]}),
             ),
         ]
+        all_investments = [
+            self.children_reports[k].investment_handler
+            for x in self.children_reports
+        ]
+        attribution = PvmTrackRecordAttribution(all_investments)
+        attribution.net_performance_results()
         name = f"ManagerTR_{self.manager_name}"
         worksheets = [ReportWorksheet("Sheet1", report_tables=tables)]
         wb_handler = ReportWorkBookHandler(
