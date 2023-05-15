@@ -79,6 +79,9 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             ],
         )
 
+    def report_name_metadata(self):
+        return f"PE {self.report_meta.entity_domain.name} Performance x Industry x Deal"
+
     @classmethod
     def standard_entity_get_callable(
         cls, domain: EntityDomainProvider, pargs: ParsedArgs
