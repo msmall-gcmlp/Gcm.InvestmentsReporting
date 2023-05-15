@@ -43,6 +43,8 @@ from gcm.inv.dataprovider.entity_provider.entity_domains.synthesis_unit.type_con
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-12-31&ReportName=PvmPerformanceBreakoutReport&test=True&frequency=Quarterly&save=True&aggregate_interval=Multi&EntityDomainTypes=Portfolio&GetBy=PEREI_Entities
 # Run a single entity:
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-12-31&ReportName=PvmPerformanceBreakoutReport&test=True&frequency=Quarterly&save=True&aggregate_interval=Multi&EntityDomainTypes=Portfolio&EntityNames=[%22The%20Consolidated%20Edison%20Pension%20Plan%20Master%20Trust%20-%20GCM%20PE%20Account%22]
+# For synthesisunits:
+# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-12-31&ReportName=PvmPerformanceBreakoutReport&test=True&frequency=Quarterly&save=True&aggregate_interval=Multi&EntityDomainTypes=SynthesisUnit&SynthesisUnitType=PvmDealAssetClass
 class PvmPerformanceBreakoutReport(ReportStructure):
     def __init__(self, report_meta: ReportMeta):
         super().__init__(
@@ -96,11 +98,14 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             "EntityName"
         ].unique()[0]
 
-        if self.report_meta.entity_domain == EntityDomainTypes.SynthesisUnit:
+        if (
+            self.report_meta.entity_domain
+            == EntityDomainTypes.SynthesisUnit
+        ):
             # example: this is "Private Eqtuiy"
             # get all deals associated with Private Equity
             deals_within_scope: pd.DataFrame = (
-                PvmDealAssetClass().get_deals_for_asset_class[entity_name]
+                PvmDealAssetClass().get_deals_for_asset_class(entity_name)
             )
             deals_within_scope.drop_duplicates(inplace=True)
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")

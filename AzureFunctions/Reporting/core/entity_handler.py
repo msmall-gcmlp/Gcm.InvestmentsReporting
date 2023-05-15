@@ -68,6 +68,8 @@ class EntityReportingMetadata:
     @staticmethod
     def __coerce_to_int(item: object, strict=True):
         try:
+            if type(item) == int:
+                return item
             if type(item) == float:
                 return int(float(item))
             if type(item) == str:
