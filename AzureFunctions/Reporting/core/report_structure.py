@@ -1,5 +1,4 @@
 from abc import abstractmethod, abstractproperty, abstractclassmethod
-
 from .components.report_component_base import (
     ReportComponentBase,
 )
@@ -68,11 +67,13 @@ class ReportConsumer(SerializableBase):
         FIRM = 5
 
     class Vertical(ExtendedEnum):
-        FIRM = 0
-        ARS = 1
-        PEREI = 2
-        SIG = 3
-        Other = 4
+        FIRM = "FIRM"
+        PE = "Private Equity"
+        Infrastructure = "Infrastructure"
+        Real_Estate = "Real Estate"
+        ARS = "ARS"
+        ARS_EOF = "ARS-EOF"
+        SIG = "SIG"
 
     def __init__(self, horizontal: List[Horizontal], vertical: Vertical):
         self.horizontal = horizontal
@@ -376,7 +377,7 @@ class ReportStructure(SerializableBase):
             class_type.gcm_as_of_date: Scenario.get_attribute(
                 "as_of_date"
             ).strftime("%Y-%m-%d"),
-            class_type.gcm_business_group: self.report_meta.consumer.vertical.name,
+            class_type.gcm_business_group: self.report_meta.consumer.vertical.value,
             class_type.gcm_report_frequency: self.report_meta.frequency.type.name,
             class_type.gcm_report_period: self.report_meta.interval.name,
             class_type.gcm_report_type: self.report_meta.type.value,

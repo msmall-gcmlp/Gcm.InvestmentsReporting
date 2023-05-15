@@ -70,7 +70,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             aggregate_intervals=[AggregateInterval.Multi],
             consumer=ReportConsumer(
                 horizontal=[ReportConsumer.Horizontal.FIRM],
-                vertical=ReportConsumer.Vertical.PEREI,
+                vertical=ReportConsumer.Vertical.PE,
             ),
             entity_groups=[
                 EntityDomainTypes.Portfolio,
@@ -80,7 +80,8 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         )
 
     def report_name_metadata(self):
-        return f"PE {self.report_meta.entity_domain.name} Performance x Industry x Deal"
+        domain_name = self.report_meta.entity_domain.name
+        return f"PE {domain_name} Performance x Industry x Deal"
 
     @classmethod
     def standard_entity_get_callable(

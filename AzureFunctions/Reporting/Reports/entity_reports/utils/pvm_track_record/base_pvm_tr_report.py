@@ -78,7 +78,7 @@ class BasePvmTrackRecordReport(ReportStructure):
             aggregate_intervals=[AggregateInterval.ITD],
             consumer=ReportConsumer(
                 horizontal=[ReportConsumer.Horizontal.IC],
-                vertical=ReportConsumer.Vertical.PEREI,
+                vertical=ReportConsumer.Vertical.PE,
             ),
             entity_groups=[cls.level()],
         )

@@ -74,7 +74,7 @@ class TestPerformanceBreakDown(object):
                     interval=Scenario.get_attribute("aggregate_interval"),
                     consumer=ReportConsumer(
                         horizontal=[ReportConsumer.Horizontal.IC],
-                        vertical=ReportConsumer.Vertical.PEREI,
+                        vertical=ReportConsumer.Vertical.PE,
                     ),
                     frequency=Frequency(
                         FrequencyType.Once, Calendar.AllDays
@@ -104,7 +104,7 @@ class TestPerformanceBreakDown(object):
                     interval=Scenario.get_attribute("aggregate_interval"),
                     consumer=ReportConsumer(
                         horizontal=[ReportConsumer.Horizontal.IC],
-                        vertical=ReportConsumer.Vertical.PEREI,
+                        vertical=ReportConsumer.Vertical.PE,
                     ),
                     frequency=Frequency(
                         FrequencyType.Once, Calendar.AllDays
