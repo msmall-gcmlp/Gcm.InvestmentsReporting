@@ -71,10 +71,16 @@ class PvmTrackRecordAttribution(object):
 
         def performance_concentration(
             self, run_on: PerformanceConcentrationType
-        ) -> PvmPerformanceContribution:
+        ) -> dict[str, PvmPerformanceContribution]:
+            # for each thing that we run attribution on
+            #   (example, RealizationStatus should give us "Realized","Unrealized","Partially Realized")
+            # AND an "ALL"
+            # run 1-3-5 analysis for each group
             pass
 
-        def get_performance_details(self):
+        def get_performance_details(
+            self,
+        ) -> dict[str, PvmPerformanceResults]:
             pass
 
     def run_position_attribution(

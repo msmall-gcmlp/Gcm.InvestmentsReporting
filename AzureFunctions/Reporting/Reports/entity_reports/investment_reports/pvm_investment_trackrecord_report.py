@@ -49,14 +49,13 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             return df[df["InvestmentId"] == self.idw_pvm_tr_id]
 
         @cached_property
-        def net_cashflows(self) -> pd.DataFrame:
+        def investment_cashflows(self) -> pd.DataFrame:
             cfs = self.manager_handler.all_net_cfs
             cfs = self.filter_by_inv_id(cfs)
             return cfs
 
         @cached_property
-        def gross_cashflows(self) -> pd.DataFrame:
-
+        def position_cashflows(self) -> pd.DataFrame:
             cfs = self.manager_handler.all_position_cfs
             cfs = self.filter_by_inv_id(cfs)
             return cfs
