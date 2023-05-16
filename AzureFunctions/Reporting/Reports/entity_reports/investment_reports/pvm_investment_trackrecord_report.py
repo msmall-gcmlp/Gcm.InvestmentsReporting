@@ -1,3 +1,5 @@
+from typing import List
+
 from ....core.report_structure import (
     ReportMeta,
 )
@@ -25,6 +27,10 @@ from ....core.components.report_workbook_handler import (
 from ....core.components.report_worksheet import ReportWorksheet
 from ..utils.pvm_track_record.analytics.attribution import (
     PvmTrackRecordAttribution,
+)
+from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_track_record.analytics.attribution import (
+    get_perf_concentration_rpt_dict,
+    generate_fund_rpt_dict,
 )
 
 
@@ -55,6 +61,12 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             return cfs
 
         @cached_property
+        def investment_dimn(self) -> pd.DataFrame:
+            cached_property = self.manager_handler.investment_attrib
+            cached_property = self.filter_by_inv_id(cached_property)
+            return cached_property
+
+        @cached_property
         def position_cashflows(self) -> pd.DataFrame:
             cfs = self.manager_handler.all_position_cfs
             cfs = self.filter_by_inv_id(cfs)
@@ -62,7 +74,9 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
 
         @cached_property
         def position_dimn(self) -> pd.DataFrame:
-            return super().position_dimn
+            position_dimn = self.manager_handler.position_attrib
+            position_dimn = self.filter_by_inv_id(position_dimn)
+            return position_dimn
 
     @property
     def excel_template_location(self):
@@ -107,24 +121,47 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         return PvmTrackRecordAttribution([self.investment_handler])
 
     def assign_components(self):
+        tr_json = generate_fund_rpt_dict(
+            df=self.investment_handler.position_dimn,
+            cf=self.investment_handler.position_cashflows,
+        )
+        tr_tables: List[ReportTable] = []
+        for k, v in tr_json.items():
+            this_table = ReportTable(k, v)
+            tr_tables.append(this_table)
 
-        tables = [
-            ReportTable(
-                "MyComponent",
-                pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
-            ),
-            ReportTable(
-                "MyComponent_2",
-                pd.DataFrame({"V1": [1.0, 2.0], "V2": [1.0, 2.0]}),
-            ),
-        ]
         worksheets = [
             ReportWorksheet(
-                "Sheet1",
-                report_tables=tables,
-                render_params=ReportWorksheet.ReportWorkSheetRenderer(),
+                "Fund TR",
+                report_tables=tr_tables,
+                render_params=ReportWorksheet.ReportWorkSheetRenderer(
+                    trim_region=[x.component_name for x in tr_tables]
+                ),
             )
         ]
+
+        perf_concen_json = get_perf_concentration_rpt_dict(
+            deal_attrib=self.investment_handler.position_dimn,
+            deal_cf=self.investment_handler.position_cashflows,
+        )
+
+        perf_concen_tbls: List[ReportTable] = []
+        for k, v in perf_concen_json.items():
+            this_table = ReportTable(k, v)
+            perf_concen_tbls.append(this_table)
+
+        worksheets.append(
+            ReportWorksheet(
+                "Performance Concentration",
+                report_tables=perf_concen_tbls,
+                render_params=ReportWorksheet.ReportWorkSheetRenderer(
+                    trim_region=[
+                        x.component_name for x in perf_concen_tbls
+                    ]
+                ),
+            )
+        )
+
         return [
             ReportWorkBookHandler(
                 f"{self.manager_name}_{self.idw_pvm_tr_id}_Report",

@@ -25,6 +25,10 @@ from typing import List
 from ..utils.pvm_track_record.analytics.attribution import (
     PvmTrackRecordAttribution,
 )
+from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_track_record.analytics.attribution import (
+    get_mgr_rpt_dict,
+    get_perf_concentration_rpt_dict
+)
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
@@ -42,6 +46,7 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             sources="investmentsreporting",
             entity="exceltemplates",
             path=["PvmManagerTrackRecordTemplate.xlsx"],
+            # path=["Underwriting_Packet_Template.xlsx"]
         )
 
     @cached_property
@@ -68,6 +73,8 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         children = structure.get_entities_directly_related_by_name(
             self.child_type
         )
+        # DT: filtering below because funky stuff going on with get_entities_directly_related_by_name
+        children = children[children.SourceName == "PVM.TR.Investment.Id"]
         return children
 
     @cached_property
@@ -85,27 +92,66 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             cach_dict[g] = this_report
         return cach_dict
 
-    def assign_components(self):
-        tables = [
-            ReportTable(
-                "manager_name",
-                pd.DataFrame({"m_name": [self.manager_name]}),
-            ),
+
+    def assign_components(self) -> List[ReportWorkBookHandler]:
+        entity_name: str = self.report_meta.entity_info[
+            "EntityName"
+        ].unique()[0]
+        # DT: need to add tables here
+        # as_of_date: dt.date = Scenario.get_attribute("as_of_date")
+        # domain = self.report_meta.entity_domain
+        # entity_info = self.report_meta.entity_info
+        tr_json = get_mgr_rpt_dict(
+            manager_attrib=self.manager_handler.manager_attrib,
+            fund_attrib=self.manager_handler.investment_attrib,
+            deal_attrib=self.manager_handler.position_attrib,
+            deal_cf=self.manager_handler.position_cf,
+        )
+
+        tr_tables: List[ReportTable] = []
+        for k, v in tr_json.items():
+            this_table = ReportTable(k, v)
+            tr_tables.append(this_table)
+
+        worksheets = [
+            ReportWorksheet(
+                "Manager TR",
+                report_tables=tr_tables,
+                render_params=ReportWorksheet.ReportWorkSheetRenderer(
+                    trim_region=[x.component_name for x in tr_tables]
+                ),
+            )
         ]
+
+        perf_concen_json = get_perf_concentration_rpt_dict(
+            deal_attrib=self.manager_handler.position_attrib, deal_cf=self.manager_handler.position_cf
+        )
+
+        perf_concen_tbls: List[ReportTable] = []
+        for k, v in perf_concen_json.items():
+            this_table = ReportTable(k, v)
+            perf_concen_tbls.append(this_table)
+
+        worksheets.append(
+            ReportWorksheet(
+                "Performance Concentration",
+                report_tables=perf_concen_tbls,
+                render_params=ReportWorksheet.ReportWorkSheetRenderer(
+                    trim_region=[
+                        x.component_name for x in perf_concen_tbls
+                    ]
+                ),
+            )
+        )
+
         all_investments = [
             self.children_reports[k].investment_handler
             for k in self.children_reports
         ]
         attribution = PvmTrackRecordAttribution(all_investments)
         attribution.net_performance_results()
+
         name = f"ManagerTR_{self.manager_name}"
-        worksheets = [
-            ReportWorksheet(
-                "Sheet1",
-                report_tables=tables,
-                render_params=ReportWorksheet.ReportWorkSheetRenderer(),
-            )
-        ]
         wb_handler = ReportWorkBookHandler(
             name,
             report_sheets=worksheets,

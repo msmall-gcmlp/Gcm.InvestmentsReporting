@@ -36,7 +36,7 @@ class TestPvmManagerTrReport(object):
         with Scenario(
             as_of_date=dt.date(2022, 6, 30),
             aggregate_interval=AggregateInterval.ITD,
-            save=False,
+            save=True,
         ).context():
             d = EntityDomainTypes.InvestmentManager
             entity_info = TestPvmManagerTrReport.get_entity(
@@ -57,7 +57,7 @@ class TestPvmManagerTrReport(object):
                     ),
                     entity_domain=d,
                     entity_info=entity_info,
-                )
+                ),
             )
             assert this_report is not None
             output = print(report_structure=this_report, print_pdf=True)

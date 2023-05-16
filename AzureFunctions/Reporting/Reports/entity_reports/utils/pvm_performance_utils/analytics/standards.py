@@ -496,6 +496,57 @@ def get_ks_pme_rpt(
     return result
 
 
+def get_hit_rate(
+    df: pd.DataFrame,
+    discount_df: pd.DataFrame,
+    list_to_iterate: List[List[str]],
+) -> pd.DataFrame:
+    result = pd.DataFrame()
+    adhocchk = len(df)
+    pnl_grouped = (
+        discount_df.groupby("Name").Discounted.sum().reset_index()
+    )
+    pnl_grouped.Discounted = pnl_grouped.Discounted.abs()
+    df = df.merge(pnl_grouped, how="left", left_on="Name", right_on="Name")
+    assert len(df) == adhocchk
+
+    for group_cols in list_to_iterate:
+        if group_cols == ["Name"]:
+            continue
+        hit_rate = (
+            df.groupby(group_cols).HitRateType.sum()
+            / df.groupby(group_cols).HitRateType.count()
+        )
+        hit_rate = hit_rate.reset_index()
+
+        avg_size = (
+            df[df.HitRateType == 1]
+            .groupby(group_cols)
+            .pct_commitment.mean()
+            / df[df.HitRateType == 0]
+            .groupby(group_cols)
+            .pct_commitment.mean()
+        )
+        avg_size = avg_size.reset_index()
+
+        pnl_ratio = (
+            df[df.HitRateType == 1].groupby(group_cols).Discounted.mean()
+            / df[df.HitRateType == 0].groupby(group_cols).Discounted.mean()
+        )
+        pnl_ratio = pnl_ratio.reset_index()
+
+        rslt = hit_rate.merge(avg_size).merge(pnl_ratio)
+
+        rslt["Name"] = rslt.apply(
+            lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
+        )
+        rslt = rslt[
+            ["Name", "HitRateType", "Discounted", "pct_commitment"]
+        ]
+        result = pd.concat([result, rslt])
+    return result
+
+
 def get_fv_cashflow_df(
     fund_df: pd.DataFrame,
     fund_cf: pd.DataFrame,
@@ -1078,13 +1129,8 @@ def calc_irr(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
     if len(cf) == 0:
         return pd.DataFrame(columns=["Name", type + "Irr"])
     if group_cols is None:
-        irr = xirr(
-            cf[["TransactionDate", "BaseAmount"]]
-            .groupby("TransactionDate")
-            .sum()
-            .reset_index(drop=True)
-            .squeeze()
-        )
+        irr = xirr(cf[["TransactionDate", "BaseAmount"]])
+        return irr
     else:
         irr = cf.groupby(group_cols)[
             ["TransactionDate", "BaseAmount"]
@@ -1093,7 +1139,7 @@ def calc_irr(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
         irr["Name"] = irr.apply(
             lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
         )
-    return irr
+        return irr
 
 
 def get_horizon_tvpi_df_rpt(
@@ -1178,26 +1224,30 @@ def get_dpi_df_rpt(
 
 
 def calc_multiple(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
-
+    if len(cf[~cf.TransactionType.isin(["D", "T", "R"])]) != 0:
+        cf.TransactionType = np.select(
+            [
+                (cf.TransactionType == "Distributions"),
+                (cf.TransactionType == "Contributions"),
+                (cf.TransactionType == "Net Asset Value"),
+            ],
+            ["D", "T", "R"],
+        )
     # all funds/deals in cfs dataframe are what the result will reflect (i.e. do filtering beforehand)
     if len(cf) == 0:
         return pd.DataFrame(columns=["Name", type + "Multiple"])
     if group_cols is None:
-        multiple = cf[
-            cf.TransactionType.isin(["Distributions", "Net Asset Value"])
-        ].BaseAmount.sum() / abs(
-            cf[cf.TransactionType.isin(["Contributions"])].BaseAmount.sum()
-        )
+        multiple = [
+            cf[cf.TransactionType.isin(["D", "R"])].BaseAmount.sum()
+            / abs(cf[cf.TransactionType.isin(["T"])].BaseAmount.sum())
+        ]
+        return multiple[0]
     else:
         multiple = (
-            cf[
-                cf.TransactionType.isin(
-                    ["Distributions", "Net Asset Value"]
-                )
-            ]
+            cf[cf.TransactionType.isin(["D", "R"])]
             .groupby(group_cols)
             .BaseAmount.sum()
-            / cf[cf.TransactionType.isin(["Contributions"])]
+            / cf[cf.TransactionType.isin(["T"])]
             .groupby(group_cols)
             .BaseAmount.sum()
             .abs()
@@ -1208,7 +1258,7 @@ def calc_multiple(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
         multiple["Name"] = multiple.apply(
             lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
         )
-    return multiple
+        return multiple
 
 
 def calc_dpi(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
