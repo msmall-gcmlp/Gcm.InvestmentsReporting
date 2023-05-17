@@ -226,7 +226,7 @@ class EofLiquidityReport(ReportingRunnerBase):
             "Top_industry_dn": top_industry_factors_dn[['PortfolioExposure', 'Directional_shock']].head(15),
             "Top_industry_dn_index": top_industry_factors_dn[['GcmTicker']].head(15),
             "Style_Beta_dn": min_beta,
-            "Top_Idios": top_idio_shocks[['dollarIdio', 'exposure', 'pctIdio']],
+            "Top_Idios": top_idio_shocks[['SpecificResidualRisk', 'exposure', 'pctIdio']],
             "Top_Idios_index": top_idio_shocks[['SecurityName']],
             "Total_dn": total_dn,
         }
