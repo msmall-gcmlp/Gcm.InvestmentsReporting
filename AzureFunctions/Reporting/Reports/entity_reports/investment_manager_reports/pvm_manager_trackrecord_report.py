@@ -25,9 +25,9 @@ from typing import List
 from ..utils.pvm_track_record.analytics.attribution import (
     PvmTrackRecordAttribution,
 )
-from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_track_record.analytics.attribution import (
+from ..utils.pvm_track_record.analytics.attribution import (
     get_mgr_rpt_dict,
-    get_perf_concentration_rpt_dict
+    get_perf_concentration_rpt_dict,
 )
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
@@ -92,7 +92,6 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             cach_dict[g] = this_report
         return cach_dict
 
-
     def assign_components(self) -> List[ReportWorkBookHandler]:
         entity_name: str = self.report_meta.entity_info[
             "EntityName"
@@ -124,7 +123,8 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         ]
 
         perf_concen_json = get_perf_concentration_rpt_dict(
-            deal_attrib=self.manager_handler.position_attrib, deal_cf=self.manager_handler.position_cf
+            deal_attrib=self.manager_handler.position_attrib,
+            deal_cf=self.manager_handler.position_cf,
         )
 
         perf_concen_tbls: List[ReportTable] = []

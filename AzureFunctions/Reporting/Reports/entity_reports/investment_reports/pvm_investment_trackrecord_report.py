@@ -28,7 +28,7 @@ from ....core.components.report_worksheet import ReportWorksheet
 from ..utils.pvm_track_record.analytics.attribution import (
     PvmTrackRecordAttribution,
 )
-from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_track_record.analytics.attribution import (
+from ..utils.pvm_track_record.analytics.attribution import (
     get_perf_concentration_rpt_dict,
     generate_fund_rpt_dict,
 )

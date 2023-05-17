@@ -13,7 +13,6 @@ from functools import cached_property, reduce
 import pandas as pd
 from .gets.get_cfs import get_cfs
 from .gets.get_positions import get_positions
-from .gets.get_position_map import get_position_map
 
 
 class TrackRecordHandler(object):
@@ -75,9 +74,7 @@ class TrackRecordHandler(object):
         mgr_cfs = self.all_net_cfs
         mgr_attrib = pd.DataFrame(
             {
-                "InvestmentManagerName": [
-                    self.manager_name
-                ],
+                "InvestmentManagerName": [self.manager_name],
                 "NetIrr": [
                     xirr(
                         mgr_cfs[["TransactionDate", "BaseAmount"]]
