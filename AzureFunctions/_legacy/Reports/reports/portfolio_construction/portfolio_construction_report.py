@@ -1,6 +1,7 @@
 import datetime as dt
 import os
 import pandas as pd
+from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.models.portfolio_construction.optimization.optimization_inputs import (
     OptimizationInputs,
     download_optimization_inputs,
@@ -334,7 +335,7 @@ class PortfolioConstructionReport(ReportingRunnerBase):
 
         # TODO set up entity names and ids
         with Scenario(as_of_date=self._as_of_date).context():
-            InvestmentsReportRunner().execute(
+            InvestmentsReportRunner().run(
                 data=excel_data,
                 template="ARS_Portfolio_Construction_Report_Template.xlsx",
                 save=True,
@@ -348,6 +349,8 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
                 aggregate_intervals=AggregateInterval.MTD,
+                output_dir="cleansed/investmentsreporting/printedexcels/",
+                report_output_source=DaoSource.DataLake,
             )
 
     def run(self,
@@ -374,15 +377,17 @@ class PortfolioConstructionReport(ReportingRunnerBase):
             as_of_date=as_of_date,
             client=dl_client
         )
-        weights = get_optimal_weights(portfolio_acronym="ANCHOR4", scenario_name="default_test",
-                                      as_of_date=dt.date(2023, 3, 1), client=sql_client)
+        weights = get_optimal_weights(
+            portfolio_acronym=portfolio_acronym,
+            scenario_name=scenario_name,
+            as_of_date=as_of_date,
+            client=sql_client
+        )
         inv_group_id_map = optim_inputs.fundInputs.fundData.investment_group_ids
         inv_group_id_map.InvestmentGroupId = inv_group_id_map.InvestmentGroupId.astype(int)
         weights["InvestmentGroupName"] = weights[["InvestmentGroupId"]].merge(
             inv_group_id_map,
         )["Fund"]
-        # TODO: get planned from appropriate locations
-        weights["Planned"] = weights["Optimized"]
 
         current_balances = optim_inputs.config.portfolioAttributes.currentBalances
         current_weights = pd.DataFrame.from_dict(current_balances, orient="index", columns=["Current"]).reset_index(
@@ -393,6 +398,8 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         ).merge(
             weights, on="InvestmentGroupId", how="outer"
         )
+        # TODO: get planned from appropriate locations
+        weights["Planned"] = weights["Current"]
         weights.InvestmentGroupName = weights.InvestmentGroupName.combine_first(weights.Fund)
         weights = weights[["InvestmentGroupName", "InvestmentGroupId", "Current", "Planned", "Optimized"]]
         weights = weights.fillna(0)
@@ -408,8 +415,8 @@ if __name__ == "__main__":
     as_of_date = dt.date(2023, 3, 1)
     scenario_name = "default_test"
 
-    with Scenario(dao=DaoRunner(), as_of_date=dt.date(2023, 5, 1)).context():
-        PortfolioConstructionReport().execute(
+    with Scenario(dao=DaoRunner(), as_of_date=as_of_date).context():
+        PortfolioConstructionReport().run(
             portfolio_acronym=portfolio_acronym,
             scenario_name=scenario_name,
             as_of_date=as_of_date,
