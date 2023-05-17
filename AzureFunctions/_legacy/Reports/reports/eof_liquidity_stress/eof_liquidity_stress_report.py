@@ -175,25 +175,32 @@ class EofLiquidityReport(ReportingRunnerBase):
         region = 2
         industry = 14
         header_info = self.get_header_info()
-        style_factor_shock_dn = self.get_factor_stress_by_category(category="Style_Factor", number_of_factors=style)[0]['cum_shock']
-        industry_factor_shock_dn = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[0]['cum_shock']
-        region_factor_shock_dn = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[0]['cum_shock']
-        style_factor_shock_up = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[1]['cum_shock']
-        industry_factor_shock_up = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[1]['cum_shock']
-        region_factor_shock_up = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[1]['cum_shock']
-        top_regional_factors_dn = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[0]['top_factors']
-        top_style_factors_dn = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[0]['top_factors']
-        top_industry_factors_dn = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[0]['top_factors']
-        top_regional_factors_up = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[1]['top_factors']
-        top_style_factors_up = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[1]['top_factors']
-        top_industry_factors_up = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[1]['top_factors']
+        style_factor_shock_dn = self.get_factor_stress_by_category(category="Style_Factor", number_of_factors=style)[0][
+            'cum_shock']
+        industry_factor_shock_dn = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[0][
+            'cum_shock']
+        region_factor_shock_dn = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[0][
+            'cum_shock']
+        # style_factor_shock_up = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[1]['cum_shock']
+        # industry_factor_shock_up = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[1]['cum_shock']
+        # region_factor_shock_up = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[1]['cum_shock']
+        top_regional_factors_dn = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[0][
+            'top_factors']
+        top_style_factors_dn = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[0][
+            'top_factors']
+        top_industry_factors_dn = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[0][
+            'top_factors']
+        # top_regional_factors_up = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[1]['top_factors']
+        # top_style_factors_up = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[1]['top_factors']
+        # top_industry_factors_up = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[1]['top_factors']
         beta_shock_dn = self.get_beta_shock(shock=-0.16)
         idio_shock_dn = -1 * self.get_idio_shock(number_of_top_exposure=3, number_of_vol=2)['cum_shock']
         top_idio_shocks = self.get_idio_shock(number_of_top_exposure=3, number_of_vol=2)['top_exposures']
-        beta_shock_up = self.get_beta_shock(shock=0.1)
-        idio_shock_up = self.get_idio_shock(number_of_top_exposure=3, number_of_vol=2)['cum_shock']
+        # beta_shock_up = self.get_beta_shock(shock=0.1)
+        # idio_shock_up = self.get_idio_shock(number_of_top_exposure=3, number_of_vol=2)['cum_shock']
         style_beta_dn = self.get_style_beta()[0]
-        style_beta_up = self.get_style_beta()[1]
+        min_beta = pd.DataFrame(min(style_beta_dn.values, beta_shock_dn.values), columns=['beta_shock'])
+        # style_beta_up = self.get_style_beta()[1]
         total_dn = -1 * self.get_total_shock(style_factor_shock_dn,
                                              industry_factor_shock_dn,
                                              region_factor_shock_dn,
@@ -201,39 +208,28 @@ class EofLiquidityReport(ReportingRunnerBase):
                                              style_beta_dn,
                                              idio_shock_dn
                                              )
-        total_up = self.get_total_shock(style_factor_shock_up,
-                                        industry_factor_shock_up,
-                                        region_factor_shock_up,
-                                        beta_shock_up,
-                                        style_beta_up,
-                                        idio_shock_up
-                                        )
+        # total_up = self.get_total_shock(style_factor_shock_up,
+        #                                 industry_factor_shock_up,
+        #                                 region_factor_shock_up,
+        #                                 beta_shock_up,
+        #                                 style_beta_up,
+        #                                 idio_shock_up
+        #                                 )
         input_data = {
             "header_info": header_info,
-            "header_info2": header_info,
             "Style_Shock_dn": style_factor_shock_dn,
             "Industry_Shock_dn": industry_factor_shock_dn,
             "Regional_Shock_dn": region_factor_shock_dn,
-            "Style_Shock_up": style_factor_shock_up,
-            "Industry_Shock_up": industry_factor_shock_up,
-            "Regional_Shock_up": region_factor_shock_up,
-            "Beta_Shock_dn": beta_shock_dn,
             "Idio_shock_dn": idio_shock_dn,
-            "Beta_Shock_up": beta_shock_up,
-            "Idio_shock_up": idio_shock_up,
-            "Top_regional_up": top_regional_factors_up,
-            "Top_style_up": top_style_factors_up,
-            "Top_industry_up": top_industry_factors_up,
-            "Top_regional_dn": top_regional_factors_dn,
-            "Top_style_dn": top_style_factors_dn,
-            "Top_industry_dn": top_industry_factors_dn,
-            "Style_Beta_dn": style_beta_dn,
-            "Style_Beta_up": style_beta_up,
-            "Top_Idios": top_idio_shocks,
+            "Top_regional_dn": top_regional_factors_dn.head(5),
+            "Top_style_dn": top_style_factors_dn.head(15),
+            "Top_industry_dn": top_industry_factors_dn[['PortfolioExposure', 'Directional_shock']].head(15),
+            "Top_industry_dn_index": top_industry_factors_dn[['GcmTicker']].head(15),
+            "Style_Beta_dn": min_beta,
+            "Top_Idios": top_idio_shocks[['dollarIdio', 'exposure', 'pctIdio']],
+            "Top_Idios_index": top_idio_shocks[['SecurityName']],
             "Total_dn": total_dn,
-            "Total_up": total_up
         }
-
         as_of_date = dt.combine(self._as_of_date, dt.min.time())
         with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
@@ -273,8 +269,8 @@ if __name__ == "__main__":
                 "Subscription": "prd",
             },
             DaoSource.ReportingStorage.name: {
-                "Environment": "dev",
-                "Subscription": "nonprd",
+                "Environment": "prd",
+                "Subscription": "prd",
             },
         }
     }
