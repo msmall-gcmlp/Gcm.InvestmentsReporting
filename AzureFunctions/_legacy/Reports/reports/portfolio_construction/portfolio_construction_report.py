@@ -1,5 +1,10 @@
 import datetime as dt
+import os
 import pandas as pd
+from gcm.inv.models.portfolio_construction.optimization.optimization_inputs import (
+    OptimizationInputs,
+    download_optimization_inputs,
+)
 from _legacy.core.Runners.investmentsreporting import InvestmentsReportRunner
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
@@ -12,7 +17,38 @@ from _legacy.core.ReportStructure.report_structure import (
 )
 from gcm.Dao.DaoRunner import DaoRunner
 from gcm.inv.scenario import Scenario
+from gcm.data import DataAccess, DataSource
+from gcm.data.sql._sql_odbc_client import SqlOdbcClient
 from gcm.inv.models.portfolio_construction.portfolio_metrics.portfolio_metrics import collect_portfolio_metrics
+
+
+def get_optimal_weights(
+    portfolio_acronym: str,
+    scenario_name: str,
+    as_of_date: dt.date,
+    client: SqlOdbcClient,
+) -> pd.DataFrame:
+    query = (
+        f"""
+        WITH WeightsTbl
+        AS (
+        SELECT
+            igm.EntityName as InvestmentGroupName,
+            igm.EntityId as InvestmentGroupId,
+            ow.Weight AS Optimized
+        FROM PortfolioConstruction.OptimalWeights ow
+        LEFT JOIN entitymaster.InvestmentGroupMaster igm
+        ON ow.InvestmentGroupId = igm.EntityId
+        INNER JOIN PortfolioConstruction.InputLocations il
+        ON ow.InputLocationId = il.Id
+        WHERE PortfolioAcronym='{portfolio_acronym}'
+        AND ScenarioName='{scenario_name}'
+        AND AsOfDate='{as_of_date.isoformat()}'
+        )
+        SELECT * FROM WeightsTbl
+        """
+    )
+    return client.read_raw_sql(query)
 
 
 class PortfolioConstructionReport(ReportingRunnerBase):
@@ -90,11 +126,12 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                                                  capacity_status=capacity)
         return formatted_weights
 
-    def _combine_metrics_across_weights(self, weights, optim_config_name, rf):
-        portfolio_metrics = {k: collect_portfolio_metrics(runner=self._runner,
-                                                          weights=weights[k],
-                                                          optim_config_name=optim_config_name,
-                                                          rf=rf) for k in weights.columns}
+    def _combine_metrics_across_weights(self, weights, optim_inputs, rf):
+        portfolio_metrics = {k: collect_portfolio_metrics(
+            weights=weights[k],
+            optim_inputs=optim_inputs,
+            rf=rf) for k in weights.columns
+        }
 
         metrics = {key: None for key in [f.name for f in portfolio_metrics['Current'].metrics.__attrs_attrs__]}
         for m in metrics.keys():
@@ -118,8 +155,14 @@ class PortfolioConstructionReport(ReportingRunnerBase):
 
     @staticmethod
     def _summarize_formal_mandate(obs_cons):
-        if obs_cons.scenario_index == 704:
-            max_beta = 0.25
+        # TODO: refactor with ScenarioAggregator
+        stress_idx_to_beta_map = {
+            115: 0.15,
+            118: 0.18,
+            125: 0.25,
+            140: 0.40,
+        }
+        max_beta = stress_idx_to_beta_map[obs_cons.scenario_index]
 
         mandate = pd.DataFrame(
             {
@@ -179,8 +222,16 @@ class PortfolioConstructionReport(ReportingRunnerBase):
 
     @staticmethod
     def _summarize_stress_limits(obs_cons):
-        if obs_cons.scenario_index == 704:
-            mkt_selloff = 375
+        # TODO: refactor with ScenarioAggregator
+        stress_idx_to_beta_map = {
+            115: 0.15,
+            118: 0.18,
+            125: 0.25,
+            140: 0.40,
+        }
+        max_beta = stress_idx_to_beta_map[obs_cons.scenario_index]
+        mkt_selloff = max_beta * 1500  # bps
+        if obs_cons.scenario_index > 100:
             growth_selloff = 300
             credit_liquidity = 400
             expected_shortfall = 800
@@ -225,10 +276,9 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         )
         return rebalance_limits
 
-    def _summarize_obs_and_cons(self, weights, optim_config_name, rf):
-        metrics = collect_portfolio_metrics(runner=self._runner,
-                                            weights=weights['Current'],
-                                            optim_config_name=optim_config_name,
+    def _summarize_obs_and_cons(self, weights, optim_inputs, rf):
+        metrics = collect_portfolio_metrics(weights=weights['Current'],
+                                            optim_inputs=optim_inputs,
                                             rf=rf)
         obs_cons = metrics.obs_cons
         formal_mandate = self._summarize_formal_mandate(obs_cons)
@@ -249,17 +299,21 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         })
         return obs_cons_summary
 
-    def generate_excel_report(self, weights, optim_config_name, rf):
-        acronym = 'Sample'
-
+    def generate_excel_report(
+        self,
+        weights: pd.DataFrame,
+        optim_inputs: OptimizationInputs
+    ):
         #TODO map weights to ids
         weights = weights.rename(columns={'InvestmentGroupName': 'Fund'}).set_index('Fund')
         weights.drop(columns={"InvestmentGroupId"}, inplace=True)
 
-        obs_cons = self._summarize_obs_and_cons(weights=weights, optim_config_name=optim_config_name, rf=rf)
-        metrics = self._combine_metrics_across_weights(weights=weights, optim_config_name=optim_config_name, rf=rf)
+        rf = optim_inputs.config.expRf
+        obs_cons = self._summarize_obs_and_cons(weights=weights, optim_inputs=optim_inputs, rf=rf)
+        metrics = self._combine_metrics_across_weights(weights=weights, optim_inputs=optim_inputs, rf=rf)
         allocation_summary = self._format_allocations_summary(weights=weights, metrics=metrics)
 
+        acronym = optim_inputs.config.portfolioAttributes.acronym
         # TODO need to properly order strategy_allocation
         excel_data = {
             "header_info": self._format_header_info(acronym=acronym),
@@ -296,18 +350,67 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                 aggregate_intervals=AggregateInterval.MTD,
             )
 
-    def run(self, weights, optim_config_name, rf, **kwargs):
+    def run(self,
+            portfolio_acronym: str,
+            scenario_name: str,
+            as_of_date: dt.date,
+            **kwargs):
+        env = os.environ.get("Environment", "dev").replace("local", "dev")
+        sub = os.environ.get("Subscription", "nonprd").replace("local", "nonprd")
+
+        sql_client = DataAccess().get(
+            DataSource.Sql,
+            target_name=f"gcm-elasticpoolinvestments-{sub}",
+            database_name=f"investmentsdwh-{env}"
+        )
+
+        dl_client = DataAccess().get(
+            DataSource.DataLake,
+            target_name=f"gcmdatalake{sub}",
+        )
+        optim_inputs = download_optimization_inputs(
+            portfolio_acronym=portfolio_acronym,
+            scenario_name=scenario_name,
+            as_of_date=as_of_date,
+            client=dl_client
+        )
+        weights = get_optimal_weights(portfolio_acronym="ANCHOR4", scenario_name="default_test",
+                                      as_of_date=dt.date(2023, 3, 1), client=sql_client)
+        inv_group_id_map = optim_inputs.fundInputs.fundData.investment_group_ids
+        inv_group_id_map.InvestmentGroupId = inv_group_id_map.InvestmentGroupId.astype(int)
+        weights["InvestmentGroupName"] = weights[["InvestmentGroupId"]].merge(
+            inv_group_id_map,
+        )["Fund"]
+        # TODO: get planned from appropriate locations
+        weights["Planned"] = weights["Optimized"]
+
+        current_balances = optim_inputs.config.portfolioAttributes.currentBalances
+        current_weights = pd.DataFrame.from_dict(current_balances, orient="index", columns=["Current"]).reset_index(
+            names="Fund"
+        )
+        weights = current_weights.merge(
+            inv_group_id_map, on="Fund", how="inner"
+        ).merge(
+            weights, on="InvestmentGroupId", how="outer"
+        )
+        weights.InvestmentGroupName = weights.InvestmentGroupName.combine_first(weights.Fund)
+        weights = weights[["InvestmentGroupName", "InvestmentGroupId", "Current", "Planned", "Optimized"]]
+        weights = weights.fillna(0)
+        weights = weights[weights.iloc[:, 2:].max(axis=1) > 0]
+
         self.generate_excel_report(weights=weights,
-                                   optim_config_name=optim_config_name,
-                                   rf=rf)
+                                   optim_inputs=optim_inputs)
         return 'Complete'
 
 
 if __name__ == "__main__":
-    weights = pd.read_csv('test_weights.csv').fillna(0)
-    weights = weights[weights.iloc[:, 2:].max(axis=1) > 0]
+    portfolio_acronym = "ANCHOR4"
+    as_of_date = dt.date(2023, 3, 1)
+    scenario_name = "default_test"
 
     with Scenario(dao=DaoRunner(), as_of_date=dt.date(2023, 5, 1)).context():
-        PortfolioConstructionReport().execute(weights=weights,
-                                              optim_config_name='ANCHOR4_default_2023-05-01',
-                                              rf=0.04)
+        PortfolioConstructionReport().execute(
+            portfolio_acronym=portfolio_acronym,
+            scenario_name=scenario_name,
+            as_of_date=as_of_date,
+        )
