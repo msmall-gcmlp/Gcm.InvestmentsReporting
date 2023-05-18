@@ -1259,24 +1259,58 @@ def calc_multiple(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
             lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
         )
         return multiple
+    # if len(cf) == 0:
+    #     return pd.DataFrame(columns=["Name", type + "Multiple"])
+    # if group_cols is None:
+    #     multiple = [
+    #         cf[cf.TransactionType.isin(["Distributions", "Net Asset Value"])].BaseAmount.sum()
+    #         / abs(cf[cf.TransactionType.isin(["Contributions"])].BaseAmount.sum())
+    #     ]
+    #     return multiple[0]
+    # else:
+    #     multiple = (
+    #         cf[cf.TransactionType.isin(["Distributions", "Net Asset Value"])]
+    #         .groupby(group_cols)
+    #         .BaseAmount.sum()
+    #         / cf[cf.TransactionType.isin(["Contributions"])]
+    #         .groupby(group_cols)
+    #         .BaseAmount.sum()
+    #         .abs()
+    #     )
+    #     multiple = multiple.reset_index().rename(
+    #         columns={"BaseAmount": type + "Multiple"}
+    #     )
+    #     multiple["Name"] = multiple.apply(
+    #         lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
+    #     )
+    #     return multiple
 
 
 def calc_dpi(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
     # all funds/deals in cfs dataframe are what the result will reflect (i.e. do filtering beforehand)
+    if len(cf[~cf.TransactionType.isin(["D", "T", "R"])]) != 0:
+        cf.TransactionType = np.select(
+            [
+                (cf.TransactionType == "Distributions"),
+                (cf.TransactionType == "Contributions"),
+                (cf.TransactionType == "Net Asset Value"),
+            ],
+            ["D", "T", "R"],
+        )
     if len(cf) == 0:
         return pd.DataFrame(columns=["Name", type + "Dpi"])
     if group_cols is None:
-        dpi = cf[
-            cf.TransactionType.isin(["Distributions"])
-        ].BaseAmount.sum() / abs(
-            cf[cf.TransactionType.isin(["Contributions"])].BaseAmount.sum()
-        )
+        dpi = [
+            cf[cf.TransactionType.isin(["D"])].BaseAmount.sum()
+            / abs(cf[cf.TransactionType.isin(["T"])].BaseAmount.sum())
+        ]
+        return dpi[0]
     else:
         dpi = (
-            cf[cf.TransactionType.isin(["Distributions"])]
+            cf[cf.TransactionType.isin(["D"])]
             .groupby(group_cols)
             .BaseAmount.sum()
-            / cf[cf.TransactionType.isin(["Contributions"])]
+            / cf[cf.TransactionType.isin(["T"])]
             .groupby(group_cols)
             .BaseAmount.sum()
             .abs()
@@ -1287,7 +1321,37 @@ def calc_dpi(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
         dpi["Name"] = dpi.apply(
             lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
         )
-    return dpi
+        return dpi
+    # if len(cf) == 0:
+    #     return pd.DataFrame(columns=["Name", type + "Dpi"])
+    # if group_cols is None:
+    #     dpi = [
+    #         cf[
+    #             cf.TransactionType.isin(["Distributions"])
+    #         ].BaseAmount.sum() / abs(
+    #             cf[
+    #                 cf.TransactionType.isin(["Contributions"])
+    #             ].BaseAmount.sum()
+    #         )
+    #     ]
+    #     return dpi[0]
+    # else:
+    #     dpi = (
+    #         cf[cf.TransactionType.isin(["Distributions"])]
+    #         .groupby(group_cols)
+    #         .BaseAmount.sum()
+    #         / cf[cf.TransactionType.isin(["Contributions"])]
+    #         .groupby(group_cols)
+    #         .BaseAmount.sum()
+    #         .abs()
+    #     )
+    #     dpi = dpi.reset_index().rename(
+    #         columns={"BaseAmount": type + "Dpi"}
+    #     )
+    #     dpi["Name"] = dpi.apply(
+    #         lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
+    #     )
+    #     return dpi
 
 
 def get_sum_df_rpt(

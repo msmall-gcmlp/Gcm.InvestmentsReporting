@@ -53,7 +53,6 @@ class TrackRecordHandler(object):
 
     @cached_property
     def all_position_cfs(self) -> pd.DataFrame:
-
         inv_entity_info = self.manager_hierarchy_structure.get_entities_directly_related_by_name(
             EntityDomainTypes.Investment
         )
@@ -70,7 +69,7 @@ class TrackRecordHandler(object):
         return df
 
     @cached_property
-    def manager_attrib(self) -> pd.DataFrame:
+    def manager_dimn(self) -> pd.DataFrame:
         mgr_cfs = self.all_net_cfs
         mgr_attrib = pd.DataFrame(
             {
@@ -113,6 +112,7 @@ class TrackRecordHandler(object):
         investment_attrib = pd.DataFrame(
             {
                 "InvestmentName": mgr_cfs.InvestmentName.unique(),
+                "InvestmentId": mgr_cfs.InvestmentId.unique(),
                 # proxy committed as called capital, not right ofc, linking it up..
                 "CommittedCapital": mgr_cfs[
                     ["InvestmentName", "CommittedCapital"]
@@ -151,13 +151,17 @@ class TrackRecordHandler(object):
                 ][0],
             }
         )
+        investment_attrib[
+            "InvestmentManagerName"
+        ] = mgr_cfs.InvestmentManagerName.unique()[0]
         return investment_attrib
 
     @cached_property
-    def position_attrib(self) -> pd.DataFrame:
+    def position_dimn(self) -> pd.DataFrame:
         mgr_cfs = self.all_position_cfs.sort_values("AssetName")
         inv_and_asset_names = mgr_cfs[
             [
+                "InvestmentManagerName",
                 "AssetName",
                 "InvestmentName",
                 "PositionId",
@@ -177,6 +181,11 @@ class TrackRecordHandler(object):
             .reset_index()
             .rename(columns={"BaseAmount": "EquityInvested"})
         )
+        equity_invested["PctCapital"] = (
+            equity_invested.EquityInvested
+            / equity_invested.EquityInvested.sum()
+        )
+        # DT: TODO update
         status = pd.DataFrame(
             {
                 "AssetName": inv_and_asset_names.AssetName.unique(),
@@ -204,18 +213,24 @@ class TrackRecordHandler(object):
             .reset_index()
             .rename(columns={"BaseAmount": "TotalValue"})
         )
+        # revisit
         inv_gain = (
-            mgr_cfs[mgr_cfs.TransactionType.isin(["D", "R"])]
-            .groupby("AssetName")
+            mgr_cfs.groupby("AssetName")
             .BaseAmount.sum()
-            .abs()
-            - mgr_cfs[mgr_cfs.TransactionType.isin(["T"])]
-            .groupby("AssetName")
-            .BaseAmount.sum()
-            .abs()
+            .reset_index()
+            .rename(columns={"BaseAmount": "InvestmentGain"})
         )
-        inv_gain = inv_gain.reset_index().rename(
-            columns={"BaseAmount": "InvestmentGain"}
+
+        inv_gain = inv_gain.assign(
+            CostType=lambda v: v.InvestmentGain.apply(
+                lambda InvestmentGain: "Below Cost"
+                if InvestmentGain < 0
+                else "Above Cost"
+                if InvestmentGain > 0
+                else "At Cost"
+                if InvestmentGain == 0
+                else "N/A"
+            ),
         )
 
         position_attrib = reduce(
@@ -241,15 +256,36 @@ class TrackRecordHandler(object):
         pos_cf = self.all_position_cfs
         position_cf = pos_cf[
             [
+                "PositionId",
+                "TransactionDate",
+                "TransactionType",
+                "BaseAmount",
+            ]
+        ].drop_duplicates()
+        position_cf_dimn = position_cf.merge(
+            self.position_dimn,
+            how="left",
+            left_on="PositionId",
+            right_on="PositionId",
+        )
+        assert len(position_cf) == len(position_cf_dimn)
+
+        return position_cf_dimn
+
+    @cached_property
+    def investment_cf(self) -> pd.DataFrame:
+        inv_cf = self.all_net_cfs
+        investment_cf = inv_cf[
+            [
+                "InvestmentManagerName",
                 "InvestmentName",
-                "AssetName",
                 "TransactionDate",
                 "TransactionType",
                 "BaseAmount",
             ]
         ].drop_duplicates()
 
-        return position_cf
+        return investment_cf
 
 
 class TrackRecordManagerSingletonProvider(metaclass=Singleton):

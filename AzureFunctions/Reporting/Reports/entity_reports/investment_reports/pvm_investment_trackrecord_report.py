@@ -74,7 +74,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
 
         @cached_property
         def position_dimn(self) -> pd.DataFrame:
-            position_dimn = self.manager_handler.position_attrib
+            position_dimn = self.manager_handler.position_dimn
             position_dimn = self.filter_by_inv_id(position_dimn)
             return position_dimn
 
@@ -122,8 +122,11 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
 
     def assign_components(self):
         tr_json = generate_fund_rpt_dict(
-            df=self.investment_handler.position_dimn,
-            cf=self.investment_handler.position_cashflows,
+            manager_attrib=self.manager_handler.manager_dimn,
+            fund_attrib=self.investment_handler.investment_dimn,
+            investment_cf=self.investment_handler.investment_cashflows,
+            deal_attrib=self.investment_handler.position_dimn,
+            deal_cf=self.investment_handler.position_cashflows,
         )
         tr_tables: List[ReportTable] = []
         for k, v in tr_json.items():

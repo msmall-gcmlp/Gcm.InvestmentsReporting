@@ -96,22 +96,33 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         entity_name: str = self.report_meta.entity_info[
             "EntityName"
         ].unique()[0]
-        # DT: need to add tables here
-        # as_of_date: dt.date = Scenario.get_attribute("as_of_date")
-        # domain = self.report_meta.entity_domain
-        # entity_info = self.report_meta.entity_info
+
+        # get report dictionaries
         tr_json = get_mgr_rpt_dict(
-            manager_attrib=self.manager_handler.manager_attrib,
+            manager_attrib=self.manager_handler.manager_dimn,
             fund_attrib=self.manager_handler.investment_attrib,
-            deal_attrib=self.manager_handler.position_attrib,
+            investment_cf=self.manager_handler.investment_cf,
+            deal_attrib=self.manager_handler.position_dimn,
             deal_cf=self.manager_handler.position_cf,
         )
 
+        perf_concen_json = get_perf_concentration_rpt_dict(
+            deal_attrib=self.manager_handler.position_dimn,
+            deal_cf=self.manager_handler.position_cf,
+        )
+
+        # set sheet-specific ReportTables
         tr_tables: List[ReportTable] = []
         for k, v in tr_json.items():
             this_table = ReportTable(k, v)
             tr_tables.append(this_table)
 
+        perf_concen_tbls: List[ReportTable] = []
+        for k, v in perf_concen_json.items():
+            this_table = ReportTable(k, v)
+            perf_concen_tbls.append(this_table)
+
+        # set ReportWorksheets
         worksheets = [
             ReportWorksheet(
                 "Manager TR",
@@ -119,20 +130,7 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
                 render_params=ReportWorksheet.ReportWorkSheetRenderer(
                     trim_region=[x.component_name for x in tr_tables]
                 ),
-            )
-        ]
-
-        perf_concen_json = get_perf_concentration_rpt_dict(
-            deal_attrib=self.manager_handler.position_attrib,
-            deal_cf=self.manager_handler.position_cf,
-        )
-
-        perf_concen_tbls: List[ReportTable] = []
-        for k, v in perf_concen_json.items():
-            this_table = ReportTable(k, v)
-            perf_concen_tbls.append(this_table)
-
-        worksheets.append(
+            ),
             ReportWorksheet(
                 "Performance Concentration",
                 report_tables=perf_concen_tbls,
@@ -141,8 +139,8 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
                         x.component_name for x in perf_concen_tbls
                     ]
                 ),
-            )
-        )
+            ),
+        ]
 
         all_investments = [
             self.children_reports[k].investment_handler
