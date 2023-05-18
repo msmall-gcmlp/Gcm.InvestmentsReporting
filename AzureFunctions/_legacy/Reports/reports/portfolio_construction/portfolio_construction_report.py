@@ -109,6 +109,7 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         return wts_formatted
 
     def _format_allocations_summary(self, weights, metrics):
+        weights = weights.sort_index()
         strategies = metrics['fund_strategies']
         strategies['Strategy'] = strategies['Current'].combine_first(strategies['Optimized'])
         strategies['Strategy'] = strategies.Strategy.combine_first(strategies.Planned)
@@ -125,9 +126,17 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         formatted_weights = self._format_weights(allocations=combined_weights,
                                                  strategies=strategies,
                                                  capacity_status=capacity)
-        return formatted_weights
+        dollar_weights = formatted_weights[['Fund',
+                                            'Current',
+                                            'Planned',
+                                            'Optimized',
+                                            'Delta']]
+        risk_weights = formatted_weights[['Fund'] + [x + ' - %Risk' for x in dollar_weights.columns[1:]]]
 
-    def _combine_metrics_across_weights(self, weights, optim_inputs, rf):
+        return dollar_weights, risk_weights
+
+    @staticmethod
+    def _combine_metrics_across_weights(weights, optim_inputs, rf):
         portfolio_metrics = {k: collect_portfolio_metrics(
             weights=weights[k],
             optim_inputs=optim_inputs,
@@ -140,6 +149,14 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                                     getattr(portfolio_metrics['Planned'].metrics, m),
                                     getattr(portfolio_metrics['Optimized'].metrics, m)], axis=1)
             metrics[m].columns = weights.columns
+
+        strategy_order = pd.DataFrame(index=['Credit', 'Long/Short Equity', 'Macro', 'Multi-Strategy', 'Quantitative'])
+        strategy_weights = strategy_order.merge(metrics['strategy_weights'],
+                                                left_index=True, right_index=True,
+                                                how='left')
+        cash_and_other = pd.DataFrame(1 - strategy_weights.sum()).T
+        cash_and_other.index = ['Cash and Other']
+        metrics['strategy_weights'] = pd.concat([strategy_weights, cash_and_other], axis=0)
         return metrics
 
     def _format_header_info(self, acronym):
@@ -312,10 +329,9 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         rf = optim_inputs.config.expRf
         obs_cons = self._summarize_obs_and_cons(weights=weights, optim_inputs=optim_inputs, rf=rf)
         metrics = self._combine_metrics_across_weights(weights=weights, optim_inputs=optim_inputs, rf=rf)
-        allocation_summary = self._format_allocations_summary(weights=weights, metrics=metrics)
+        dollar_weights, risk_weights = self._format_allocations_summary(weights=weights, metrics=metrics)
 
         acronym = optim_inputs.config.portfolioAttributes.acronym
-        # TODO need to properly order strategy_allocation
         excel_data = {
             "header_info": self._format_header_info(acronym=acronym),
             "formal_mandate": obs_cons['formal_mandate'],
@@ -330,7 +346,8 @@ class PortfolioConstructionReport(ReportingRunnerBase):
             "exp_risk_adj_performance": metrics['risk_adj_performance'],
             "strategy_allocation": metrics['strategy_weights'],
             "liquidity": metrics['liquidity'],
-            "allocation_summary": allocation_summary
+            "dollar_allocation_summary": dollar_weights,
+            "risk_allocation_summary": risk_weights
         }
 
         # TODO set up entity names and ids
