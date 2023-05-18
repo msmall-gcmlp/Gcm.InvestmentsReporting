@@ -5,10 +5,11 @@ import pandas as pd
 from enum import Enum, auto
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 import numpy as np
-from pyxirr import xirr
 from ....pvm_performance_utils.analytics.standards import (
     calc_irr,
     calc_multiple,
+    calc_dpi,
+    calc_sum
 )
 
 
