@@ -7,6 +7,10 @@ class InvestmentContainerBase(object):
         pass
 
     @abstractproperty
+    def name(self) -> str:
+        raise NotImplementedError()
+
+    @abstractproperty
     def investment_cashflows(self) -> pd.DataFrame:
         raise NotImplementedError()
 

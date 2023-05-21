@@ -22,7 +22,7 @@ from ..utils.pvm_track_record.base_pvm_tr_report import (
 )
 from functools import cached_property
 from typing import List
-from ..utils.pvm_track_record.analytics.attribution import (
+from ..utils.pvm_performance_results.attribution import (
     PvmTrackRecordAttribution,
 )
 from ..utils.pvm_track_record.analytics.attribution import (

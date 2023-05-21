@@ -4,6 +4,7 @@ from gcm.inv.dataprovider.entity_provider.hierarchy_controller.hierarchy_handler
 from .......core.report_structure import (
     EntityDomainTypes,
     Standards as EntityDomainStandards,
+    DaoRunner,
     DaoSource,
 )
 import pandas as pd
@@ -16,10 +17,7 @@ from gcm.inv.utils.DaoUtils.query_utils import (
 )
 
 
-def get_positions(
-    struct: HierarchyHandler, entity_info: pd.DataFrame
-) -> pd.DataFrame:
-    runner = Scenario.get_attribute("dao")
+def get_assets(struct: HierarchyHandler, entity_info: pd.DataFrame):
     nodes = (
         entity_info[EntityDomainStandards.NodeId]
         .drop_duplicates()
@@ -28,8 +26,11 @@ def get_positions(
     assets = struct.get_entities_directly_related_by_name(
         EntityDomainTypes.Asset, starting_node_id=nodes, down=True
     )
-    assert assets is not None
+    return assets
 
+
+def get_positions(assets: pd.DataFrame) -> pd.DataFrame:
+    runner: DaoRunner = Scenario.get_attribute("dao")
     positions = [
         int(json.loads(x)["Position_Id"])
         for x in assets["EdgeInfo"].drop_duplicates().to_list()
