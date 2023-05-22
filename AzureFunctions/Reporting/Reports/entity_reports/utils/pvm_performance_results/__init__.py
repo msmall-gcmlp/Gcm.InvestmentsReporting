@@ -2,6 +2,7 @@ from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from functools import cached_property
 from ..cashflows import PvmCashflows
 import pandas as pd
+from pyxirr import xirr
 
 
 class PvmPerformanceResultsBase(object):
@@ -15,11 +16,14 @@ class PvmPerformanceResultsBase(object):
 
     @cached_property
     def irr(self) -> float:
-        return 0.0
+        dates = self.cfs.cfs[PvmCashflows.CashflowColumns.CashflowDate.name]
+        vals = self.cfs.cfs[PvmCashflows.CashflowColumns.Amount.name]
+        guess = 0.1 if self.pnl > 0 else -0.1
+        return xirr(dates, vals, guess)
 
     @cached_property
     def moic(self) -> float:
-        return 1.0 + (self.pnl / self.cost)
+        return 1.0 + (self.pnl / abs(self.cost))
 
     @cached_property
     def tvpi(self) -> float:

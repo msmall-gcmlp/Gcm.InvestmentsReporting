@@ -1,3 +1,8 @@
+from gcm.inv.utils.date.AggregateInterval import AggregateInterval
+
+from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_track_record.data_handler.gross_atom import (
+    GrossAttributionAtom,
+)
 from ....core.report_structure import (
     ReportMeta,
 )
@@ -20,6 +25,7 @@ from ..utils.pvm_track_record.data_handler.pvm_track_record_handler import (
 from functools import cached_property
 from ..utils.pvm_performance_results.attribution import (
     PvmTrackRecordAttribution,
+    PositionAttributionResults,
 )
 
 
@@ -71,6 +77,25 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             position_dimn = self.filter_by_inv_id(position_dimn)
             return position_dimn
 
+        def get_atom_level_performance_result_cache(
+            self, agg: AggregateInterval
+        ):
+            result_set = (
+                self.manager_handler.gross_atom_level_performance_cache(
+                    agg
+                )
+            )
+            atom_id = f"{self.gross_atom.name}Id"
+            set = list(self.position_dimn[atom_id].unique())
+            items = {}
+            for p in set:
+                items[p] = result_set[p]
+            return items
+
+        @property
+        def gross_atom(self) -> GrossAttributionAtom:
+            return GrossAttributionAtom.Position
+
     @property
     def excel_template_location(self):
         return AzureDataLakeDao.BlobFileStructure(
@@ -89,6 +114,10 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     @classmethod
     def level(cls):
         return EntityDomainTypes.Investment
+
+    @cached_property
+    def pvm_perfomance_results(self) -> PvmTrackRecordAttribution:
+        return PvmTrackRecordAttribution([self.investment_handler])
 
     @property
     def manager_name(self) -> str:
@@ -109,18 +138,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
                 raise RuntimeError("More than one manager")
         return self.___investment_manager_name
 
-    @cached_property
-    def pvm_perfomance_results(self) -> PvmTrackRecordAttribution:
-        return PvmTrackRecordAttribution([self.investment_handler])
-
     def assign_components(self):
-        results = self.pvm_perfomance_results
-        agg = self.report_meta.interval
-        net_results = results.net_performance_results(agg)
-        assert net_results is not None
-        net_df: pd.DataFrame = net_results.to_df()
-        attribution_status = results.run_position_attribution(
-            ["RealizationStatus"]
-        )
-
-        assert net_df is not None
+        items = self.realization_status_breakout
+        irr = items.performance_results.irr
+        assert items is not None

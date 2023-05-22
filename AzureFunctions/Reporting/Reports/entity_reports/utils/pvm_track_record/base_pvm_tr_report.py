@@ -18,6 +18,12 @@ from ..pvm_track_record.data_handler.pvm_track_record_handler import (
 )
 from abc import abstractclassmethod, abstractproperty
 from functools import cached_property
+from ...utils.pvm_performance_results.attribution import (
+    PvmAggregatedPerformanceResults,
+    PositionAttributionResults,
+    PvmTrackRecordAttribution,
+)
+
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
@@ -82,3 +88,34 @@ class BasePvmTrackRecordReport(ReportStructure):
             ),
             entity_groups=[cls.level()],
         )
+
+    @abstractproperty
+    def pvm_perfomance_results(self) -> PvmTrackRecordAttribution:
+        raise NotImplementedError()
+
+    @cached_property
+    def realization_status_breakout(
+        self,
+    ) -> PositionAttributionResults.LayerResults:
+        results = self.pvm_perfomance_results
+        agg = self.report_meta.interval
+        net_results = results.net_performance_results(agg)
+        assert net_results is not None
+        attribution = results.position_attribution(
+            [
+                TrackRecordHandler.CommonPositionAttribution.RealizationStatus.name
+            ]
+        ).results()
+        return attribution
+
+    def get_1_3_5(
+        self, attribution_results: PositionAttributionResults.LayerResults
+    ) -> dict[int, PvmAggregatedPerformanceResults]:
+        final = {}
+        cut_by = [1, 3, 5]
+        for i in cut_by:
+            output = attribution_results.get_position_performance_concentration_at_layer(
+                i
+            )
+            final[i] = output
+        return final

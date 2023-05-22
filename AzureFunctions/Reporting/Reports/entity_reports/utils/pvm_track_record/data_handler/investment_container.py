@@ -1,5 +1,7 @@
-from abc import abstractproperty
+from abc import abstractproperty, abstractmethod
 import pandas as pd
+from gcm.inv.utils.date.AggregateInterval import AggregateInterval
+from .gross_atom import GrossAttributionAtom
 
 
 class InvestmentContainerBase(object):
@@ -37,3 +39,13 @@ class InvestmentContainerBase(object):
     @abstractproperty
     def asset_dimn(self) -> pd.DataFrame:
         raise NotImplementedError()
+
+    @abstractmethod
+    def get_atom_level_performance_result_cache(
+        self, agg: AggregateInterval
+    ):
+        raise NotImplementedError()
+
+    @abstractproperty
+    def gross_atom(self) -> GrossAttributionAtom:
+        return NotImplementedError()
