@@ -23,14 +23,14 @@ class PvmPerformanceResultsBase(object):
         guess = 0.1 if self.pnl > 0 else -0.1
         return xirr(dates, vals, guess=guess)
 
-    @property
+    @cached_property
     def moic(self) -> float:
         return 1.0 + (self.pnl / abs(self.cost))
     
-    @property
+    @cached_property
     def loss_ratio(self) -> float:
         if self.pnl < 0.0:
-            return self.pnl / self.cost
+            return self.pnl / abs(self.cost)
         return 0.0
 
     @property
@@ -69,7 +69,7 @@ class PvmPerformanceResultsBase(object):
         cols = [
             "irr",
             "moic",
-            "loss_ratio"
+            "loss_ratio",
             "pnl",
             "cost",
             "distributions",

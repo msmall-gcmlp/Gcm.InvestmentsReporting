@@ -142,5 +142,5 @@ class BasePvmTrackRecordReport(ReportStructure):
             if other is not None:
                 final.append(other.to_df())
         final = pd.concat(final)
-        final = final.reset_index(inplace=True, drop=True)
+        final.reset_index(inplace=True, drop=True)
         return final

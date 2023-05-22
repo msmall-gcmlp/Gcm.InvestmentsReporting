@@ -4,6 +4,7 @@ from AzureFunctions.Reporting.Reports.entity_reports.utils.cashflows import (
 )
 from . import PvmPerformanceResultsBase, PvmCashflows, AggregateInterval
 import pandas as pd
+from functools import cached_property
 
 
 class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
@@ -23,34 +24,6 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
             cfs = PvmCashflows(pd.concat([x.cfs for x in cf_objects]))
         super().__init__(cfs, aggregate_interval)
 
-    @property
-    def pnl(self):
-        return sum([self.components[x].pnl for x in self.components])
-
-    @property
-    def cost(self):
-        return sum([self.components[x].cost for x in self.components])
-
-    @property
-    def distrutions(self):
-        return sum(
-            [self.components[x].distributions for x in self.components]
-        )
-    
-    @property
-    def loss_ratio(self) -> float:
-        total_cost_tracker = 0.0
-        loss_tracker = 0.0
-        for i in self.components:
-            item = self.components[i]
-            loss_ratio = item.loss_ratio
-            cost_amount = item.cost
-            loss_amount = loss_ratio * cost_amount
-            total_cost_tracker = total_cost_tracker + cost_amount
-            loss_tracker = loss_tracker + loss_amount
-        return loss_tracker / total_cost_tracker
-
-    
     @staticmethod
     def _expand(
         results: "PvmAggregatedPerformanceResults",
@@ -72,6 +45,37 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
                 raise NotImplementedError()
         return items
     
+
+
+    @property
+    def pnl(self):
+        return sum([self.components[x].pnl for x in self.components])
+
+    @property
+    def cost(self):
+        return sum([self.components[x].cost for x in self.components])
+
+    @property
+    def distrutions(self):
+        return sum(
+            [self.components[x].distributions for x in self.components]
+        )
+    
+    @cached_property
+    def loss_ratio(self) -> float:
+        total_cost_tracker = 0.0
+        loss_tracker = 0.0
+        for i in self.components:
+            item = self.components[i]
+            loss_ratio = item.loss_ratio
+            cost_amount = item.cost
+            loss_amount = loss_ratio * cost_amount
+            total_cost_tracker = total_cost_tracker + cost_amount
+            loss_tracker = loss_tracker + loss_amount
+        return loss_tracker / total_cost_tracker
+
+    
+
 
     def to_df(self) -> pd.DataFrame:
         df = super().to_df()
