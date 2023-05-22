@@ -36,6 +36,41 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
         return sum(
             [self.components[x].distributions for x in self.components]
         )
+    
+    def loss_ratio(self) -> float:
+        total_cost_tracker = 0.0
+        loss_tracker = 0.0
+        for i in self.components:
+            item = self.components[i]
+            loss_ratio = item.loss_ratio
+            cost_amount = item.cost
+            loss_amount = loss_ratio * cost_amount
+            total_cost_tracker = total_cost_tracker + cost_amount
+            loss_tracker = loss_tracker + loss_amount
+        return loss_tracker / total_cost_tracker
+
+    
+    @staticmethod
+    def _expand(
+        results: "PvmAggregatedPerformanceResults",
+    ) -> dict[str, PvmPerformanceResultsBase]:
+        items = {}
+        for c in results.components:
+            # TODO: do better subtype check
+            item = results.components[c]
+            if type(item) == PvmAggregatedPerformanceResults:
+                expanded_items = (
+                    PvmAggregatedPerformanceResults._expand(
+                        item
+                    )
+                )
+                items = items | expanded_items
+            elif type(item) == PvmPerformanceResultsBase:
+                items[c] = item
+            else:
+                raise NotImplementedError()
+        return items
+    
 
     def to_df(self) -> pd.DataFrame:
         df = super().to_df()

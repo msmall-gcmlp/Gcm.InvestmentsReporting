@@ -26,6 +26,12 @@ class PvmPerformanceResultsBase(object):
     @property
     def moic(self) -> float:
         return 1.0 + (self.pnl / abs(self.cost))
+    
+    @property
+    def loss_ratio(self) -> float:
+        if self.pnl < 0.0:
+            return self.pnl / self.cost
+        return 0.0
 
     @property
     def pnl(self) -> float:
@@ -63,6 +69,7 @@ class PvmPerformanceResultsBase(object):
         cols = [
             "irr",
             "moic",
+            "loss_ratio"
             "pnl",
             "cost",
             "distributions",

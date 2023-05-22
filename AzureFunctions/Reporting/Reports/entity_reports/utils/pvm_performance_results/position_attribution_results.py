@@ -28,30 +28,9 @@ class PositionAttributionResults(object):
         ):
             self.performance_results = performance_results
 
-        @staticmethod
-        def _expand(
-            results: PvmAggregatedPerformanceResults,
-        ) -> dict[str, PvmPerformanceResultsBase]:
-            items = {}
-            for c in results.components:
-                # TODO: do better subtype check
-                item = results.components[c]
-                if type(item) == PvmAggregatedPerformanceResults:
-                    expanded_items = (
-                        PositionAttributionResults.LayerResults._expand(
-                            item
-                        )
-                    )
-                    items = items | expanded_items
-                elif type(item) == PvmPerformanceResultsBase:
-                    items[c] = item
-                else:
-                    raise NotImplementedError()
-            return items
-
         @cached_property
         def expanded(self) -> dict[str, PvmPerformanceResultsBase]:
-            return PositionAttributionResults.LayerResults._expand(
+            return PvmAggregatedPerformanceResults._expand(
                 self.performance_results
             )
 
