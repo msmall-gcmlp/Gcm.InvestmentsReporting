@@ -1,3 +1,6 @@
+from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_performance_results import (
+    PvmPerformanceResultsBase,
+)
 from . import AggregateInterval, PvmPerformanceResultsBase
 from .aggregated import PvmAggregatedPerformanceResults
 import pandas as pd
@@ -22,11 +25,21 @@ class PositionAttributionResults(object):
         self.attribute_by = attribute_by
         self.gross_atom = gross_atom
 
-    class LayerResults(object):
+    class LayerBase(object):
         def __init__(
-            self, performance_results: PvmAggregatedPerformanceResults
+            self, name: str, performance_results: PvmPerformanceResultsBase
         ):
             self.performance_results = performance_results
+            self.name = name
+
+    class LayerResults(LayerBase):
+        def __init__(
+            self,
+            performance_results: PvmAggregatedPerformanceResults,
+            sub_layers: List["PositionAttributionResults.LayerBase"],
+        ):
+            super().__init__(performance_results.name, performance_results)
+            self.sub_layers = sub_layers
 
         @cached_property
         def expanded(self) -> dict[str, PvmPerformanceResultsBase]:
@@ -150,7 +163,7 @@ class PositionAttributionResults(object):
         if name is None:
             name = "Total"
         grouped = parent_frame.groupby(attribution_item)
-        child_map = {}
+        layer_cache: List[PositionAttributionResults.LayerBase] = []
         for n, g in grouped:
             # now we can get the cfs for in-group-items
             if is_base_case:
@@ -163,16 +176,22 @@ class PositionAttributionResults(object):
                             n,
                         )
                     )
-                    child_map[n] = item
+                    layer = PositionAttributionResults.LayerBase(n, item)
+                    layer_cache.append(layer)
             else:
                 child_depth = depth + 1
                 sub_item = self.results(
                     child_depth, g, name=f"{attribution_item} - {n}"
                 )
-                sub_item = sub_item.performance_results
-                child_map[n] = sub_item
+                layer_cache.append(sub_item)
+        dict_to_move = {}
+        for i in [x for x in layer_cache]:
+            dict_to_move[i.name] = i.performance_results
         return PositionAttributionResults.LayerResults(
-            PvmAggregatedPerformanceResults(
-                name, child_map, self.aggregate_interval
-            )
+            performance_results=PvmAggregatedPerformanceResults(
+                name=name,
+                components=dict_to_move,
+                aggregate_interval=self.aggregate_interval,
+            ),
+            sub_layers=layer_cache,
         )

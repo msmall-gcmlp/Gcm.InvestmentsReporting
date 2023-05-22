@@ -33,10 +33,8 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
             # TODO: do better subtype check
             item = results.components[c]
             if type(item) == PvmAggregatedPerformanceResults:
-                expanded_items = (
-                    PvmAggregatedPerformanceResults._expand(
-                        item
-                    )
+                expanded_items = PvmAggregatedPerformanceResults._expand(
+                    item
                 )
                 items = items | expanded_items
             elif type(item) == PvmPerformanceResultsBase:
@@ -44,8 +42,6 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
             else:
                 raise NotImplementedError()
         return items
-    
-
 
     @property
     def pnl(self):
@@ -60,7 +56,7 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
         return sum(
             [self.components[x].distributions for x in self.components]
         )
-    
+
     @cached_property
     def loss_ratio(self) -> float:
         total_cost_tracker = 0.0
@@ -73,9 +69,6 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
             total_cost_tracker = total_cost_tracker + cost_amount
             loss_tracker = loss_tracker + loss_amount
         return loss_tracker / total_cost_tracker
-
-    
-
 
     def to_df(self) -> pd.DataFrame:
         df = super().to_df()

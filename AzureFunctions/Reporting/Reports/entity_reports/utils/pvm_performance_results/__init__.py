@@ -26,7 +26,7 @@ class PvmPerformanceResultsBase(object):
     @cached_property
     def moic(self) -> float:
         return 1.0 + (self.pnl / abs(self.cost))
-    
+
     @cached_property
     def loss_ratio(self) -> float:
         if self.pnl < 0.0:
