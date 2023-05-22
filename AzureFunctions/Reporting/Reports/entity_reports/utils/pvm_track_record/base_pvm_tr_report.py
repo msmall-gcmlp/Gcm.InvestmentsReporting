@@ -23,6 +23,7 @@ from ...utils.pvm_performance_results.attribution import (
     PositionAttributionResults,
     PvmTrackRecordAttribution,
 )
+import pandas as pd
 
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
@@ -121,17 +122,21 @@ class BasePvmTrackRecordReport(ReportStructure):
             realized = breakout[layer]
             return PositionAttributionResults.LayerResults(realized)
         return None
+    
+    _1_3_5 = [1, 3, 5]
 
-    def get_1_3_5(
+    def get_1_3_5_df(
         self, layer_item: PositionAttributionResults.LayerResults
-    ) -> dict[int, PvmAggregatedPerformanceResults]:
-        final = {}
-        cut_by = [1, 3, 5]
-        for i in cut_by:
+    ) -> pd.DataFrame:
+        final = []
+        for i in BasePvmTrackRecordReport._1_3_5:
             output = (
                 layer_item.get_position_performance_concentration_at_layer(
                     i
                 )
             )
-            final[i] = output
+            final.append(output.to_df())
+        final = pd.concat(final)
+        final = final.reset_index(inplace=True, drop=True)
         return final
+            

@@ -142,13 +142,13 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def assign_components(self):
         total_gross = self.total_positions_line_item
         total_df = total_gross.performance_results.to_df()
-        total_1_3_5 = self.get_1_3_5(total_gross)
+        total_1_3_5_df = self.get_1_3_5_df(total_gross)
         realized = self.get_realation_status_positions("Realized")
         if realized is not None:
             realized_df = realized.performance_results.to_df()
-            realized_1_3_5 = self.get_1_3_5(realized)
-        unrealized = self.get_realation_status_positions("Unrealized")
+            realized_1_3_5_df = self.get_1_3_5_df(realized)
+        unrealized: pd.DataFrame = self.get_realation_status_positions("Unrealized")
         if unrealized is not None:
-            unrealized = realized.performance_results.to_df()
-            unrealized_1_3_5 = self.get_1_3_5(unrealized)
+            unrealized_df: pd.DataFrame = realized.performance_results.to_df()
+            unrealized_1_3_5_df = self.get_1_3_5_df(unrealized)
         
