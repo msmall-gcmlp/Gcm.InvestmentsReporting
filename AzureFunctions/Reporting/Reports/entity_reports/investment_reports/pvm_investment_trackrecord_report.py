@@ -25,7 +25,6 @@ from ..utils.pvm_track_record.data_handler.pvm_track_record_handler import (
 from functools import cached_property
 from ..utils.pvm_performance_results.attribution import (
     PvmTrackRecordAttribution,
-    PositionAttributionResults,
 )
 
 
@@ -37,6 +36,27 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             ReportNames.PvmInvestmentTrackRecordReport, report_meta
         )
         self.___investment_manager_name = investment_manager_name
+
+    
+    @property
+    def manager_name(self) -> str:
+        if self.___investment_manager_name is None:
+            # time to do acrobatics....
+            e = self.related_entities
+            manager_data = e.get_entities_directly_related_by_name(
+                EntityDomainTypes.InvestmentManager, None, False
+            )
+            managers = (
+                manager_data[EntityDomainStandards.EntityName]
+                .drop_duplicates()
+                .to_list()
+            )
+            if len(managers) == 1:
+                self.___investment_manager_name = managers[0]
+            else:
+                raise RuntimeError("More than one manager")
+        return self.___investment_manager_name
+
 
     class InvestmentContainer(InvestmentContainerBase):
         def __init__(
@@ -119,26 +139,16 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def pvm_perfomance_results(self) -> PvmTrackRecordAttribution:
         return PvmTrackRecordAttribution([self.investment_handler])
 
-    @property
-    def manager_name(self) -> str:
-        if self.___investment_manager_name is None:
-            # time to do acrobatics....
-            e = self.related_entities
-            manager_data = e.get_entities_directly_related_by_name(
-                EntityDomainTypes.InvestmentManager, None, False
-            )
-            managers = (
-                manager_data[EntityDomainStandards.EntityName]
-                .drop_duplicates()
-                .to_list()
-            )
-            if len(managers) == 1:
-                self.___investment_manager_name = managers[0]
-            else:
-                raise RuntimeError("More than one manager")
-        return self.___investment_manager_name
-
     def assign_components(self):
-        items = self.realization_status_breakout
-        irr = items.performance_results.irr
-        assert items is not None
+        total_gross = self.total_positions_line_item
+        total_df = total_gross.performance_results.to_df()
+        total_1_3_5 = self.get_1_3_5(total_gross)
+        realized = self.get_realation_status_positions("Realized")
+        if realized is not None:
+            realized_df = realized.performance_results.to_df()
+            realized_1_3_5 = self.get_1_3_5(realized)
+        unrealized = self.get_realation_status_positions("Unrealized")
+        if unrealized is not None:
+            unrealized = realized.performance_results.to_df()
+            unrealized_1_3_5 = self.get_1_3_5(unrealized)
+        

@@ -98,9 +98,6 @@ class BasePvmTrackRecordReport(ReportStructure):
         self,
     ) -> PositionAttributionResults.LayerResults:
         results = self.pvm_perfomance_results
-        agg = self.report_meta.interval
-        net_results = results.net_performance_results(agg)
-        assert net_results is not None
         attribution = results.position_attribution(
             [
                 TrackRecordHandler.CommonPositionAttribution.RealizationStatus.name
@@ -108,14 +105,33 @@ class BasePvmTrackRecordReport(ReportStructure):
         ).results()
         return attribution
 
+    @property
+    def total_positions_line_item(
+        self,
+    ) -> PositionAttributionResults.LayerResults:
+        return self.realization_status_breakout
+
+    def get_realation_status_positions(
+        self, layer="Realized"
+    ) -> PositionAttributionResults.LayerResults:
+        breakout = (
+            self.realization_status_breakout.performance_results.components
+        )
+        if layer in breakout:
+            realized = breakout[layer]
+            return PositionAttributionResults.LayerResults(realized)
+        return None
+
     def get_1_3_5(
-        self, attribution_results: PositionAttributionResults.LayerResults
+        self, layer_item: PositionAttributionResults.LayerResults
     ) -> dict[int, PvmAggregatedPerformanceResults]:
         final = {}
         cut_by = [1, 3, 5]
         for i in cut_by:
-            output = attribution_results.get_position_performance_concentration_at_layer(
-                i
+            output = (
+                layer_item.get_position_performance_concentration_at_layer(
+                    i
+                )
             )
             final[i] = output
         return final

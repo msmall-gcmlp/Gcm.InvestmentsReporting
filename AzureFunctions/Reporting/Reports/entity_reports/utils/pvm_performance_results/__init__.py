@@ -16,32 +16,65 @@ class PvmPerformanceResultsBase(object):
 
     @cached_property
     def irr(self) -> float:
-        dates = self.cfs.cfs[PvmCashflows.CashflowColumns.CashflowDate.name]
+        dates = self.cfs.cfs[
+            PvmCashflows.CashflowColumns.CashflowDate.name
+        ]
         vals = self.cfs.cfs[PvmCashflows.CashflowColumns.Amount.name]
         guess = 0.1 if self.pnl > 0 else -0.1
-        return xirr(dates, vals, guess)
+        return xirr(dates, vals, guess=guess)
 
-    @cached_property
+    @property
     def moic(self) -> float:
         return 1.0 + (self.pnl / abs(self.cost))
 
-    @cached_property
-    def tvpi(self) -> float:
-        return self.moic
-
-    @cached_property
+    @property
     def pnl(self) -> float:
         return self.cfs.sum(self.cfs.cfs)
 
-    @cached_property
+    @property
     def cost(self) -> float:
         return self.cfs.sum(self.cfs.T_Cfs)
 
-    @cached_property
-    def distrutions(self) -> float:
+    @property
+    def distributions(self) -> float:
         return self.cfs.sum(self.cfs.D_Cfs)
 
+    @property
+    def nav(self) -> float:
+        return self.cfs.sum(self.cfs.R_Cfs)
+
+    # ALIAS
+    @property
+    def realized_value(self) -> float:
+        return self.distributions
+
+    # ALIAS
+    @property
+    def unrealized_value(self) -> float:
+        return self.nav
+
+    # ALIAS
+    @property
+    def tvpi(self) -> float:
+        return self.moic
+
     def to_df(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            {"IRR": [self.irr], "MOIC": [self.moic], "PNL": [self.pnl]}
-        )
+        # TODO: make more dynamic
+        cols = [
+            "irr",
+            "moic",
+            "pnl",
+            "cost",
+            "distributions",
+            "nav",
+            "realized_value",
+            "unrealized_value",
+            "tvpi",
+        ]
+        df_dict = {}
+        for i in cols:
+            attr = getattr(self, i, None)
+            if attr is not None:
+                df_dict[i] = [attr]
+        return pd.DataFrame(df_dict)
+
