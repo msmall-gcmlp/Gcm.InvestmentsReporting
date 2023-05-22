@@ -37,7 +37,6 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         )
         self.___investment_manager_name = investment_manager_name
 
-    
     @property
     def manager_name(self) -> str:
         if self.___investment_manager_name is None:
@@ -56,7 +55,6 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             else:
                 raise RuntimeError("More than one manager")
         return self.___investment_manager_name
-
 
     class InvestmentContainer(InvestmentContainerBase):
         def __init__(
@@ -139,15 +137,13 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
     def pvm_perfomance_results(self) -> PvmTrackRecordAttribution:
         return PvmTrackRecordAttribution([self.investment_handler])
 
-
-
     def assign_components(self):
         total_gross = self.total_positions_line_item
         total_df = total_gross.performance_results.to_df()
-        total_1_3_5_df = self.get_1_3_5_df(total_gross)
+        total_1_3_5_df = self.get_1_3_5_other_df(total_gross)
         realized = self.get_realation_status_positions("Realized")
-        realized_expanded = realized.expanded   
+
+        realized_expanded = realized.expanded
         if realized is not None:
             realized_df = realized.performance_results.to_df()
-            realized_1_3_5_df = self.get_1_3_5_df(realized)
-
+            realized_1_3_5_df = self.get_1_3_5_other_df(realized)

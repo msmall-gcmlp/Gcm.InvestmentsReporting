@@ -77,4 +77,3 @@ class PvmPerformanceResultsBase(object):
             if attr is not None:
                 df_dict[i] = [attr]
         return pd.DataFrame(df_dict)
-

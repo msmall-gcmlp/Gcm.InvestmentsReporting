@@ -56,8 +56,11 @@ class PositionAttributionResults(object):
             )
 
         def get_position_performance_concentration_at_layer(
-            self, top=1, ascending=False
-        ) -> PvmAggregatedPerformanceResults:
+            self, top=1, ascending=False, return_other=False
+        ) -> tuple[
+            PvmAggregatedPerformanceResults,
+            PvmAggregatedPerformanceResults,
+        ]:
             expanded = self.expanded
 
             pnl_list = []
@@ -75,12 +78,31 @@ class PositionAttributionResults(object):
             for i, s in sorted.iterrows():
                 final[f"Top {in_count}"] = s["obj"]
                 in_count = in_count + 1
-            # now get
-            return PvmAggregatedPerformanceResults(
-                f"Top {top}",
-                final,
-                self.performance_results.aggregate_interval,
-            )
+            # now get other if return_other
+
+            # if there is 100 objects, shape == 100
+            other = None
+            if return_other:
+                other_df = df.iloc[top:]
+                if other_df.shape[0] > 0:
+                    other_final = {}
+                    in_count = 1
+                    for i, s in other_df.iterrows():
+                        other_final[f"Top {in_count}"] = s["obj"]
+                        in_count = in_count + 1
+                    other = PvmAggregatedPerformanceResults(
+                        f"Other [-{top}]",
+                        other_final,
+                        self.performance_results.aggregate_interval,
+                    )
+            return [
+                PvmAggregatedPerformanceResults(
+                    f"Top {top}",
+                    final,
+                    self.performance_results.aggregate_interval,
+                ),
+                other,
+            ]
 
     @cached_property
     def merged_position_results(self) -> pd.DataFrame:

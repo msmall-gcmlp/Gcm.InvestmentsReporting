@@ -19,7 +19,6 @@ from ..pvm_track_record.data_handler.pvm_track_record_handler import (
 from abc import abstractclassmethod, abstractproperty
 from functools import cached_property
 from ...utils.pvm_performance_results.attribution import (
-    PvmAggregatedPerformanceResults,
     PositionAttributionResults,
     PvmTrackRecordAttribution,
 )
@@ -122,21 +121,26 @@ class BasePvmTrackRecordReport(ReportStructure):
             realized = breakout[layer]
             return PositionAttributionResults.LayerResults(realized)
         return None
-    
-    _1_3_5 = [1, 3, 5]
 
-    def get_1_3_5_df(
+    # return Other
+    _1_3_5 = [(1, False), (3, False), (5, True)]
+
+    def get_1_3_5_other_df(
         self, layer_item: PositionAttributionResults.LayerResults
     ) -> pd.DataFrame:
         final = []
         for i in BasePvmTrackRecordReport._1_3_5:
-            output = (
-                layer_item.get_position_performance_concentration_at_layer(
-                    i
-                )
+            length = i[0]
+            return_other = i[1]
+            [
+                output,
+                other,
+            ] = layer_item.get_position_performance_concentration_at_layer(
+                length, return_other=return_other
             )
             final.append(output.to_df())
+            if other is not None:
+                final.append(other.to_df())
         final = pd.concat(final)
         final = final.reset_index(inplace=True, drop=True)
         return final
-            

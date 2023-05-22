@@ -34,11 +34,10 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
     @property
     def distrutions(self):
         return sum(
-            [self.components[x].distrutions for x in self.components]
+            [self.components[x].distributions for x in self.components]
         )
 
     def to_df(self) -> pd.DataFrame:
         df = super().to_df()
         df["Name"] = self.name
         return df
-
