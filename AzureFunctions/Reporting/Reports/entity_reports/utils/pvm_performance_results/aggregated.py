@@ -37,6 +37,7 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
             [self.components[x].distributions for x in self.components]
         )
     
+    @property
     def loss_ratio(self) -> float:
         total_cost_tracker = 0.0
         loss_tracker = 0.0
