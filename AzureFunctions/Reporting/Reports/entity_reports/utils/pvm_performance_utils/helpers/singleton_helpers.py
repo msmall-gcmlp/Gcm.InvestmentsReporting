@@ -146,17 +146,38 @@ def get_all_deal_attributes() -> pd.DataFrame:
                     os.Ticker OsTicker,
                     h.ReportingName,
                     hrpting.PredominantSector,
-                    d.*  
+                    d.*
                 from entitydata.OperationalSeries os
                     left join entitydata.Investment i on os.MasterId = i.OperationalSeriesId
                     left join entitydata.Deal d on i.DealId = d.MasterId
                     left join entitydata.Holding h on i.HoldingId = h.MasterId
                     left join entitydata.Holding hrpting on h.ReportingMasterId = hrpting.MasterId
                 """
+        # TODO: DT note - i don't trust the below query yet, revisit!
+        # raw = """
+        #                 select distinct
+        # 			p.Ticker PortfolioTicker,
+        #             os.Ticker OsTicker,
+        #             h.ReportingName,
+        #             im.LegalName InvestmentManagerName,
+        #             hrpting.PredominantSector,
+        #             d.*
+        #         from entitydata.OperationalSeries os
+        #             left join entitydata.Investment i on os.MasterId = i.OperationalSeriesId
+        # 			left join entitydata.PortfolioSeries ps on os.PortfolioSeriesId=ps.MasterId
+        # 			left join entitydata.Portfolio p on ps.PortfolioId=p.MasterId
+        #             left join entitydata.Deal d on i.DealId = d.MasterId
+        #             left join entitydata.Holding h on i.HoldingId = h.MasterId
+        #             left join entitydata.Holding hrpting on h.ReportingMasterId = hrpting.MasterId
+        #             left join entitydata.InvestmentManager im on hrpting.InvestmentManagerId = im.MasterId
+        #             where d.Name is not null
+        #                 """
         df = pd.read_sql(
             raw,
             dao.data_engine.session.bind,
         )
+        # needed when we do x-portfolio analysis where each "atomic unit" needs to be independently evaluated at portfolio level
+        # df['Name'] = df.PortfolioTicker + 'ticker_' + df.Name
         return df
 
     attrib = __runner().execute(

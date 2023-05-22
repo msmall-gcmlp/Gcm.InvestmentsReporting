@@ -25,7 +25,6 @@ from utils.print_utils import print
 import pytest
 
 
-@pytest.mark.skip
 class TestPerformanceBreakDown(object):
     @staticmethod
     def get_entity(domain, name):
@@ -56,17 +55,17 @@ class TestPerformanceBreakDown(object):
             )
             assert final_data is not None
 
-    def test_render_single_port_report(self):
+    def test_render_single_vertical_report(self):
         as_of_date = dt.date(2022, 12, 31)
         with Scenario(
             as_of_date=as_of_date,
             aggregate_interval=AggregateInterval.ITD,
             save=True,
         ).context():
-            port_name = "The Consolidated Edison Pension Plan Master Trust - GCM PE Account"
-            domain = EntityDomainTypes.Portfolio
+            # port_name = "The Consolidated Edison Pension Plan Master Trust - GCM PE Account"
+            domain = EntityDomainTypes.Vertical
             info = TestPerformanceBreakDown.get_entity(
-                domain=domain, name=port_name
+                domain=domain, name="ARS"
             )
             this_report = PvmPerformanceBreakoutReport(
                 ReportMeta(
@@ -84,6 +83,44 @@ class TestPerformanceBreakDown(object):
                 )
             )
             output = print(report_structure=this_report, print_pdf=True)
+        assert output is not None
+
+    def test_render_single_port_report(self):
+        as_of_date = dt.date(2022, 12, 31)
+        with Scenario(
+            as_of_date=as_of_date,
+            aggregate_interval=AggregateInterval.ITD,
+            save=True,
+        ).context():
+            for port_name in [
+                "The Consolidated Edison Pension Plan Master Trust - GCM PE Account"
+            ]:
+                # for port_name in ['The Consolidated Edison Pension Plan Master Trust - GCM PE Account']:
+                # port_name = "The Consolidated Edison Pension Plan Master Trust - GCM PE Account"
+                domain = EntityDomainTypes.Portfolio
+                info = TestPerformanceBreakDown.get_entity(
+                    domain=domain, name=port_name
+                )
+                this_report = PvmPerformanceBreakoutReport(
+                    ReportMeta(
+                        type=ReportType.Performance,
+                        interval=Scenario.get_attribute(
+                            "aggregate_interval"
+                        ),
+                        consumer=ReportConsumer(
+                            horizontal=[ReportConsumer.Horizontal.IC],
+                            vertical=ReportConsumer.Vertical.PE,
+                        ),
+                        frequency=Frequency(
+                            FrequencyType.Once, Calendar.AllDays
+                        ),
+                        entity_domain=domain,
+                        entity_info=info,
+                    )
+                )
+                output = print(
+                    report_structure=this_report, print_pdf=True
+                )
             assert output is not None
 
     def test_render_single_mgr_report(self):

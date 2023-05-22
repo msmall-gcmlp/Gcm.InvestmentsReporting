@@ -723,20 +723,8 @@ def get_ror_ctr_df_rpt(
             )
             for i in list_to_iterate
         ]
-    )[["Name", "AnnRor", "Ctr", "Period", "group_cols"]]
-    rslt = pd.DataFrame()
-    for i in ror_ctr_df.Period.unique():
-        sub = ror_ctr_df[ror_ctr_df.Period == i]
-        for x in sub.group_cols.unique():
-            subb = sub[sub.group_cols == x]
-            ctr_total = sub[sub.Name == owner].AnnRor.squeeze() / sum(
-                subb[~subb.Ctr.isnull()].Ctr
-            )
-            subb["Ctr"] = subb.Ctr * ctr_total.squeeze()
-            rslt = pd.concat([rslt, subb])[
-                ["Name", "AnnRor", "Ctr", "Period"]
-            ]
-    result = pivot_trailing_period_df(rslt)
+    )[["Name", "AnnRor", "Ctr", "Period"]]
+    result = pivot_trailing_period_df(ror_ctr_df)
     return result
 
 
@@ -781,12 +769,13 @@ def get_ror_ctr(
         left_on=["Name", "Period"],
         right_on=["Name", "Period"],
     )
-    result["group_cols"] = str(group_cols)
     return result
 
 
 def get_ctrs(
-    as_of_date: dt.date, ctrs: pd.DataFrame, trailing_periods: dict
+        as_of_date: dt.date,
+        ctrs: pd.DataFrame,
+        trailing_periods: dict
 ):
     def safe_division(numerator, denominator):
         """Return 0 if denominator is 0."""
@@ -800,22 +789,13 @@ def get_ctrs(
                 days=1,
             )
             ctr = calc_ctr(ctrs.loc[start_date:as_of_date])
-            ctr.AnnCtr = ctr[["Ctr", "NoObs"]].apply(
-                lambda row: (1 + row["Ctr"])
-                ** (safe_division(4, row["NoObs"]))
-                - 1,
-                axis=1,
-            )
-            ctr.Ctr = np.where(ctr.NoObs <= 4, ctr.Ctr, ctr.AnnCtr)
         else:
             ctr = calc_ctr(ctrs)
-            ctr.AnnCtr = ctr[["Ctr", "NoObs"]].apply(
-                lambda row: (1 + row["Ctr"])
-                ** (safe_division(4, row["NoObs"]))
-                - 1,
-                axis=1,
-            )
-            ctr.Ctr = np.where(ctr.NoObs <= 4, ctr.Ctr, ctr.AnnCtr)
+        if ctr.NoObs.max() > 4:
+            total_ann_return = (1 + sum(ctr.Ctr)) ** (4 / ctr.NoObs.max()) - 1
+            total_cumulative_return = sum(ctr.Ctr)
+            ctr.Ctr = ctr.Ctr * safe_division(total_ann_return, total_cumulative_return)
+
         ctr["Period"] = trailing_period
         result = pd.concat([result, ctr])
     return result
@@ -1385,25 +1365,10 @@ def get_holding_periods_rpt(
         .rename(columns={"TransactionDate": "MaxNavDate"})
     )
 
-    min_cf_date = (
-        df[_attributes_needed + ["TransactionDate", "Portfolio"]]
-        .groupby(_attributes_needed + ["Portfolio"])
-        .min()
-        .reset_index()
-    )
-    date_df = min_cf_date.merge(max_nav_date, how="outer")
-    date_df["HoldingPeriod"] = (
-        date_df.MaxNavDate - date_df.TransactionDate
-    ) / pd.Timedelta("365 days")
-
-    rslt = pd.concat(
+    result = pd.concat(
         [calc_duration(discount_df, group_cols=i) for i in list_to_iterate]
-    )
-    rslt = rslt[["Name", "Duration"]]
-
-    # used for big join... remove
-    rslt["NoObs"] = "Incep"
-    return rslt, max_nav_date
+    )[["Name", "Duration"]]
+    return result, max_nav_date
 
 
 def pivot_trailing_period_df(df):

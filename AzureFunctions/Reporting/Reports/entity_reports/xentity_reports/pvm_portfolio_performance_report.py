@@ -136,7 +136,8 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         # regions_to_trim: List[str] = [x.component_name for x in tables]
 
         # 19 = number of excel header rows before primary_df range starts (not scalable)
-        print_region = "B1:AC" + str(len(primary_df) + 19)
+        print_region = "B1:AC" + str(len(primary_df) + 22)
+        # print_region = "B1:AF" + str(len(primary_df) + 22)
 
         # identifying hide_columns could be more generic, not worth it currently
         # below hide_col conditions would be better to use
@@ -152,7 +153,6 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             # TODO: generic:
             #    https://stackoverflow.com/questions/16060899/alphabet-range-in-python
             hide_columns = [
-                "M",
                 "N",
                 "O",
                 "P",
@@ -164,10 +164,11 @@ class PvmPerformanceBreakoutReport(ReportStructure):
                 "V",
                 "W",
                 "X",
+                "Y",
             ]
         elif primary_df.loc[0, "5Y_AnnRor"] is None:
             # hide 5Y columns
-            hide_columns = ["M", "N", "O", "P", "Q", "R"]
+            hide_columns = ["N", "O", "P", "Q", "R", "S"]
 
         this_worksheet = ReportWorksheet(
             sheet_name,

@@ -82,9 +82,35 @@ class PvmPerformanceHelper(object):
                     self.related_mgr_holdings.HoldingName
                 )
             ]
+        if self.entity_domain == EntityDomainTypes.Vertical:
+            # ad hoc/temporary
+            raw_df = raw_df[
+                raw_df.PredominantInvestmentType.isin(
+                    ["Co-investment/Direct"]
+                )
+            ]
+            raw_df = raw_df[
+                raw_df.PredominantAssetClass.isin(["Private Equity"])
+            ]
+            raw_df = raw_df[raw_df.VintageYear >= 2009]
 
+        # max_nav_date = (
+        #     raw_df[
+        #         (raw_df.TransactionType == "Net Asset Value")
+        #         & (raw_df.BaseAmount != 0)
+        #     ]
+        #     .groupby(["OwnerName", "InvestmentName"])
+        #     .TransactionDate.max()
+        #     .reset_index()
+        #     .rename(columns={"TransactionDate": "MaxNavDate"})
+        # )
+        # TODO: DT note figure out whether we want max nav date to reflect NAV != 0
+        # makes a difference for all RMV measures at group levels (vertical/portfolio/sector/etc)
         max_nav_date = (
-            raw_df[raw_df.TransactionType == "Net Asset Value"]
+            raw_df[
+                (raw_df.TransactionType == "Net Asset Value")
+                # & (raw_df.BaseAmount != 0)
+            ]
             .groupby(["OwnerName", "InvestmentName"])
             .TransactionDate.max()
             .reset_index()
@@ -165,8 +191,14 @@ class PvmPerformanceHelper(object):
                 & (commitment_df.TransactionDate == as_of_date)
             ]
             funded = commitment_df[
-                commitment_df.TransactionType
-                != "Unfunded Commitment Without Modification"
+                (
+                    commitment_df.TransactionType
+                    != "Unfunded Commitment Without Modification"
+                )
+                & (
+                    commitment_df.TransactionDate
+                    <= commitment_df.MaxNavDate
+                )
             ]
             funded = (
                 funded[["OwnerName", "InvestmentName", "Commitment"]]
@@ -224,7 +256,10 @@ class PvmPerformanceHelper(object):
                         ].to_list()
                     )
                 ]
+            elif self.entity_domain == EntityDomainTypes.Vertical:
+                df = all_os
             setattr(self, __name, df)
+
         return getattr(self, __name, None)
 
     @property
@@ -319,6 +354,24 @@ class PvmPerformanceHelper(object):
                     ["PredominantInvestmentType", "PredominantSector"],
                     ["Name"],
                 ]
+                # list_of_items = [
+                #     ["Portfolio"],
+                #     ["PredominantRealizationTypeCategory"],
+                #     ["PredominantRealizationTypeCategory", "VintageYear"],
+                #     ["Name"],
+                # ]
+            elif self.entity_domain == EntityDomainTypes.Vertical:
+                # list_of_items = [
+                #     ["Portfolio"],
+                #     ["PredominantInvestmentType"],
+                #     ["PredominantInvestmentType", "PredominantSector"],
+                #     ["Name"],
+                # ]
+                list_of_items = [
+                    ["Portfolio"],
+                    ["VintageYear"],
+                    ["Name"],
+                ]
             setattr(self, __name, list_of_items)
         return getattr(self, __name, None)
 
@@ -342,6 +395,21 @@ class PvmPerformanceHelper(object):
                 "Name",
                 "PredominantInvestmentType",
                 "PredominantSector",
+            ]
+            # return [
+            #     "Name",
+            #     "PredominantRealizationTypeCategory",
+            #     "VintageYear",
+            # ]
+        elif self.entity_domain == EntityDomainTypes.Vertical:
+            # return [
+            #     "Name",
+            #     "PredominantInvestmentType",
+            #     "PredominantSector",
+            # ]
+            return [
+                "Name",
+                "VintageYear",
             ]
         elif self.entity_domain == EntityDomainTypes.InvestmentManager:
             return [
@@ -369,6 +437,11 @@ class PvmPerformanceHelper(object):
                     .drop_duplicates()
                     .to_list()
                 )
+                assert len(tickers) == 1
+                setattr(self, __name, tickers[0])
+            elif self.entity_domain == EntityDomainTypes.Vertical:
+                # ad hoc/temporary
+                tickers = ["GCM PE Co-Investments"]
                 assert len(tickers) == 1
                 setattr(self, __name, tickers[0])
         return getattr(self, __name, None)
