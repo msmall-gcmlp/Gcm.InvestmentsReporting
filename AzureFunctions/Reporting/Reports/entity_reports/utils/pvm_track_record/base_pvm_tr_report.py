@@ -3,6 +3,7 @@ from .....core.report_structure import (
     ReportMeta,
     AvailableMetas,
 )
+from typing import List
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from .....core.report_structure import (
     ReportType,
@@ -24,6 +25,7 @@ from ...utils.pvm_performance_results.attribution import (
 from ..pvm_performance_results.report_layer_results import (
     ReportingLayerAggregatedResults,
 )
+from enum import Enum, auto
 import pandas as pd
 
 
@@ -49,6 +51,9 @@ class BasePvmTrackRecordReport(ReportStructure):
             )
         )
         return manager_handler
+
+    def atom(self):
+        items = [x for x in self.investment_handler]
 
     @cached_property
     def idw_pvm_tr_id(self) -> int:
@@ -113,6 +118,79 @@ class BasePvmTrackRecordReport(ReportStructure):
     ) -> ReportingLayerAggregatedResults:
         item = self.__realization_status_breakout
         return item
+
+    class _KnownRealizationStatusBuckets(Enum):
+        REALIZED = auto()
+        UNREALIZED = auto()
+
+    dict_of_mappings = {"RealizationStatus - Unrealized"}
+
+    def _get_realization_bucket(
+        self, bucket: _KnownRealizationStatusBuckets, include_unknown=False
+    ):
+        layers = self.__realization_status_breakout.sub_layers
+
+        def simple_compare(
+            x: ReportingLayerAggregatedResults,
+            b: BasePvmTrackRecordReport._KnownRealizationStatusBuckets,
+        ):
+            _name = x.name
+            upp = _name.upper()
+            upp = upp.replace("RealizationStatus -".upper(), "")
+            upp = upp.strip()
+            return upp.startswith(b.name.upper())
+
+        true_vals = [x for x in layers if simple_compare(x, bucket)]
+        final_bucket: List[ReportingLayerAggregatedResults] = []
+        if include_unknown:
+            remaining = [i for i in layers]
+            for i in [
+                e
+                for e in BasePvmTrackRecordReport._KnownRealizationStatusBuckets
+            ]:
+                remaining = [
+                    x for x in remaining if (not simple_compare(x, i))
+                ]
+
+            final_bucket = list(set(true_vals + remaining))
+        else:
+            final_bucket = true_vals
+        if len(final_bucket) > 1:
+            computed_names = " & ".join(
+                list(set([x.name for x in final_bucket]))
+            )
+            item = ReportingLayerAggregatedResults(
+                computed_names,
+                sub_layers=final_bucket,
+                aggregate_interval=self.report_meta.interval,
+            )
+            return item
+        elif len(final_bucket) == 1:
+            return final_bucket[0]
+        else:
+            raise RuntimeError()
+
+    GroupOtherWithRealized = False
+
+    @property
+    def realized_reporting_layer(
+        self,
+    ) -> ReportingLayerAggregatedResults:
+        group_other_in_realized = self.__class__.GroupOtherWithRealized
+        return self._get_realization_bucket(
+            BasePvmTrackRecordReport._KnownRealizationStatusBuckets.REALIZED,
+            group_other_in_realized,
+        )
+
+    @property
+    def unrealized_reporting_layer(
+        self,
+    ) -> ReportingLayerAggregatedResults:
+        group_other_in_realized = not self.__class__.GroupOtherWithRealized
+        return self._get_realization_bucket(
+            BasePvmTrackRecordReport._KnownRealizationStatusBuckets.UNREALIZED,
+            group_other_in_realized,
+        )
 
     # return Other
     _1_3_5 = [(1, False), (3, False), (5, True)]

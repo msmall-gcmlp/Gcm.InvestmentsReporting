@@ -59,12 +59,9 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
         return self.__class__._expand_to_lowest(self)
 
     @property
-    def performance_results_count(self) -> int:
-        count = 0
-        for i in self.components:
-            item = self.components[i]
-            count = item.performance_results_count + count
-        return count
+    def full_expanded_performance_results_count(self) -> int:
+        keys = list(self.full_expansion.keys())
+        return len(keys)
 
     @property
     def pnl(self):

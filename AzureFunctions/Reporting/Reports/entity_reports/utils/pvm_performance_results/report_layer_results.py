@@ -70,13 +70,15 @@ class ReportingLayerBase(PvmAggregatedPerformanceResults):
         return list(atom_dimn["ExitDate"].unique())[0]
 
     @cached_property
-    def holding_period(self):
+    def holding_period(self) -> float:
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
         exit_date = (
             as_of_date if self.exit_date is None else self.exit_date
         )
-        hp = (exit_date - self.investment_date) / 365.25
-        return hp
+        hp = (exit_date - self.investment_date) / pd.Timedelta(
+            "365.25 days"
+        )
+        return float(hp)
 
 
 class ReportingLayerAggregatedResults(ReportingLayerBase):
@@ -122,7 +124,7 @@ class ReportingLayerAggregatedResults(ReportingLayerBase):
                 item.holding_period * item.cost
             )
             cost_basis_tracker = cost_basis_tracker + item.cost
-        return holding_period_tracker / cost_basis_tracker
+        return float(holding_period_tracker / cost_basis_tracker)
 
     def get_position_performance_concentration_at_layer(
         self, top=1, ascending=False, return_other=False

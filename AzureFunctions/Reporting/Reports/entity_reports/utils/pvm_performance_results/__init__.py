@@ -16,7 +16,7 @@ class PvmPerformanceResultsBase(object):
         self.aggregate_interval = aggregate_interval
 
     @property
-    def performance_results_count(self) -> int:
+    def full_expanded_performance_results_count(self) -> int:
         return 1
 
     @cached_property
@@ -64,6 +64,10 @@ class PvmPerformanceResultsBase(object):
     def unrealized_value(self) -> float:
         return self.nav
 
+    @property
+    def total_value(self) -> float:
+        return self.realized_value + self.unrealized_value
+
     # ALIAS
     @property
     def tvpi(self) -> float:
@@ -80,7 +84,8 @@ class PvmPerformanceResultsBase(object):
         realized_value = auto()
         unrealized_value = auto()
         tvpi = auto()
-        performance_results_count = auto()
+        full_expanded_performance_results_count = auto()
+        total_value = auto()
 
     def get_measure(self, measure: Measures):
         attr = getattr(self, measure.name, None)
