@@ -1,6 +1,6 @@
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 
-from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_track_record.data_handler.gross_atom import (
+from ..utils.pvm_track_record.data_handler.gross_atom import (
     GrossAttributionAtom,
 )
 from ....core.report_structure import (

@@ -14,6 +14,10 @@ class PvmPerformanceResultsBase(object):
         self.cfs = cfs
         self.aggregate_interval = aggregate_interval
 
+    @property
+    def performance_results_count(self) -> int:
+        return 1
+
     @cached_property
     def irr(self) -> float:
         dates = self.cfs.cfs[
@@ -77,6 +81,7 @@ class PvmPerformanceResultsBase(object):
             "realized_value",
             "unrealized_value",
             "tvpi",
+            "performance_results_count",
         ]
         df_dict = {}
         for i in cols:

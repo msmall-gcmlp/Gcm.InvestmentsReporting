@@ -1,4 +1,4 @@
-from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_performance_results import (
+from ...utils.pvm_performance_results import (
     PvmPerformanceResultsBase,
 )
 from . import AggregateInterval, PvmPerformanceResultsBase
@@ -25,6 +25,7 @@ class PositionAttributionResults(object):
         self.attribute_by = attribute_by
         self.gross_atom = gross_atom
 
+    # Could this be a subclass of PvmPerformanceResult Base? I think so..
     class LayerBase(object):
         def __init__(
             self, name: str, performance_results: PvmPerformanceResultsBase

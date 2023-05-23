@@ -1,5 +1,5 @@
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
-from AzureFunctions.Reporting.Reports.entity_reports.utils.cashflows import (
+from ....entity_reports.utils.cashflows import (
     PvmCashflows,
 )
 from . import PvmPerformanceResultsBase, PvmCashflows, AggregateInterval
@@ -42,6 +42,14 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
             else:
                 raise NotImplementedError()
         return items
+
+    @property
+    def performance_results_count(self) -> int:
+        count = 0
+        for i in self.components:
+            item = self.components[i]
+            count = item.performance_results_count + count
+        return count
 
     @property
     def pnl(self):
