@@ -24,24 +24,39 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
             cfs = PvmCashflows(pd.concat([x.cfs for x in cf_objects]))
         super().__init__(cfs, aggregate_interval)
 
-    @staticmethod
-    def _expand(
+    @classmethod
+    def get_lowest_expansion_types(cls):
+        return [PvmPerformanceResultsBase]
+
+    @classmethod
+    def get_highest_expansion_types(cls):
+        _highest = [cls]
+        return _highest
+
+    @classmethod
+    def _expand_to_lowest(
+        cls,
         results: "PvmAggregatedPerformanceResults",
     ) -> dict[str, PvmPerformanceResultsBase]:
         items = {}
         for c in results.components:
             # TODO: do better subtype check
             item = results.components[c]
-            if type(item) == PvmAggregatedPerformanceResults:
-                expanded_items = PvmAggregatedPerformanceResults._expand(
-                    item
-                )
-                items = items | expanded_items
-            elif type(item) == PvmPerformanceResultsBase:
-                items[c] = item
-            else:
-                raise NotImplementedError()
+            for i in cls.get_highest_expansion_types():
+                if issubclass(type(item), i):
+                    expanded_items = cls._expand_to_lowest(item)
+                    items = items | expanded_items
+                else:
+                    for i in cls.get_lowest_expansion_types():
+                        if issubclass(type(item), i):
+                            items[c] = item
+                        else:
+                            raise NotImplementedError()
         return items
+
+    @cached_property
+    def full_expansion(self) -> dict[str, PvmPerformanceResultsBase]:
+        return self.__class__._expand_to_lowest(self)
 
     @property
     def performance_results_count(self) -> int:

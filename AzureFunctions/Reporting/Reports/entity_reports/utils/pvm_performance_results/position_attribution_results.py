@@ -2,7 +2,6 @@ from ...utils.pvm_performance_results import (
     PvmPerformanceResultsBase,
 )
 from . import AggregateInterval, PvmPerformanceResultsBase
-from .aggregated import PvmAggregatedPerformanceResults
 import pandas as pd
 from typing import List
 from ..pvm_track_record.data_handler.investment_container import (
@@ -76,14 +75,8 @@ class PositionAttributionResults(object):
         this_position_results = results[position_id]
         return this_position_results
 
-    def results(
-        self,
-        depth=0,
-        parent_frame: pd.DataFrame = None,
-        name: str = None,
-    ) -> ReportingLayerAggregatedResults:
+    def evaluate_base(self, depth: int) -> tuple[bool, str]:
         is_base_case = False
-
         if depth >= len(self.attribute_by):
             if depth == len(self.attribute_by):
                 attribution_item = f"{self.gross_atom.name}Id"
@@ -93,6 +86,42 @@ class PositionAttributionResults(object):
                 raise RuntimeError()
         else:
             attribution_item = self.attribute_by[depth]
+        return (is_base_case, attribution_item)
+
+    def generate_base_layer(
+        self, n: object, g: pd.DataFrame
+    ) -> ReportingLayerBase:
+        investment_names = list(g["InvestmentName"].unique())
+        if len(investment_names) == 1:
+            investment = [
+                x
+                for x in self.investment_containers
+                if x.name in investment_names
+            ]
+            single_component: dict[str, PvmPerformanceResultsBase] = {
+                n: self.get_position_results(
+                    investment_names[0],
+                    self.aggregate_interval,
+                    n,
+                )
+            }
+            layer = ReportingLayerBase(
+                name=n,
+                investment_obj=investment,
+                components=single_component,
+                aggregate_interval=self.aggregate_interval,
+            )
+            return layer
+        else:
+            raise RuntimeError()
+
+    def results(
+        self,
+        depth=0,
+        parent_frame: pd.DataFrame = None,
+        name: str = None,
+    ) -> ReportingLayerAggregatedResults:
+        [is_base_case, attribution_item] = self.evaluate_base(depth)
         if parent_frame is None:
             parent_frame = self.merged_position_results
         if name is None:
@@ -102,40 +131,16 @@ class PositionAttributionResults(object):
         for n, g in grouped:
             # now we can get the cfs for in-group-items
             if is_base_case:
-                investment_names = list(g["InvestmentName"].unique())
-                if len(investment_names) == 1:
-                    item: PvmPerformanceResultsBase = (
-                        self.get_position_results(
-                            investment_names[0],
-                            self.aggregate_interval,
-                            n,
-                        )
-                    )
-                    investment = [
-                        x
-                        for x in self.investment_containers
-                        if x.name in investment_names
-                    ]
-                    layer = ReportingLayerBase(
-                        name=n,
-                        investment_obj=investment,
-                        performance_results=item,
-                    )
-                    layer_cache.append(layer)
+                layer = self.generate_base_layer(n, g)
+                layer_cache.append(layer)
             else:
                 child_depth = depth + 1
                 sub_item = self.results(
                     child_depth, g, name=f"{attribution_item} - {n}"
                 )
                 layer_cache.append(sub_item)
-        dict_to_move = {}
-        for i in [x for x in layer_cache]:
-            dict_to_move[i.name] = i.performance_results
         return ReportingLayerAggregatedResults(
-            performance_results=PvmAggregatedPerformanceResults(
-                name=name,
-                components=dict_to_move,
-                aggregate_interval=self.aggregate_interval,
-            ),
+            name=name,
             sub_layers=layer_cache,
+            aggregate_interval=self.aggregate_interval,
         )

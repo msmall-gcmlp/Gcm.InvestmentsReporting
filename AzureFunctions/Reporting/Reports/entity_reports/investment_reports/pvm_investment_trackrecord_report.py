@@ -9,7 +9,6 @@ from ....core.report_structure import (
 from ..utils.pvm_track_record.base_pvm_tr_report import (
     BasePvmTrackRecordReport,
 )
-from ..utils.pvm_performance_results.report_layer_results import ReportingLayerBase
 from gcm.Dao.DaoRunner import AzureDataLakeDao
 from ....core.report_structure import (
     EntityDomainTypes,
@@ -165,7 +164,9 @@ class FundSummaryTabFormatter(object):
 
     def all_gross_investments_formatted(self) -> pd.DataFrame:
         total_gross = self.report.total_positions_line_item
-        return total_gross.performance_results.to_df()
+        df = total_gross.to_df()
+        df["Blank1"] = ""
+        df["Blank2"] = ""
 
     def total_realized_investments_formatted(self) -> pd.DataFrame:
         pass
@@ -180,9 +181,6 @@ class FundSummaryTabFormatter(object):
         top_line = ReportTable(
             "full_fund_total1", self.all_gross_investments_formatted()
         )
-        some_item: ReportingLayerBase = self.report.total_positions_line_item.sub_layers[0].sub_layers[0]
-        date = some_item.investment_date
-        df = some_item.to_df()
         return ReportWorksheet(
             "Fund TR",
             ReportWorksheet.ReportWorkSheetRenderer(),

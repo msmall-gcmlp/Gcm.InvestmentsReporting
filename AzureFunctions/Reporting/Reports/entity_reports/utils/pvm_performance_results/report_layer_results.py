@@ -1,5 +1,6 @@
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_performance_results import (
+    AggregateInterval,
     PvmPerformanceResultsBase,
 )
 from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_track_record.data_handler.investment_container import (
@@ -18,38 +19,27 @@ from ..pvm_track_record.data_handler.investment_container import (
 )
 from functools import cached_property
 from enum import Enum, auto
+from .utils import get_concentration
+from gcm.inv.scenario import Scenario
+import datetime as dt
 
 
-class ReportingLayerBase(PvmPerformanceResultsBase):
+class ReportingLayerBase(PvmAggregatedPerformanceResults):
     def __init__(
         self,
         name: str,
         investment_obj: List[InvestmentContainerBase],
-        performance_results: PvmPerformanceResultsBase,
+        components: dict[str, PvmPerformanceResultsBase],
+        aggregate_interval: AggregateInterval,
     ):
-        self.name = name
+
         self.investment_obj = investment_obj
-        self.performance_results = performance_results
-        cfs = performance_results.cfs
-        agg = performance_results.aggregate_interval
-        super().__init__(cfs, agg)
+        super().__init__(name, components, aggregate_interval)
 
     class ReportLayerSpecificMeasure(Enum):
         investment_date = auto()
-
-    # in theory, once you have overridden on item (performance results),
-    # you should have overridden all.
-    def get_measure(
-        self,
-        measure: Union[
-            PvmPerformanceResultsBase.Measures,
-            ReportLayerSpecificMeasure,
-        ],
-    ):
-        if type(measure) == PvmPerformanceResultsBase.Measures:
-            return self.performance_results.get_measure(measure)
-        else:
-            return super().get_measure(measure)
+        exit_date = auto()
+        holding_period = auto()
 
     def measure_cols(self):
         cols = super().measure_cols()
@@ -57,7 +47,7 @@ class ReportingLayerBase(PvmPerformanceResultsBase):
             x for x in ReportingLayerBase.ReportLayerSpecificMeasure
         ]
         return cols
-    
+
     @cached_property
     def atom_dimn(self) -> pd.DataFrame:
         if len(self.investment_obj) == 1:
@@ -68,72 +58,71 @@ class ReportingLayerBase(PvmPerformanceResultsBase):
                     position_dimn[f"{inv.gross_atom.name}Id"] == self.name
                 ]
                 return filtered
-    
-    @property
-    def investment_date(self):
-        atom_dimn = self.atom_dimn
-        return list(atom_dimn['InvestmentDate'].unique())[0]
 
     @property
-    def exit_date(self):
+    def investment_date(self) -> dt.date:
         atom_dimn = self.atom_dimn
-        return list(atom_dimn['ExitDate'].unique())[0]
+        return list(atom_dimn["InvestmentDate"].unique())[0]
 
- 
+    @property
+    def exit_date(self) -> Union[dt.date, None]:
+        atom_dimn = self.atom_dimn
+        return list(atom_dimn["ExitDate"].unique())[0]
+
+    @cached_property
+    def holding_period(self):
+        as_of_date: dt.date = Scenario.get_attribute("as_of_date")
+        exit_date = (
+            as_of_date if self.exit_date is None else self.exit_date
+        )
+        hp = (exit_date - self.investment_date) / 365.25
+        return hp
 
 
 class ReportingLayerAggregatedResults(ReportingLayerBase):
-    @staticmethod
-    def _flatten(
-        items: List[ReportingLayerBase],
-    ) -> List[InvestmentContainerBase]:
-        flattened = []
-        for i in items:
-            flattened = flattened + i.investment_obj
-        return flattened
-
     def __init__(
         self,
-        performance_results: PvmAggregatedPerformanceResults,
+        name: str,
         sub_layers: List[ReportingLayerBase],
+        aggregate_interval: AggregateInterval,
     ):
-        invesment_objs = list(
-            set(ReportingLayerAggregatedResults._flatten(sub_layers))
+        performance_results: dict[str, ReportingLayerBase] = {}
+        flattened = []
+        for i in sub_layers:
+            performance_results[i.name] = i
+            flattened = flattened + i.investment_obj
+            flattened = list(set(flattened))
+        super().__init__(
+            name,
+            investment_obj=flattened,
+            components=performance_results,
+            aggregate_interval=aggregate_interval,
         )
         self.sub_layers = sub_layers
-        super().__init__(
-            performance_results.name, invesment_objs, performance_results
-        )
 
     @property
     def investment_date(self):
-        return 0.0
+        return None
 
+    @property
+    def exit_date(self):
+        return None
+
+    @classmethod
+    def get_lowest_expansion_types(cls):
+        return [ReportingLayerBase]
 
     @cached_property
-    def expanded(self) -> dict[str, PvmPerformanceResultsBase]:
-        return PvmAggregatedPerformanceResults._expand(
-            self.performance_results
-        )
-
-    @staticmethod
-    def _aggregate_other(
-        amount: int, df: pd.DataFrame, interval: AggregateInterval
-    ):
-        other_df = df.iloc[amount:]
-        if other_df.shape[0] > 0:
-            other_final = {}
-            in_count = 1
-            for i, s in other_df.iterrows():
-                other_final[f"Top {in_count}"] = s["obj"]
-                in_count = in_count + 1
-            other = PvmAggregatedPerformanceResults(
-                f"Other [-{amount}]",
-                other_final,
-                interval,
+    def holding_period(self):
+        cost_basis_tracker = 0.0
+        holding_period_tracker = 0.0
+        for i in self.full_expansion:
+            item: ReportingLayerBase = self.full_expansion[i]
+            holding_period_tracker = holding_period_tracker + (
+                item.holding_period * item.cost
             )
-            return other
-        return None
+            cost_basis_tracker = cost_basis_tracker + item.cost
+        return holding_period_tracker / cost_basis_tracker
 
     def get_position_performance_concentration_at_layer(
         self, top=1, ascending=False, return_other=False
@@ -141,31 +130,10 @@ class ReportingLayerAggregatedResults(ReportingLayerBase):
         PvmAggregatedPerformanceResults,
         PvmAggregatedPerformanceResults,
     ]:
-        expanded = self.expanded
-        pnl_list = []
-        item_list = []
-        for i in expanded:
-            pnl_list.append(expanded[i].pnl)
-            item_list.append(expanded[i])
-        df = pd.DataFrame({"pnl": pnl_list, "obj": item_list})
-        df.sort_values(by="pnl", ascending=ascending, inplace=True)
-        sorted = df.head(top)
-        final = {}
-        in_count = 1
-        for i, s in sorted.iterrows():
-            final[f"Top {in_count}"] = s["obj"]
-            in_count = in_count + 1
-        # now get other if return_other
-        other = None
-        if return_other:
-            other = ReportingLayerAggregatedResults._aggregate_other(
-                top, df, self.performance_results.aggregate_interval
-            )
-        return [
-            PvmAggregatedPerformanceResults(
-                f"Top {top}",
-                final,
-                self.performance_results.aggregate_interval,
-            ),
-            other,
-        ]
+        return get_concentration(
+            full_expansion=self.full_expansion,
+            aggregate_interval=self.aggregate_interval,
+            top=top,
+            ascending=ascending,
+            return_other=return_other,
+        )
