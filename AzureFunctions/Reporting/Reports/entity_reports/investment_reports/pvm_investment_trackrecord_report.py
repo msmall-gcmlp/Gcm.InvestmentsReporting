@@ -9,6 +9,7 @@ from ....core.report_structure import (
 from ..utils.pvm_track_record.base_pvm_tr_report import (
     BasePvmTrackRecordReport,
 )
+from ..utils.pvm_performance_results.report_layer_results import ReportingLayerBase
 from gcm.Dao.DaoRunner import AzureDataLakeDao
 from ....core.report_structure import (
     EntityDomainTypes,
@@ -26,6 +27,11 @@ from functools import cached_property
 from ..utils.pvm_performance_results.attribution import (
     PvmTrackRecordAttribution,
 )
+from ....core.components.report_workbook_handler import (
+    ReportWorksheet,
+    ReportWorkBookHandler,
+)
+from ....core.components.report_table import ReportTable
 
 
 class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
@@ -138,12 +144,47 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         return PvmTrackRecordAttribution([self.investment_handler])
 
     def assign_components(self):
-        total_gross = self.total_positions_line_item
-        total_df = total_gross.performance_results.to_df()
-        total_1_3_5_df = self.get_1_3_5_other_df(total_gross)
-        realized = self.get_realation_status_positions("Realized")
+        formatted = FundSummaryTabFormatter(self)
+        ws = formatted.to_worksheet()
+        report_name = "_".join(
+            [
+                self.manager_name,
+                self.investment_handler.name,
+            ]
+        )
+        return [
+            ReportWorkBookHandler(
+                report_name, self.excel_template_location, [ws]
+            )
+        ]
 
-        realized_expanded = realized.expanded
-        if realized is not None:
-            realized_df = realized.performance_results.to_df()
-            realized_1_3_5_df = self.get_1_3_5_other_df(realized)
+
+class FundSummaryTabFormatter(object):
+    def __init__(self, report: PvmInvestmentTrackRecordReport):
+        self.report = report
+
+    def all_gross_investments_formatted(self) -> pd.DataFrame:
+        total_gross = self.report.total_positions_line_item
+        return total_gross.performance_results.to_df()
+
+    def total_realized_investments_formatted(self) -> pd.DataFrame:
+        pass
+
+    def total_unrealized_investments_formatted(self) -> pd.DataFrame:
+        pass
+
+    def position_breakout(self) -> pd.DataFrame:
+        pass
+
+    def to_worksheet(self) -> ReportWorksheet:
+        top_line = ReportTable(
+            "full_fund_total1", self.all_gross_investments_formatted()
+        )
+        some_item: ReportingLayerBase = self.report.total_positions_line_item.sub_layers[0].sub_layers[0]
+        date = some_item.investment_date
+        df = some_item.to_df()
+        return ReportWorksheet(
+            "Fund TR",
+            ReportWorksheet.ReportWorkSheetRenderer(),
+            [top_line],
+        )

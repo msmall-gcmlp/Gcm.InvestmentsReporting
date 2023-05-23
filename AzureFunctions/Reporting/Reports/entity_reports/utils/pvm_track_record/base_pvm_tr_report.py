@@ -19,8 +19,10 @@ from ..pvm_track_record.data_handler.pvm_track_record_handler import (
 from abc import abstractclassmethod, abstractproperty
 from functools import cached_property
 from ...utils.pvm_performance_results.attribution import (
-    PositionAttributionResults,
     PvmTrackRecordAttribution,
+)
+from ..pvm_performance_results.report_layer_results import (
+    ReportingLayerAggregatedResults,
 )
 import pandas as pd
 
@@ -94,9 +96,9 @@ class BasePvmTrackRecordReport(ReportStructure):
         raise NotImplementedError()
 
     @cached_property
-    def realization_status_breakout(
+    def __realization_status_breakout(
         self,
-    ) -> PositionAttributionResults.LayerResults:
+    ) -> ReportingLayerAggregatedResults:
         results = self.pvm_perfomance_results
         attribution = results.position_attribution(
             [
@@ -108,25 +110,15 @@ class BasePvmTrackRecordReport(ReportStructure):
     @property
     def total_positions_line_item(
         self,
-    ) -> PositionAttributionResults.LayerResults:
-        return self.realization_status_breakout
-
-    def get_realation_status_positions(
-        self, layer="Realized"
-    ) -> PositionAttributionResults.LayerResults:
-        breakout = (
-            self.realization_status_breakout.performance_results.components
-        )
-        if layer in breakout:
-            realized = breakout[layer]
-            return PositionAttributionResults.LayerResults(realized)
-        return None
+    ) -> ReportingLayerAggregatedResults:
+        item = self.__realization_status_breakout
+        return item
 
     # return Other
     _1_3_5 = [(1, False), (3, False), (5, True)]
 
     def get_1_3_5_other_df(
-        self, layer_item: PositionAttributionResults.LayerResults
+        self, layer_item: ReportingLayerAggregatedResults
     ) -> pd.DataFrame:
         final = []
         for i in BasePvmTrackRecordReport._1_3_5:

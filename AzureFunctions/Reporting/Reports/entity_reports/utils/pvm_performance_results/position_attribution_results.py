@@ -10,6 +10,10 @@ from ..pvm_track_record.data_handler.investment_container import (
 )
 from functools import cached_property
 from ..pvm_track_record.data_handler.gross_atom import GrossAttributionAtom
+from .report_layer_results import (
+    ReportingLayerAggregatedResults,
+    ReportingLayerBase,
+)
 
 
 class PositionAttributionResults(object):
@@ -26,76 +30,6 @@ class PositionAttributionResults(object):
         self.gross_atom = gross_atom
 
     # Could this be a subclass of PvmPerformanceResult Base? I think so..
-    class LayerBase(object):
-        def __init__(
-            self, name: str, performance_results: PvmPerformanceResultsBase
-        ):
-            self.performance_results = performance_results
-            self.name = name
-
-    class LayerResults(LayerBase):
-        def __init__(
-            self,
-            performance_results: PvmAggregatedPerformanceResults,
-            sub_layers: List["PositionAttributionResults.LayerBase"],
-        ):
-            super().__init__(performance_results.name, performance_results)
-            self.sub_layers = sub_layers
-
-        @cached_property
-        def expanded(self) -> dict[str, PvmPerformanceResultsBase]:
-            return PvmAggregatedPerformanceResults._expand(
-                self.performance_results
-            )
-
-        def get_position_performance_concentration_at_layer(
-            self, top=1, ascending=False, return_other=False
-        ) -> tuple[
-            PvmAggregatedPerformanceResults,
-            PvmAggregatedPerformanceResults,
-        ]:
-            expanded = self.expanded
-
-            pnl_list = []
-            item_list = []
-            name_list = []
-            for i in expanded:
-                pnl_list.append(expanded[i].pnl)
-                item_list.append(expanded[i])
-                name_list.append(i)
-            df = pd.DataFrame({"pnl": pnl_list, "obj": item_list})
-            df.sort_values(by="pnl", ascending=ascending, inplace=True)
-            sorted = df.head(top)
-            final = {}
-            in_count = 1
-            for i, s in sorted.iterrows():
-                final[f"Top {in_count}"] = s["obj"]
-                in_count = in_count + 1
-            # now get other if return_other
-
-            # if there is 100 objects, shape == 100
-            other = None
-            if return_other:
-                other_df = df.iloc[top:]
-                if other_df.shape[0] > 0:
-                    other_final = {}
-                    in_count = 1
-                    for i, s in other_df.iterrows():
-                        other_final[f"Top {in_count}"] = s["obj"]
-                        in_count = in_count + 1
-                    other = PvmAggregatedPerformanceResults(
-                        f"Other [-{top}]",
-                        other_final,
-                        self.performance_results.aggregate_interval,
-                    )
-            return [
-                PvmAggregatedPerformanceResults(
-                    f"Top {top}",
-                    final,
-                    self.performance_results.aggregate_interval,
-                ),
-                other,
-            ]
 
     @cached_property
     def merged_position_results(self) -> pd.DataFrame:
@@ -147,7 +81,7 @@ class PositionAttributionResults(object):
         depth=0,
         parent_frame: pd.DataFrame = None,
         name: str = None,
-    ) -> "LayerResults":
+    ) -> ReportingLayerAggregatedResults:
         is_base_case = False
 
         if depth >= len(self.attribute_by):
@@ -164,20 +98,29 @@ class PositionAttributionResults(object):
         if name is None:
             name = "Total"
         grouped = parent_frame.groupby(attribution_item)
-        layer_cache: List[PositionAttributionResults.LayerBase] = []
+        layer_cache: List[ReportingLayerBase] = []
         for n, g in grouped:
             # now we can get the cfs for in-group-items
             if is_base_case:
-                investment_name = list(g["InvestmentName"].unique())
-                if len(investment_name) == 1:
+                investment_names = list(g["InvestmentName"].unique())
+                if len(investment_names) == 1:
                     item: PvmPerformanceResultsBase = (
                         self.get_position_results(
-                            investment_name[0],
+                            investment_names[0],
                             self.aggregate_interval,
                             n,
                         )
                     )
-                    layer = PositionAttributionResults.LayerBase(n, item)
+                    investment = [
+                        x
+                        for x in self.investment_containers
+                        if x.name in investment_names
+                    ]
+                    layer = ReportingLayerBase(
+                        name=n,
+                        investment_obj=investment,
+                        performance_results=item,
+                    )
                     layer_cache.append(layer)
             else:
                 child_depth = depth + 1
@@ -188,7 +131,7 @@ class PositionAttributionResults(object):
         dict_to_move = {}
         for i in [x for x in layer_cache]:
             dict_to_move[i.name] = i.performance_results
-        return PositionAttributionResults.LayerResults(
+        return ReportingLayerAggregatedResults(
             performance_results=PvmAggregatedPerformanceResults(
                 name=name,
                 components=dict_to_move,
