@@ -43,6 +43,14 @@ class PvmPerformanceResultsBase(object):
         return self.cfs.sum(self.cfs.cfs)
 
     @property
+    def dpi(self) -> float:
+        return -1.0 * self.distributions / self.cost
+
+    @property
+    def rvpi(self) -> float:
+        return self.tvpi - self.dpi
+
+    @property
     def cost(self) -> float:
         return self.cfs.sum(self.cfs.T_Cfs)
 
@@ -86,6 +94,8 @@ class PvmPerformanceResultsBase(object):
         tvpi = auto()
         full_expanded_performance_results_count = auto()
         total_value = auto()
+        dpi = auto()
+        rvpi = auto()
 
     def get_measure(self, measure: Measures):
         attr = getattr(self, measure.name, None)

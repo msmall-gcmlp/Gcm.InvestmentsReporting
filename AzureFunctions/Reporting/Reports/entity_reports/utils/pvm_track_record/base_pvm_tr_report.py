@@ -24,6 +24,7 @@ from ...utils.pvm_performance_results.attribution import (
 )
 from ..pvm_performance_results.report_layer_results import (
     ReportingLayerAggregatedResults,
+    PvmPerformanceResultsBase,
 )
 from enum import Enum, auto
 import pandas as pd
@@ -51,9 +52,6 @@ class BasePvmTrackRecordReport(ReportStructure):
             )
         )
         return manager_handler
-
-    def atom(self):
-        items = [x for x in self.investment_handler]
 
     @cached_property
     def idw_pvm_tr_id(self) -> int:
@@ -122,8 +120,6 @@ class BasePvmTrackRecordReport(ReportStructure):
     class _KnownRealizationStatusBuckets(Enum):
         REALIZED = auto()
         UNREALIZED = auto()
-
-    dict_of_mappings = {"RealizationStatus - Unrealized"}
 
     def _get_realization_bucket(
         self, bucket: _KnownRealizationStatusBuckets, include_unknown=False
@@ -195,10 +191,10 @@ class BasePvmTrackRecordReport(ReportStructure):
     # return Other
     _1_3_5 = [(1, False), (3, False), (5, True)]
 
-    def get_1_3_5_other_df(
+    def _1_3_5_objects(
         self, layer_item: ReportingLayerAggregatedResults
-    ) -> pd.DataFrame:
-        final = []
+    ) -> dict[object, PvmPerformanceResultsBase]:
+        final = {}
         for i in BasePvmTrackRecordReport._1_3_5:
             length = i[0]
             return_other = i[1]
@@ -208,9 +204,19 @@ class BasePvmTrackRecordReport(ReportStructure):
             ] = layer_item.get_position_performance_concentration_at_layer(
                 length, return_other=return_other
             )
-            final.append(output.to_df())
+            final[i[0]] = output
             if other is not None:
-                final.append(other.to_df())
+                final[-1 * i[0]] = other
+        return final
+
+    def get_1_3_5_other_df(
+        self,
+        layer_item: ReportingLayerAggregatedResults,
+    ) -> pd.DataFrame:
+        final = []
+        results = self._1_3_5_objects(layer_item)
+        for k, v in results.items():
+            final.append(v.to_df())
         final = pd.concat(final)
         final.reset_index(inplace=True, drop=True)
         return final
