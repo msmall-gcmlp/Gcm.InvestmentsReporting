@@ -295,9 +295,10 @@ def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date, inv_group_i
     with Scenario(dao=runner, as_of_date=date).context():
         fund_dimn = _get_fund_dimn(as_of_date=date, inv_group_ids=inv_group_ids)
 
-        peer_rankings = _get_peer_rankings(runner=runner, as_of_date=date, emm_dimn=fund_dimn)
-        lagged_date = pd.to_datetime(date - pd.tseries.offsets.MonthEnd(3)).date()
-        peer_rankings_lag = _get_peer_rankings(runner=runner, as_of_date=lagged_date, emm_dimn=fund_dimn)
+        date_q_minus_1 = pd.to_datetime(date - pd.tseries.offsets.QuarterEnd(1)).date()
+        peer_rankings = _get_peer_rankings(runner=runner, as_of_date=date_q_minus_1, emm_dimn=fund_dimn)
+        date_q_minus_2 = pd.to_datetime(date - pd.tseries.offsets.QuarterEnd(2)).date()
+        peer_rankings_lag = _get_peer_rankings(runner=runner, as_of_date=date_q_minus_2, emm_dimn=fund_dimn)
         pq_stats = _get_performance_quality_metrics(runner=runner, emm_dimn=fund_dimn, as_of_date=date)
         final_summary = _generate_final_summary(emm_dimn=fund_dimn,
                                                 pq_stats=pq_stats,
@@ -326,7 +327,7 @@ if __name__ == "__main__":
             }
         },
     )
-    date = dt.date(2022, 12, 31)
+    date = dt.date(2023, 4, 30)
     # inv_group_ids = [19717, 20292, 20319, 31378, 89745, 43058, 51810, 86478, 87478, 89809] <- ESG Prd Ids
     inv_group_ids = None
     report_data = generate_xpfund_pq_report_data(runner=dao_runner,
