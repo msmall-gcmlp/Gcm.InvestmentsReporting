@@ -1,7 +1,9 @@
+import os
 from datetime import datetime as dt
 import pandas as pd
 import math
 from gcm.Dao.DaoSources import DaoSource
+from gcm.Dao.Utils.bulk_insert.sql_bulk_insert import SqlBulkInsert
 
 from _legacy.Reports.reports.eof_liquidity_stress.report_data import EofStressTestingData
 from _legacy.core.ReportStructure.report_structure import (
@@ -18,6 +20,7 @@ from _legacy.core.reporting_runner_base import (
 )
 from gcm.inv.dataprovider.attributes.exposure import Exposure
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
+from gcm.inv.dataprovider.entity_master import EntityMaster
 
 
 class EofLiquidityReport(ReportingRunnerBase):
@@ -35,6 +38,24 @@ class EofLiquidityReport(ReportingRunnerBase):
         self._manager_exposure = manager_exposure
         self._exposure = Exposure()
         self._correlated_factors = correlated_factors
+        self._runner = runner
+        self._entity_master = EntityMaster()
+
+    def get_inv_group_id(self):
+        with Scenario(dao=self._runner).context():
+            entity_master = self._entity_master.get_investment_entities(investment_names=['Equity Opps Fund Ltd'])
+        inv_group_id = entity_master.InvestmentGroupId.unique()
+        return inv_group_id
+
+    @staticmethod
+    def delete_rows(runner, as_of_date):
+        def delete(dao, params):
+            raw_sql = "DELETE FROM RiskModel.StressLoss WHERE AsOfDate = '{}'".format(as_of_date)
+            conn = dao.data_engine.get_connection
+            with conn.begin():
+                conn.execute(raw_sql)
+
+        runner.execute(params={}, source=DaoSource.InvestmentsDwh, operation=delete)
 
     def get_factor_stress_by_category(self, category, number_of_factors=3):
         factor_inventory = self._factor_inventory.copy()
@@ -84,7 +105,6 @@ class EofLiquidityReport(ReportingRunnerBase):
             # append if doesnt exist in the ticker
             correlated_factors = list(set(correlated_factors) - set(self._correlated_factors['Ticker'].to_list()))
             self._correlated_factors = pd.concat([self._correlated_factors, pd.DataFrame({'Reporting Name': correlated_factors,
-
                                                                                           'Ticker': correlated_factors})])
         if (category == 'Region_Factor'):
             factor_shocks['GcmTicker'] = factor_shocks['GcmTicker'].str.split('_', n=1, expand=True)[0]
@@ -102,6 +122,8 @@ class EofLiquidityReport(ReportingRunnerBase):
         factor_shocks['Directional_shockv2'] = factor_shocks['Directional_shock'] * factor_shocks['exposure_sign']
         mask = ~factor_shocks['Ticker'].isnull()
         factor_shocks.loc[mask, 'Directional_shock'] = factor_shocks.loc[mask, 'Directional_shockv2']
+        factor_exposure_info = factor_shocks
+        factor_exposure_info['GcmTicker'] = factor_exposure_info['GcmTicker'].str.replace("_", " ")
         factor_shocks = factor_shocks[['Directional_shock', 'PortfolioExposure', 'GcmTicker']].groupby(['GcmTicker']).sum().reset_index()
         factor_shocks['Directional_shock'] = abs(factor_shocks['Directional_shock']) * multiplier
 
@@ -115,7 +137,12 @@ class EofLiquidityReport(ReportingRunnerBase):
             ['GcmTicker', 'PortfolioExposure', 'Directional_shock']]
         top_factors['GcmTicker'] = top_factors['GcmTicker'].str.replace("_", " ")
         top_factors = top_factors[abs(top_factors['Directional_shock']) >= 0.001]
-        return {'cum_shock': cum_shock, 'top_factors': top_factors.head(15)}
+        output_to_save = factor_exposure_info[
+            factor_exposure_info.GcmTicker.isin(top_factors.GcmTicker.head(number_of_factors))][['FactorShockTicker',
+                                                                                                 'category',
+                                                                                                 'Directional_shock',
+                                                                                                 'GcmTicker']]
+        return {'cum_shock': cum_shock, 'top_factors': top_factors.head(15), 'output_to_save': output_to_save}
 
     def _get_shocks_by_coverage(self, factor_shocks, coverage_ratio=0.5, sock_dn=True):
         factor_shocks.sort_values(by='Directional_shock', ascending=sock_dn, inplace=True, ignore_index=True)
@@ -123,7 +150,9 @@ class EofLiquidityReport(ReportingRunnerBase):
         factor_shocks['pct_total'] = factor_shocks['cum_shock'] / factor_shocks['Directional_shock'].sum()
         # TODO:: get closest to the coverage ratio
         cum_shock = pd.DataFrame([factor_shocks[factor_shocks['pct_total'] <= coverage_ratio + 0.0001]['Directional_shock'].sum()], columns=['cum_shock'])
-        top_factors = factor_shocks[factor_shocks['pct_total'] <= coverage_ratio + 0.0001][['GcmTicker', 'PortfolioExposure', 'Directional_shock']]
+        top_factors = factor_shocks[factor_shocks['pct_total'] <= coverage_ratio + 0.0001][['GcmTicker',
+                                                                                            'PortfolioExposure',
+                                                                                            'Directional_shock']]
         top_factors['GcmTicker'] = top_factors['GcmTicker'].str.replace("_", " ")
         return {'cum_shock': cum_shock, 'top_factors': top_factors.head(10)}
 
@@ -166,7 +195,8 @@ class EofLiquidityReport(ReportingRunnerBase):
 
     def get_total_shock(self, style_factor_shock, industry_factor_shock, region_factor_shock, beta_shock, style_beta, idio):
         beta = max(abs(beta_shock).values, abs(style_beta).values)
-        total = pd.DataFrame(abs(style_factor_shock).values + abs(industry_factor_shock).values + abs(region_factor_shock).values
+        total = pd.DataFrame(abs(style_factor_shock).values + abs(industry_factor_shock).values +
+                             abs(region_factor_shock).values
                              + beta + abs(idio).values, columns=['total_shock'])
         return total
 
@@ -175,25 +205,41 @@ class EofLiquidityReport(ReportingRunnerBase):
         region = 2
         industry = 14
         header_info = self.get_header_info()
-        style_factor_shock_dn = self.get_factor_stress_by_category(category="Style_Factor", number_of_factors=style)[0]['cum_shock']
-        industry_factor_shock_dn = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[0]['cum_shock']
-        region_factor_shock_dn = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[0]['cum_shock']
-        style_factor_shock_up = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[1]['cum_shock']
-        industry_factor_shock_up = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[1]['cum_shock']
-        region_factor_shock_up = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[1]['cum_shock']
-        top_regional_factors_dn = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[0]['top_factors']
-        top_style_factors_dn = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[0]['top_factors']
-        top_industry_factors_dn = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[0]['top_factors']
-        top_regional_factors_up = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[1]['top_factors']
-        top_style_factors_up = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[1]['top_factors']
-        top_industry_factors_up = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[1]['top_factors']
+        style_factor_shock_dn = self.get_factor_stress_by_category(category="Style_Factor", number_of_factors=style)[0][
+            'cum_shock']
+        industry_factor_shock_dn = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[0][
+            'cum_shock']
+        region_factor_shock_dn = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[0][
+            'cum_shock']
+        # style_factor_shock_up = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[1]['cum_shock']
+        # industry_factor_shock_up = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[1]['cum_shock']
+        # region_factor_shock_up = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[1]['cum_shock']
+        # output to save in the invdwh
+        output_to_save_regional_factors_dn = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[0][
+            'output_to_save']
+        output_to_save_style_factors_dn = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[0][
+            'output_to_save']
+        output_to_save_industry_factors_dn = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[0][
+            'output_to_save']
+        factor_output = pd.concat([output_to_save_regional_factors_dn, output_to_save_style_factors_dn, output_to_save_industry_factors_dn],
+                            axis=0)
+        top_regional_factors_dn = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[0][
+            'top_factors']
+        top_style_factors_dn = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[0][
+            'top_factors']
+        top_industry_factors_dn = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[0][
+            'top_factors']
+        # top_regional_factors_up = self.get_factor_stress_by_category("Region_Factor", number_of_factors=region)[1]['top_factors']
+        # top_style_factors_up = self.get_factor_stress_by_category("Style_Factor", number_of_factors=style)[1]['top_factors']
+        # top_industry_factors_up = self.get_factor_stress_by_category("Industry_Factor", number_of_factors=industry)[1]['top_factors']
         beta_shock_dn = self.get_beta_shock(shock=-0.16)
         idio_shock_dn = -1 * self.get_idio_shock(number_of_top_exposure=3, number_of_vol=2)['cum_shock']
         top_idio_shocks = self.get_idio_shock(number_of_top_exposure=3, number_of_vol=2)['top_exposures']
-        beta_shock_up = self.get_beta_shock(shock=0.1)
-        idio_shock_up = self.get_idio_shock(number_of_top_exposure=3, number_of_vol=2)['cum_shock']
+        # beta_shock_up = self.get_beta_shock(shock=0.1)
+        # idio_shock_up = self.get_idio_shock(number_of_top_exposure=3, number_of_vol=2)['cum_shock']
         style_beta_dn = self.get_style_beta()[0]
-        style_beta_up = self.get_style_beta()[1]
+        min_beta = pd.DataFrame(min(style_beta_dn.values, beta_shock_dn.values), columns=['beta_shock'])
+        # style_beta_up = self.get_style_beta()[1]
         total_dn = -1 * self.get_total_shock(style_factor_shock_dn,
                                              industry_factor_shock_dn,
                                              region_factor_shock_dn,
@@ -201,37 +247,39 @@ class EofLiquidityReport(ReportingRunnerBase):
                                              style_beta_dn,
                                              idio_shock_dn
                                              )
-        total_up = self.get_total_shock(style_factor_shock_up,
-                                        industry_factor_shock_up,
-                                        region_factor_shock_up,
-                                        beta_shock_up,
-                                        style_beta_up,
-                                        idio_shock_up
-                                        )
+        idio_syst_output = pd.DataFrame.from_dict({'FactorShockTicker': ['Eq__Idio__Dn__Pct__Liquidity_Stress',
+                                                                         'Eq__Market__Dn__Pct__Liquidity_Stress',
+                                                                         'Eq__EOF__Dn__Pct__Liquidity_Stress'],
+                                                   'category': ['Idio', 'Systematic', 'Total'],
+                                                   'Directional_shock': [float(idio_shock_dn.values),
+                                                                         float(min_beta.values),
+                                                                         float(total_dn.values)]})
+        output = pd.concat([factor_output, idio_syst_output])
+        output['AsofDate'] = self._as_of_date
+        output['category'] = output['category'].str.replace('_Factor', '')
+        output.rename(columns={'category': 'FactorGroup', 'Directional_shock': 'StressLoss'}, inplace=True)
+        output['InvestmentGroupId'] = int(self.get_inv_group_id())
+        # total_up = self.get_total_shock(style_factor_shock_up,
+        #                                 industry_factor_shock_up,
+        #                                 region_factor_shock_up,
+        #                                 beta_shock_up,
+        #                                 style_beta_up,
+        #                                 idio_shock_up)
+
         input_data = {
             "header_info": header_info,
-            "header_info2": header_info,
             "Style_Shock_dn": style_factor_shock_dn,
             "Industry_Shock_dn": industry_factor_shock_dn,
             "Regional_Shock_dn": region_factor_shock_dn,
-            "Style_Shock_up": style_factor_shock_up,
-            "Industry_Shock_up": industry_factor_shock_up,
-            "Regional_Shock_up": region_factor_shock_up,
-            "Beta_Shock_dn": beta_shock_dn,
             "Idio_shock_dn": idio_shock_dn,
-            "Beta_Shock_up": beta_shock_up,
-            "Idio_shock_up": idio_shock_up,
-            "Top_regional_up": top_regional_factors_up,
-            "Top_style_up": top_style_factors_up,
-            "Top_industry_up": top_industry_factors_up,
-            "Top_regional_dn": top_regional_factors_dn,
-            "Top_style_dn": top_style_factors_dn,
-            "Top_industry_dn": top_industry_factors_dn,
-            "Style_Beta_dn": style_beta_dn,
-            "Style_Beta_up": style_beta_up,
-            "Top_Idios": top_idio_shocks,
+            "Top_regional_dn": top_regional_factors_dn.head(5),
+            "Top_style_dn": top_style_factors_dn.head(15),
+            "Top_industry_dn": top_industry_factors_dn[['PortfolioExposure', 'Directional_shock']].head(15),
+            "Top_industry_dn_index": top_industry_factors_dn[['GcmTicker']].head(15),
+            "Style_Beta_dn": min_beta,
+            "Top_Idios": top_idio_shocks[['SpecificResidualRisk', 'exposure', 'pctIdio']],
+            "Top_Idios_index": top_idio_shocks[['SecurityName']],
             "Total_dn": total_dn,
-            "Total_up": total_up
         }
 
         as_of_date = dt.combine(self._as_of_date, dt.min.time())
@@ -242,7 +290,7 @@ class EofLiquidityReport(ReportingRunnerBase):
                 save=True,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.manager_fund_group,
-                entity_name="Equity Opps Fund Ltd",
+                entity_name="GCM Equity Opps Fund",
                 entity_display_name="EOF",
                 entity_ids=[640],
                 entity_source=DaoSource.PubDwh,
@@ -251,6 +299,56 @@ class EofLiquidityReport(ReportingRunnerBase):
                 report_frequency="Daily",
                 aggregate_intervals=AggregateInterval.Daily,
                 output_dir="eof/"
+            )
+            # persist results
+            dwh_subscription = os.environ.get("Subscription", "nonprd")
+            dwh_environment = os.environ.get("Environment", "dev").replace(
+                "local", "dev"
+            )
+            config_params = {
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    DaoSource.DataLake_Blob.name: {
+                        "Environment": dwh_environment,
+                        "Subscription": dwh_subscription,
+                    },
+                }
+            }
+
+            runner = DaoRunner(
+                container_lambda=lambda b, i: b.config.from_dict(i),
+                config_params=config_params,
+            )
+
+            EofLiquidityReport.delete_rows(runner=runner, as_of_date=self._as_of_date)
+            factor_shockdimn = runner.execute(
+                params={
+                    "schema": "factors",
+                    "table": "FactorShockDimn",
+                },
+                source=DaoSource.InvestmentsDwh,
+                operation=lambda dao, params: dao.get_data(params),
+            )
+            missing_tickers = pd.DataFrame(
+                list(set(output['FactorShockTicker'].to_list()) - set(factor_shockdimn['FactorShockTicker'].to_list())),
+                columns=['FactorShockTicker'])
+
+            SqlBulkInsert().execute(
+                runner=runner,
+                df=missing_tickers,
+                target_source=DaoSource.InvestmentsDwh,
+                target_schema='factors',
+                target_table='FactorShockDimn',
+                csv_params={"index_label": "FactorShockTickerId", "float_format": "%.10f"},
+                save=True,
+            )
+            SqlBulkInsert().execute(
+                runner=runner,
+                df=output,
+                target_source=DaoSource.InvestmentsDwh,
+                target_schema='RiskModel',
+                target_table='StressLoss',
+                csv_params={"index_label": "Id", "float_format": "%.10f"},
+                save=True,
             )
 
     def run(self, **kwargs):
