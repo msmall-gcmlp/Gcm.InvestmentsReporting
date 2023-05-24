@@ -19,7 +19,6 @@ from ..pvm_track_record.data_handler.investment_container import (
 )
 from functools import cached_property
 from enum import Enum, auto
-from .utils import get_concentration
 from gcm.inv.scenario import Scenario
 import datetime as dt
 
@@ -129,13 +128,128 @@ class ReportingLayerAggregatedResults(ReportingLayerBase):
     def get_position_performance_concentration_at_layer(
         self, top=1, ascending=False, return_other=False
     ) -> tuple[
-        PvmAggregatedPerformanceResults,
-        PvmAggregatedPerformanceResults,
+        "ReportingLayerAggregatedResults",
+        "ReportingLayerAggregatedResults",
     ]:
-        return get_concentration(
+        return ReportLayerUtils.get_concentration(
             full_expansion=self.full_expansion,
             aggregate_interval=self.aggregate_interval,
             top=top,
             ascending=ascending,
             return_other=return_other,
+        )
+
+    class DistributionType(Enum):
+        AboveAtBelow_Cost = auto()
+
+    def get_return_distributions_at_layer(
+        self, distribution_type=DistributionType.AboveAtBelow_Cost
+    ):
+        if (
+            distribution_type
+            == ReportingLayerAggregatedResults.DistributionType.AboveAtBelow_Cost
+        ):
+            return ReportLayerUtils.get_return_distribution(
+                full_expansion=self.full_expansion,
+                aggregate_interval=self.aggregate_interval,
+            )
+
+
+class ReportLayerUtils:
+    @staticmethod
+    def aggregate_other(
+        amount: int, df: pd.DataFrame, interval: AggregateInterval
+    ) -> ReportingLayerAggregatedResults:
+        other_df = df.iloc[amount:]
+        if other_df.shape[0] > 0:
+            tracker = []
+            in_count = 1
+            for i, s in other_df.iterrows():
+                item: ReportingLayerBase = s["obj"]
+                in_count = in_count + 1
+                tracker.append(item)
+            other = ReportingLayerAggregatedResults(
+                "Other", sub_layers=tracker, aggregate_interval=interval
+            )
+            return other
+        return None
+
+    @staticmethod
+    def _materialize_to_df(full_expansion: dict[str, ReportingLayerBase]):
+        pnl_list = []
+        item_list = []
+        for i in full_expansion:
+            pnl_list.append(full_expansion[i].pnl)
+            item_list.append(full_expansion[i])
+        df = pd.DataFrame({"pnl": pnl_list, "obj": item_list})
+        return df
+
+    @staticmethod
+    def get_concentration(
+        full_expansion: dict[str, ReportingLayerBase],
+        aggregate_interval: AggregateInterval,
+        top: int = 1,
+        ascending=False,
+        return_other=False,
+    ) -> tuple[
+        ReportingLayerAggregatedResults,
+        ReportingLayerAggregatedResults,
+    ]:
+        df = ReportLayerUtils._materialize_to_df(
+            full_expansion=full_expansion
+        )
+        df.sort_values(by="pnl", ascending=ascending, inplace=True)
+        sorted = df.head(top)
+        final = []
+        for i, s in sorted.iterrows():
+            final.append(s["obj"])
+        # now get other if return_other
+        other = None
+        if return_other:
+            other = ReportLayerUtils.aggregate_other(
+                top, df, aggregate_interval
+            )
+        return [
+            ReportingLayerAggregatedResults(
+                f"Top {top}",
+                sub_layers=final,
+                aggregate_interval=aggregate_interval,
+            ),
+            other,
+        ]
+
+    @staticmethod
+    def get_return_distribution(
+        full_expansion: dict[str, PvmAggregatedPerformanceResults],
+        aggregate_interval: AggregateInterval,
+    ) -> ReportingLayerAggregatedResults:
+        df = ReportLayerUtils._materialize_to_df(full_expansion)
+        title = "PnL Bucket"
+
+        def construct_pnl_bucket(series: pd.Series):
+            if series.pnl == 0.0:
+                return "At Cost"
+            elif series.pnl > 0.0:
+                return "Above Cost"
+            elif series.pnl < 0.0:
+                return "Below Cost"
+            raise NotImplementedError()
+
+        df[title] = df.apply(lambda x: construct_pnl_bucket(x), axis=1)
+        cache = []
+        for n, g in df.groupby(title):
+            layers = []
+            for i, s in g.iterrows():
+                obj: ReportingLayerBase = s["obj"]
+                layers.append(obj)
+            item = ReportingLayerAggregatedResults(
+                n,
+                layers,
+                aggregate_interval,
+            )
+            cache.append(item)
+        return ReportingLayerAggregatedResults(
+            f"Return Distribution",
+            cache,
+            aggregate_interval,
         )

@@ -24,7 +24,6 @@ from ...utils.pvm_performance_results.attribution import (
 )
 from ..pvm_performance_results.report_layer_results import (
     ReportingLayerAggregatedResults,
-    PvmPerformanceResultsBase,
 )
 from enum import Enum, auto
 import pandas as pd
@@ -163,6 +162,8 @@ class BasePvmTrackRecordReport(ReportStructure):
             return item
         elif len(final_bucket) == 1:
             return final_bucket[0]
+        elif len(final_bucket) == 0:
+            return None
         else:
             raise RuntimeError()
 
@@ -188,14 +189,24 @@ class BasePvmTrackRecordReport(ReportStructure):
             group_other_in_realized,
         )
 
-    # return Other
+    @property
+    def performance_details(self) -> "PerformanceDetailsHelper":
+        return PerformanceDetailsHelper(self)
+
+
+class PerformanceDetailsHelper(object):
+    def __init__(self, report: BasePvmTrackRecordReport):
+        self.report = report
+
+    # return Other for 5 only.
     _1_3_5 = [(1, False), (3, False), (5, True)]
 
+    @staticmethod
     def _1_3_5_objects(
-        self, layer_item: ReportingLayerAggregatedResults
-    ) -> dict[object, PvmPerformanceResultsBase]:
+        layer_item: ReportingLayerAggregatedResults,
+    ) -> dict[object, ReportingLayerAggregatedResults]:
         final = {}
-        for i in BasePvmTrackRecordReport._1_3_5:
+        for i in PerformanceDetailsHelper._1_3_5:
             length = i[0]
             return_other = i[1]
             [
@@ -209,14 +220,26 @@ class BasePvmTrackRecordReport(ReportStructure):
                 final[-1 * i[0]] = other
         return final
 
-    def get_1_3_5_other_df(
-        self,
-        layer_item: ReportingLayerAggregatedResults,
+    @staticmethod
+    def _1_3_5_object_to_df(
+        _1_3_5_object: dict[object, ReportingLayerAggregatedResults]
     ) -> pd.DataFrame:
         final = []
-        results = self._1_3_5_objects(layer_item)
-        for k, v in results.items():
+        for k, v in _1_3_5_object.items():
             final.append(v.to_df())
         final = pd.concat(final)
         final.reset_index(inplace=True, drop=True)
-        return final
+
+    @staticmethod
+    def get_1_3_5_other_df(
+        layer_item: ReportingLayerAggregatedResults,
+    ) -> pd.DataFrame:
+
+        results = PerformanceDetailsHelper._1_3_5_objects(layer_item)
+        return PerformanceDetailsHelper._1_3_5_object_to_df(results)
+
+    @staticmethod
+    def get_performance_distribution(
+        layer_item: ReportingLayerAggregatedResults,
+    ) -> ReportingLayerAggregatedResults:
+        return layer_item.get_return_distributions_at_layer()

@@ -73,21 +73,25 @@ class PositionSummarySheet(object):
         col_list: List[str],
     ):
         cls = self.__class__
-        df = cls.assign_title(sub_total.to_df())
-        df = self.append_relevant_info(df)
+        if sub_total is not None:
+            df = cls.assign_title(sub_total.to_df())
+            df = self.append_relevant_info(df)
+        else:
+            df = pd.DataFrame()
         return self.construct_rendered_frame(df, col_list)
 
     @classmethod
-    def assign_title(cls, df: pd.DataFrame) -> pd.DataFrame:
-        def get_title(x: pd.Series):
-            count = getattr(
-                x,
-                cls.base_measures.full_expanded_performance_results_count.name,
-            )
-            name = getattr(x, "Name", "")
-            return f"{name} ({count})"
+    def _get_title(cls, x: pd.Series):
+        count = getattr(
+            x,
+            cls.base_measures.full_expanded_performance_results_count.name,
+        )
+        name = getattr(x, "Name", "")
+        return f"{name} ({count})"
 
-        df[cls.title] = df.apply(lambda x: get_title(x), axis=1)
+    @classmethod
+    def assign_title(cls, df: pd.DataFrame) -> pd.DataFrame:
+        df[cls.title] = df.apply(lambda x: cls._get_title(x), axis=1)
         return df
 
     @property
@@ -154,16 +158,19 @@ class PositionSummarySheet(object):
             == BasePvmTrackRecordReport._KnownRealizationStatusBuckets.REALIZED
             else self.report.unrealized_reporting_layer
         )
-        cache = []
-        expanded = item.full_expansion
-        for k, v in expanded.items():
-            df = self.create_item_df(v, self.__class__.standard_cols)
-            df[self.__class__.title] = self.get_atom_reporting_name(k)
-            cache.append(df)
-        final = pd.concat(cache)
-        final.reset_index(inplace=True, drop=True)
-        final.sort_values(by=sort_by, inplace=True, ascending=False)
-        return final
+        if item is not None:
+            cache = []
+            expanded = item.full_expansion
+            for k, v in expanded.items():
+                df = self.create_item_df(v, self.__class__.standard_cols)
+                df[self.__class__.title] = self.get_atom_reporting_name(k)
+                cache.append(df)
+            final = pd.concat(cache)
+            final.reset_index(inplace=True, drop=True)
+            final.sort_values(by=sort_by, inplace=True, ascending=False)
+            return final
+        else:
+            return pd.DataFrame()
 
     def total_net_results_df(self):
         results = (

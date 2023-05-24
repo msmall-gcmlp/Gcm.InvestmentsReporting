@@ -1,6 +1,6 @@
 from ...pvm_track_record.base_pvm_tr_report import (
     BasePvmTrackRecordReport,
-    PvmPerformanceResultsBase,
+    ReportingLayerAggregatedResults,
 )
 from .position_summary import (
     PositionSummarySheet,
@@ -12,32 +12,27 @@ from functools import cached_property
 
 
 class PositionConcentration(PositionSummarySheet):
-    def __init__(self, report: BasePvmTrackRecordReport):
-        super().__init__(report)
-
-    def append_percent_realized_performance(self):
-        pass
-
-    @cached_property
-    def total_1_3_5_other(self) -> dict[object, PvmPerformanceResultsBase]:
-        return self.report._1_3_5_objects(
-            self.report.total_positions_line_item
-        )
-
-    @cached_property
-    def realized_1_3_5_other(
-        self,
-    ) -> dict[object, PvmPerformanceResultsBase]:
-        item = self.report._1_3_5_objects(
-            self.report.realized_reporting_layer
-        )
-        return item
-
     top_deal_count = 5
-
     _percent_realized_gain = "percent realized gain"
     _percent_capital = "percent_in_group_capital"
 
+    concentration_columns = [
+        PositionSummarySheet.title,
+        PositionSummarySheet.base_measures.irr.name,
+        PositionSummarySheet.base_measures.moic.name,
+        _percent_realized_gain,
+        PositionSummarySheet._percent_total_gain,
+    ]
+
+    distribution_columns = [
+        PositionSummarySheet.title,
+        PositionSummarySheet.base_measures.full_expanded_performance_results_count.name,
+        PositionSummarySheet.base_measures.moic.name,
+        PositionSummarySheet.base_measures.irr.name,
+        _percent_capital,
+    ]
+
+    # override
     def append_relevant_info(self, df: pd.DataFrame):
         df = super().append_relevant_info(df)
         cls = self.__class__
@@ -46,18 +41,7 @@ class PositionConcentration(PositionSummarySheet):
         )
         return df
 
-    def all_gross_investments_formatted(self) -> pd.DataFrame:
-        base = super().all_gross_investments_formatted()
-        return self.construct_rendered_frame(
-            base, PositionConcentration.standard_cols
-        )
-
-    def total_realized_investments_formatted(self) -> pd.DataFrame:
-        base = super().total_realized_investments_formatted()
-        return self.construct_rendered_frame(
-            base, PositionConcentration.standard_cols
-        )
-
+    # override
     standard_cols = [
         PositionSummarySheet.title,
         PositionSummarySheet.report_measures.investment_date.name,
@@ -72,25 +56,60 @@ class PositionConcentration(PositionSummarySheet):
         PositionSummarySheet._percent_total_gain,
     ]
 
-    concentration_columns = [
-        PositionSummarySheet.base_measures.irr.name,
-        PositionSummarySheet.base_measures.moic.name,
-        _percent_realized_gain,
-        PositionSummarySheet._percent_total_gain,
-    ]
+    # override
+    @classmethod
+    def _get_title(cls, x: pd.Series):
+        name = getattr(x, "Name", "")
+        if type(name) == str:
+            if name.upper().startswith("TOP "):
+                return name
+        return super()._get_title(x)
 
-    distribution_columns = [
-        PositionSummarySheet.base_measures.full_expanded_performance_results_count.name,
-        PositionSummarySheet.base_measures.moic.name,
-        PositionSummarySheet.base_measures.irr.name,
-        _percent_capital,
-    ]
+    def __init__(self, report: BasePvmTrackRecordReport):
+        super().__init__(report)
+
+    @cached_property
+    def total_1_3_5_other(
+        self,
+    ) -> dict[object, ReportingLayerAggregatedResults]:
+        return self.report.performance_details._1_3_5_objects(
+            self.report.total_positions_line_item
+        )
+
+    @cached_property
+    def realized_1_3_5_other(
+        self,
+    ) -> dict[object, ReportingLayerAggregatedResults]:
+        item = self.report.performance_details._1_3_5_objects(
+            self.report.realized_reporting_layer
+        )
+        return item
+
+    @cached_property
+    def total_performance_distribution(
+        self,
+    ) -> ReportingLayerAggregatedResults:
+        return (
+            self.report.performance_details.get_performance_distribution(
+                self.report.total_positions_line_item
+            )
+        )
+
+    @cached_property
+    def realized_performance_distribution(
+        self,
+    ) -> ReportingLayerAggregatedResults:
+        return (
+            self.report.performance_details.get_performance_distribution(
+                self.report.realized_reporting_layer
+            )
+        )
 
     def top_in_group_deals_df(
         self,
         deal_set: pd.DataFrame,
-        set_1_3_5: dict[object, PvmPerformanceResultsBase],
-    ):
+        set_1_3_5: dict[object, ReportingLayerAggregatedResults],
+    ) -> pd.DataFrame:
         cls = self.__class__
         filtered_deal_set = deal_set.head(cls.top_deal_count)
         other_key = int(-1 * cls.top_deal_count)
@@ -104,7 +123,13 @@ class PositionConcentration(PositionSummarySheet):
             filtered_deal_set, PositionConcentration.standard_cols
         )
 
-    def top_all_deals_df(self):
+    @staticmethod
+    def _format_total_buckets(df: pd.DataFrame) -> pd.DataFrame:
+        if PositionConcentration._percent_realized_gain in df.columns:
+            df[PositionConcentration._percent_realized_gain] = ""
+        return df
+
+    def _get_all_deals(self):
         sort_by = PositionSummarySheet.base_measures.pnl.name
         realized_df = self.position_breakout(
             BasePvmTrackRecordReport._KnownRealizationStatusBuckets.REALIZED,
@@ -115,9 +140,13 @@ class PositionConcentration(PositionSummarySheet):
             sort_by,
         )
         all_deals: pd.DataFrame = pd.concat([realized_df, unrealized_df])
-        return self.top_in_group_deals_df(
-            all_deals, self.total_1_3_5_other
-        )
+        return all_deals
+
+    def top_all_deals_df(self) -> pd.DataFrame:
+        all_deals = self._get_all_deals()
+        df = self.top_in_group_deals_df(all_deals, self.total_1_3_5_other)
+        df = PositionConcentration._format_total_buckets(df)
+        return df
 
     def top_realized_deals_df(self):
         sort_by = PositionSummarySheet.base_measures.pnl.name
@@ -129,24 +158,114 @@ class PositionConcentration(PositionSummarySheet):
             realized_df, self.realized_1_3_5_other
         )
 
+    def generate_concentration_item(
+        self, obj_1_3_5: dict[str, ReportingLayerAggregatedResults]
+    ):
+        target_cols = PositionConcentration.concentration_columns
+        df_cache = []
+        for i, v in obj_1_3_5.items():
+            if v is not None:
+                df = self.create_item_df(v, target_cols)
+                df_cache.append(df)
+        final = pd.concat(df_cache)
+        final.reset_index(inplace=True, drop=True)
+        final = self.construct_rendered_frame(final, target_cols)
+        return final
+
+    def all_concen(self):
+        total = self.generate_concentration_item(self.total_1_3_5_other)
+        total = PositionConcentration._format_total_buckets(total)
+        return total
+
+    def all_concen_total(self):
+        total = self.all_gross_investments_formatted()
+        total = self.construct_rendered_frame(
+            total, PositionConcentration.concentration_columns
+        )
+        total = PositionConcentration._format_total_buckets(total)
+        return total
+
+    def realized_concen(self):
+        total = self.generate_concentration_item(self.realized_1_3_5_other)
+        return total
+
+    def realized_concen_total(self):
+        total = self.total_realized_investments_formatted()
+        total = self.construct_rendered_frame(
+            total, PositionConcentration.concentration_columns
+        )
+        return total
+
+    def _generate_distribution_frame(
+        self, top_line: ReportingLayerAggregatedResults, expand_down=True
+    ):
+        cls = self.__class__
+
+        def _generate(
+            item: ReportingLayerAggregatedResults,
+        ) -> pd.DataFrame:
+            df = self.create_item_df(item, cls.standard_cols)
+            df[cls._percent_capital] = (
+                df[cls.base_measures.cost.name] / top_line.cost
+            )
+            df = self.construct_rendered_frame(
+                df, cls.distribution_columns
+            )
+            return df
+
+        if expand_down:
+            cache = []
+            for k in top_line.sub_layers:
+                df = _generate(k)
+                cache.append(df)
+            final = pd.concat(cache)
+            final.reset_index(inplace=True, drop=True)
+            return final
+        else:
+            df = _generate(top_line)
+            return df
+
+    def all_distrib(self):
+        total = self.total_performance_distribution
+        final = self._generate_distribution_frame(total)
+        return final
+
+    def all_distrib_total(self):
+        total = self.total_performance_distribution
+        final = self._generate_distribution_frame(total, expand_down=False)
+        return final
+
+    def realized_distrib(self):
+        total = self.realized_performance_distribution
+        final = self._generate_distribution_frame(total)
+        return final
+
+    def realized_distrib_total(self):
+        total = self.realized_performance_distribution
+        final = self._generate_distribution_frame(total, expand_down=False)
+        return final
+
     def to_worksheet(self) -> ReportWorksheet:
         d_items = {
             "top_deals": self.top_all_deals_df,
             "top_deals_total": self.all_gross_investments_formatted,
             "top_realized_deals": self.top_realized_deals_df,
             "top_realized_deals_total": self.total_realized_investments_formatted,
-            # "all_concen": None,
-            # "all_concen_total": None,
-            # "realized_concen": None,
-            # "realized_concen_total": None,
-            # "all_distrib": None,
-            # "all_distrib_total": None,
-            # "realized_distrib": None,
-            # "realized_distrib_total": None,
+            "all_concen": self.all_concen,
+            "all_concen_total": self.all_concen_total,
+            "realized_concen": self.realized_concen,
+            "realized_concen_total": self.realized_concen_total,
+            "all_distrib": self.all_distrib,
+            "all_distrib_total": self.all_distrib_total,
+            "realized_distrib": self.realized_distrib,
+            "realized_distrib_total": self.realized_distrib_total,
         }
         to_render = []
         for k, v in d_items.items():
             df = v()
+            if k == "top_deals_total":
+                PositionConcentration._format_total_buckets(df)
+
             i = ReportTable(k, df)
             to_render.append(i)
         return ReportWorksheet(
