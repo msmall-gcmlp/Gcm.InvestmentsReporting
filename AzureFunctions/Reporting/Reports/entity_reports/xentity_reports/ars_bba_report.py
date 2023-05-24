@@ -48,9 +48,9 @@ class BrinsonAttributionReport(ReportStructure):
         # TODO: Confirm with David
         current_domain: EntityDomainTypes = self.report_meta.entity_domain
         if current_domain == EntityDomainTypes.Portfolio:
-            file = "PFUND_Attributes_Template.xlsx"
-        elif current_domain == EntityDomainTypes.Vertical:
             file = "BBA_Template_Portfolio.xlsx"
+        elif current_domain == EntityDomainTypes.Vertical:
+            file = "BBA_Template_Firm.xlsx"
         if file is not None:
             return AzureDataLakeDao.BlobFileStructure(
                 zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
