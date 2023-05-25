@@ -302,8 +302,8 @@ class EofLiquidityReport(ReportingRunnerBase):
                 output_dir="eof/"
             )
 
-            EofLiquidityReport.delete_rows(runner=runner, as_of_date=self._as_of_date)
-            factor_shockdimn = runner.execute(
+            EofLiquidityReport.delete_rows(runner=self._runner, as_of_date=self._as_of_date)
+            factor_shockdimn = self._runner.execute(
                 params={
                     "schema": "factors",
                     "table": "FactorShockDimn",
@@ -316,7 +316,7 @@ class EofLiquidityReport(ReportingRunnerBase):
                 columns=['FactorShockTicker'])
 
             SqlBulkInsert().execute(
-                runner=runner,
+                runner=self._runner,
                 df=missing_tickers,
                 target_source=DaoSource.InvestmentsDwh,
                 target_schema='factors',
@@ -325,7 +325,7 @@ class EofLiquidityReport(ReportingRunnerBase):
                 save=True,
             )
             SqlBulkInsert().execute(
-                runner=runner,
+                runner=self._runner,
                 df=output,
                 target_source=DaoSource.InvestmentsDwh,
                 target_schema='RiskModel',
