@@ -206,18 +206,19 @@ class PerformanceDetailsHelper(object):
         layer_item: ReportingLayerAggregatedResults,
     ) -> dict[object, ReportingLayerAggregatedResults]:
         final = {}
-        for i in PerformanceDetailsHelper._1_3_5:
-            length = i[0]
-            return_other = i[1]
-            [
-                output,
-                other,
-            ] = layer_item.get_position_performance_concentration_at_layer(
-                length, return_other=return_other
-            )
-            final[i[0]] = output
-            if other is not None:
-                final[-1 * i[0]] = other
+        if layer_item is not None:
+            for i in PerformanceDetailsHelper._1_3_5:
+                length = i[0]
+                return_other = i[1]
+                [
+                    output,
+                    other,
+                ] = layer_item.get_position_performance_concentration_at_layer(
+                    length, return_other=return_other
+                )
+                final[i[0]] = output
+                if other is not None:
+                    final[-1 * i[0]] = other
         return final
 
     @staticmethod
@@ -242,4 +243,9 @@ class PerformanceDetailsHelper(object):
     def get_performance_distribution(
         layer_item: ReportingLayerAggregatedResults,
     ) -> ReportingLayerAggregatedResults:
-        return layer_item.get_return_distributions_at_layer()
+
+        return (
+            layer_item
+            if layer_item is None
+            else layer_item.get_return_distributions_at_layer()
+        )

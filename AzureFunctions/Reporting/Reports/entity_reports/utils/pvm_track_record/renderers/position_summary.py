@@ -45,20 +45,22 @@ class PositionSummarySheet(object):
         df[name] = default_val if name not in df.columns else df[name]
         return df
 
-    standard_cols = [
-        title,
-        report_measures.investment_date.name,
-        report_measures.exit_date.name,
-        report_measures.holding_period.name,
-        base_measures.cost.name,
-        base_measures.unrealized_value.name,
-        base_measures.total_value.name,
-        base_measures.pnl.name,
-        base_measures.moic.name,
-        _percent_total_gain,
-        base_measures.loss_ratio.name,
-        base_measures.irr.name,
-    ]
+    @classmethod
+    def get_standard_cols(cls):
+        return [
+            cls.title,
+            cls.report_measures.investment_date.name,
+            cls.report_measures.exit_date.name,
+            cls.report_measures.holding_period.name,
+            cls.base_measures.cost.name,
+            cls.base_measures.unrealized_value.name,
+            cls.base_measures.total_value.name,
+            cls.base_measures.pnl.name,
+            cls.base_measures.moic.name,
+            cls._percent_total_gain,
+            cls.base_measures.loss_ratio.name,
+            cls.base_measures.irr.name,
+        ]
 
     def append_relevant_info(self, df: pd.DataFrame):
         cls = self.__class__
@@ -108,28 +110,35 @@ class PositionSummarySheet(object):
         )
         return total_gross
 
-    def all_gross_investments_formatted(self) -> pd.DataFrame:
-        df = self.create_item_df(
-            self.total_gross, self.__class__.standard_cols
-        )
+    def all_gross_investments_formatted(self, cols=None) -> pd.DataFrame:
+        if cols is None:
+            cols = self.__class__.get_standard_cols()
+        df = self.create_item_df(self.total_gross, cols)
         return df
 
-    def total_realized_investments_formatted(self) -> pd.DataFrame:
-        df = self.create_item_df(
-            self.total_realized, self.__class__.standard_cols
-        )
+    def total_realized_investments_formatted(
+        self, cols=None
+    ) -> pd.DataFrame:
+        if cols is None:
+            cols = self.__class__.get_standard_cols()
+        df = self.create_item_df(self.total_realized, cols)
         return df
 
-    def total_unrealized_investments_formatted(self) -> pd.DataFrame:
+    def total_unrealized_investments_formatted(
+        self, cols=None
+    ) -> pd.DataFrame:
+        if cols is None:
+            cols = self.__class__.get_standard_cols()
         unrealized: ReportingLayerAggregatedResults = (
             self.report.unrealized_reporting_layer
         )
-        df = self.create_item_df(unrealized, self.__class__.standard_cols)
+        df = self.create_item_df(unrealized, cols)
         return df
 
     def get_atom_reporting_name(self, k: Union[int, str]):
         assert k is not None
         id_get = f"{self.report.manager_handler.gross_atom.name}Id"
+        level = self.report.level()
         name_get = "AssetName"
         df: pd.DataFrame = None
         if (
@@ -143,9 +152,33 @@ class PositionSummarySheet(object):
         ):
             df = self.report.manager_handler.asset_attribs
 
-        names = list(df[df[id_get] == k][name_get])
+        filtered_df = df[df[id_get] == k]
+
+        # get fund name if non-fund report
+        names = list(filtered_df[name_get])
         names = list(set(names))
-        return " & ".join(names)
+        names = " & ".join(names)
+
+        if level != EntityDomainTypes.Investment:
+            # get expanded
+
+            if (
+                self.report.manager_handler.gross_atom
+                == GrossAttributionAtom.Position
+            ):
+                inv_ids = list(filtered_df["InvestmentId"].unique())
+                inv_dimn = self.report.manager_handler.investment_attrib
+                investment_names = inv_dimn[
+                    inv_dimn["InvestmentId"].isin(inv_ids)
+                ]["InvestmentName"]
+                investment_names = ",".join(
+                    list(investment_names.unique())
+                )
+                investment_names = f" [{investment_names}]"
+                names = names + investment_names
+            else:
+                raise NotImplementedError("TODO: GS")
+        return names
 
     def position_breakout(
         self,
@@ -158,12 +191,14 @@ class PositionSummarySheet(object):
             == BasePvmTrackRecordReport._KnownRealizationStatusBuckets.REALIZED
             else self.report.unrealized_reporting_layer
         )
+        cls = self.__class__
+        cols = cls.get_standard_cols()
         if item is not None:
             cache = []
             expanded = item.full_expansion
             for k, v in expanded.items():
-                df = self.create_item_df(v, self.__class__.standard_cols)
-                df[self.__class__.title] = self.get_atom_reporting_name(k)
+                df = self.create_item_df(v, cols)
+                df[cls.title] = self.get_atom_reporting_name(k)
                 cache.append(df)
             final = pd.concat(cache)
             final.reset_index(inplace=True, drop=True)

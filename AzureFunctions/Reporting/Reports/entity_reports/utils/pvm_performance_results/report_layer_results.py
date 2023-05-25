@@ -1,14 +1,3 @@
-from gcm.inv.utils.date.AggregateInterval import AggregateInterval
-from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_performance_results import (
-    AggregateInterval,
-    PvmPerformanceResultsBase,
-)
-from AzureFunctions.Reporting.Reports.entity_reports.utils.pvm_track_record.data_handler.investment_container import (
-    InvestmentContainerBase,
-)
-from . import (
-    PvmPerformanceResultsBase,
-)
 from . import AggregateInterval, PvmPerformanceResultsBase
 from .aggregated import PvmAggregatedPerformanceResults
 import pandas as pd
@@ -249,7 +238,7 @@ class ReportLayerUtils:
             )
             cache.append(item)
         return ReportingLayerAggregatedResults(
-            f"Return Distribution",
+            "Return Distribution",
             cache,
             aggregate_interval,
         )

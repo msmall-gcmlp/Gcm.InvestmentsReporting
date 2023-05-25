@@ -2,7 +2,7 @@ from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from ....entity_reports.utils.cashflows import (
     PvmCashflows,
 )
-from . import PvmPerformanceResultsBase, PvmCashflows, AggregateInterval
+from . import PvmPerformanceResultsBase
 import pandas as pd
 from functools import cached_property
 
@@ -75,6 +75,12 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
     def distrutions(self):
         return sum(
             [self.components[x].distributions for x in self.components]
+        )
+
+    @property
+    def realized_value(self):
+        return sum(
+            [self.components[x].realized_value for x in self.components]
         )
 
     @cached_property

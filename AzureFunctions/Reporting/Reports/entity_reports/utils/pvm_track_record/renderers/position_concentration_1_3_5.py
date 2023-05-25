@@ -8,7 +8,11 @@ from .position_summary import (
     ReportTable,
 )
 import pandas as pd
+from gcm.Dao.DaoRunner import AzureDataLakeDao
 from functools import cached_property
+from ......core.components.report_workbook_handler import (
+    ReportWorkBookHandler,
+)
 
 
 class PositionConcentration(PositionSummarySheet):
@@ -36,25 +40,31 @@ class PositionConcentration(PositionSummarySheet):
     def append_relevant_info(self, df: pd.DataFrame):
         df = super().append_relevant_info(df)
         cls = self.__class__
-        df[cls._percent_realized_gain] = (
-            df[cls.base_measures.pnl.name] / self.total_realized.pnl
-        )
+        if self.total_realized is not None:
+            df[cls._percent_realized_gain] = (
+                df[cls.base_measures.pnl.name] / self.total_realized.pnl
+            )
+        else:
+            df[cls._percent_realized_gain] = 0.0
         return df
 
     # override
-    standard_cols = [
-        PositionSummarySheet.title,
-        PositionSummarySheet.report_measures.investment_date.name,
-        PositionSummarySheet.report_measures.exit_date.name,
-        PositionSummarySheet.base_measures.cost.name,
-        PositionSummarySheet.base_measures.unrealized_value.name,
-        PositionSummarySheet.base_measures.total_value.name,
-        PositionSummarySheet.base_measures.pnl.name,
-        PositionSummarySheet.base_measures.moic.name,
-        PositionSummarySheet.base_measures.irr.name,
-        _percent_realized_gain,
-        PositionSummarySheet._percent_total_gain,
-    ]
+    @classmethod
+    def get_standard_cols(cls):
+        standard_cols = [
+            PositionSummarySheet.title,
+            PositionSummarySheet.report_measures.investment_date.name,
+            PositionSummarySheet.report_measures.exit_date.name,
+            PositionSummarySheet.base_measures.cost.name,
+            PositionSummarySheet.base_measures.unrealized_value.name,
+            PositionSummarySheet.base_measures.total_value.name,
+            PositionSummarySheet.base_measures.pnl.name,
+            PositionSummarySheet.base_measures.moic.name,
+            PositionSummarySheet.base_measures.irr.name,
+            cls._percent_realized_gain,
+            PositionSummarySheet._percent_total_gain,
+        ]
+        return standard_cols
 
     # override
     @classmethod
@@ -67,6 +77,15 @@ class PositionConcentration(PositionSummarySheet):
 
     def __init__(self, report: BasePvmTrackRecordReport):
         super().__init__(report)
+
+    @property
+    def excel_template_location(self):
+        return AzureDataLakeDao.BlobFileStructure(
+            zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+            sources="investmentsreporting",
+            entity="exceltemplates",
+            path=["PvmTrackRecordPerformanceConcentration.xlsx"],
+        )
 
     @cached_property
     def total_1_3_5_other(
@@ -116,11 +135,11 @@ class PositionConcentration(PositionSummarySheet):
         if other_key in set_1_3_5:
             other = set_1_3_5[other_key]
             other = self.create_item_df(
-                other, PositionConcentration.standard_cols
+                other, self.__class__.get_standard_cols()
             )
             filtered_deal_set = pd.concat([filtered_deal_set, other])
         return self.construct_rendered_frame(
-            filtered_deal_set, PositionConcentration.standard_cols
+            filtered_deal_set, self.__class__.get_standard_cols()
         )
 
     @staticmethod
@@ -167,10 +186,14 @@ class PositionConcentration(PositionSummarySheet):
             if v is not None:
                 df = self.create_item_df(v, target_cols)
                 df_cache.append(df)
-        final = pd.concat(df_cache)
-        final.reset_index(inplace=True, drop=True)
-        final = self.construct_rendered_frame(final, target_cols)
-        return final
+        if len(df_cache) > 0:
+            final = pd.concat(df_cache)
+            final.reset_index(inplace=True, drop=True)
+            final = self.construct_rendered_frame(final, target_cols)
+            return final
+        else:
+            df = pd.DataFrame()
+            return df
 
     def all_concen(self):
         total = self.generate_concentration_item(self.total_1_3_5_other)
@@ -200,30 +223,32 @@ class PositionConcentration(PositionSummarySheet):
         self, top_line: ReportingLayerAggregatedResults, expand_down=True
     ):
         cls = self.__class__
+        if top_line is not None:
 
-        def _generate(
-            item: ReportingLayerAggregatedResults,
-        ) -> pd.DataFrame:
-            df = self.create_item_df(item, cls.standard_cols)
-            df[cls._percent_capital] = (
-                df[cls.base_measures.cost.name] / top_line.cost
-            )
-            df = self.construct_rendered_frame(
-                df, cls.distribution_columns
-            )
-            return df
+            def _generate(
+                item: ReportingLayerAggregatedResults,
+            ) -> pd.DataFrame:
+                df = self.create_item_df(item, cls.get_standard_cols())
+                df[cls._percent_capital] = (
+                    df[cls.base_measures.cost.name] / top_line.cost
+                )
+                df = self.construct_rendered_frame(
+                    df, cls.distribution_columns
+                )
+                return df
 
-        if expand_down:
-            cache = []
-            for k in top_line.sub_layers:
-                df = _generate(k)
-                cache.append(df)
-            final = pd.concat(cache)
-            final.reset_index(inplace=True, drop=True)
-            return final
-        else:
-            df = _generate(top_line)
-            return df
+            if expand_down:
+                cache = []
+                for k in top_line.sub_layers:
+                    df = _generate(k)
+                    cache.append(df)
+                final = pd.concat(cache)
+                final.reset_index(inplace=True, drop=True)
+                return final
+            else:
+                df = _generate(top_line)
+                return df
+        return pd.DataFrame()
 
     def all_distrib(self):
         total = self.total_performance_distribution
@@ -273,3 +298,15 @@ class PositionConcentration(PositionSummarySheet):
             ReportWorksheet.ReportWorkSheetRenderer(),
             to_render,
         )
+
+    def to_workbook(self) -> ReportWorkBookHandler:
+
+        r_name = [self.__class__.__name__, self.report.level().name]
+        r_name = "_".join(r_name)
+        ws = self.to_worksheet()
+        wb = ReportWorkBookHandler(
+            r_name,
+            self.excel_template_location,
+            [ws],
+        )
+        return wb

@@ -150,7 +150,6 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         formatted = PositionSummarySheet(self)
         details = formatted.to_worksheet()
         performance_concentration = PositionConcentration(self)
-        concentration = performance_concentration.to_worksheet()
         report_name = "_".join(
             [
                 self.manager_name,
@@ -161,6 +160,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             ReportWorkBookHandler(
                 report_name,
                 self.excel_template_location,
-                [details, concentration],
-            )
+                [details],
+            ),
+            performance_concentration.to_workbook(),
         ]

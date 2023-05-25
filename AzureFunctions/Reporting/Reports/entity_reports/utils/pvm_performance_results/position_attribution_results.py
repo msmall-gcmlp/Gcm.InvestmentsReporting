@@ -1,6 +1,3 @@
-from ...utils.pvm_performance_results import (
-    PvmPerformanceResultsBase,
-)
 from . import AggregateInterval, PvmPerformanceResultsBase
 import pandas as pd
 from typing import List

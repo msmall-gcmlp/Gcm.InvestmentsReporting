@@ -40,6 +40,7 @@ def generate_fund_rpt_dict(df, cf, _exclude_net=False):
 
     if len(df_fund) != 0:
         all_fund, all_fund_total = _get_single_fund_stats(df_fund, cf=cf)
+        assert all_fund is not None
         # all_rslt.to_csv('C:/Tmp/' + str(fund) + '_All.csv')
     else:
         all_fund = pd.DataFrame({"Name": ["No Deals"]})
