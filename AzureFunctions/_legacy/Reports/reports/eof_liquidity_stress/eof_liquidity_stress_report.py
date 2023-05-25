@@ -235,6 +235,7 @@ class EofLiquidityReport(ReportingRunnerBase):
         beta_shock_dn = self.get_beta_shock(shock=-0.16)
         idio_shock_dn = -1 * self.get_idio_shock(number_of_top_exposure=3, number_of_vol=2)['cum_shock']
         top_idio_shocks = self.get_idio_shock(number_of_top_exposure=3, number_of_vol=2)['top_exposures']
+        top_idio_shocks['pctIdio'] = -1 * top_idio_shocks['pctIdio']
         # beta_shock_up = self.get_beta_shock(shock=0.1)
         # idio_shock_up = self.get_idio_shock(number_of_top_exposure=3, number_of_vol=2)['cum_shock']
         style_beta_dn = self.get_style_beta()[0]
@@ -300,24 +301,6 @@ class EofLiquidityReport(ReportingRunnerBase):
                 aggregate_intervals=AggregateInterval.Daily,
                 output_dir="eof/"
             )
-            # persist results
-            dwh_subscription = os.environ.get("Subscription", "nonprd")
-            dwh_environment = os.environ.get("Environment", "dev").replace(
-                "local", "dev"
-            )
-            config_params = {
-                DaoRunnerConfigArgs.dao_global_envs.name: {
-                    DaoSource.DataLake_Blob.name: {
-                        "Environment": dwh_environment,
-                        "Subscription": dwh_subscription,
-                    },
-                }
-            }
-
-            runner = DaoRunner(
-                container_lambda=lambda b, i: b.config.from_dict(i),
-                config_params=config_params,
-            )
 
             EofLiquidityReport.delete_rows(runner=runner, as_of_date=self._as_of_date)
             factor_shockdimn = runner.execute(
@@ -357,9 +340,14 @@ class EofLiquidityReport(ReportingRunnerBase):
 
 
 if __name__ == "__main__":
-    as_of_date = '2023-4-6'
+    as_of_date = '2023-5-24'
     scenario = ["Liquidity Stress"],
     as_of_date = dt.strptime(as_of_date, "%Y-%m-%d").date()
+    # persist results
+    dwh_subscription = os.environ.get("Subscription", "prd")
+    dwh_environment = os.environ.get("Environment", "prd").replace(
+        "local", "dev"
+    )
     config_params = {
         DaoRunnerConfigArgs.dao_global_envs.name: {
             DaoSource.PubDwh.name: {
@@ -371,8 +359,12 @@ if __name__ == "__main__":
                 "Subscription": "prd",
             },
             DaoSource.ReportingStorage.name: {
-                "Environment": "dev",
-                "Subscription": "nonprd",
+                "Environment": "prd",
+                "Subscription": "prd",
+            },
+            DaoSource.DataLake_Blob.name: {
+                "Environment": dwh_environment,
+                "Subscription": dwh_subscription,
             },
         }
     }
