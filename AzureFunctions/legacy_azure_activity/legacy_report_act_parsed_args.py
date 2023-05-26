@@ -17,6 +17,7 @@ class LegacyActivities(ExtendedEnum):
     SingleNameEquityActivity = auto()
     XPFundPqReportActivity = auto()
     EofCrowdingReportActivity = auto()
+    PortfolioConstructionReportActivity = auto()
 
 
 class LegacyReportingActivityParsedArgs(LegacyReportingOrchParsedArgs):

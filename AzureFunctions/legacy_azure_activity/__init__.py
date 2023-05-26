@@ -31,6 +31,9 @@ from .activities.XPFundPqReportActivity import (
 from .activities.EofCrowdingReportActivity import (
     main as eof_crowding_report_main,
 )
+from .activities.PortfolioConstructionReportActivity import (
+    main as portfolio_construction_report_main,
+)
 
 
 class LegacyReportConstructorActivity(LegacyActivity):
@@ -50,6 +53,7 @@ class LegacyReportConstructorActivity(LegacyActivity):
             LegacyActivities.SingleNameEquityActivity: singlename_equityexposure_main,
             LegacyActivities.XPFundPqReportActivity: x_pfund_pq_report_main,
             LegacyActivities.EofCrowdingReportActivity: eof_crowding_report_main,
+            LegacyActivities.PortfolioConstructionReportActivity: portfolio_construction_report_main,
         }
 
     @property
