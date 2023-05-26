@@ -16,7 +16,7 @@ from _legacy.core.ReportStructure.report_structure import (
     AggregateInterval,
     ReportVertical,
 )
-from gcm.Dao.DaoRunner import DaoRunner
+from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.inv.scenario import Scenario
 from gcm.data import DataAccess, DataSource
 from gcm.data.sql._sql_odbc_client import SqlOdbcClient
@@ -50,6 +50,34 @@ def get_optimal_weights(
         """
     )
     return client.read_raw_sql(query)
+
+
+def get_portfolio_attributes(
+    portfolio_acronym: str,
+    client: SqlOdbcClient,
+) -> pd.DataFrame:
+    query = (
+        f"""
+        WITH AttributesTbl
+        AS (
+        SELECT
+            Field, Value, FieldGroup, FieldDescription, ValueType
+        FROM PortfolioConstruction.PortfolioAttributesLong
+        WHERE PortfolioAcronym='{portfolio_acronym}'
+        )
+        SELECT * FROM AttributesTbl
+        """
+    )
+    result = client.read_raw_sql(query)
+    is_bit = result['ValueType'] == 'bit'
+    result.loc[is_bit, 'Value'] = result[is_bit]['Value'].astype(int).astype(bool).astype(str)
+    result.loc[result['Value'] == 'True', 'Value'] = "Yes"
+    result.loc[result['Value'] == 'False', 'Value'] = "No"
+
+    is_float = result['ValueType'] == 'float'
+    result.loc[is_float, 'Value'] = result[is_float]['Value'].astype(float)
+
+    return result
 
 
 class PortfolioConstructionReport(ReportingRunnerBase):
@@ -99,7 +127,8 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         wts_formatted.loc[is_closed, 'Fund'] = wts_formatted.loc[is_closed, 'Fund'] + '*'
         wts_formatted.drop(columns={"Capacity"}, inplace=True)
 
-        wts_formatted.iloc[:, 1:] = wts_formatted.iloc[:, 1:].astype(float).round(0)
+        # leave current to 2 decimals
+        wts_formatted.iloc[:, 2:] = wts_formatted.iloc[:, 2:].astype(float).round(0)
         wts_formatted['Delta'] = wts_formatted['Optimized'] - wts_formatted['Planned']
         wts_formatted['Delta - %Risk'] = wts_formatted['Optimized - %Risk'] - wts_formatted['Planned - %Risk']
         column_order = ['Current', 'Planned', 'Optimized', 'Delta']
@@ -133,7 +162,9 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                                             'Delta']]
         risk_weights = formatted_weights[['Fund'] + [x + ' - %Risk' for x in dollar_weights.columns[1:]]]
 
-        return dollar_weights, risk_weights
+        weights = {"dollar_allocation_summary": dollar_weights, "risk_allocation_summary": risk_weights}
+
+        return weights
 
     @staticmethod
     def _combine_metrics_across_weights(weights, optim_inputs, rf):
@@ -157,115 +188,54 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         cash_and_other = pd.DataFrame(1 - strategy_weights.sum()).T
         cash_and_other.index = ['Cash and Other']
         metrics['strategy_weights'] = pd.concat([strategy_weights, cash_and_other], axis=0)
+
+        metrics["distribution_of_returns"] = metrics.pop('outcomes_distribution')
+        metrics["exp_risk_adj_performance"] = metrics.pop('risk_adj_performance')
+        metrics["strategy_allocation"] = metrics.pop('strategy_weights')
+
         return metrics
 
-    def _format_header_info(self, acronym):
+    def _format_header_info(self, acronym, scenario_name):
         header_info = pd.DataFrame(
             {
                 "header_info": [
                     acronym,
-                    'ARS',
+                    scenario_name,
                     self._as_of_date,
                 ]
             }
         )
+        header_info = {"header_info": header_info}
         return header_info
 
     @staticmethod
-    def _summarize_formal_mandate(obs_cons):
-        # TODO: refactor with ScenarioAggregator
-        stress_idx_to_beta_map = {
-            115: 0.15,
-            118: 0.18,
-            125: 0.25,
-            140: 0.40,
-        }
-        max_beta = stress_idx_to_beta_map[obs_cons.scenario_index]
-
-        mandate = pd.DataFrame(
-            {
-                "mandate": [
-                    "Broad Mandate",
-                    "N/A",
-                    max_beta,
-                    obs_cons.maxFundCount
-                ]
-            },
-            index=['MandateType', 'PerformanceObjective', 'BetaLimit', 'MaxFundCount']
-        )
-        return mandate
-
-    @staticmethod
     def _summarize_liquidity_cons(obs_cons):
-        liquidity_cons = pd.DataFrame(
-            {
-                "frequency": [
-                    'Monthly',
-                    'Quarterly',
-                    'Semiannual',
-                    'Annual',
-                    'TwoYears',
-                    'Other',
-                ],
-                "liquidity_cons": [
-                    obs_cons.liquidityConstraints.monthly,
-                    obs_cons.liquidityConstraints.quarterly,
-                    obs_cons.liquidityConstraints.semiannual,
-                    obs_cons.liquidityConstraints.annual,
-                    obs_cons.liquidityConstraints.twoYears,
-                    obs_cons.liquidityConstraints.other,
-                ],
-            }
-        )
-        liquidity_cons = liquidity_cons.ffill().fillna(0)
-        slf_budget = 1 - liquidity_cons[liquidity_cons['frequency'] == 'Other']['liquidity_cons'].iloc[0]
-        slf_budget = pd.DataFrame({'frequency': ['SLF Budget'], 'liquidity_cons': [slf_budget]})
-        liquidity_cons = pd.concat([liquidity_cons[liquidity_cons['frequency'] != 'Other'], slf_budget], axis=0)
-        liquidity_cons = liquidity_cons.set_index('frequency')
-        return liquidity_cons
-
-    @staticmethod
-    def _summarize_portfolio_fees(obs_cons):
-        fees = pd.DataFrame(
-            {
-                "fee_terms": [
-                    obs_cons.fees.mgmtFee,
-                    obs_cons.fees.incentiveFee,
-                    obs_cons.fees.hurdleRate,
-                ]
-            },
-            index=['MgmtFee', 'IncentiveFee', 'HurdleRate']
-        )
-        return fees
+        liq_class = obs_cons.liquidityConstraints
+        liq_freq = list(obs_cons.liquidityConstraints.__annotations__.keys())
+        liquidity = {x: liq_class.__getattribute__(x) for x in liq_freq if liq_class.__getattribute__(x) is not None}
+        liq_display_names = {'daily': 'D',
+                             'monthly': 'M',
+                             'quarterly': 'Q',
+                             'semiannual': 'SA',
+                             'annual': 'A',
+                             'eighteenMonths': '18M',
+                             'twoYears': '2Y',
+                             'threeYears': '3Y',
+                             'greaterThanThreeYears': '4Y'}
+        liquidity = {liq_display_names[k]: liquidity[k] for k in liquidity}
+        liquidity = ' | '.join("{:.0f}".format(100 * y) + '% ' + str(x) for x, y in liquidity.items())
+        return liquidity
 
     @staticmethod
     def _summarize_stress_limits(obs_cons):
-        # TODO: refactor with ScenarioAggregator
-        stress_idx_to_beta_map = {
-            115: 0.15,
-            118: 0.18,
-            125: 0.25,
-            140: 0.40,
-        }
-        max_beta = stress_idx_to_beta_map[obs_cons.scenario_index]
-        mkt_selloff = max_beta * 1500  # bps
-        if obs_cons.scenario_index > 100:
-            growth_selloff = 300
-            credit_liquidity = 400
-            expected_shortfall = 800
+        scenarios = obs_cons.stress_scenarios
+        n_scenarios = range(len(scenarios))
+        beta = [scenarios[x].limit for x in n_scenarios if scenarios[x].name == 'LongRunSelloff']
+        max_mkt_exposure = beta[0] / -0.15
 
-        stress_limits = pd.DataFrame(
-            {
-                "stress_limits": [
-                    mkt_selloff,
-                    growth_selloff,
-                    credit_liquidity,
-                    expected_shortfall,
-                ]
-            },
-            index=['MktSelloff', 'GrowthSelloff', 'CreditLiquidity', 'ExpectedShortfall']
-        )
-        return stress_limits
+        credit_lim = [scenarios[x].limit for x in n_scenarios if scenarios[x].name == 'CreditLiquidityTechnicals']
+        credit_lim = credit_lim[0]
+        return max_mkt_exposure, credit_lim
 
     @staticmethod
     def _summarize_position_limits(obs_cons):
@@ -281,74 +251,108 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         )
         return stress_limits
 
-    @staticmethod
-    def _summarize_rebalancing_limits(obs_cons):
-        rebalance_limits = pd.DataFrame(
-            {
-                "rebalancing_limits": [
-                    "No",
-                    "Blank Slate",
-                ]
-            },
-            index=['ReallocateScarceCapacity', 'BlankSlateOrRebal']
-        )
-        return rebalance_limits
-
-    def _summarize_obs_and_cons(self, weights, optim_inputs, rf):
+    def _format_config_attributes(self, weights, optim_inputs, rf):
         metrics = collect_portfolio_metrics(weights=weights['Current'],
                                             optim_inputs=optim_inputs,
                                             rf=rf)
         obs_cons = metrics.obs_cons
-        formal_mandate = self._summarize_formal_mandate(obs_cons)
-        liquidity_cons = self._summarize_liquidity_cons(obs_cons)
-        fees = self._summarize_portfolio_fees(obs_cons)
-        target_return = pd.DataFrame({'target_return': [obs_cons.target_return]})
-        stress_scenario_limits = self._summarize_stress_limits(obs_cons)
-        position_limits = self._summarize_position_limits(obs_cons)
-        rebalancing_limits = self._summarize_rebalancing_limits(obs_cons)
+        target_excess = 10_000 * (obs_cons.target_return - rf)
+        target_excess = "{:.0f}".format(target_excess) + 'bps over risk-free'
+        liquidity = self._summarize_liquidity_cons(obs_cons)
+        max_mkt_exposure, credit_lim = self._summarize_stress_limits(obs_cons)
+
         obs_cons_summary = dict({
-            "formal_mandate": formal_mandate,
-            "liquidity_cons": liquidity_cons,
-            "fee_terms": fees,
-            "target_return": target_return,
-            "stress_limits": stress_scenario_limits,
-            "position_limits": position_limits,
-            "rebalancing_limits": rebalancing_limits
+            "TargetReturn": pd.DataFrame({obs_cons.target_return}),
+            "TargetExcessReturn": pd.DataFrame({target_excess}),
+            "MaxMktExposure": pd.DataFrame({max_mkt_exposure}),
+            "LiquidityConstraint_Informal": pd.DataFrame({liquidity}),
+            "MaxFundCount": pd.DataFrame({obs_cons.maxFundCount}),
+            "MinAcceptableAllocation": pd.DataFrame({obs_cons.minMaterialNonZero}),
+            "CreditLiquidityTechnicalsLimit": pd.DataFrame({credit_lim}),
+            "ReallocateScarceCapacity": pd.DataFrame({"No"}),
+            "BlankSlateOrRebalance": pd.DataFrame({"Blank Slate"})
         })
+
         return obs_cons_summary
+
+    @staticmethod
+    def _format_non_config_attributes(reference_attributes):
+        reference_attributes = dict(zip(reference_attributes['Field'], reference_attributes['Value']))
+
+        # format fees for display
+        fee_items = ['MgmtFee', 'IncentiveFee', 'HurdleRate']
+        fees = {key: str(round(100 * reference_attributes[key], 2)) + '%' for key in fee_items}
+        reference_attributes['Fees'] = fees['MgmtFee'] + ' | ' + fees['IncentiveFee'] + ' | ' + fees['HurdleRate']
+
+        # format beta for display
+        beta = reference_attributes.get('MaxBeta')
+        if beta is None:
+            reference_attributes["FormalBetaConstraint"] = "--"
+        else:
+            beta = "{:.2f}".format(reference_attributes['MaxBeta'])
+            reference_attributes["FormalBetaConstraint"] = beta + ' vs ' + reference_attributes['BetaBenchmark']
+
+        formal_attributes = ['ClientName',
+                             'StrategyFocus',
+                             'FirstPrincipal',
+                             'FirstAnalyst',
+                             'Fees',
+                             'MaxLineOfCreditAmount',
+                             'ReturnObjective',
+                             'VolatilityConstraint',
+                             'FormalBetaConstraint',
+                             'LiquidityConstraint',
+                             'MaxSLFAllocation_Formal',
+                             'MaxAllocationSingleFund_Formal',
+                             'MaxAllocationSingleManager',
+                             'MaxFundCount_Formal',
+                             'MaxLeverageVolUnadj',
+                             'MaxSclPositionImpact',
+                             'MaxDesignatedAmount',
+                             'MaxSLFAllocation',
+                             'MaxAllocationSingleFund',
+                             'MaxDrawdownConstraint',
+                             'DrawdownFundsEligible']
+        formal_attribute_subset = {key: pd.DataFrame({reference_attributes.get(key)}) for key in formal_attributes}
+
+        for k, v in formal_attribute_subset.items():
+            if v.squeeze() is None:
+                formal_attribute_subset[k] = pd.DataFrame({"--"})
+        return formal_attribute_subset
 
     def generate_excel_report(
         self,
+        acronym: str,
+        scenario_name: str,
         weights: pd.DataFrame,
-        optim_inputs: OptimizationInputs
+        optim_inputs: OptimizationInputs,
+        reference_attributes: pd.DataFrame
     ):
         #TODO map weights to ids
         weights = weights.rename(columns={'InvestmentGroupName': 'Fund'}).set_index('Fund')
         weights.drop(columns={"InvestmentGroupId"}, inplace=True)
 
-        rf = optim_inputs.config.expRf
-        obs_cons = self._summarize_obs_and_cons(weights=weights, optim_inputs=optim_inputs, rf=rf)
-        metrics = self._combine_metrics_across_weights(weights=weights, optim_inputs=optim_inputs, rf=rf)
-        dollar_weights, risk_weights = self._format_allocations_summary(weights=weights, metrics=metrics)
+        header_info = self._format_header_info(acronym=acronym, scenario_name=scenario_name)
+        non_config_attributes = self._format_non_config_attributes(reference_attributes=reference_attributes)
+        config_attributes = self._format_config_attributes(weights=weights, optim_inputs=optim_inputs,
+                                                           rf=optim_inputs.config.expRf)
+        metrics = self._combine_metrics_across_weights(weights=weights, optim_inputs=optim_inputs,
+                                                       rf=optim_inputs.config.expRf)
+        weights = self._format_allocations_summary(weights=weights, metrics=metrics)
 
-        acronym = optim_inputs.config.portfolioAttributes.acronym
-        excel_data = {
-            "header_info": self._format_header_info(acronym=acronym),
-            "formal_mandate": obs_cons['formal_mandate'],
-            "fee_terms": obs_cons['fee_terms'],
-            "liquidity_constraints": obs_cons['liquidity_cons'],
-            "target_return": obs_cons['target_return'],
-            "stress_limits": obs_cons['stress_limits'],
-            "position_limits": obs_cons['position_limits'],
-            "rebalancing_limits": obs_cons["rebalancing_limits"],
-            "objective_measures": metrics['objective_measures'],
-            "distribution_of_returns": metrics['outcomes_distribution'],
-            "exp_risk_adj_performance": metrics['risk_adj_performance'],
-            "strategy_allocation": metrics['strategy_weights'],
-            "liquidity": metrics['liquidity'],
-            "dollar_allocation_summary": dollar_weights,
-            "risk_allocation_summary": risk_weights
-        }
+        metric_subset = ("distribution_of_returns",
+                         "exp_risk_adj_performance",
+                         "strategy_allocation",
+                         "objective_measures",
+                         "liquidity")
+        metrics = {k: metrics[k] for k in metric_subset}
+
+        excel_data = {}
+        excel_data.update(header_info)
+        excel_data.update(non_config_attributes)
+        excel_data.update(config_attributes)
+        excel_data.update(metrics)
+        excel_data.update(weights)
 
         # TODO set up entity names and ids
         with Scenario(as_of_date=self._as_of_date).context():
@@ -358,8 +362,8 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                 save=True,
                 runner=self._runner,
                 entity_type=ReportingEntityTypes.portfolio,
-                entity_name=acronym,
-                entity_display_name=acronym,
+                entity_name=acronym + ' ' + scenario_name,
+                entity_display_name=acronym + ' ' + scenario_name,
                 entity_ids='',
                 report_name="ARS Portfolio Construction",
                 report_type=ReportType.Risk,
@@ -375,8 +379,8 @@ class PortfolioConstructionReport(ReportingRunnerBase):
             scenario_name: str,
             as_of_date: dt.date,
             **kwargs):
-        env = os.environ.get("Environment", "dev").replace("local", "dev")
-        sub = os.environ.get("Subscription", "nonprd").replace("local", "nonprd")
+        env = os.environ.get("Environment", "prd").replace("local", "prd")
+        sub = os.environ.get("Subscription", "prd").replace("local", "prd")
 
         sql_client = DataAccess().get(
             DataSource.Sql,
@@ -400,6 +404,7 @@ class PortfolioConstructionReport(ReportingRunnerBase):
             as_of_date=as_of_date,
             client=sql_client
         )
+
         inv_group_id_map = optim_inputs.fundInputs.fundData.investment_group_ids
         inv_group_id_map.InvestmentGroupId = inv_group_id_map.InvestmentGroupId.astype(int)
         weights["InvestmentGroupName"] = weights[["InvestmentGroupId"]].merge(
@@ -422,19 +427,88 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         weights = weights.fillna(0)
         weights = weights[weights.iloc[:, 2:].max(axis=1) > 0]
 
-        self.generate_excel_report(weights=weights,
-                                   optim_inputs=optim_inputs)
+        # these are formal attributes for reference only. they don't flow through to optimizer so are not
+        # in the config
+        reference_attributes = get_portfolio_attributes(
+            portfolio_acronym=portfolio_acronym,
+            client=sql_client
+        )
+
+        self.generate_excel_report(acronym=portfolio_acronym,
+                                   scenario_name=scenario_name,
+                                   weights=weights,
+                                   optim_inputs=optim_inputs,
+                                   reference_attributes=reference_attributes)
         return 'Complete'
 
 
 if __name__ == "__main__":
-    portfolio_acronym = "ANCHOR4"
-    as_of_date = dt.date(2023, 3, 1)
-    scenario_name = "default_test"
+    dao_runner = DaoRunner(
+        container_lambda=lambda b, i: b.config.from_dict(i),
+        config_params={
+            DaoRunnerConfigArgs.dao_global_envs.name: {
+                DaoSource.DataLake.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.PubDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.InvestmentsDwh.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.DataLake_Blob.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+                DaoSource.ReportingStorage.name: {
+                    "Environment": "prd",
+                    "Subscription": "prd",
+                },
+            }
+        })
 
-    with Scenario(dao=DaoRunner(), as_of_date=as_of_date).context():
-        PortfolioConstructionReport().run(
-            portfolio_acronym=portfolio_acronym,
-            scenario_name=scenario_name,
-            as_of_date=as_of_date,
-        )
+    portfolio_acronym = "GIP"
+    acronyms = [
+        'ALPHAOPP',
+        'ANCHOR4',
+        'ASUTY',
+        'BALCERA',
+        'BH2',
+        'BUCKEYE',
+        'BUTTER',
+        'BUTTERB',
+        'CARMEL',
+        'CASCADE',
+        'CHARLES2',
+        'CHARTEROAK',
+        'CICFOREST',
+        'CLOVER2',
+        'CORKTOWN',
+        'CPA',
+        'CPAT',
+        'CTOM',
+        'ELAR',
+        'FALCON',
+        'FARIA',
+        'FATHUNTER',
+        'FOB',
+        'FTPAT',
+        'GAIC',
+        'GIP',
+        'RAVEN1',
+        'WILMORE'
+    ]
+
+    for portfolio_acronym in acronyms:
+        as_of_date = dt.date(2023, 5, 1)
+        scenario_name = "default_test"
+
+        with Scenario(dao=dao_runner, as_of_date=as_of_date).context():
+            PortfolioConstructionReport().run(
+                portfolio_acronym=portfolio_acronym,
+                scenario_name=scenario_name,
+                as_of_date=as_of_date,
+            )
