@@ -307,8 +307,8 @@ def _format_non_config_attributes(reference_attributes):
 
 
 def get_report_data(portfolio_acronym, scenario_name, as_of_date):
-    env = os.environ.get("Environment", "prd").replace("local", "prd")
-    sub = os.environ.get("Subscription", "prd").replace("local", "prd")
+    env = os.environ.get("Environment", "dev").replace("local", "dev")
+    sub = os.environ.get("Subscription", "nonprd").replace("local", "nonprd")
 
     sql_client = DataAccess().get(
         DataSource.Sql,
