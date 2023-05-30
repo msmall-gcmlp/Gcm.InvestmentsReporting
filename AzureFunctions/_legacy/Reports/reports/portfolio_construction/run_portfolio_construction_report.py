@@ -15,6 +15,7 @@ from _legacy.core.ReportStructure.report_structure import (
 )
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.inv.scenario import Scenario
+from gcm.inv.dataprovider.portfolio import Portfolio
 
 
 class PortfolioConstructionReport(ReportingRunnerBase):
@@ -32,25 +33,48 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                                                 weights=weights,
                                                 optim_inputs=optim_inputs,
                                                 reference_attributes=reference_attributes)
+        portfolio_dimn = Portfolio(acronyms=[acronym]).get_dimensions()
 
-        with Scenario(as_of_date=self._as_of_date).context():
-            InvestmentsReportRunner().run(
-                data=excel_data,
-                template="ARS_Portfolio_Construction_Report_Template.xlsx",
-                save=True,
-                runner=self._runner,
-                entity_type=ReportingEntityTypes.portfolio,
-                entity_name=acronym + ' ' + scenario_name,
-                entity_display_name=acronym + ' ' + scenario_name,
-                entity_ids='',
-                report_name="ARS Portfolio Construction",
-                report_type=ReportType.Risk,
-                report_vertical=ReportVertical.ARS,
-                report_frequency="Monthly",
-                aggregate_intervals=AggregateInterval.MTD,
-                output_dir="cleansed/investmentsreporting/printedexcels/",
-                report_output_source=DaoSource.DataLake,
-            )
+        if scenario_name == 'default_test':
+            with Scenario(as_of_date=self._as_of_date).context():
+                InvestmentsReportRunner().run(
+                    data=excel_data,
+                    template="ARS_Portfolio_Construction_Report_Template.xlsx",
+                    save=True,
+                    runner=self._runner,
+                    entity_type=ReportingEntityTypes.portfolio,
+                    entity_name=acronym,
+                    entity_display_name=acronym,
+                    entity_ids=[portfolio_dimn[portfolio_dimn.Acronym == acronym].MasterId.item()],
+                    entity_source=DaoSource.PubDwh,
+                    report_name="ARS Portfolio Construction",
+                    report_type=ReportType.Risk,
+                    report_vertical=ReportVertical.ARS,
+                    report_frequency="Monthly",
+                    aggregate_intervals=AggregateInterval.MTD,
+                    output_dir="cleansed/investmentsreporting/printedexcels/",
+                    report_output_source=DaoSource.DataLake,
+                )
+        else:
+            with Scenario(as_of_date=self._as_of_date).context():
+                InvestmentsReportRunner().run(
+                    data=excel_data,
+                    template="ARS_Portfolio_Construction_Report_Template.xlsx",
+                    save=True,
+                    runner=self._runner,
+                    entity_type=ReportingEntityTypes.cross_entity,
+                    entity_name=acronym + ' ' + scenario_name,
+                    entity_display_name=acronym + ' ' + scenario_name,
+                    entity_ids='',
+                    entity_source=DaoSource.PubDwh,
+                    report_name="ARS Portfolio Construction",
+                    report_type=ReportType.Risk,
+                    report_vertical=ReportVertical.ARS,
+                    report_frequency="Monthly",
+                    aggregate_intervals=AggregateInterval.MTD,
+                    output_dir="cleansed/investmentsreporting/printedexcels/",
+                    report_output_source=DaoSource.DataLake,
+                )
 
     def run(self,
             portfolio_acronym: str,
