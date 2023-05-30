@@ -36,7 +36,7 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         portfolio_dimn = Portfolio(acronyms=[acronym]).get_dimensions()
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
-        if scenario_name == 'default_test':
+        if scenario_name == 'Default':
             with Scenario(as_of_date=as_of_date).context():
                 InvestmentsReportRunner().run(
                     data=excel_data,
