@@ -35,8 +35,9 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                                                 reference_attributes=reference_attributes)
         portfolio_dimn = Portfolio(acronyms=[acronym]).get_dimensions()
 
+        as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         if scenario_name == 'default_test':
-            with Scenario(as_of_date=self._as_of_date).context():
+            with Scenario(as_of_date=as_of_date).context():
                 InvestmentsReportRunner().run(
                     data=excel_data,
                     template="ARS_Portfolio_Construction_Report_Template.xlsx",
@@ -56,7 +57,7 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                     # report_output_source=DaoSource.DataLake,
                 )
         else:
-            with Scenario(as_of_date=self._as_of_date).context():
+            with Scenario(as_of_date=as_of_date).context():
                 InvestmentsReportRunner().run(
                     data=excel_data,
                     template="ARS_Portfolio_Construction_Report_Template.xlsx",
