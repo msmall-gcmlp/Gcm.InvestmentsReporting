@@ -13,6 +13,7 @@ class LegacyOrchestrations(ExtendedEnum):
     SingleNameEquityExposureOrchestrator = auto()
     XPFundPqReportOrchestrator = auto()
     EofCrowdingReportOrchestrator = auto()
+    PortfolioConstructionReportOrchestrator = auto()
 
     # TODO: refactor below to be scenario compliant
     # ReportCopyOrchestrator = auto()
