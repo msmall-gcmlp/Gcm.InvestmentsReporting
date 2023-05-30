@@ -184,6 +184,9 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         reporting_inv_names = self._get_altsoft_investment_names(entities)
         constituents = constituents.merge(reporting_inv_names, on=['InvestmentGroupName'], how='left')
 
+        name_is_na = constituents['InvestmentName'].isna()
+        constituents.loc[name_is_na, 'InvestmentName'] = constituents.loc[name_is_na, 'InvestmentGroupName']
+
         constituents = constituents[['InvestmentGroupId', 'InvestmentGroupName', 'InvestmentName', 'InvestmentStatus']]
         constituents = constituents.drop_duplicates()
 
@@ -733,6 +736,8 @@ if __name__ == "__main__":
     as_of_dates = pd.date_range(dt.date(2019, 12, 31), dt.date(2022, 12, 31), freq='Q').tolist()
     as_of_dates = pd.to_datetime(as_of_dates).date.tolist()
 
+    peer_groups = ['GCM Macro ex. CTA']
+    as_of_dates = [dt.date(2023, 3, 31)]
     for peer_group in peer_groups:
         for as_of_date in as_of_dates:
             with Scenario(dao=runner, as_of_date=as_of_date).context():
