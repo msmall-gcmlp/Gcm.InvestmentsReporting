@@ -44,7 +44,7 @@ def _fund_file_path(fund_name, as_of_date):
     return fund_name.replace("/", "") + "_fund_" + as_of_date.strftime("%Y-%m-%d") + ".json"
 
 
-def _filter_fund_set(inv_group_ids=None):
+def _filter_fund_set(inv_group_ids=None, additional_ids=None):
     if inv_group_ids is None:
         fund_dimn = InvestmentGroup(investment_group_ids=None).get_dimensions(
             exclude_gcm_portfolios=True,
@@ -52,6 +52,10 @@ def _filter_fund_set(inv_group_ids=None):
             exclude_filters=dict(strategy=["Other", "Aggregated Prior Period Adjustment",
                                            "Uninvested"]),
         )
+        if additional_ids is not None:
+            addl_fund_dimn = InvestmentGroup(investment_group_ids=additional_ids).get_dimensions()
+            fund_dimn = pd.concat([fund_dimn, addl_fund_dimn], axis=0)
+            fund_dimn = fund_dimn.sort_values('InvestmentGroupName')
     else:
         fund_dimn = InvestmentGroup(investment_group_ids=inv_group_ids).get_dimensions()
     return fund_dimn
@@ -78,8 +82,9 @@ def _subset_fund_dimn(fund_dimn):
     return fund_dimn
 
 
-def _get_fund_dimn(as_of_date, inv_group_ids=None):
-    funds = _subset_fund_dimn(fund_dimn=_filter_fund_set(inv_group_ids=inv_group_ids))
+def _get_fund_dimn(as_of_date, inv_group_ids=None, additional_ids=None):
+    funds = _subset_fund_dimn(fund_dimn=_filter_fund_set(inv_group_ids=inv_group_ids,
+                                                         additional_ids=additional_ids))
     ig = InvestmentGroup(investment_group_ids=funds['InvestmentGroupId'].tolist())
     allocs = ig.get_firmwide_allocation(start_date=as_of_date, end_date=as_of_date)
 
@@ -291,9 +296,10 @@ def _get_performance_quality_metrics(runner, emm_dimn, as_of_date):
     return stats
 
 
-def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date, inv_group_ids=None):
+def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date, inv_group_ids=None, additional_ids=None):
     with Scenario(dao=runner, as_of_date=date).context():
-        fund_dimn = _get_fund_dimn(as_of_date=date, inv_group_ids=inv_group_ids)
+        fund_dimn = _get_fund_dimn(as_of_date=date, inv_group_ids=inv_group_ids,
+                                   additional_ids=additional_ids)
 
         date_q_minus_1 = pd.to_datetime(date - pd.tseries.offsets.QuarterEnd(1)).date()
         peer_rankings = _get_peer_rankings(runner=runner, as_of_date=date_q_minus_1, emm_dimn=fund_dimn)
