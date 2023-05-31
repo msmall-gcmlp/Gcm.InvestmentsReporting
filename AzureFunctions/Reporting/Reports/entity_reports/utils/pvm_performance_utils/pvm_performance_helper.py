@@ -86,24 +86,23 @@ class PvmPerformanceHelper(object):
             # ad hoc/temporary
             raw_df = raw_df[
                 raw_df.PredominantInvestmentType.isin(
-                    ["Co-investment/Direct"]
+                    [
+                        "Co-investment/Direct",
+                        # 'Primary Fund',
+                        # 'Secondary'
+                    ]
                 )
             ]
             raw_df = raw_df[
                 raw_df.PredominantAssetClass.isin(["Private Equity"])
             ]
-            raw_df = raw_df[raw_df.VintageYear >= 2009]
+            # raw_df = raw_df[
+            #     raw_df.PredominantAssetClass.isin(["Infrastructure"])
+            # ]
+            # raw_df = raw_df[raw_df.VintageYear >= 2009]
+            raw_df = raw_df[~((raw_df.PredominantInvestmentType == 'Secondary') & (raw_df.VintageYear < 2014))]
+            raw_df = raw_df[~((raw_df.PredominantAssetClass == 'Real Estate') & (raw_df.VintageYear < 2010))]
 
-        # max_nav_date = (
-        #     raw_df[
-        #         (raw_df.TransactionType == "Net Asset Value")
-        #         & (raw_df.BaseAmount != 0)
-        #     ]
-        #     .groupby(["OwnerName", "InvestmentName"])
-        #     .TransactionDate.max()
-        #     .reset_index()
-        #     .rename(columns={"TransactionDate": "MaxNavDate"})
-        # )
         # TODO: DT note figure out whether we want max nav date to reflect NAV != 0
         # makes a difference for all RMV measures at group levels (vertical/portfolio/sector/etc)
         max_nav_date = (
@@ -126,6 +125,7 @@ class PvmPerformanceHelper(object):
             return raw_df
         if cf_type == PvmPerformanceHelper.Cf_Filter_Type.IrrCashflows:
             irr_cf = raw_df[raw_df.TransactionDate <= raw_df.MaxNavDate]
+            #TODO: move to ENUMs and only use R/D/T for IRR cfs
             irr_cf = irr_cf[
                 irr_cf.TransactionType.isin(
                     [
@@ -327,6 +327,9 @@ class PvmPerformanceHelper(object):
             df = PvmPerfomanceHelperSingleton().all_deal_attributes
             filtered = df[df["OsTicker"].isin(self.os_tickers)]
             filtered["Portfolio"] = self.top_line_owner
+            filtered['Name'] = filtered.apply(
+                lambda x: "_".join([str(x[i]) for i in self.recursion_iterate_controller[-1]]), axis=1
+            )
             setattr(self, __name, filtered)
         return getattr(self, __name, None)
 
@@ -350,8 +353,8 @@ class PvmPerformanceHelper(object):
             elif self.entity_domain == EntityDomainTypes.Portfolio:
                 list_of_items = [
                     ["Portfolio"],
-                    ["PredominantInvestmentType"],
-                    ["PredominantInvestmentType", "PredominantSector"],
+                    # ["PredominantInvestmentType"],
+                    # ["PredominantInvestmentType", "PredominantSector"],
                     ["Name"],
                 ]
                 # list_of_items = [
@@ -361,24 +364,25 @@ class PvmPerformanceHelper(object):
                 #     ["Name"],
                 # ]
             elif self.entity_domain == EntityDomainTypes.Vertical:
+                list_of_items = [
+                    ["Portfolio"],
+                    ["Portfolio", "PredominantInvestmentType"],
+                    ["Portfolio", "PredominantInvestmentType", "EmergingDiverseStatus"],
+                    ["Portfolio", "PredominantInvestmentType", "EmergingDiverseStatus", "DealName"],
+                ]
                 # list_of_items = [
                 #     ["Portfolio"],
                 #     ["PredominantInvestmentType"],
-                #     ["PredominantInvestmentType", "PredominantSector"],
                 #     ["Name"],
                 # ]
-                list_of_items = [
-                    ["Portfolio"],
-                    ["VintageYear"],
-                    ["Name"],
-                ]
             setattr(self, __name, list_of_items)
         return getattr(self, __name, None)
 
     @property
-    def trailing_periods(self, as_of_date) -> dict:
+    def trailing_periods(self) -> dict:
         # TODO: make this work so not using tmp_trailing_periods
         # TODO: also probably should use standard trailing_period enums
+        as_of_date = Scenario.get
         return {
             "QTD": 1,
             "YTD": int(as_of_date.month / 3),
@@ -393,8 +397,8 @@ class PvmPerformanceHelper(object):
         if self.entity_domain == EntityDomainTypes.Portfolio:
             return [
                 "Name",
-                "PredominantInvestmentType",
-                "PredominantSector",
+                # "PredominantInvestmentType",
+                # "PredominantSector",
             ]
             # return [
             #     "Name",
@@ -407,9 +411,12 @@ class PvmPerformanceHelper(object):
             #     "PredominantInvestmentType",
             #     "PredominantSector",
             # ]
+            # TODO: refactor "Name" to be Atomic unit or equiv; Node ID/Edge ID?
             return [
                 "Name",
-                "VintageYear",
+                "DealName",
+                "PredominantInvestmentType",
+                "EmergingDiverseStatus"
             ]
         elif self.entity_domain == EntityDomainTypes.InvestmentManager:
             return [
@@ -441,7 +448,7 @@ class PvmPerformanceHelper(object):
                 setattr(self, __name, tickers[0])
             elif self.entity_domain == EntityDomainTypes.Vertical:
                 # ad hoc/temporary
-                tickers = ["GCM PE Co-Investments"]
+                tickers = ["GCM Private Equity"]
                 assert len(tickers) == 1
                 setattr(self, __name, tickers[0])
         return getattr(self, __name, None)
@@ -468,7 +475,7 @@ class PvmPerformanceHelper(object):
             PvmPerformanceHelper.Cf_Filter_Type.CommitmentSeries,
             reporting_type,
         )
-        # was having issue getting trailing_periods property to work, temp solution
+        # TODO: move to argument/scenario/standard config
         tmp_trailing_period = {
             "QTD": 1,
             "YTD": int(as_of_date.month / 3),

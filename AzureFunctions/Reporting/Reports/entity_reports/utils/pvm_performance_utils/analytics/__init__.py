@@ -153,7 +153,7 @@ def format_performance_report(
     rslt = rslt[~rslt.DisplayName.isnull()]
 
     flat_data = rslt.merge(
-        attrib, how="left", left_on="DisplayName", right_on="Name"
+        attrib, how="left", left_on="DisplayName", right_on="DealName"
     )
     flat_data["Name"] = np.where(
         flat_data.Name.isnull(), flat_data.DisplayName, flat_data.Name
@@ -222,8 +222,8 @@ def get_performance_report_dict(
     commitment_df = get_sum_df_rpt(
         commitment_df, list_to_iterate, "Commitment"
     )[["Name", "Commitment"]]
-
-    nav = irr_cfs[irr_cfs.TransactionType == "Net Asset Value"].rename(
+    # TODO: change to ENUM and only D/T/R for IRR cfs
+    nav = irr_cfs[irr_cfs.TransactionType == "R"].rename(
         columns={"BaseAmount": "Nav"}
     )
     nav_df = get_sum_df_rpt(nav, list_to_iterate, "Nav")[["Name", "Nav"]]
@@ -307,7 +307,10 @@ def get_performance_report_dict(
     ordered_rpt_items.reset_index(inplace=True, drop=True)
     # formatted_rslt.DisplayName = [str(x)[str(x).find('ticker_')+7:] if 'ticker_' in str(x) else str(x) for x in formatted_rslt.DisplayName]
 
-    input_data = {"Data": formatted_rslt, "RawData": flat_data}
+    # formatted_rslt = formatted_rslt[~formatted_rslt.DisplayName.isin(
+    #     ordered_rpt_items[ordered_rpt_items.Layer == ordered_rpt_items.Layer.max()].DisplayName
+    # )]
+    input_data = {"Data": formatted_rslt, "FlatData": flat_data}
 
     group_range_map = {1: "FormatType", 2: "FormatSector", 3: "GroupThree"}
     for group_number in ordered_rpt_items.Layer.unique():

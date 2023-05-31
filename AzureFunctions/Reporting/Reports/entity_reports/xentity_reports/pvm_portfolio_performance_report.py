@@ -115,10 +115,13 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
         domain = self.report_meta.entity_domain
         entity_info = self.report_meta.entity_info
+
+        # actually calls report process
         p = PvmPerformanceHelper(domain, entity_info=entity_info)
         final_data: dict = p.generate_components_for_this_entity(
             as_of_date
         )
+
         tables: List[ReportTable] = []
         for k, v in final_data.items():
             this_table = ReportTable(k, v)
@@ -135,16 +138,8 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         # trim rows for all ranges in this sheet
         # regions_to_trim: List[str] = [x.component_name for x in tables]
 
-        # 19 = number of excel header rows before primary_df range starts (not scalable)
+        # 22 = number of excel header rows before primary_df range starts (not scalable)
         print_region = "B1:AC" + str(len(primary_df) + 22)
-        # print_region = "B1:AF" + str(len(primary_df) + 22)
-
-        # identifying hide_columns could be more generic, not worth it currently
-        # below hide_col conditions would be better to use
-        # an entity-specific "track record length" property
-        # rather than inferring from whether 3Y/5Y ROR exists
-        # similarly, setting up report dictionary of df metric-to-excel column
-        # would be better for determining columns to hide
         hide_columns = []
 
         # TODO: check portfolio inception date to set these dynamically

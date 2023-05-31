@@ -927,16 +927,15 @@ def calc_tw_ror(
             + [
                 "OwnerName",
                 "InvestmentName",
-                "PredominantStrategy",
                 "thisq",
                 "Nav",
             ]
         ].rename(columns={"Nav": "PriorNav", "thisq": "lastq"}),
         how="left",
         left_on=_attributes_needed
-        + ["OwnerName", "InvestmentName", "PredominantStrategy", "lastq"],
+        + ["OwnerName", "InvestmentName", "lastq"],
         right_on=_attributes_needed
-        + ["OwnerName", "InvestmentName", "PredominantStrategy", "lastq"],
+        + ["OwnerName", "InvestmentName", "lastq"],
     )
     cf = df[df.TransactionType != "Net Asset Value"]
 
@@ -1357,8 +1356,9 @@ def calc_sum(df: pd.DataFrame, group_cols: List[str], sum_col: str):
 def get_holding_periods_rpt(
     df, discount_df, list_to_iterate, _attributes_needed
 ):
+    # TODO: change to ENUM and only D/T/R for IRR cfs
     max_nav_date = (
-        df[df.TransactionType == "Net Asset Value"]
+        df[df.TransactionType.isin(["R", "Net Asset Value"])]
         .groupby(["Name"])
         .TransactionDate.max()
         .reset_index()

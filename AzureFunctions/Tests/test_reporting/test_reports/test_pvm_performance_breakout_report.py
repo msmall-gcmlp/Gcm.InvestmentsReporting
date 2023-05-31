@@ -57,6 +57,7 @@ class TestPerformanceBreakDown(object):
 
     def test_render_single_vertical_report(self):
         as_of_date = dt.date(2022, 12, 31)
+        # as_of_date = dt.date(2023, 3, 31)
         with Scenario(
             as_of_date=as_of_date,
             aggregate_interval=AggregateInterval.ITD,
@@ -86,14 +87,19 @@ class TestPerformanceBreakDown(object):
         assert output is not None
 
     def test_render_single_port_report(self):
-        as_of_date = dt.date(2022, 12, 31)
+        as_of_date = dt.date(2023, 3, 31)
         with Scenario(
             as_of_date=as_of_date,
             aggregate_interval=AggregateInterval.ITD,
             save=True,
         ).context():
             for port_name in [
-                "The Consolidated Edison Pension Plan Master Trust - GCM PE Account"
+                "GCM Grosvenor Co-Investment Opportunities Fund II, L.P.",
+                "GCM Grosvenor Secondary Opportunities Fund II, L.P.",
+                "GCM Grosvenor Customized Infrastructure Strategies II, L.P.",
+                "GCM Grosvenor Customized Infrastructure Strategies III, L.P.",
+                "Labor Impact Fund, L.P.",
+                "GCM Grosvenor Infrastructure Advantage Fund II, L.P."
             ]:
                 # for port_name in ['The Consolidated Edison Pension Plan Master Trust - GCM PE Account']:
                 # port_name = "The Consolidated Edison Pension Plan Master Trust - GCM PE Account"
@@ -101,6 +107,7 @@ class TestPerformanceBreakDown(object):
                 info = TestPerformanceBreakDown.get_entity(
                     domain=domain, name=port_name
                 )
+
                 this_report = PvmPerformanceBreakoutReport(
                     ReportMeta(
                         type=ReportType.Performance,
