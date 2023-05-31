@@ -1,5 +1,7 @@
 import datetime as dt
 import os
+
+import numpy as np
 import pandas as pd
 from gcm.inv.models.portfolio_construction.optimization.optimization_inputs import (
     OptimizationInputs,
@@ -143,6 +145,7 @@ def _format_allocations_summary(weights, metrics):
                                         'Optimized',
                                         'Delta']]
     risk_weights = formatted_weights[['Fund'] + [x + ' - %Risk' for x in dollar_weights.columns[1:]]]
+    risk_weights.columns = dollar_weights.columns
 
     weights = {"dollar_allocation_summary": dollar_weights, "risk_allocation_summary": risk_weights}
 
@@ -364,6 +367,19 @@ def get_report_data(portfolio_acronym, scenario_name, as_of_date):
     return weights, optim_inputs, reference_attributes
 
 
+def _nullify_data_for_zero_weights(weights, metrics):
+    cash = weights['dollar_allocation_summary'].loc[weights['dollar_allocation_summary']['Fund'] == 'Cash & Other']
+    zero_out = cash[['Current', 'Planned', 'Optimized', 'Delta']].abs() == 100
+    zero_out_fields = zero_out.T.loc[zero_out.T.values].index
+
+    for field in zero_out_fields.tolist():
+        for m in metrics.keys():
+            metrics[m].loc[:, field] = np.nan
+        for w in weights.keys():
+            weights[w].loc[:, field] = np.nan
+    return weights, metrics
+
+
 def generate_excel_report_data(
     acronym: str,
     scenario_name: str,
@@ -391,10 +407,13 @@ def generate_excel_report_data(
                      "liquidity")
     metrics = {k: metrics[k] for k in metric_subset}
 
+    weights, metrics = _nullify_data_for_zero_weights(weights=weights, metrics=metrics)
+
     excel_data = {}
     excel_data.update(header_info)
     excel_data.update(non_config_attributes)
     excel_data.update(config_attributes)
+
     excel_data.update(metrics)
     excel_data.update(weights)
     return excel_data
