@@ -166,7 +166,8 @@ def _combine_metrics_across_weights(weights, optim_inputs, rf):
                                 getattr(portfolio_metrics['Optimized'].metrics, m)], axis=1)
         metrics[m].columns = weights.columns
 
-    strategy_order = pd.DataFrame(index=['Credit', 'Long/Short Equity', 'Macro', 'Multi-Strategy', 'Quantitative'])
+    strategy_order = pd.DataFrame(index=['Credit', 'Long/Short Equity', 'Macro', 'Multi-Strategy', 'Quantitative',
+                                         'Relative Value'])
     strategy_weights = strategy_order.merge(metrics['strategy_weights'],
                                             left_index=True, right_index=True,
                                             how='left')
