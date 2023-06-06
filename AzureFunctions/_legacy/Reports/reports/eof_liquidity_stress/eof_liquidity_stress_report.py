@@ -321,7 +321,7 @@ class EofLiquidityReport(ReportingRunnerBase):
                 target_source=DaoSource.InvestmentsDwh,
                 target_schema='factors',
                 target_table='FactorShockDimn',
-                csv_params={"index_label": "FactorShockTickerId", "float_format": "%.10f"},
+                csv_params={"index_label": "FactorShockTickerId"},
                 save=True,
             )
             SqlBulkInsert().execute(
@@ -340,7 +340,7 @@ class EofLiquidityReport(ReportingRunnerBase):
 
 
 if __name__ == "__main__":
-    as_of_date = '2023-5-24'
+    as_of_date = '2023-5-26'
     scenario = ["Liquidity Stress"],
     as_of_date = dt.strptime(as_of_date, "%Y-%m-%d").date()
     # persist results
