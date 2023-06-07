@@ -14,6 +14,47 @@ class PvmPerformanceResultsBase(object):
     ):
         self.cfs = cfs
         self.aggregate_interval = aggregate_interval
+        self._t_item = None
+        self._d_item = None
+        self._r_item = None
+
+    # BASE ITEMS:
+
+    @property
+    def cost(self) -> float:
+        if self._t_item is None:
+            self._t_item = self.cfs.sum(self.cfs.T_Cfs)
+        return self._t_item
+
+    @cost.setter
+    def cost(self, amount: float):
+        self._t_item = -1.0 * abs(amount)
+
+    @property
+    def distributions(self) -> float:
+        if self._d_item is None:
+            self._d_item = self.cfs.sum(self.cfs.D_Cfs)
+        return self._d_item
+
+    @distributions.setter
+    def distributions(self, amount):
+        self._d_item = amount
+
+    @property
+    def nav(self) -> float:
+        if self._r_item is None:
+            self._r_item = self.cfs.sum(self.cfs.R_Cfs)
+        return self._r_item
+
+    @nav.setter
+    def nav(self, amount):
+        self._r_item = amount
+
+    @property
+    def pnl(self) -> float:
+        return self.cfs.sum(self.cfs.cfs)
+
+    # Base items getters / setters
 
     @property
     def full_expanded_performance_results_count(self) -> int:
@@ -39,28 +80,12 @@ class PvmPerformanceResultsBase(object):
         return 0.0
 
     @property
-    def pnl(self) -> float:
-        return self.cfs.sum(self.cfs.cfs)
-
-    @property
     def dpi(self) -> float:
         return -1.0 * self.distributions / self.cost
 
     @property
     def rvpi(self) -> float:
         return self.tvpi - self.dpi
-
-    @property
-    def cost(self) -> float:
-        return self.cfs.sum(self.cfs.T_Cfs)
-
-    @property
-    def distributions(self) -> float:
-        return self.cfs.sum(self.cfs.D_Cfs)
-
-    @property
-    def nav(self) -> float:
-        return self.cfs.sum(self.cfs.R_Cfs)
 
     # ALIAS
     @property

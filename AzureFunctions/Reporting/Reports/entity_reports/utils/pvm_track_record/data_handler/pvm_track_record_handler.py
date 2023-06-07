@@ -12,7 +12,7 @@ from functools import cached_property
 import pandas as pd
 from .gets.get_cfs import get_cfs
 from .gets.get_positions import get_positions, get_assets
-from .gets.get_dimns import get_dimns
+from .gets.get_dimns import get_dimns, get_facts
 from ...pvm_performance_results import (
     PvmPerformanceResultsBase,
     PvmCashflows,
@@ -142,6 +142,12 @@ class TrackRecordHandler(object):
         return pos
 
     @cached_property
+    def position_facts(self) -> pd.DataFrame:
+        position_ids = self.position_ids
+        f = get_facts(position_ids, "Position")
+        return f
+
+    @cached_property
     def asset_attribs(self) -> pd.DataFrame:
         asset_ids = self.asset_ids
         asset = get_dimns(asset_ids, "Asset")
@@ -152,15 +158,54 @@ class TrackRecordHandler(object):
     ) -> dict[int, PvmPerformanceResultsBase]:
         if aggregate_interval not in self._position_level_cache:
             grouped = self.position_cf.groupby(f"{self.gross_atom.name}Id")
-            final = {}
+            final: dict[int, PvmPerformanceResultsBase] = {}
             for n, g in grouped:
                 cfs = g[[c.name for c in PvmCashflows.CashflowColumns]]
                 cfs = PvmCashflows(cfs=cfs)
                 final[n] = PvmPerformanceResultsBase(
                     cfs, aggregate_interval
                 )
-            self._position_level_cache[aggregate_interval] = final
+            real_final = {}
+            position_facts = self.position_facts
+            for k, v in final.items():
+                filtered = position_facts[
+                    position_facts["PositionId"] == k
+                ]
+                v = override(v, filtered, "cost")
+                v = override(v, filtered, "distrib")
+                v = override(v, filtered, "nav")
+                real_final[k] = v
+            self._position_level_cache[aggregate_interval] = real_final
         return self._position_level_cache[aggregate_interval]
+
+
+def override(
+    v: PvmPerformanceResultsBase,
+    filtered_on_positions: pd.DataFrame,
+    base_type: str,
+) -> PvmPerformanceResultsBase:
+    if base_type == "cost":
+        total = sum(
+            filtered_on_positions[
+                filtered_on_positions["MeasureName"] == "Invested Capital"
+            ]["MeasureValue"]
+        )
+        v.cost = total
+    if base_type == "distrib":
+        total = sum(
+            filtered_on_positions[
+                filtered_on_positions["MeasureName"] == "Realized Value"
+            ]["MeasureValue"]
+        )
+        v.distributions = total
+    if base_type == "nav":
+        total = sum(
+            filtered_on_positions[
+                filtered_on_positions["MeasureName"] == "Unrealized Value"
+            ]["MeasureValue"]
+        )
+        v.nav = total
+    return v
 
 
 class TrackRecordManagerSingletonProvider(metaclass=Singleton):

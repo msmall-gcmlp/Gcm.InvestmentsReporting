@@ -56,7 +56,39 @@ def get_cfs(ids: List[int], cf_type="Position"):
         df.CashflowType.str.contains("Distrib"), "D", df.CashflowType
     )
     df.CashflowType = np.where(
+        df.CashflowType.str.contains("Return of Capital"),
+        "D",
+        df.CashflowType,
+    )
+    df.CashflowType = np.where(
+        df.CashflowType.str.contains("Proceeds"), "D", df.CashflowType
+    )
+    df.CashflowType = np.where(
+        df.CashflowType.str.contains("Interest"), "D", df.CashflowType
+    )
+    df.CashflowType = np.where(
+        df.CashflowType.str.contains("Private Sale"), "D", df.CashflowType
+    )
+    df.CashflowType = np.where(
+        df.CashflowType.str.contains("Public Sale"), "D", df.CashflowType
+    )
+    df.CashflowType = np.where(
+        df.CashflowType.str.contains("Dividend"), "D", df.CashflowType
+    )
+
+    df.CashflowType = np.where(
         df.CashflowType.str.contains("NAV"), "R", df.CashflowType
+    )
+    df.CashflowType = np.where(
+        df.CashflowType.str.contains("Current Carrying Value"),
+        "R",
+        df.CashflowType,
+    )
+    df.CashflowType = np.where(
+        df.CashflowType.str.contains("Investment"), "T", df.CashflowType
+    )
+    df.CashflowType = np.where(
+        df.CashflowType.str.contains("Expenses"), "T", df.CashflowType
     )
     df["Currency"] = "USD"
     df["AggregateIntervalName"] = "ITD"

@@ -91,3 +91,36 @@ def get_dimns(ids: List[int], type="Investment"):
     ]
     df = pd.merge(df, extens, on=[f"{type}Id"])
     return df
+
+
+def get_facts(ids: List[int], d_type="Investment"):
+    dao: DaoRunner = Scenario.get_attribute("dao")
+
+    def oper(query: Query, item: dict[str, DeclarativeMeta]):
+        query = filter_many(query, item, f"{d_type}Id", ids)
+        return query
+
+    df: pd.DataFrame = remove_sys_cols(
+        dao.execute(
+            params={
+                "table": f"{d_type}Fact",
+                "schema": "PvmTrackRecordAnalytics",
+                "operation": oper,
+            },
+            source=DaoSource.InvestmentsDwh,
+            operation=lambda d, p: d.get_data(p),
+        )
+    )
+    measuretype = remove_sys_cols(
+        dao.execute(
+            params={
+                "table": "MeasureType",
+                "schema": "PvmTrackRecordAnalytics",
+            },
+            source=DaoSource.InvestmentsDwh,
+            operation=lambda d, p: d.get_data(p),
+        )
+    )
+    df = pd.merge(df, measuretype, how="left")
+    assert df is not None
+    return df

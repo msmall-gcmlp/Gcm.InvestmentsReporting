@@ -41,7 +41,7 @@ class TestPvmManagerTrReport(object):
         ).context():
             d = EntityDomainTypes.InvestmentManager
             entity_info = TestPvmManagerTrReport.get_entity(
-                d, "ExampleManagerName"
+                d, "Coalesce Fund I"
             )
 
             this_report = PvmManagerTrackRecordReport(
