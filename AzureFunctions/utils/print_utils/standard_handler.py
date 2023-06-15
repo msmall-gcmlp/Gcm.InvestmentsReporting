@@ -158,6 +158,8 @@ def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
     if k.component_name in wb.defined_names:
         address = list(wb.defined_names[k.component_name].destinations)
         for sheetname, cell_address in address:
+            if 'Table of Contents_' in sheetname:
+                sheetname = 'Table of Contents'
             cell_address = cell_address.replace("$", "")
             # override wb:
             wb = ExcelIO.write_dataframe_to_xl(
@@ -174,6 +176,9 @@ def merge_files(wb_list: List[Workbook]):
             ws_count = 0
             for s in k.sheetnames:
                 source_sheet: Worksheet = k[s]
+                if 'Contents' in s:
+                    continue
+
                 target_sheet_name = f"{s}_{wb_count}_{ws_count}"
                 merged.create_sheet(target_sheet_name)
                 ws2: Worksheet = merged[target_sheet_name]

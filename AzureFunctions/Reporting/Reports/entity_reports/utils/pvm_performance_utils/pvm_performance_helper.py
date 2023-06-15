@@ -1,3 +1,5 @@
+import math
+
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain import (
     EntityDomainTypes,
     pd,
@@ -52,10 +54,18 @@ class PvmPerfomanceHelperSingleton(metaclass=Singleton):
 
 class PvmPerformanceHelper(object):
     def __init__(
-        self, entity_domain: EntityDomainTypes, entity_info: pd.DataFrame
+            self,
+            entity_domain: EntityDomainTypes,
+            entity_info: pd.DataFrame,
+            recursion_iterate_controller: List[List[str]],
+            attributes_needed: List[str],
+            iteration_number: int
     ):
         self.entity_domain = entity_domain
         self.entity_info = entity_info
+        self.recursion_iterate_controller = recursion_iterate_controller
+        self.attributes_needed = attributes_needed
+        self.iteration_number = iteration_number
 
     class Cf_Filter_Type(Enum):
         AllCashflows = auto()
@@ -84,11 +94,12 @@ class PvmPerformanceHelper(object):
             ]
         if self.entity_domain == EntityDomainTypes.Vertical:
             # ad hoc/temporary
+            # orig_raw = raw_df.copy()
             raw_df = raw_df[
                 raw_df.PredominantInvestmentType.isin(
                     [
-                        "Co-investment/Direct",
-                        # 'Primary Fund',
+                        # "Co-investment/Direct",
+                        'Primary Fund',
                         # 'Secondary'
                     ]
                 )
@@ -96,13 +107,87 @@ class PvmPerformanceHelper(object):
             raw_df = raw_df[
                 raw_df.PredominantAssetClass.isin(["Private Equity"])
             ]
+
             # raw_df = raw_df[
             #     raw_df.PredominantAssetClass.isin(["Infrastructure"])
             # ]
-            # raw_df = raw_df[raw_df.VintageYear >= 2009]
-            raw_df = raw_df[~((raw_df.PredominantInvestmentType == 'Secondary') & (raw_df.VintageYear < 2014))]
-            raw_df = raw_df[~((raw_df.PredominantAssetClass == 'Real Estate') & (raw_df.VintageYear < 2010))]
+            # raw_df = raw_df[raw_df.VintageYear.astype(int) >= 2009]
+            raw_df = raw_df[~((raw_df.PredominantInvestmentType == "Co-investment/Direct") & (raw_df.VintageYear.astype(int) < 2009))]
+            # raw_df = raw_df[~((raw_df.PredominantInvestmentType == 'Secondary') & (raw_df.VintageYear < 2014))]
+            # raw_df = raw_df[~((raw_df.PredominantAssetClass == 'Real Estate') & (raw_df.VintageYear < 2010))]
 
+            # tmp = pd.read_csv('C:/Tmp/deals needed.csv')
+            # raw_df = raw_df[raw_df.DealName.isin(tmp['Deal Name'])]
+            # assert len(raw_df[raw_df.VintageGroup.isnull()]) == 0
+            #
+            # sponsors = orig_raw[
+            #     orig_raw.PredominantInvestmentType.isin(
+            #         [
+            #             "Co-investment/Direct",
+                        # 'Primary Fund',
+                        # 'Secondary'
+                    # ]
+                # )
+            # ]
+            # sponsors = sponsors[
+            #     sponsors.PredominantAssetClass.isin(["Private Equity"])
+            # ]
+            # sponsors = sponsors[
+            #     sponsors.PredominantStrategy.isin(["Buyout"])
+            # ]
+            # sponsors = sponsors[
+            #     sponsors.InvestmentManagerName.isin(raw_df.InvestmentManagerName)
+            # ]
+            # tmp_rslt = pd.DataFrame()
+            # for i in raw_df.DealName.unique():
+            #     vintage_grp = raw_df[raw_df.DealName == i].VintageGroup.unique()
+            #     rng = range(int(str(vintage_grp)[len(str(vintage_grp))-12:len(str(vintage_grp))-8])-2,
+            #                 int(str(vintage_grp)[len(str(vintage_grp))-7:len(str(vintage_grp))-3])+1)
+            #     mgr_funds = sponsors[sponsors.InvestmentManagerName.isin(
+            #         raw_df[raw_df.DealName == i].InvestmentManagerName
+            #     )]
+            #     df_rslt_d = mgr_funds[mgr_funds.VintageYear.astype(int).isin(rng)]
+            #     if len(tmp_rslt) > 0:
+            #         df_rslt = df_rslt_d[~df_rslt_d.ReportingName.isin(tmp_rslt.ReportingName)]
+            #     else:
+            #         df_rslt = df_rslt_d.copy()
+            ##     df_rslt = df_rslt_d.copy()
+                # df_rslt['CoDeal'] = i
+                # df_rslt['VintageGroup'] = vintage_grp[0]
+                # tmp_rslt = pd.concat([tmp_rslt, df_rslt])
+            # tst = tmp_rslt[[
+            #     'InvestmentManagerName',
+            #     'DealName',
+            #     'ReportingName',
+            #     'CoDeal',
+            #     'VintageGroup'
+            # ]].drop_duplicates()
+            #
+            # parents = pd.DataFrame()
+            # for d in tst.CoDeal.unique():
+            #     for y in tst.VintageGroup.unique():
+            #         invs = tst[(tst.CoDeal == d) & (tst.VintageGroup == y)].DealName.sort_values().drop_duplicates()
+            #         if len(invs) == 0:
+            #             continue
+            #         if len(invs) == 1:
+            #             names = pd.DataFrame({'CoDeal': [d],
+            #                                   'VintageGroup': [y]
+            #                                      , 'ConcatPrimaries': [invs.squeeze()]})
+            #             parents = pd.concat([names, parents])
+            #         else:
+            #             concat_names = ''
+            #             for inv in invs.tolist():
+            #                 concat_names = concat_names + ' + ' + inv
+            #             names = pd.DataFrame({'CoDeal': [d],
+            #                                   'VintageGroup': [y],
+            #                                   'ConcatPrimaries': concat_names[2:]})
+            #             parents = pd.concat([names, parents])
+            # tst = tst.merge(parents, how='left',left_on=['CoDeal', 'VintageGroup'], right_on=['CoDeal', 'VintageGroup'])
+            # tst.to_csv('C:/Tmp/cos linked.csv')
+
+                # orig_raw[orig_raw.DealName == i].Name.unique()
+            # raw_df = tmp_rslt.copy()
+        # raw_df['BurgissSector'] = 'Test'
         # TODO: DT note figure out whether we want max nav date to reflect NAV != 0
         # makes a difference for all RMV measures at group levels (vertical/portfolio/sector/etc)
         max_nav_date = (
@@ -333,56 +418,67 @@ class PvmPerformanceHelper(object):
             setattr(self, __name, filtered)
         return getattr(self, __name, None)
 
-    @property
-    def recursion_iterate_controller(self) -> List[List[str]]:
-        __name = "recursion_iterate"
-        if getattr(self, __name, None) is None:
-            list_of_items = None
-            if self.entity_domain == EntityDomainTypes.InvestmentManager:
-                list_of_items = [
-                    ["Portfolio"],
-                    ["PredominantInvestmentType"],
-                    ["PredominantInvestmentType", "PredominantSector"],
-                    [
-                        "PredominantInvestmentType",
-                        "PredominantSector",
-                        "PredominantRealizationTypeCategory",
-                    ],
-                    ["Name"],
-                ]
-            elif self.entity_domain == EntityDomainTypes.Portfolio:
-                list_of_items = [
-                    ["Portfolio"],
-                    # ["PredominantInvestmentType"],
-                    # ["PredominantInvestmentType", "PredominantSector"],
-                    ["Name"],
-                ]
-                # list_of_items = [
-                #     ["Portfolio"],
-                #     ["PredominantRealizationTypeCategory"],
-                #     ["PredominantRealizationTypeCategory", "VintageYear"],
-                #     ["Name"],
-                # ]
-            elif self.entity_domain == EntityDomainTypes.Vertical:
-                list_of_items = [
-                    ["Portfolio"],
-                    ["Portfolio", "PredominantInvestmentType"],
-                    ["Portfolio", "PredominantInvestmentType", "EmergingDiverseStatus"],
-                    ["Portfolio", "PredominantInvestmentType", "EmergingDiverseStatus", "DealName"],
-                ]
-                # list_of_items = [
-                #     ["Portfolio"],
-                #     ["PredominantInvestmentType"],
-                #     ["Name"],
-                # ]
-            setattr(self, __name, list_of_items)
-        return getattr(self, __name, None)
+    # @property
+    # def recursion_iterate_controller(self) -> List[List[str]]:
+    #     __name = "recursion_iterate"
+    #     if getattr(self, __name, None) is None:
+    #         list_of_items = None
+    #         if self.entity_domain == EntityDomainTypes.InvestmentManager:
+    #             list_of_items = [
+    #                 ["Portfolio"],
+    #                 ["PredominantInvestmentType"],
+    #                 ["PredominantInvestmentType", "PredominantSector"],
+    #                 [
+    #                     "PredominantInvestmentType",
+    #                     "PredominantSector",
+    #                     "PredominantRealizationTypeCategory",
+    #                 ],
+    #                 ["Name"],
+    #             ]
+    #         elif self.entity_domain == EntityDomainTypes.Portfolio:
+    #             list_of_items = [
+    #                 ["Portfolio"],
+    #                 ["Portfolio", "PredominantAssetRegion"],
+    #                 ["Portfolio", "PredominantAssetRegion", "DealName"],
+    #             ]
+    #             # list_of_items = [
+    #             #     ["Portfolio"],
+    #             #     ["PredominantRealizationTypeCategory"],
+    #             #     ["PredominantRealizationTypeCategory", "VintageYear"],
+    #             #     ["Name"],
+    #             # ]
+    #         elif self.entity_domain == EntityDomainTypes.Vertical:
+    #             # list_of_items = [
+    #             #     ["Portfolio"],
+    #             #     ["Portfolio", "PredominantInvestmentType"],
+    #             #     ["Portfolio", "PredominantInvestmentType", "EmergingDiverseStatus"],
+    #             #     ["Portfolio", "PredominantInvestmentType", "EmergingDiverseStatus", "DealName"],
+    #             # ]
+    #             # list_of_items = [
+    #             #     ["Portfolio"],
+    #             #     ["Portfolio", "VintageGroup"],
+    #             #     ["Portfolio", "VintageGroup", "InvestmentManagerName"],
+    #             #     ["Portfolio", "VintageGroup", "InvestmentManagerName", "DealName"],
+    #             # ]
+    #             # list_of_items = [
+    #             #     ["Portfolio"],
+    #             #     ["Portfolio", "VintageGroup"],
+    #             #     ["Portfolio", "VintageGroup", "BurgissSector"],
+    #             #     ["Portfolio", "VintageGroup", "BurgissSector", "DealName"]
+    #             # ]
+    #             list_of_items = [
+    #                 ["Portfolio"],
+    #                 ["Portfolio", 'PredominantInvestmentType'],
+    #                 ["Portfolio", 'PredominantInvestmentType', "DealName"],
+    #                 # ["Portfolio", 'PredominantInvestmentType', "EmergingDiverseStatus", "DealName"],
+    #             ]
+    #         setattr(self, __name, list_of_items)
+    #     return getattr(self, __name, None)
 
     @property
-    def trailing_periods(self) -> dict:
+    def trailing_periods(self, as_of_date) -> dict:
         # TODO: make this work so not using tmp_trailing_periods
         # TODO: also probably should use standard trailing_period enums
-        as_of_date = Scenario.get
         return {
             "QTD": 1,
             "YTD": int(as_of_date.month / 3),
@@ -392,39 +488,40 @@ class PvmPerformanceHelper(object):
             "ITD": "ITD",
         }
 
-    @property
-    def attributes_needed(self) -> List[str]:
-        if self.entity_domain == EntityDomainTypes.Portfolio:
-            return [
-                "Name",
-                # "PredominantInvestmentType",
-                # "PredominantSector",
-            ]
-            # return [
-            #     "Name",
-            #     "PredominantRealizationTypeCategory",
-            #     "VintageYear",
-            # ]
-        elif self.entity_domain == EntityDomainTypes.Vertical:
-            # return [
-            #     "Name",
-            #     "PredominantInvestmentType",
-            #     "PredominantSector",
-            # ]
-            # TODO: refactor "Name" to be Atomic unit or equiv; Node ID/Edge ID?
-            return [
-                "Name",
-                "DealName",
-                "PredominantInvestmentType",
-                "EmergingDiverseStatus"
-            ]
-        elif self.entity_domain == EntityDomainTypes.InvestmentManager:
-            return [
-                "Name",
-                "PredominantInvestmentType",
-                "PredominantSector",
-                "PredominantRealizationTypeCategory",
-            ]
+    # @property
+    # def attributes_needed(self) -> List[str]:
+    #     if self.entity_domain == EntityDomainTypes.Portfolio:
+    #         return [
+    #             "Name",
+    #             "PredominantAssetRegion",
+    #             "DealName",
+    #         ]
+    #         # return [
+    #         #     "Name",
+    #         #     "PredominantRealizationTypeCategory",
+    #         #     "VintageYear",
+    #         # ]
+    #     elif self.entity_domain == EntityDomainTypes.Vertical:
+    #         # return [
+    #         #     "Name",
+    #         #     "VintageGroup",
+    #         #     "BurgissSector",
+    #         #     'DealName'
+    #         # ]
+    #         # TODO: refactor "Name" to be Atomic unit or equiv; Node ID/Edge ID?
+    #         return [
+    #             "Name",
+    #             'PredominantInvestmentType',
+    #             # "EmergingDiverseStatus",
+    #             "DealName"
+    #         ]
+    #     elif self.entity_domain == EntityDomainTypes.InvestmentManager:
+    #         return [
+    #             "Name",
+    #             "PredominantInvestmentType",
+    #             "PredominantSector",
+    #             "PredominantRealizationTypeCategory",
+    #         ]
 
     @property
     def top_line_owner(self) -> str:
@@ -448,7 +545,7 @@ class PvmPerformanceHelper(object):
                 setattr(self, __name, tickers[0])
             elif self.entity_domain == EntityDomainTypes.Vertical:
                 # ad hoc/temporary
-                tickers = ["GCM Private Equity"]
+                tickers = ["GCM PE"]
                 assert len(tickers) == 1
                 setattr(self, __name, tickers[0])
         return getattr(self, __name, None)
@@ -496,6 +593,17 @@ class PvmPerformanceHelper(object):
             _trailing_periods=tmp_trailing_period,
         )
 
+        if self.iteration_number == 0:
+            dimn_name = 'x Vintage & Realization Status Breakdown'
+        elif self.iteration_number == 1:
+            dimn_name = 'x Investment Manager Breakdown'
+        elif self.iteration_number == 2:
+            dimn_name = 'x Sector Breakdown'
+        elif self.iteration_number == 3:
+            dimn_name = 'x Region Breakdown'
+        else:
+            dimn_name = 'Breakdown'
+
         # more to do on the below
         report_json.update(
             {
@@ -504,7 +612,24 @@ class PvmPerformanceHelper(object):
                     {"PortfolioName": [self.top_line_owner]},
                 ),
                 "benchmark_df": PvmPerfomanceHelperSingleton().benchmark_df,
+                "dimn_cut": pd.DataFrame({
+                    'DimnCut': [
+                        dimn_name
+                    ]
+                }
+                )
             }
         )
+        page_number = int(math.ceil((len(report_json.get('Data')) + 20) / 77))
+        if (self.iteration_number+1) <= 3:
+            report_json.update(
+                {
+                    f"Page{int(self.iteration_number + 2)}": pd.DataFrame(
+                        {
+                            "PageNumber": [page_number]
+                        },
+                    ),
+                }
+            )
 
         return report_json

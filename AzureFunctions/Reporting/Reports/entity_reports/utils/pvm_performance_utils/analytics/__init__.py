@@ -28,7 +28,7 @@ def format_performance_report(
     attrib = full_cfs[_attributes_needed].drop_duplicates()
     attrib["Portfolio"] = owner
 
-    for group in range(0, len(list_to_iterate)):
+    for group in range(len(list_to_iterate)):
         attrib["Group" + str(group)] = attrib.apply(
             lambda x: "_".join(
                 [str(x[i]) for i in list_to_iterate[group]]
@@ -79,7 +79,7 @@ def format_performance_report(
         attrib = attrib.sort_values("Order")
     if "VintageYear" in attrib.columns:
         attrib = attrib.sort_values("VintageYear")
-        attrib.VintageYear = attrib.VintageYear.astype(int).astype(str)
+        # attrib.VintageYear = attrib.VintageYear.astype(int).astype(str)
     if "PredominantAssetRegion" in attrib.columns:
         attrib = attrib.sort_values("PredominantAssetRegion")
 
@@ -94,15 +94,15 @@ def format_performance_report(
     ordered_rpt_items, counter_df = recurse_down_order(
         attrib, group_by_list=ordered_recursion, depth=0, counter=0
     )
-    if "VintageYear" in attrib.columns:
-        ordered_rpt_items.Name = ordered_rpt_items.Name.str.replace(
-            ".0", ""
-        )
-        ordered_rpt_items.DisplayName = (
-            ordered_rpt_items.DisplayName.str.replace(".0", "")
-        )
-        for i in list_of_rpt_dfs:
-            i.Name = i.Name.str.replace(".0", "")
+    # if "VintageYear" in attrib.columns:
+        # ordered_rpt_items.Name = ordered_rpt_items.Name.str.replace(
+        #     ".0", ""
+        # # )
+        # ordered_rpt_items.DisplayName = (
+        #     ordered_rpt_items.DisplayName.str.replace(".0", "")
+        # )
+        # for i in list_of_rpt_dfs:
+        #     i.Name = i.Name.str.replace(".0", "")
     rslt = reduce(
         lambda left, right: pd.merge(
             left, right, on=["Name"], how="outer"
@@ -113,6 +113,7 @@ def format_performance_report(
         by=["Counter", "Commitment"], ascending=[False, False]
     )
     columns = [
+        "Name",
         "DisplayName",
         "MaxNavDate",
         "Duration",
@@ -152,12 +153,19 @@ def format_performance_report(
     rslt = rslt[columns]
     rslt = rslt[~rslt.DisplayName.isnull()]
 
-    flat_data = rslt.merge(
-        attrib, how="left", left_on="DisplayName", right_on="DealName"
-    )
-    flat_data["Name"] = np.where(
-        flat_data.Name.isnull(), flat_data.DisplayName, flat_data.Name
-    )
+    flat_data = rslt.merge(attrib,
+              how="left",
+              left_on="Name",
+              right_on="Name"
+                           )
+    flat_data[list_to_iterate[-1]] = flat_data['Name'].str.split('_', expand=True)
+
+    # flat_data["Name"] = np.where(
+    #     flat_data.Name.isnull(), flat_data.DisplayName, flat_data.Name
+    # )
+    # attrib.to_csv('C:/Tmp/attrib output test.csv')
+    rslt.drop(columns=['Name'], inplace=True)
+    flat_data.drop(columns=['Name'], inplace=True)
     return rslt, ordered_rpt_items, flat_data
 
 
@@ -244,36 +252,36 @@ def get_performance_report_dict(
         list_to_iterate,
         _attributes_needed,
     )
-    pme_hit_rate_df = (
-        full_cfs[["Portfolio"] + _attributes_needed]
-        .drop_duplicates()
-        .merge(
-            ks_pme[["Name", "ITD_KsPme"]],
-            how="left",
-            left_on="Name",
-            right_on="Name",
-        )
-        .merge(commitment_df, how="left", left_on="Name", right_on="Name")
-    )
-    pme_hit_rate_df["pct_commitment"] = (
-        pme_hit_rate_df.Commitment / pme_hit_rate_df.Commitment.sum()
-    )
-    pme_hit_rate_df = pme_hit_rate_df[~pme_hit_rate_df.ITD_KsPme.isnull()]
-    pme_hit_rate_df["HitRateType"] = np.where(
-        pme_hit_rate_df.ITD_KsPme > 1, 1, 0
-    )
-
-    pme_hit_rate_rslt = get_hit_rate(
-        df=pme_hit_rate_df,
-        discount_df=discount_df_with_attrib,
-        list_to_iterate=list_to_iterate,
-    ).rename(
-        columns={
-            "HitRateType": "HitRate",
-            "pct_commitment": "SizeRatio",
-            "Discounted": "PnlRatio",
-        }
-    )
+    # pme_hit_rate_df = (
+    #     full_cfs[["Portfolio"] + _attributes_needed]
+    #     .drop_duplicates()
+    #     .merge(
+    #         ks_pme[["Name", "ITD_KsPme"]],
+    #         how="left",
+    #         left_on="Name",
+    #         right_on="Name",
+    #     )
+    #     .merge(commitment_df, how="left", left_on="Name", right_on="Name")
+    # )
+    # pme_hit_rate_df["pct_commitment"] = (
+    #     pme_hit_rate_df.Commitment / pme_hit_rate_df.Commitment.sum()
+    # )
+    # pme_hit_rate_df = pme_hit_rate_df[~pme_hit_rate_df.ITD_KsPme.isnull()]
+    # pme_hit_rate_df["HitRateType"] = np.where(
+    #     pme_hit_rate_df.ITD_KsPme > 1, 1, 0
+    # )
+    #
+    # pme_hit_rate_rslt = get_hit_rate(
+    #     df=pme_hit_rate_df,
+    #     discount_df=discount_df_with_attrib,
+    #     list_to_iterate=list_to_iterate,
+    # ).rename(
+    #     columns={
+    #         "HitRateType": "HitRate",
+    #         "pct_commitment": "SizeRatio",
+    #         "Discounted": "PnlRatio",
+    #     }
+    # )
 
     # report specific formatting
     list_of_rpt_dfs = [
@@ -305,12 +313,14 @@ def get_performance_report_dict(
     # 'FormatSector' named_range should be Group2,
     # 1:n number of groups should be dynamic
     ordered_rpt_items.reset_index(inplace=True, drop=True)
-    # formatted_rslt.DisplayName = [str(x)[str(x).find('ticker_')+7:] if 'ticker_' in str(x) else str(x) for x in formatted_rslt.DisplayName]
 
     # formatted_rslt = formatted_rslt[~formatted_rslt.DisplayName.isin(
     #     ordered_rpt_items[ordered_rpt_items.Layer == ordered_rpt_items.Layer.max()].DisplayName
     # )]
-    input_data = {"Data": formatted_rslt, "FlatData": flat_data}
+    input_data = {
+        "Data": formatted_rslt,
+        # "FlatData": flat_data
+    }
 
     group_range_map = {1: "FormatType", 2: "FormatSector", 3: "GroupThree"}
     for group_number in ordered_rpt_items.Layer.unique():

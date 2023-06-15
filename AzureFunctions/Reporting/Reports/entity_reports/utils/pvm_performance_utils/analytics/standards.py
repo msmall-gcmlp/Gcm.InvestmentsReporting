@@ -120,9 +120,19 @@ def discount_table(
 
 
 def get_investment_sector_benchmark(df):
+    # TODO: adhoc/temp/sector and bmark assignment
+    # benchmark_map = pd.read_csv('C:/Tmp/TickerPmeMap.csv')
+    # df_bmark_mapped = df.merge(benchmark_map.rename(columns={'Ticker': 'BenchmarkTicker'}), how='left',
+    #                 left_on='BurgissSector',
+    #                 right_on='PredominantSector')
+    # df_bmark_mapped.BenchmarkTicker = np.where(df_bmark_mapped.BenchmarkTicker.isnull(),
+    #                                            'SPXT Index',
+    #                                            df_bmark_mapped.BenchmarkTicker)
+
     df_bmark_mapped = df.copy()
-    # only SPXT currently per Amy
     df_bmark_mapped["BenchmarkTicker"] = "SPXT Index"
+
+
 
     def oper(query: Query, item: DeclarativeMeta):
         query = filter_many(
@@ -177,7 +187,7 @@ def format_and_get_pme_bmarks(
 
 def get_alpha_discount_table(fund_df, fund_cf, index_prices):
     discount_table_rslt = pd.DataFrame()
-    for idx in range(0, len(fund_df)):
+    for idx in range(len(fund_df)):
         print(fund_df.Name[idx])
         single_fund = fund_cf[fund_cf["Name"] == fund_df.Name[idx]].copy()
         single_fund_group_sum = (
@@ -264,7 +274,6 @@ def get_direct_alpha_rpt(
     _attributes_needed: List[str],
     _trailing_periods: dict,
 ):
-    # bmark assignment is always at investment level
     fund_cf, index_prices = format_and_get_pme_bmarks(
         df, _attributes_needed
     )

@@ -1,3 +1,6 @@
+import math
+from functools import cached_property
+
 from ....core.report_structure import (
     ReportStructure,
     ReportMeta,
@@ -46,10 +49,17 @@ from gcm.inv.dataprovider.entity_provider.entity_domains.synthesis_unit.type_con
 # For synthesisunits:
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-12-31&ReportName=PvmPerformanceBreakoutReport&test=True&frequency=Quarterly&save=True&aggregate_interval=Multi&EntityDomainTypes=SynthesisUnit&SynthesisUnitType=PvmDealAssetClass
 class PvmPerformanceBreakoutReport(ReportStructure):
-    def __init__(self, report_meta: ReportMeta):
+    def __init__(self, report_meta: ReportMeta,
+                 recursion_iterate_controller,
+                 attributes_needed,
+                 iteration_number):
         super().__init__(
             ReportNames.PvmPerformanceBreakoutReport, report_meta
         )
+        self.recursion_iterate_controller = recursion_iterate_controller
+        self.attributes_needed = attributes_needed
+        self.iteration_number = iteration_number
+
 
     @property
     def excel_template_location(self):
@@ -57,7 +67,8 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
             sources="investmentsreporting",
             entity="exceltemplates",
-            path=["TWROR_Template_threey.xlsx"],
+            path=["PvmPerformanceBreakdown_Template.xlsx"],
+            # path=["TWROR_Template_hitrate.xlsx"],
         )
 
     @classmethod
@@ -81,7 +92,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
 
     def report_name_metadata(self):
         domain_name = self.report_meta.entity_domain.name
-        return f"PE {domain_name} Performance x Industry x Deal"
+        return f"PE {domain_name} Performance Breakout"
 
     @classmethod
     def standard_entity_get_callable(
@@ -117,15 +128,20 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         entity_info = self.report_meta.entity_info
 
         # actually calls report process
-        p = PvmPerformanceHelper(domain, entity_info=entity_info)
+        p = PvmPerformanceHelper(domain,
+                                 entity_info=entity_info,
+                                 recursion_iterate_controller=self.recursion_iterate_controller,
+                                 attributes_needed=self.attributes_needed,
+                                 iteration_number=self.iteration_number)
         final_data: dict = p.generate_components_for_this_entity(
-            as_of_date
+            as_of_date,
         )
 
         tables: List[ReportTable] = []
         for k, v in final_data.items():
             this_table = ReportTable(k, v)
             tables.append(this_table)
+
 
         # below is this-report specific logic to derive render params
         # other reports may use different logic
@@ -139,8 +155,13 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         # regions_to_trim: List[str] = [x.component_name for x in tables]
 
         # 22 = number of excel header rows before primary_df range starts (not scalable)
-        print_region = "B1:AC" + str(len(primary_df) + 22)
+        print_region = "B1:AC" + str(len(primary_df) + 21)
+        # print_region = "B1:AC50"
         hide_columns = []
+        # if (self.iteration_number + 1) <= 3:
+        #     page_number = int(math.ceil((len(primary_df) + 20) / 77) + 1)
+        # else:
+        #     page_number = None
 
         # TODO: check portfolio inception date to set these dynamically
         if primary_df.loc[0, "3Y_AnnRor"] is None:
@@ -165,18 +186,35 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             # hide 5Y columns
             hide_columns = ["N", "O", "P", "Q", "R", "S"]
 
+        breakdown_tables = [
+            x for x in tables if 'Page' not in x.component_name
+        ]
+        toc_sheet = [
+            x for x in tables if 'Page' in x.component_name or x.component_name == 'Date' or x.component_name == 'PortfolioName'
+        ]
+
         this_worksheet = ReportWorksheet(
             sheet_name,
-            report_tables=tables,
+            report_tables=breakdown_tables,
             render_params=ReportWorksheet.ReportWorkSheetRenderer(
                 # trim_region=regions_to_trim,
                 print_region=print_region,
                 hide_columns=hide_columns,
             ),
         )
+        toc_worksheet = ReportWorksheet(
+            'Table of Contents',
+            report_tables=toc_sheet,
+            render_params=ReportWorksheet.ReportWorkSheetRenderer(
+                # trim_region=regions_to_trim,
+                # print_region=print_region,
+                # hide_columns=hide_columns,
+            ),
+        )
         workbook = ReportWorkBookHandler(
             f"{self.report_meta.entity_domain.name}_Perf",
             template_location=self.excel_template_location,
-            report_sheets=[this_worksheet],
+            report_sheets=[this_worksheet, toc_worksheet],
         )
         return [workbook]
+

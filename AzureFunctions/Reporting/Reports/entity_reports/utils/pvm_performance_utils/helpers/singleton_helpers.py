@@ -73,7 +73,7 @@ def get_burgiss_bmark() -> pd.DataFrame:
         raw = """
                 select * 
                 from burgiss.BenchmarkFact
-                where Date = '2022-9-30'
+                where Date = '2022-12-31'
                 and AssetGroup='Buyout'
                 and GeographyGroup='All'
                 and Vintage = 'All'
@@ -161,6 +161,7 @@ def get_all_deal_attributes() -> pd.DataFrame:
                     im.LegalName InvestmentManagerName,
                     hrpting.SmallAndEmerging,
 					hrpting.DiverseManager,
+					hrpting.VintageYear HoldingVintageYear,
                     hrpting.PredominantSector,
                     d.*
                 from entitydata.OperationalSeries os
@@ -177,24 +178,61 @@ def get_all_deal_attributes() -> pd.DataFrame:
             raw,
             dao.data_engine.session.bind,
         )
-        # needed when we do x-portfolio analysis where each "atomic unit" needs to be independently evaluated at portfolio level
-        # df['Name'] = df.PortfolioTicker + 'ticker_' + df.Name
+
         # TODO: move to perm location
         import numpy as np
         df.SmallAndEmerging = np.where(df.SmallAndEmerging.isnull(), 0, df.SmallAndEmerging)
         df.DiverseManager = np.where(df.DiverseManager.isnull(), 0, df.DiverseManager)
         df['SumEmergingDiverse'] = df.SmallAndEmerging + df.DiverseManager
-        df['EmergingDiverseStatus'] = np.where((df.SmallAndEmerging + df.DiverseManager) > 0, 'Small/Emerging/Diverse', 'Other')
+        df['EmergingDiverseStatus'] = np.where((df.SmallAndEmerging + df.DiverseManager) > 0, 'SEM/DM', 'Other')
         # df['EmergingDiverseStatus'] = np.where(df.Name == 'Project Rambler',
         #                                        'Other',
         #                                        df.EmergingDiverseStatus)
-        df.rename(columns={'Name': 'DealName'}, inplace=True)
+#         df = df.assign(
+#             VintageGroup=lambda v: v.VintageYear.apply(
+#                 lambda VintageYear: "Small"
+#                 if VintageYear <= 2000000000
+#                 else "Mid"
+#                 if VintageYear <= 10000000000
+#                 else "Large"
+#                 if VintageYear > 10000000000
+#                 else "N/A"
+#     ),
+# )
+#         df['HoldingVintageYear'] = np.where(df.HoldingVintageYear.isnull(), df.VintageYear, df.HoldingVintageYear)
+#         df.drop(columns=['VintageYear'], inplace=True)
+#         df.rename(columns={'HoldingVintageYear': 'VintageYear'}, inplace=True)
+        # df['VintageYear'] = df.HoldingVintageYear
 
         return df
 
-    attrib = __runner().execute(
+    df = __runner().execute(
         params={},
         source=DaoSource.PvmDwh,
         operation=my_dao_operation,
     )
-    return attrib
+
+    df['VintageYear'] = df.VintageYear.astype(int).astype(str)
+
+    # tmp_burgiss_sector_map = pd.read_csv('C:/Tmp/BurgissSectorMap.csv')
+    #
+    # tmp_chk = len(df)
+    # df = df.merge(tmp_burgiss_sector_map,
+    #               how='left',
+    #               left_on='PredominantSector',
+    #               right_on='GcmSector')
+    # assert len(df) == tmp_chk
+    #
+    # tmp = pd.read_csv('C:/Tmp/deals needed.csv')
+    # tmp_chk = len(df)
+    # df = df.merge(tmp[['Deal Name', 'VintageGroup']], how='left', left_on='Name', right_on='Deal Name')
+    # assert len(df) == tmp_chk
+
+    # tmp = pd.read_csv('C:/Tmp/deals needed.csv')
+    # tmp_chk = len(df)
+    # df = df.merge(tmp[['Deal Name', 'VintageGroup']], how='left', left_on='Name', right_on='Deal Name')
+    # assert len(df) == tmp_chk
+
+    df.rename(columns={'Name': 'DealName'}, inplace=True)
+
+    return df
