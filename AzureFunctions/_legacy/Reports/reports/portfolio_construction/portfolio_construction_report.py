@@ -25,7 +25,7 @@ def get_optimal_weights(
         SELECT
             igm.EntityName as InvestmentGroupName,
             igm.EntityId as InvestmentGroupId,
-            ow.Weight AS Optimized
+            ow.LongTermWeight AS Optimized
         FROM PortfolioConstruction.OptimalWeights ow
         LEFT JOIN entitymaster.InvestmentGroupMaster igm
         ON ow.InvestmentGroupId = igm.EntityId
