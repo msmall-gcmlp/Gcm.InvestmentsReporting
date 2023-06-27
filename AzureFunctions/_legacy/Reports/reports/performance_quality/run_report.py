@@ -39,8 +39,8 @@ if __name__ == "__main__":
         config_params={
             DaoRunnerConfigArgs.dao_global_envs.name: {
                 DaoSource.DataLake.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 DaoSource.PubDwh.name: {
                     "Environment": "prd",
@@ -51,12 +51,12 @@ if __name__ == "__main__":
                     "Subscription": "prd",
                 },
                 DaoSource.DataLake_Blob.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 DaoSource.ReportingStorage.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
             }
         },
@@ -74,8 +74,8 @@ if __name__ == "__main__":
             funds_and_peers = report_runner.generate_report_data(investment_group_ids=prd_ids)
 
             funds_and_peers = json.loads(funds_and_peers)
-            fund_names = funds_and_peers.get("fund_names")
+            #fund_names = funds_and_peers.get("fund_names")
             peer_groups = funds_and_peers.get("peer_groups")
 
             report_runner.generate_peer_summaries(peer_groups=peer_groups)
-            report_runner.generate_fund_reports(fund_names=fund_names)
+            #report_runner.generate_fund_reports(fund_names=fund_names)

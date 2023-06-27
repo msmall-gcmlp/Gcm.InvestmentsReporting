@@ -382,6 +382,75 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
                             'T60': _sanitize_list(t5y_returns),
                             'T120': _sanitize_list(t10y_returns)}
         return periodic_returns
+    
+    def _calculate_constituent_excess_returns(self):
+        def _sanitize_list(returns_df):
+            return returns_df.dropna().round(4).tolist()
+
+        mtd_returns = self._analytics.compute_periodic_return(
+            ror=self._constituent_returns,
+            period=PeriodicROR.MTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
+        )
+
+        qtd_returns = self._analytics.compute_periodic_return(
+            ror=self._constituent_returns,
+            period=PeriodicROR.QTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
+        )
+        ytd_returns = self._analytics.compute_periodic_return(
+            ror=self._constituent_returns,
+            period=PeriodicROR.QTD,
+            as_of_date=self._as_of_date,
+            method="geometric",
+        )
+
+        t1y_returns = self._analytics.compute_trailing_return(
+            ror=self._constituent_returns,
+            window=12,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        t3y_returns = self._analytics.compute_trailing_return(
+            ror=self._constituent_returns,
+            window=36,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        t5y_returns = self._analytics.compute_trailing_return(
+            ror=self._constituent_returns,
+            window=60,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        t10y_returns = self._analytics.compute_trailing_return(
+            ror=self._constituent_returns,
+            window=120,
+            as_of_date=self._as_of_date,
+            method="geometric",
+            annualize=True,
+            periodicity=Periodicity.Monthly,
+        )
+
+        periodic_returns = {PeriodicROR.MTD.value: _sanitize_list(mtd_returns),
+                            PeriodicROR.QTD.value: _sanitize_list(qtd_returns),
+                            PeriodicROR.YTD.value: _sanitize_list(ytd_returns),
+                            'T12': _sanitize_list(t1y_returns),
+                            'T36': _sanitize_list(t3y_returns),
+                            'T60': _sanitize_list(t5y_returns),
+                            'T120': _sanitize_list(t10y_returns)}
+        return periodic_returns
 
     def _summarize_peer_counts(self):
         counts = self._helper.summarize_counts(returns=self._constituent_returns)
@@ -454,20 +523,20 @@ if __name__ == "__main__":
         config_params={
             DaoRunnerConfigArgs.dao_global_envs.name: {
                 DaoSource.DataLake.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 DaoSource.PubDwh.name: {
                     "Environment": "prd",
                     "Subscription": "prd",
                 },
                 DaoSource.InvestmentsDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 DaoSource.DataLake_Blob.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 # DaoSource.ReportingStorage.name: {
                 #     "Environment": "uat",
