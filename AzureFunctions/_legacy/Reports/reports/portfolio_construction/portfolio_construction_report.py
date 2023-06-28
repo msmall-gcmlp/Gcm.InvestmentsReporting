@@ -352,8 +352,15 @@ def get_report_data(portfolio_acronym, scenario_name, as_of_date):
     ).merge(
         weights, on="InvestmentGroupId", how="outer"
     )
+
+    st_weights = pd.read_csv("st_weights.csv").rename(columns={'Weight': 'StWeight',
+                                                                'Fund': 'InvestmentGroupName'})
+    st_weights = st_weights[st_weights['Acronym'] == portfolio_acronym]
+    st_weights = st_weights[['InvestmentGroupName', 'StWeight']]
+    weights = weights.merge(st_weights, on='InvestmentGroupName', how='left')
+
     # TODO: get planned from appropriate locations
-    weights["Planned"] = weights["Current"]
+    weights["Planned"] = weights["StWeight"]
     weights.InvestmentGroupName = weights.InvestmentGroupName.combine_first(weights.Fund)
     weights = weights[["InvestmentGroupName", "InvestmentGroupId", "Current", "Planned", "Optimized"]]
     weights = weights.fillna(0)
