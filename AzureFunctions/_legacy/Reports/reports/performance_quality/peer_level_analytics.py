@@ -10,6 +10,7 @@ from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 from _legacy.Reports.reports.performance_quality.helper import PerformanceQualityHelper
+#from _legacy.Reports.reports.performance_quality.report import PerformanceQualityReport
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario
@@ -383,81 +384,32 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
                             'T120': _sanitize_list(t10y_returns)}
         return periodic_returns
     
-    def _calculate_constituent_excess_returns(self):
-        def _sanitize_list(returns_df):
-            return returns_df.dropna().round(4).tolist()
-
-        mtd_returns = self._analytics.compute_periodic_return(
-            ror=self._constituent_returns,
-            period=PeriodicROR.MTD,
-            as_of_date=self._as_of_date,
-            method="geometric",
-        )
-
-        qtd_returns = self._analytics.compute_periodic_return(
-            ror=self._constituent_returns,
-            period=PeriodicROR.QTD,
-            as_of_date=self._as_of_date,
-            method="geometric",
-        )
-        ytd_returns = self._analytics.compute_periodic_return(
-            ror=self._constituent_returns,
-            period=PeriodicROR.QTD,
-            as_of_date=self._as_of_date,
-            method="geometric",
-        )
-
-        t1y_returns = self._analytics.compute_trailing_return(
-            ror=self._constituent_returns,
-            window=12,
-            as_of_date=self._as_of_date,
-            method="geometric",
-            annualize=True,
-            periodicity=Periodicity.Monthly,
-        )
-
-        t3y_returns = self._analytics.compute_trailing_return(
-            ror=self._constituent_returns,
-            window=36,
-            as_of_date=self._as_of_date,
-            method="geometric",
-            annualize=True,
-            periodicity=Periodicity.Monthly,
-        )
-
-        t5y_returns = self._analytics.compute_trailing_return(
-            ror=self._constituent_returns,
-            window=60,
-            as_of_date=self._as_of_date,
-            method="geometric",
-            annualize=True,
-            periodicity=Periodicity.Monthly,
-        )
-
-        t10y_returns = self._analytics.compute_trailing_return(
-            ror=self._constituent_returns,
-            window=120,
-            as_of_date=self._as_of_date,
-            method="geometric",
-            annualize=True,
-            periodicity=Periodicity.Monthly,
-        )
-
-        periodic_returns = {PeriodicROR.MTD.value: _sanitize_list(mtd_returns),
-                            PeriodicROR.QTD.value: _sanitize_list(qtd_returns),
-                            PeriodicROR.YTD.value: _sanitize_list(ytd_returns),
-                            'T12': _sanitize_list(t1y_returns),
-                            'T36': _sanitize_list(t3y_returns),
-                            'T60': _sanitize_list(t5y_returns),
-                            'T120': _sanitize_list(t10y_returns)}
-        return periodic_returns
-
+    # def _calculate_constituent_excess_returns(self):
+    #     peer_xs_ret_summary=pd.DataFrame()
+    #     tmp1=self._constituent_returns.dropna(axis=0, how='all')
+    #     bmrk_ret=self._peer_arb_benchmark_returns
+    #     for col in tmp1.columns:
+    #         peer_fund_summary=PerformanceQualityReport(fund_name=col)._get_return_summary(returns=tmp1[col], return_type="Fund")
+    #         peer_fund_xs=PerformanceQualityReport(fund_name=col)._get_excess_return_summary(
+    #             fund_returns=peer_fund_summary,
+    #             benchmark_returns=bmrk_ret,
+    #             benchmark_name="AbsoluteReturnBenchmark",
+    #         )
+    #         peer_fund_xs['AbsoluteReturnBenchmarkExcess'].replace('', np.nan, inplace=True)
+    #         curr_peer_xs=pd.DataFrame(peer_fund_xs["AbsoluteReturnBenchmarkExcess"])
+    #         curr_peer_xs=curr_peer_xs.rename(columns={'AbsoluteReturnBenchmarkExcess':col})
+    #         curr_peer_xs=curr_peer_xs.transpose()
+    #         peer_xs_ret_summary=pd.concat([peer_xs_ret_summary, curr_peer_xs])
+    #     peer_xs_ret_summary.dropna(how='all', inplace=True)
+    #     return peer_xs_ret_summary
+    
     def _summarize_peer_counts(self):
         counts = self._helper.summarize_counts(returns=self._constituent_returns)
         return {'counts': [int(x) for x in counts]}
 
     def generate_peer_level_summaries(self):
         constituent_total_returns = self._calculate_constituent_total_returns()
+        constituent_excess_returns = self._calculate_constituent_excess_returns()
         market_scenarios, conditional_ptile_summary = \
             generate_peer_conditional_excess_returns(peer_returns=self._constituent_returns,
                                                      benchmark_returns=self._peer_arb_benchmark_returns)
@@ -487,6 +439,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
             "market_scenarios_3y": market_scenarios.to_json(orient="index"),
             "market_returns_monthly": self._peer_arb_benchmark_returns.to_json(orient="index"),
             "constituent_total_returns": constituent_total_returns,
+            #"constituent_excess_returns": constituent_excess_returns,
             "gcm_peer_returns": self._gcm_peer_returns.to_json(orient="index"),
             "peer_counts": peer_counts
         }
