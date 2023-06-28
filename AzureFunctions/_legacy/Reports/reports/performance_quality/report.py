@@ -213,8 +213,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _primary_peer_returns(self):
-        x= pd.read_json(self._peer_inputs["gcm_peer_constituent_returns"], orient="index")
-        x=x.squeeze()
         if self._primary_peer_analytics is not None:
             #returns = pd.read_json(self._primary_peer_analytics["gcm_peer_returns"], orient="index")
             returns = pd.read_json(self._peer_inputs["gcm_peer_returns"], orient="index")
@@ -230,6 +228,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return returns.squeeze()
         else:
             return pd.Series(name='PrimaryPeer')
+        
 
     @cached_property
     def _primary_peer_counts(self):
@@ -529,9 +528,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _primary_peer_total_returns(self):
         if self._primary_peer_group is not None:
-            # x=self._primary_peer_analytics
-            # y=self._primary_peer_analytics['condl_peer_excess_returns']
-            # z=self._primary_peer_analytics["constituent_total_returns"]
             return self._primary_peer_analytics["constituent_total_returns"]
         else:
             return None
@@ -539,10 +535,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _primary_peer_excess_returns(self):
         if self._primary_peer_group is not None:
-            # x=self._primary_peer_analytics
-            # y=self._primary_peer_analytics['condl_peer_excess_returns']
-            # z=self._primary_peer_analytics["constituent_total_returns"]
-            return self._primary_peer_analytics["constituent_total_returns"]
+            return self._primary_peer_analytics["constituent_excess_returns"]
         else:
             return None
 
@@ -799,24 +792,28 @@ class PerformanceQualityReport(ReportingRunnerBase):
         )
 
         return summary
-
-    def build_ar_peer(self):
-        peer_rors=self._primary_peer_constituent_returns
+    
+    def build_ar_peer_excess(self):
+        #peer_rors=self._primary_peer_constituent_returns
         #peer_rors=PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._peer_arb_benchmark_returns
-        tmp1=PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._constituent_returns
+        peer_rors=PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._constituent_returns
+        
+        #g=self._primary_peer_excess_returns
+        # ar_monthly=self._abs_bmrk_returns
+        # ar_monthly=pd.DataFrame(ar_monthly)
+        # ar_monthly.index=pd.to_datetime(ar_monthly.index)
 
-        ar_monthly=self._abs_bmrk_returns
-        ar_monthly=pd.DataFrame(ar_monthly)
-        ar_monthly.index=pd.to_datetime(ar_monthly.index)
-
-        xs_merge=peer_rors.merge(ar_monthly, left_index=True, right_index=True)
-        xs_merge=xs_merge.dropna(axis=1, how='all')
-        xs_merge.columns = [*xs_merge.columns[:-1], 'arb']
+        # xs_merge=peer_rors.merge(ar_monthly, left_index=True, right_index=True)
+        # xs_merge=xs_merge.dropna(axis=1, how='all')
+        # xs_merge.columns = [*xs_merge.columns[:-1], 'arb']
+        # copy_xs_merge=xs_merge.copy()
+        # copy_xs_merge[copy_xs_merge.columns[:-1]]=copy_xs_merge[copy_xs_merge.columns[:-1]].sub(copy_xs_merge.iloc[:,-1], axis=0)
+        # copy_xs_merge=copy_xs_merge.drop(copy_xs_merge.columns[-1], axis=1)
           
         peer_xs_ret_summary=pd.DataFrame()
-        tmp1=tmp1.dropna(axis=0, how='all')
-        for col in tmp1.columns:
-            peer_fund_summary=self._get_return_summary(returns=tmp1[col], return_type="Fund")
+        peer_rors=peer_rors.dropna(axis=0, how='all')
+        for col in peer_rors.columns:
+            peer_fund_summary=self._get_return_summary(returns=peer_rors[col], return_type="Fund")
             peer_fund_xs=self._get_excess_return_summary(
                 fund_returns=peer_fund_summary,
                 benchmark_returns=self._abs_bmrk_returns,
@@ -828,6 +825,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
             curr_peer_xs=curr_peer_xs.transpose()
             peer_xs_ret_summary=pd.concat([peer_xs_ret_summary, curr_peer_xs])
         peer_xs_ret_summary.dropna(how='all', inplace=True)
+        peer_excess_df = peer_xs_ret_summary.iloc[:, :-1]
+        peer_excess_df.rename(columns = {'MTD':'M', 'QTD':'Q', 'YTD':'Y', 'TTM':'T12', '3Y':'T36', '5Y':'T60', '10Y':'T120'
+                                         }, inplace = True)
+        peer_excess_df = {peer_excess_df[column].name: [y for y in peer_excess_df[column] if not pd.isna(y)] for column in peer_excess_df}
+        return peer_excess_df
+        #peer_xs_ret_summary=self._primary_peer_excess_returns
     
         # nish1=xs_merge['Nishkama']
         # nish_df1=pd.DataFrame(nish1)
@@ -839,9 +842,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         #     benchmark_name="AbsoluteReturnBenchmark",
         # )
         
-        copy_xs_merge=xs_merge.copy()
-        copy_xs_merge[copy_xs_merge.columns[:-1]]=copy_xs_merge[copy_xs_merge.columns[:-1]].sub(copy_xs_merge.iloc[:,-1], axis=0)
-        copy_xs_merge=copy_xs_merge.drop(copy_xs_merge.columns[-1], axis=1)
+
         # nish=copy_xs_merge['Nishkama']
         # nish_df=pd.DataFrame(nish)
         # nish_df=nish_df.dropna(axis=0)
@@ -853,9 +854,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         #         periodicity=Periodicity.Monthly,
         #         annualize=True,
         #     )
-        return copy_xs_merge, peer_xs_ret_summary
-    
-    
+        
+
     # def peer_3y_data(self, excess_peer_data):
     #     ret_3y=pd.DataFrame()
     #     for col in excess_peer_data.columns:
@@ -893,6 +893,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
             benchmark_returns=self._ehi200_returns,
             benchmark_name="EHI200",
         )
+        fund_excess_returns=pd.DataFrame(absolute_return_summary.iloc[:,-1])
+        peer_excess_dict=self.build_ar_peer_excess()
         
         
         # k=self._primary_peer_total_returns
@@ -912,27 +914,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
         #     benchmark_returns=self._abs_bmrk_returns,
         #     benchmark_name="AbsoluteReturnBenchmark",
         # )
-        
-        primary_peer_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="Peer1Ptile",
-                                                                constituent_total_returns=self._primary_peer_total_returns)
-        
-        fund_excess_returns=pd.DataFrame(absolute_return_summary.iloc[:,-1])
-        const_monthly_rors,peer_excess_df=self.build_ar_peer()
-        peer_excess_df = peer_excess_df.iloc[:, :-1]
-        peer_excess_df.rename(columns = {'MTD':'M', 'QTD':'Q', 'YTD':'Y', 'TTM':'T12', '3Y':'T36', '5Y':'T60', '10Y':'T120'
-                                         }, inplace = True)
-        peer_excess_df = {peer_excess_df[column].name: [y for y in peer_excess_df[column] if not pd.isna(y)] for column in peer_excess_df}
+    
+        # peer_excess_df = peer_excess_df.iloc[:, :-1]
+        # peer_excess_df.rename(columns = {'MTD':'M', 'QTD':'Q', 'YTD':'Y', 'TTM':'T12', '3Y':'T36', '5Y':'T60', '10Y':'T120'
+        #                                  }, inplace = True)
+        # peer_excess_df = {peer_excess_df[column].name: [y for y in peer_excess_df[column] if not pd.isna(y)] for column in peer_excess_df}
         
         # peer_excess_df=peer_excess_df.to_dict('list')
         # peer_excess_df=[{k:v for k, v in x.items() if v == v } for x in peer_excess_df]
-        h=self._primary_peer_total_returns
+        #h=self._primary_peer_total_returns
         # peer_excess_df_3y=peer_excess_df['3Y']
         # df_3y=pd.DataFrame(peer_excess_df_3y)
         # df_3y=df_3y.dropna(how='all')
         # df_3y.to_csv(r'C:\\Code\peer_3y4.csv',encoding='utf-8') 
         #const_monthly_rors,_=self.build_ar_peer()
-        
-        
+         
         # g=self.peer_3y_data(c)
         # g.dropna(axis=1, how='all',inplace=True)
         # g=g.transpose()
@@ -970,11 +966,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
         # g.to_csv(r'C:\\Code\peer_3y2.csv',encoding='utf-8') 
         # #h=self.peer_3y_data(self._primary_peer_constituent_returns)
         
+        primary_peer_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="Peer1Ptile",
+                                                                constituent_total_returns=self._primary_peer_total_returns)
+        
         primary_peer_excess_arb_percentiles = self._get_percentile_summary(fund_returns=fund_excess_returns, group_name="Peer1Ptile",
-                                                                constituent_total_returns=peer_excess_df)
+                                                                constituent_total_returns=peer_excess_dict)
 
-        secondary_peer_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="Peer2Ptile",
-                                                                  constituent_total_returns=self._secondary_peer_total_returns)
+        # secondary_peer_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="Peer2Ptile",
+        #                                                           constituent_total_returns=self._secondary_peer_total_returns)
 
         eurekahedge_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="EH50Ptile",
                                                                constituent_monthly_rors=self._eurekahedge_constituent_returns)
@@ -1012,7 +1011,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         ehi200 = self._helper.summarize_counts(returns=self._ehi200_constituent_returns)
 
         summary = pd.DataFrame({"primary": self._primary_peer_counts,
-                                "secondary": self._secondary_peer_counts,
+                                "secondary": self._primary_peer_counts,
                                 "eureka": eureka,
                                 "ehi200": ehi200})
         return summary
@@ -1514,15 +1513,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
         prim_peer_ret=pd.DataFrame(self._primary_peer_returns)
         prim_peer_ret.rename(columns={'0':self._primary_peer_group})
 
-        ptile1, ptile2, ptile3=np.percentile(rolling_rors['Excess'], 25), np.mean(rolling_rors['Excess']), np.percentile(rolling_rors['Excess'], 75)
+        ptile_25, ptile_mean, ptile_75=np.percentile(rolling_rors['Excess'], 25), np.mean(rolling_rors['Excess']), np.percentile(rolling_rors['Excess'], 75)
         
         const_ret=PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._constituent_returns
         bmrk_ret=PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._peer_arb_benchmark_returns
+        #const_ret=self._primary_peer_constituent_returns
+        #bmrk_ret=self._abs_bmrk_returns
         market_scenarios, conditional_ptile_summary = \
             generate_peer_conditional_excess_returns(peer_returns=const_ret,
                                                      benchmark_returns=bmrk_ret)
         
-        a,_=_compute_rolling_excess_metrics(const_ret, bmrk_ret,percentiles=[10, 25, 50, 75, 90], window=36)
+        rolling_excess,_=_compute_rolling_excess_metrics(const_ret, bmrk_ret,percentiles=[10, 25, 50, 75, 90], window=36)
         passive_bmrk = bmrk_ret.columns[0]
         if passive_bmrk == 'MOVE Index':
             rolling_3y_bmrk = bmrk_ret.rolling(36).mean().dropna()
@@ -1540,7 +1541,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                             bins=spx_ror_cutoffs,
                                             labels=['composite'])
         
-        conditional_ptiles = rolling_3y_bmrk.merge(a, how='left', left_index=True, right_index=True)
+        conditional_ptiles = rolling_3y_bmrk.merge(rolling_excess, how='left', left_index=True, right_index=True)
         conditional_ptile_summary = conditional_ptiles.groupby('MarketScenario').mean()
         conditional_ptile_summary = conditional_ptile_summary.round(2)
         conditional_ptile_summary = conditional_ptile_summary.iloc[:1]
@@ -1550,7 +1551,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         ind=[10,25,50,75,90]
         peer_excess={'peer_excess': condl_list}
         df_peer=pd.DataFrame(peer_excess, index=ind)
-        fund_excess={'fund_excess': [ptile1, ptile2, ptile3]}
+        fund_excess={'fund_excess': [ptile_25, ptile_mean, ptile_75]}
         df_fund=pd.DataFrame(fund_excess)
         df_fund.columns=['fund_excess']
         
@@ -1811,21 +1812,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.DataFrame(columns=["Month", "Year"] + months + ["YTD"], index=years)
 
         net_exps = self._fund_net_exposures.copy()
-        # index_tuples=gross_exps.index.tolist()
-        # new_index=pd.MultiIndex.from_tuples(index_tuples,names=['Year','Month'])
-        # gross_exps.index=new_index
-        # gross_exps['Month']=gross_exps.index.get_level_values('Month')
-        # gross_exps['Year']=gross_exps.index.get_level_values('Year')
         net_exps.index=net_exps.index.map(ast.literal_eval)
         net_exps['Year']=[index[0] for index in net_exps.index]
         net_exps['Month']=[index[1] for index in net_exps.index]
-        
-        # gross_exps['Year']=gross_exps.index.to_series().apply(lambda x: x[0])
-        # gross_exps['Month']=gross_exps.index.to_series().apply(lambda x: x[1])
-        
-        
-        # gross_exps["Month"] = gross_exps.index.month
-        # gross_exps["Year"] = gross_exps.index.year
 
         # pivot long to wide
         monthly_net_exps = net_exps.pivot(index=["Year"], columns=["Month"])
@@ -1837,10 +1826,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         monthly_net_exps = 100 * monthly_net_exps.astype(float).round(3)
         monthly_net_exps = monthly_net_exps.reset_index()
         
-        #monthly_gross_exps.loc[monthly_gross_exps.isnull().all(axis=1),'Year']=None
         ytd_index = ~monthly_net_exps.isna().all(axis=1)
         monthly_net_exps.loc[~ytd_index.values, "Year"] = None
-        #monthly_gross_exps.dropna(subset=monthly_gross_exps.columns.difference(['Year']),how='all', inplace=True)
         monthly_net_exps.loc[monthly_net_exps.drop('Year',axis=1).isna().all(axis=1), 'Year']=None
 
         return monthly_net_exps
@@ -1854,21 +1841,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.DataFrame(columns=["Month", "Year"] + months + ["YTD"], index=years)
 
         gross_exps = self._fund_gross_exposures.copy()
-        # index_tuples=gross_exps.index.tolist()
-        # new_index=pd.MultiIndex.from_tuples(index_tuples,names=['Year','Month'])
-        # gross_exps.index=new_index
-        # gross_exps['Month']=gross_exps.index.get_level_values('Month')
-        # gross_exps['Year']=gross_exps.index.get_level_values('Year')
         gross_exps.index=gross_exps.index.map(ast.literal_eval)
         gross_exps['Year']=[index[0] for index in gross_exps.index]
         gross_exps['Month']=[index[1] for index in gross_exps.index]
-        
-        # gross_exps['Year']=gross_exps.index.to_series().apply(lambda x: x[0])
-        # gross_exps['Month']=gross_exps.index.to_series().apply(lambda x: x[1])
-        
-        
-        # gross_exps["Month"] = gross_exps.index.month
-        # gross_exps["Year"] = gross_exps.index.year
 
         # pivot long to wide
         monthly_gross_exps = gross_exps.pivot(index=["Year"], columns=["Month"])
@@ -1879,11 +1854,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         
         monthly_gross_exps = 100 * monthly_gross_exps.astype(float).round(3)
         monthly_gross_exps = monthly_gross_exps.reset_index()
-        
-        #monthly_gross_exps.loc[monthly_gross_exps.isnull().all(axis=1),'Year']=None
+
         ytd_index = ~monthly_gross_exps.isna().all(axis=1)
         monthly_gross_exps.loc[~ytd_index.values, "Year"] = None
-        #monthly_gross_exps.dropna(subset=monthly_gross_exps.columns.difference(['Year']),how='all', inplace=True)
         monthly_gross_exps.loc[monthly_gross_exps.drop('Year',axis=1).isna().all(axis=1), 'Year']=None
 
         return monthly_gross_exps
@@ -1903,7 +1876,6 @@ class PerformanceQualityReport(ReportingRunnerBase):
         logging.info("Generating report for: " + self._fund_name)
         header_info = self.get_header_info()
 
-        #build_ar_peer=self.build_ar_peer()
         return_summary = self.build_benchmark_summary()
         conditional_fund_return_summary = self.build_conditional_fund_return_summary()[0]
         conditional_composite_summary= self.build_conditional_fund_return_summary()[1]
