@@ -4,9 +4,9 @@ import os
 import numpy as np
 import pandas as pd
 from gcm.inv.models.portfolio_construction.optimization.optimization_inputs import (
-    OptimizationInputs,
-    download_optimization_inputs,
+    LongTermInputs,
 )
+from gcm.inv.models.portfolio_construction.optimization.get_post_optim_inputs import download_optimization_inputs
 from gcm.data import DataAccess, DataSource
 from gcm.data.sql._sql_odbc_client import SqlOdbcClient
 from gcm.inv.models.portfolio_construction.portfolio_metrics.portfolio_metrics import collect_portfolio_metrics
@@ -25,7 +25,8 @@ def get_optimal_weights(
         SELECT
             igm.EntityName as InvestmentGroupName,
             igm.EntityId as InvestmentGroupId,
-            ow.LongTermWeight AS Optimized
+            ow.LongTermWeight AS LongTermOptimal,
+            ow.ShortTermWeight as ShortTermOptimal
         FROM PortfolioConstruction.OptimalWeights ow
         LEFT JOIN entitymaster.InvestmentGroupMaster igm
         ON ow.InvestmentGroupId = igm.EntityId
@@ -110,11 +111,18 @@ def _format_weights(allocations, strategies, capacity_status):
     wts_formatted.loc[is_closed, 'Fund'] = wts_formatted.loc[is_closed, 'Fund'] + '*'
     wts_formatted.drop(columns={"Capacity"}, inplace=True)
 
-    # leave current to 2 decimals
-    wts_formatted.iloc[:, 2:] = wts_formatted.iloc[:, 2:].astype(float).round(0)
-    wts_formatted['Delta'] = wts_formatted['Optimized'] - wts_formatted['Planned']
-    wts_formatted['Delta - %Risk'] = wts_formatted['Optimized - %Risk'] - wts_formatted['Planned - %Risk']
-    column_order = ['Current', 'Planned', 'Optimized', 'Delta']
+    wts_formatted.iloc[:, 1:] = wts_formatted.iloc[:, 1:].astype(float).round(0)
+    wts_formatted['Delta_LT'] = wts_formatted['LongTermOptimal'] - wts_formatted['Current']
+    wts_formatted['Delta_ST'] = wts_formatted['ShortTermOptimal'] - wts_formatted['Current']
+    wts_formatted['Delta_LT - %Risk'] = wts_formatted['LongTermOptimal - %Risk'] - wts_formatted[
+        'Current - %Risk']
+    wts_formatted['Delta_ST - %Risk'] = wts_formatted['ShortTermOptimal - %Risk'] - wts_formatted[
+        'Current - %Risk']
+    column_order = ['Current',
+                    'ShortTermOptimal',
+                    'Delta_ST',
+                    'LongTermOptimal',
+                    'Delta_LT']
     column_order = ['Fund'] + column_order + [x + ' - %Risk' for x in column_order]
     wts_formatted = wts_formatted[column_order]
 
@@ -124,13 +132,13 @@ def _format_weights(allocations, strategies, capacity_status):
 def _format_allocations_summary(weights, metrics):
     weights = weights.sort_index()
     strategies = metrics['fund_strategies']
-    strategies['Strategy'] = strategies['Current'].combine_first(strategies['Optimized'])
-    strategies['Strategy'] = strategies.Strategy.combine_first(strategies.Planned)
+    strategies['Strategy'] = strategies['Current'].combine_first(strategies['LongTermOptimal'])
+    strategies['Strategy'] = strategies.Strategy.combine_first(strategies.ShortTermOptimal)
     strategies = strategies.reset_index().rename(columns={'index': 'Fund'})[['Fund', 'Strategy']]
 
     capacity = metrics['fund_capacities']
-    capacity['Capacity'] = capacity['Current'].combine_first(capacity['Optimized'])
-    capacity['Capacity'] = capacity['Capacity'].combine_first(capacity['Planned'])
+    capacity['Capacity'] = capacity['Current'].combine_first(capacity['LongTermOptimal'])
+    capacity['Capacity'] = capacity['Capacity'].combine_first(capacity['ShortTermOptimal'])
     capacity = capacity.reset_index().rename(columns={'index': 'Fund'})[['Fund', 'Capacity']]
 
     metrics['risk_allocations'].columns = metrics['risk_allocations'].columns + ' - %Risk'
@@ -139,11 +147,13 @@ def _format_allocations_summary(weights, metrics):
     formatted_weights = _format_weights(allocations=combined_weights,
                                         strategies=strategies,
                                         capacity_status=capacity)
+
     dollar_weights = formatted_weights[['Fund',
                                         'Current',
-                                        'Planned',
-                                        'Optimized',
-                                        'Delta']]
+                                        'ShortTermOptimal',
+                                        'Delta_ST',
+                                        'LongTermOptimal',
+                                        'Delta_LT']]
     risk_weights = formatted_weights[['Fund'] + [x + ' - %Risk' for x in dollar_weights.columns[1:]]]
     risk_weights.columns = dollar_weights.columns
 
@@ -162,8 +172,8 @@ def _combine_metrics_across_weights(weights, optim_inputs, rf):
     metrics = {key: None for key in [f.name for f in portfolio_metrics['Current'].metrics.__attrs_attrs__]}
     for m in metrics.keys():
         metrics[m] = pd.concat([getattr(portfolio_metrics['Current'].metrics, m),
-                                getattr(portfolio_metrics['Planned'].metrics, m),
-                                getattr(portfolio_metrics['Optimized'].metrics, m)], axis=1)
+                                getattr(portfolio_metrics['ShortTermOptimal'].metrics, m),
+                                getattr(portfolio_metrics['LongTermOptimal'].metrics, m)], axis=1)
         metrics[m].columns = weights.columns
 
     strategy_order = pd.DataFrame(index=['Credit', 'Long/Short Equity', 'Macro', 'Multi-Strategy', 'Quantitative',
@@ -352,10 +362,9 @@ def get_report_data(portfolio_acronym, scenario_name, as_of_date):
     ).merge(
         weights, on="InvestmentGroupId", how="outer"
     )
-    # TODO: get planned from appropriate locations
-    weights["Planned"] = weights["Current"]
+
     weights.InvestmentGroupName = weights.InvestmentGroupName.combine_first(weights.Fund)
-    weights = weights[["InvestmentGroupName", "InvestmentGroupId", "Current", "Planned", "Optimized"]]
+    weights = weights[["InvestmentGroupName", "InvestmentGroupId", "Current", "ShortTermOptimal", "LongTermOptimal"]]
     weights = weights.fillna(0)
     weights = weights[weights.iloc[:, 2:].max(axis=1) > 0]
 
@@ -370,7 +379,7 @@ def get_report_data(portfolio_acronym, scenario_name, as_of_date):
 
 def _nullify_data_for_zero_weights(weights, metrics):
     cash = weights['dollar_allocation_summary'].loc[weights['dollar_allocation_summary']['Fund'] == 'Cash & Other']
-    zero_out = cash[['Current', 'Planned', 'Optimized', 'Delta']].abs() == 100
+    zero_out = cash[['Current', 'ShortTermOptimal', 'Delta_ST', 'LongTermOptimal', 'Delta_LT']].abs() == 100
     zero_out_fields = zero_out.T.loc[zero_out.T.values].index
 
     for field in zero_out_fields.tolist():
@@ -386,7 +395,7 @@ def generate_excel_report_data(
     scenario_name: str,
     as_of_date: dt.date,
     weights: pd.DataFrame,
-    optim_inputs: OptimizationInputs,
+    optim_inputs: LongTermInputs,
     reference_attributes: pd.DataFrame
 ):
     # TODO map weights to ids
