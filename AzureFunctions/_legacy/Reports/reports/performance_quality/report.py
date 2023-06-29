@@ -107,6 +107,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _fund_expectations(self):
         expectations = pd.read_json(self._fund_inputs["expectations"], orient="index")
         return expectations
+    
+    @cached_property
+    def _fund_fl_expected_returns(self):
+        expected_return = pd.read_json(self._fund_inputs["fl_expected_returns"], orient="index")
+        return expected_return
 
     @cached_property
     def _fund_distributions(self):
@@ -115,10 +120,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _risk_model_expected_return(self):
-        if self._fund_expectations.shape[0] == 0:
+        if self._fund_fl_expected_returns.shape[0] == 0:
             return np.nan
         else:
-            return self._fund_expectations["RoR"].squeeze().round(2)
+            return self._fund_fl_expected_returns["ExpectedReturn"].squeeze().round(2)
 
     @cached_property
     def _risk_model_expected_vol(self):
@@ -816,7 +821,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         
         h=self._helper.rf_return
         rf_df=pd.DataFrame(h)
-        peer_bmrk_ror = peer_rors.merge(peer_rors1, how='left', left_index=True, right_index=True)
+        peer_bmrk_ror = peer_rors.merge(peer_arb_bmrk, how='left', left_index=True, right_index=True)
         passive_bmrk = peer_arb_bmrk.columns[0]
         betas = []
         
@@ -1734,9 +1739,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.DataFrame(columns=["Month", "Year"] + months + ["YTD"], index=years)
 
         net_exps = self._fund_net_exposures.copy()
-        net_exps.index=net_exps.index.map(ast.literal_eval)
-        net_exps['Year']=[index[0] for index in net_exps.index]
-        net_exps['Month']=[index[1] for index in net_exps.index]
+        net_exps['Month']=net_exps.index.month
+        net_exps['Year']=net_exps.index.year
+        #net_exps.index=net_exps.index.map(ast.literal_eval)
+        #net_exps['Year']=[index[0] for index in net_exps.index]
+        #net_exps['Month']=[index[1] for index in net_exps.index]
 
         # pivot long to wide
         monthly_net_exps = net_exps.pivot(index=["Year"], columns=["Month"])
@@ -1763,9 +1770,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
             return pd.DataFrame(columns=["Month", "Year"] + months + ["YTD"], index=years)
 
         gross_exps = self._fund_gross_exposures.copy()
-        gross_exps.index=gross_exps.index.map(ast.literal_eval)
-        gross_exps['Year']=[index[0] for index in gross_exps.index]
-        gross_exps['Month']=[index[1] for index in gross_exps.index]
+        gross_exps['Month']=gross_exps.index.month
+        gross_exps['Year']=gross_exps.index.year
+        #gross_exps.index=gross_exps.index.map(ast.literal_eval)
+        #gross_exps['Year']=[index[0] for index in gross_exps.index]
+        #gross_exps['Month']=[index[1] for index in gross_exps.index]
 
         # pivot long to wide
         monthly_gross_exps = gross_exps.pivot(index=["Year"], columns=["Month"])
@@ -1797,7 +1806,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         logging.info("Generating report for: " + self._fund_name)
         header_info = self.get_header_info()
-
+        
+        
         return_summary = self.build_benchmark_summary()
         conditional_fund_return_summary = self.build_conditional_fund_return_summary()[0]
         conditional_composite_summary= self.build_conditional_fund_return_summary()[1]
@@ -1972,5 +1982,5 @@ if __name__ == "__main__":
 
     with Scenario(dao=runner, as_of_date=dt.date(2022, 10, 31)).context():
         #for fund in ['Skye', 'Citadel', 'Element', 'D1 Capital']:
-        for fund in ['Element']:
+        for fund in ['Skye']:
             PerformanceQualityReport(fund_name=fund).execute()

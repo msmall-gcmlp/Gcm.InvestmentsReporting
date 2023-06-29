@@ -153,32 +153,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         exposure_3y = self._inv_group.get_average_exposure(start_date=self._start_3y, end_date=self._end_date)
         exposure_5y = self._inv_group.get_average_exposure(start_date=self._start_5y, end_date=self._end_date)
         exposure_10y = self._inv_group.get_average_exposure(start_date=self._start_10y, end_date=self._end_date)
-        # fund_monthly_exposures = self._inv_group.get_monthly_pub_exposure(
-        #     start_date=dt.date(1970, 1, 1),
-        #     end_date=dt.date(2023,4,4)
-        #     #end_date=self._end_date
-        # )
-        # fund_exp_net_df=fund_monthly_exposures[['InvestmentGroupName','Date','ExposureStrategy','NetNotional']]
-        # fund_exp_net_df=fund_monthly_exposures[fund_monthly_exposures['ExposureStrategy'].isin(['Credit','Equities'])]
-        # fund_exp_net_df=fund_exp_net_df.groupby(['InvestmentGroupName','Date']).agg({'NetNotional': 'sum'}).reset_index()
-        # fund_exp_net_timeseries=fund_exp_net_df.sort_values(by=['InvestmentGroupName','Date'])
-        # fund_exp_net_timeseries['Month']=pd.to_datetime(fund_exp_net_timeseries['Date']).dt.month
-        # fund_exp_net_timeseries['Year']=pd.to_datetime(fund_exp_net_timeseries['Date']).dt.year
-        # fund_exp_net_timeseries=fund_exp_net_timeseries.pivot_table(index=['Year','Month'],columns='InvestmentGroupName',values='NetNotional',dropna=False)
-        # fund_exp_net_timeseries.fillna(method='ffill',inplace=True)
-        # fund_monthly_exposures=fund_monthly_exposures[['InvestmentGroupName','Date','GrossNotional']]
-        # fund_monthly_exposures=fund_monthly_exposures.groupby(['InvestmentGroupName','Date']).agg({'GrossNotional': 'sum'}).reset_index()
-        # #fund_monthly_exposures.drop_duplicates(subset=['InvestmentGroupName','Date'],inplace=True)
-        # fund_monthly_exposures.sort_values(by=['InvestmentGroupName','Date'],inplace=True)
-        # fund_monthly_exposures['Month']=pd.to_datetime(fund_monthly_exposures['Date']).dt.month
-        # fund_monthly_exposures['Year']=pd.to_datetime(fund_monthly_exposures['Date']).dt.year
-        # fund_monthly_exposures_timeseries=fund_monthly_exposures.pivot_table(index=['Year','Month'],columns='InvestmentGroupName',values='GrossNotional',dropna=False)
-        # fund_monthly_exposures_timeseries.fillna(method='ffill',inplace=True)
-        # fund_monthly_exposures_timeseries=self._inv_group.get_exposure_timeseries(            
-        #     start_date=dt.date(1970, 1, 1),
-        #     end_date=dt.date(2023,4,4)
-        #     )
-        #net_timeseries_df
         return exposure_latest, exposure_3y, exposure_5y, exposure_10y
 
     @cached_property
@@ -196,14 +170,9 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         fund_exp_net_timeseries = fund_exp_net_timeseries.set_index('Date').groupby('InvestmentGroupName',group_keys=False)\
             .apply(lambda s: s.reindex(i).ffill()).reset_index()
         
-        
-        #fund_exp_net_timeseries['Month']=pd.to_datetime(fund_exp_net_timeseries['Date']).dt.month
-        #fund_exp_net_timeseries['Year']=pd.to_datetime(fund_exp_net_timeseries['Date']).dt.year
-        
         fund_exp_net_timeseries=fund_exp_net_timeseries.pivot_table(index='Date',columns='InvestmentGroupName',values='NetNotional',dropna=False)
         fund_exp_net_timeseries.fillna(method='ffill',inplace=True)
-        #fund_exp_net_timeseries['Date']=pd.to_datetime(fund_exp_net_timeseries['Date'])
-        #fund_exp_net_timeseries.set_index('Date', inplace=True)
+        
         return fund_exp_net_timeseries
     
     
@@ -216,13 +185,12 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         )
         fund_monthly_exposures=fund_monthly_exposures[['InvestmentGroupName','Date','GrossNotional']]
         fund_monthly_exposures=fund_monthly_exposures.groupby(['InvestmentGroupName','Date']).agg({'GrossNotional': 'sum'}).reset_index()
-        #fund_monthly_exposures.drop_duplicates(subset=['InvestmentGroupName','Date'],inplace=True)
-        fund_monthly_exposures.sort_values(by=['InvestmentGroupName','Date'],inplace=True)
+        fund_monthly_gross_exposures=fund_monthly_exposures.sort_values(by=['InvestmentGroupName','Date'])
         i = pd.date_range(dt.date(1970, 1, 1), self._end_date, freq='M', name='Date')
-        fund_monthly_exposures = fund_monthly_exposures.set_index('Date').groupby('InvestmentGroupName',group_keys=False)\
+        fund_monthly_gross_exposures = fund_monthly_gross_exposures.set_index('Date').groupby('InvestmentGroupName',group_keys=False)\
             .apply(lambda s: s.reindex(i).ffill()).reset_index()
 
-        fund_monthly_exposures_timeseries=fund_monthly_exposures.pivot_table(index='Date',columns='InvestmentGroupName',values='GrossNotional',dropna=False)
+        fund_monthly_exposures_timeseries=fund_monthly_gross_exposures.pivot_table(index='Date',columns='InvestmentGroupName',values='GrossNotional',dropna=False)
         
         fund_monthly_exposures_timeseries.fillna(method='ffill',inplace=True)
         fund_monthly_exposures_timeseries=fund_monthly_exposures_timeseries.reset_index()
@@ -370,6 +338,11 @@ class PerformanceQualityReportData(ReportingRunnerBase):
     @cached_property
     def _fund_expectations(self):
         return self._inv_group.get_fund_expectations()
+    
+    @cached_property
+    def _fund_fl_expected_returns(self):
+        x=self._inv_group.get_fund_fl_expected_returns()
+        return self._inv_group.get_fund_fl_expected_returns()
 
     @cached_property
     def _fund_distributions(self):
@@ -395,6 +368,12 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             dimn = self._fund_dimn[self._fund_dimn["InvestmentGroupId"] == fund_id]
             fund_inputs["fund_dimn"] = dimn.to_json(orient="index")
             name = dimn["InvestmentGroupName"].squeeze()
+            
+            # expectations = self._fund_expectations[self._fund_expectations["InvestmentGroupId"] == fund_id]
+            # fund_inputs["expectations"] = expectations.to_json(orient="index")
+            
+            # fl_expected_returns=self._fund_fl_expected_returns[self._fund_fl_expected_returns["InvestmentGroupId"] == fund_id]
+            # fund_inputs["fl_expected_returns"] = fl_expected_returns.to_json(orient="index")
 
             returns = self._report_fund_returns.loc[:, self._report_fund_returns.columns.isin([name])].dropna()
             fund_inputs["fund_returns"] = returns.to_json(orient="index")
@@ -449,6 +428,9 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
             expectations = self._fund_expectations[self._fund_expectations["InvestmentGroupId"] == fund_id]
             fund_inputs["expectations"] = expectations.to_json(orient="index")
+            
+            fl_expected_returns=self._fund_fl_expected_returns[self._fund_fl_expected_returns["InvestmentGroupId"] == fund_id]
+            fund_inputs["fl_expected_returns"] = fl_expected_returns.to_json(orient="index")
 
             if fund_id in self._fund_distributions.columns:
                 distributions = self._fund_distributions[fund_id]
@@ -561,12 +543,12 @@ if __name__ == "__main__":
         config_params={
             DaoRunnerConfigArgs.dao_global_envs.name: {
                 DaoSource.InvestmentsDwh.name: {
-                    "Environment": "dev",
-                    "Subscription": "nonprd",
+                    "Environment": "prd",
+                    "Subscription": "prd",
                 },
                 DaoSource.PubDwh.name: {
-                    "Environment": "dev",
-                    "Subscription": "nonprd",
+                    "Environment": "prd",
+                    "Subscription": "prd",
                 },
             }
         },
