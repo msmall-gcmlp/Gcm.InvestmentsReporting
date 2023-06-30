@@ -133,8 +133,8 @@ class EntityReportingMetadata:
                 f"ALTSOFT.{pub}",
                 f"{pub}.INVESTMENTDIMN",
             ]
-            pvm_med = "pvm-med"
-            pvm_med_sources = [pvm_med]
+            pvm_med = "PVM.MED"
+            pvm_med_sources = [pvm_med, "pvm-med"]
 
             if EntityReportingMetadata._check_is_of_type(
                 avail_srcs_this_entity, pub_med_identifiers

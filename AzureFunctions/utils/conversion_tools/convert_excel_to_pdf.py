@@ -66,31 +66,21 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
     )
     wb.calculateFormula(True)
     FontConfigs.setFontFolder(get_fonts_path(), True)
-    # wb.getWorksheets().get(1).getCells().deleteRows(0,1,True)
-    # wb.getWorksheets().get(1).getCells().clearMergedCells()
-    # wb.getWorksheets().get(1).getCells().merge(18, 27, 1, 2)
-    # wb.getWorksheets().get(1).getCells().merge(18, 6, 1, 7)
-    # wb.getWorksheets().get(1).getCells().merge(18, 25, 18, 2)
 
-    # pdf_save_options = PdfSaveOptions()
-    # pdf_save_options.setCalculateFormula(True)
-    # pdf_save_options.setMergeAreas(True)
-    # pdf_save_options.setValidateMergedAreas(True)
-    #
+    #DT uncomment for fixing merged cell pdf issue
     # t1 = wb.getWorksheets().get(1).getCells().getMergedCells()
-    for x in range(wb.getWorksheets().getCount()):
-        if x <= 1:
-            continue
-        wb.getWorksheets().get(x).getCells().clearMergedCells()
-        merged_cell_array = wb.getWorksheets().get(1).getCells().getMergedCells()
-        for i in range(len(merged_cell_array)):
-            start_row = merged_cell_array.get(i).StartRow
-            end_row = merged_cell_array.get(i).EndRow
-            start_col = merged_cell_array.get(i).StartColumn
-            end_col = merged_cell_array.get(i).EndColumn
-            wb.getWorksheets().get(x).getCells().merge(start_row+1, start_col, end_row-start_row+1, end_col-start_col+1)
+    # for x in range(wb.getWorksheets().getCount()):
+    #     if x <= 1:
+    #         continue
+    #     wb.getWorksheets().get(x).getCells().clearMergedCells()
+    #     merged_cell_array = wb.getWorksheets().get(1).getCells().getMergedCells()
+    #     for i in range(len(merged_cell_array)):
+    #         start_row = merged_cell_array.get(i).StartRow
+    #         end_row = merged_cell_array.get(i).EndRow
+    #         start_col = merged_cell_array.get(i).StartColumn
+    #         end_col = merged_cell_array.get(i).EndColumn
+    #         wb.getWorksheets().get(x).getCells().merge(start_row+1, start_col, end_row-start_row+1, end_col-start_col+1)
 
-    # wb.save('C:/Tmp/testpdf.pdf', SaveFormat.PDF)
     v = wb.saveToBytes(SaveFormat.PDF)
     dao.execute(
         params=params,

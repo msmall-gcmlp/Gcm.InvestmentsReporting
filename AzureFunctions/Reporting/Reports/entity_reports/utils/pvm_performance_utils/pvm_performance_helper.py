@@ -57,15 +57,12 @@ class PvmPerformanceHelper(object):
             self,
             entity_domain: EntityDomainTypes,
             entity_info: pd.DataFrame,
-            recursion_iterate_controller: List[List[str]],
-            attributes_needed: List[str],
-            iteration_number: int
+            group_cols: List[str]
     ):
         self.entity_domain = entity_domain
         self.entity_info = entity_info
-        self.recursion_iterate_controller = recursion_iterate_controller
-        self.attributes_needed = attributes_needed
-        self.iteration_number = iteration_number
+        self.group_cols = group_cols
+
 
     class Cf_Filter_Type(Enum):
         AllCashflows = auto()
@@ -98,7 +95,7 @@ class PvmPerformanceHelper(object):
             raw_df = raw_df[
                 raw_df.PredominantInvestmentType.isin(
                     [
-                        # "Co-investment/Direct",
+                        "Co-investment/Direct",
                         'Primary Fund',
                         # 'Secondary'
                     ]
@@ -108,18 +105,6 @@ class PvmPerformanceHelper(object):
                 raw_df.PredominantAssetClass.isin(["Private Equity"])
             ]
 
-            # raw_df = raw_df[
-            #     raw_df.PredominantAssetClass.isin(["Infrastructure"])
-            # ]
-            # raw_df = raw_df[raw_df.VintageYear.astype(int) >= 2009]
-            raw_df = raw_df[~((raw_df.PredominantInvestmentType == "Co-investment/Direct") & (raw_df.VintageYear.astype(int) < 2009))]
-            # raw_df = raw_df[~((raw_df.PredominantInvestmentType == 'Secondary') & (raw_df.VintageYear < 2014))]
-            # raw_df = raw_df[~((raw_df.PredominantAssetClass == 'Real Estate') & (raw_df.VintageYear < 2010))]
-
-            # tmp = pd.read_csv('C:/Tmp/deals needed.csv')
-            # raw_df = raw_df[raw_df.DealName.isin(tmp['Deal Name'])]
-            # assert len(raw_df[raw_df.VintageGroup.isnull()]) == 0
-            #
             # sponsors = orig_raw[
             #     orig_raw.PredominantInvestmentType.isin(
             #         [
@@ -418,62 +403,16 @@ class PvmPerformanceHelper(object):
             setattr(self, __name, filtered)
         return getattr(self, __name, None)
 
-    # @property
-    # def recursion_iterate_controller(self) -> List[List[str]]:
-    #     __name = "recursion_iterate"
-    #     if getattr(self, __name, None) is None:
-    #         list_of_items = None
-    #         if self.entity_domain == EntityDomainTypes.InvestmentManager:
-    #             list_of_items = [
-    #                 ["Portfolio"],
-    #                 ["PredominantInvestmentType"],
-    #                 ["PredominantInvestmentType", "PredominantSector"],
-    #                 [
-    #                     "PredominantInvestmentType",
-    #                     "PredominantSector",
-    #                     "PredominantRealizationTypeCategory",
-    #                 ],
-    #                 ["Name"],
-    #             ]
-    #         elif self.entity_domain == EntityDomainTypes.Portfolio:
-    #             list_of_items = [
-    #                 ["Portfolio"],
-    #                 ["Portfolio", "PredominantAssetRegion"],
-    #                 ["Portfolio", "PredominantAssetRegion", "DealName"],
-    #             ]
-    #             # list_of_items = [
-    #             #     ["Portfolio"],
-    #             #     ["PredominantRealizationTypeCategory"],
-    #             #     ["PredominantRealizationTypeCategory", "VintageYear"],
-    #             #     ["Name"],
-    #             # ]
-    #         elif self.entity_domain == EntityDomainTypes.Vertical:
-    #             # list_of_items = [
-    #             #     ["Portfolio"],
-    #             #     ["Portfolio", "PredominantInvestmentType"],
-    #             #     ["Portfolio", "PredominantInvestmentType", "EmergingDiverseStatus"],
-    #             #     ["Portfolio", "PredominantInvestmentType", "EmergingDiverseStatus", "DealName"],
-    #             # ]
-    #             # list_of_items = [
-    #             #     ["Portfolio"],
-    #             #     ["Portfolio", "VintageGroup"],
-    #             #     ["Portfolio", "VintageGroup", "InvestmentManagerName"],
-    #             #     ["Portfolio", "VintageGroup", "InvestmentManagerName", "DealName"],
-    #             # ]
-    #             # list_of_items = [
-    #             #     ["Portfolio"],
-    #             #     ["Portfolio", "VintageGroup"],
-    #             #     ["Portfolio", "VintageGroup", "BurgissSector"],
-    #             #     ["Portfolio", "VintageGroup", "BurgissSector", "DealName"]
-    #             # ]
-    #             list_of_items = [
-    #                 ["Portfolio"],
-    #                 ["Portfolio", 'PredominantInvestmentType'],
-    #                 ["Portfolio", 'PredominantInvestmentType', "DealName"],
-    #                 # ["Portfolio", 'PredominantInvestmentType', "EmergingDiverseStatus", "DealName"],
-    #             ]
-    #         setattr(self, __name, list_of_items)
-    #     return getattr(self, __name, None)
+    @property
+    def recursion_iterate_controller(self) -> List[List[str]]:
+        __name = "recursion_iterate"
+        if getattr(self, __name, None) is None:
+            list_of_group_cols = [self.group_cols.copy()]
+            list_of_group_cols.extend(
+                [list_of_group_cols[-1][0:len(self.group_cols) - 1 - i] for i in range(len(self.group_cols) - 1)])
+            recursion_iterate = [i for i in reversed(list_of_group_cols)]
+            setattr(self, __name, recursion_iterate)
+        return getattr(self, __name, None)
 
     @property
     def trailing_periods(self, as_of_date) -> dict:
@@ -488,40 +427,10 @@ class PvmPerformanceHelper(object):
             "ITD": "ITD",
         }
 
-    # @property
-    # def attributes_needed(self) -> List[str]:
-    #     if self.entity_domain == EntityDomainTypes.Portfolio:
-    #         return [
-    #             "Name",
-    #             "PredominantAssetRegion",
-    #             "DealName",
-    #         ]
-    #         # return [
-    #         #     "Name",
-    #         #     "PredominantRealizationTypeCategory",
-    #         #     "VintageYear",
-    #         # ]
-    #     elif self.entity_domain == EntityDomainTypes.Vertical:
-    #         # return [
-    #         #     "Name",
-    #         #     "VintageGroup",
-    #         #     "BurgissSector",
-    #         #     'DealName'
-    #         # ]
-    #         # TODO: refactor "Name" to be Atomic unit or equiv; Node ID/Edge ID?
-    #         return [
-    #             "Name",
-    #             'PredominantInvestmentType',
-    #             # "EmergingDiverseStatus",
-    #             "DealName"
-    #         ]
-    #     elif self.entity_domain == EntityDomainTypes.InvestmentManager:
-    #         return [
-    #             "Name",
-    #             "PredominantInvestmentType",
-    #             "PredominantSector",
-    #             "PredominantRealizationTypeCategory",
-    #         ]
+    @property
+    def attributes_needed(self) -> List[str]:
+        attributes_needed = ['Name' if i == 0 else self.group_cols[i] for i in range(len(self.group_cols))]
+        return attributes_needed
 
     @property
     def top_line_owner(self) -> str:
@@ -581,6 +490,7 @@ class PvmPerformanceHelper(object):
             "5Y": 20,
             "ITD": "ITD",
         }
+
         report_json = get_performance_report_dict(
             owner=self.top_line_owner,
             list_to_iterate=self.recursion_iterate_controller,
@@ -593,17 +503,6 @@ class PvmPerformanceHelper(object):
             _trailing_periods=tmp_trailing_period,
         )
 
-        if self.iteration_number == 0:
-            dimn_name = 'x Vintage & Realization Status Breakdown'
-        elif self.iteration_number == 1:
-            dimn_name = 'x Investment Manager Breakdown'
-        elif self.iteration_number == 2:
-            dimn_name = 'x Sector Breakdown'
-        elif self.iteration_number == 3:
-            dimn_name = 'x Region Breakdown'
-        else:
-            dimn_name = 'Breakdown'
-
         # more to do on the below
         report_json.update(
             {
@@ -612,24 +511,7 @@ class PvmPerformanceHelper(object):
                     {"PortfolioName": [self.top_line_owner]},
                 ),
                 "benchmark_df": PvmPerfomanceHelperSingleton().benchmark_df,
-                "dimn_cut": pd.DataFrame({
-                    'DimnCut': [
-                        dimn_name
-                    ]
-                }
-                )
             }
         )
-        page_number = int(math.ceil((len(report_json.get('Data')) + 20) / 77))
-        if (self.iteration_number+1) <= 3:
-            report_json.update(
-                {
-                    f"Page{int(self.iteration_number + 2)}": pd.DataFrame(
-                        {
-                            "PageNumber": [page_number]
-                        },
-                    ),
-                }
-            )
 
         return report_json

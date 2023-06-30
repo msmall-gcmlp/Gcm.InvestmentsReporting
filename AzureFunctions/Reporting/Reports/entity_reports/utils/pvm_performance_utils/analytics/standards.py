@@ -128,6 +128,8 @@ def get_investment_sector_benchmark(df):
     # df_bmark_mapped.BenchmarkTicker = np.where(df_bmark_mapped.BenchmarkTicker.isnull(),
     #                                            'SPXT Index',
     #                                            df_bmark_mapped.BenchmarkTicker)
+    #
+    # assert len(df_bmark_mapped[df_bmark_mapped.BurgissSector.isnull()]) == 0
 
     df_bmark_mapped = df.copy()
     df_bmark_mapped["BenchmarkTicker"] = "SPXT Index"
@@ -248,6 +250,7 @@ def get_alpha_discount_table(fund_df, fund_cf, index_prices):
             dates_index=fund_specific_index.iloc[:, 0],
             index=fund_specific_index.iloc[:, 1],
         )
+        discount_table_df['IndexName'] = fund_df.BenchmarkTicker[idx]
         discount_table_df["Name"] = fund_df.Name[idx]
         discount_table_rslt = pd.concat(
             [discount_table_rslt, discount_table_df]
@@ -562,7 +565,7 @@ def get_fv_cashflow_df(
     index_prices: pd.DataFrame,
 ):
     fv_cashflows_df = pd.DataFrame()
-    for idx in range(0, len(fund_df)):
+    for idx in range(len(fund_df)):
         print(fund_df.Name[idx])
 
         single_fund = fund_cf[fund_cf["Name"] == fund_df.Name[idx]].copy()

@@ -49,16 +49,17 @@ from gcm.inv.dataprovider.entity_provider.entity_domains.synthesis_unit.type_con
 # For synthesisunits:
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-12-31&ReportName=PvmPerformanceBreakoutReport&test=True&frequency=Quarterly&save=True&aggregate_interval=Multi&EntityDomainTypes=SynthesisUnit&SynthesisUnitType=PvmDealAssetClass
 class PvmPerformanceBreakoutReport(ReportStructure):
-    def __init__(self, report_meta: ReportMeta,
-                 recursion_iterate_controller,
-                 attributes_needed,
-                 iteration_number):
+
+    def __init__(self,
+                 report_meta: ReportMeta,
+                 report_display_name: str):
         super().__init__(
-            ReportNames.PvmPerformanceBreakoutReport, report_meta
+            ReportNames.PvmPerformanceBreakoutReport, report_meta,
         )
-        self.recursion_iterate_controller = recursion_iterate_controller
-        self.attributes_needed = attributes_needed
-        self.iteration_number = iteration_number
+        self.report_display_name = report_display_name
+        # self.recursion_iterate_controller = recursion_iterate_controller
+        # self.attributes_needed = attributes_needed
+        # self.iteration_number = iteration_number
 
 
     @property
@@ -90,9 +91,17 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             ],
         )
 
-    def report_name_metadata(self):
-        domain_name = self.report_meta.entity_domain.name
-        return f"PE {domain_name} Performance Breakout"
+    #makeshift report cut config
+    @property
+    def group_cols(self) -> List[str]:
+        if self.report_display_name == 'PE Portfolio Performance x Vintage & Realization Status':
+            return ['Portfolio', 'VintageYear', 'PredominantRealizationTypeCategory', 'DealName']
+        elif self.report_display_name == 'PE Portfolio Performance x Investment Manager':
+            return ['Portfolio', 'InvestmentManagerName', 'DealName']
+        elif self.report_display_name == 'PE Portfolio Performance x Sector':
+            return ['Portfolio, VintageYear, PredominantSector', 'DealName']
+        elif self.report_display_name == 'PE Portfolio Performance x Region':
+            return ['Portfolio', 'PredominantAssetRegion', 'DealName']
 
     @classmethod
     def standard_entity_get_callable(
@@ -107,6 +116,8 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             return syn_unit.get_all_in_unit
         else:
             return domain.get_perei_med_entities
+
+
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
         entity_name: str = self.report_meta.entity_info[
@@ -126,13 +137,11 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
         domain = self.report_meta.entity_domain
         entity_info = self.report_meta.entity_info
-
+        group_cols = self.group_cols
         # actually calls report process
         p = PvmPerformanceHelper(domain,
                                  entity_info=entity_info,
-                                 recursion_iterate_controller=self.recursion_iterate_controller,
-                                 attributes_needed=self.attributes_needed,
-                                 iteration_number=self.iteration_number)
+                                 group_cols=self.group_cols)
         final_data: dict = p.generate_components_for_this_entity(
             as_of_date,
         )

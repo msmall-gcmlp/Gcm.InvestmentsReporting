@@ -94,21 +94,14 @@ def format_performance_report(
     ordered_rpt_items, counter_df = recurse_down_order(
         attrib, group_by_list=ordered_recursion, depth=0, counter=0
     )
-    # if "VintageYear" in attrib.columns:
-        # ordered_rpt_items.Name = ordered_rpt_items.Name.str.replace(
-        #     ".0", ""
-        # # )
-        # ordered_rpt_items.DisplayName = (
-        #     ordered_rpt_items.DisplayName.str.replace(".0", "")
-        # )
-        # for i in list_of_rpt_dfs:
-        #     i.Name = i.Name.str.replace(".0", "")
+
     rslt = reduce(
         lambda left, right: pd.merge(
             left, right, on=["Name"], how="outer"
         ),
         [ordered_rpt_items] + list_of_rpt_dfs,
     )
+
     rslt = rslt.sort_values(
         by=["Counter", "Commitment"], ascending=[False, False]
     )
@@ -119,12 +112,8 @@ def format_performance_report(
         "Duration",
         "Commitment",
         "Nav",
-        # "HitRate",
-        # "PnlRatio",
-        # "SizeRatio",
         "ITD_KsPme",
         "ITD_DirectAlpha",
-        # "AlphaHitRate",
         "ITD_GrossMultiple",
         "ITD_GrossIrr",
         "GrossDpi",
@@ -180,6 +169,7 @@ def get_performance_report_dict(
     _attributes_needed: List[str],
     _trailing_periods: dict,
 ) -> dict[str, pd.DataFrame]:
+
     direct_alpha, discount_df = get_direct_alpha_rpt(
         as_of_date=as_of_date,
         df=irr_cfs,
@@ -227,14 +217,14 @@ def get_performance_report_dict(
         _attributes_needed=_attributes_needed,
     )
 
-    commitment_df = get_sum_df_rpt(
+    commitment_rslt = get_sum_df_rpt(
         commitment_df, list_to_iterate, "Commitment"
     )[["Name", "Commitment"]]
     # TODO: change to ENUM and only D/T/R for IRR cfs
     nav = irr_cfs[irr_cfs.TransactionType == "R"].rename(
         columns={"BaseAmount": "Nav"}
     )
-    nav_df = get_sum_df_rpt(nav, list_to_iterate, "Nav")[["Name", "Nav"]]
+    nav_rslt = get_sum_df_rpt(nav, list_to_iterate, "Nav")[["Name", "Nav"]]
 
     discount_df_with_attrib = discount_df[
         ["Name", "Date", "Discounted", "Type"]
@@ -252,51 +242,20 @@ def get_performance_report_dict(
         list_to_iterate,
         _attributes_needed,
     )
-    # pme_hit_rate_df = (
-    #     full_cfs[["Portfolio"] + _attributes_needed]
-    #     .drop_duplicates()
-    #     .merge(
-    #         ks_pme[["Name", "ITD_KsPme"]],
-    #         how="left",
-    #         left_on="Name",
-    #         right_on="Name",
-    #     )
-    #     .merge(commitment_df, how="left", left_on="Name", right_on="Name")
-    # )
-    # pme_hit_rate_df["pct_commitment"] = (
-    #     pme_hit_rate_df.Commitment / pme_hit_rate_df.Commitment.sum()
-    # )
-    # pme_hit_rate_df = pme_hit_rate_df[~pme_hit_rate_df.ITD_KsPme.isnull()]
-    # pme_hit_rate_df["HitRateType"] = np.where(
-    #     pme_hit_rate_df.ITD_KsPme > 1, 1, 0
-    # )
-    #
-    # pme_hit_rate_rslt = get_hit_rate(
-    #     df=pme_hit_rate_df,
-    #     discount_df=discount_df_with_attrib,
-    #     list_to_iterate=list_to_iterate,
-    # ).rename(
-    #     columns={
-    #         "HitRateType": "HitRate",
-    #         "pct_commitment": "SizeRatio",
-    #         "Discounted": "PnlRatio",
-    #     }
-    # )
+
 
     # report specific formatting
     list_of_rpt_dfs = [
-        commitment_df,
+        commitment_rslt,
         holding_period_df,
         max_nav_date,
-        nav_df,
+        nav_rslt,
         horizon_irr,
         horizon_multiple,
         ks_pme,
         direct_alpha,
         ror_ctr_df,
         dpi_rslt,
-        # alpha_hit_rate_rslt,
-        # pme_hit_rate_rslt,
     ]
     (
         formatted_rslt,
@@ -309,14 +268,9 @@ def get_performance_report_dict(
         full_cfs=full_cfs,
         _attributes_needed=_attributes_needed,
     )
-    # 'FormatType' named_range should be Group1,
-    # 'FormatSector' named_range should be Group2,
-    # 1:n number of groups should be dynamic
+
     ordered_rpt_items.reset_index(inplace=True, drop=True)
 
-    # formatted_rslt = formatted_rslt[~formatted_rslt.DisplayName.isin(
-    #     ordered_rpt_items[ordered_rpt_items.Layer == ordered_rpt_items.Layer.max()].DisplayName
-    # )]
     input_data = {
         "Data": formatted_rslt,
         # "FlatData": flat_data

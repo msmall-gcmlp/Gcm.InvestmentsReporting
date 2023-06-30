@@ -215,7 +215,7 @@ def get_all_deal_attributes() -> pd.DataFrame:
     df['VintageYear'] = df.VintageYear.astype(int).astype(str)
 
     # tmp_burgiss_sector_map = pd.read_csv('C:/Tmp/BurgissSectorMap.csv')
-    #
+    # #
     # tmp_chk = len(df)
     # df = df.merge(tmp_burgiss_sector_map,
     #               how='left',

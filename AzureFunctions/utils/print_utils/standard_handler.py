@@ -158,8 +158,6 @@ def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
     if k.component_name in wb.defined_names:
         address = list(wb.defined_names[k.component_name].destinations)
         for sheetname, cell_address in address:
-            if 'Table of Contents_' in sheetname:
-                sheetname = 'Table of Contents'
             cell_address = cell_address.replace("$", "")
             # override wb:
             wb = ExcelIO.write_dataframe_to_xl(
