@@ -383,33 +383,13 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
                             'T60': _sanitize_list(t5y_returns),
                             'T120': _sanitize_list(t10y_returns)}
         return periodic_returns
-    
-    # def _calculate_constituent_excess_returns(self):
-    #     peer_xs_ret_summary=pd.DataFrame()
-    #     tmp1=self._constituent_returns.dropna(axis=0, how='all')
-    #     bmrk_ret=self._peer_arb_benchmark_returns
-    #     for col in tmp1.columns:
-    #         peer_fund_summary=PerformanceQualityReport(fund_name=col)._get_return_summary(returns=tmp1[col], return_type="Fund")
-    #         peer_fund_xs=PerformanceQualityReport(fund_name=col)._get_excess_return_summary(
-    #             fund_returns=peer_fund_summary,
-    #             benchmark_returns=bmrk_ret,
-    #             benchmark_name="AbsoluteReturnBenchmark",
-    #         )
-    #         peer_fund_xs['AbsoluteReturnBenchmarkExcess'].replace('', np.nan, inplace=True)
-    #         curr_peer_xs=pd.DataFrame(peer_fund_xs["AbsoluteReturnBenchmarkExcess"])
-    #         curr_peer_xs=curr_peer_xs.rename(columns={'AbsoluteReturnBenchmarkExcess':col})
-    #         curr_peer_xs=curr_peer_xs.transpose()
-    #         peer_xs_ret_summary=pd.concat([peer_xs_ret_summary, curr_peer_xs])
-    #     peer_xs_ret_summary.dropna(how='all', inplace=True)
-    #     return peer_xs_ret_summary
-    
+
     def _summarize_peer_counts(self):
         counts = self._helper.summarize_counts(returns=self._constituent_returns)
         return {'counts': [int(x) for x in counts]}
 
     def generate_peer_level_summaries(self):
         constituent_total_returns = self._calculate_constituent_total_returns()
-        constituent_excess_returns = self._calculate_constituent_excess_returns()
         market_scenarios, conditional_ptile_summary = \
             generate_peer_conditional_excess_returns(peer_returns=self._constituent_returns,
                                                      benchmark_returns=self._peer_arb_benchmark_returns)
