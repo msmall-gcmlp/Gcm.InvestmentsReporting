@@ -132,9 +132,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
     @cached_property
     def _peer_bmrk_returns(self):
-        # x=self._benchmarks.get_altsoft_peer_returns(start_date=self._start_date,
-        #                                                  end_date=self._end_date,
-        #                                                  peer_names=self._peer_groups)
         return self._benchmarks.get_altsoft_peer_returns(start_date=self._start_date,
                                                          end_date=self._end_date,
                                                          peer_names=self._peer_groups)
@@ -159,8 +156,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
     def _get_net_exposures(self):
         fund_monthly_exposures = self._inv_group.get_monthly_pub_exposure(
             start_date=dt.date(1970, 1, 1),
-            end_date=dt.date(2023,4,4)
-            #end_date=self._end_date
+            end_date=self._end_date
         )
         fund_exp_net_df=fund_monthly_exposures[['InvestmentGroupName','Date','ExposureStrategy','NetNotional']]
         fund_exp_net_df=fund_monthly_exposures[fund_monthly_exposures['ExposureStrategy'].isin(['Credit','Equities'])]
@@ -181,7 +177,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         fund_monthly_exposures = self._inv_group.get_monthly_pub_exposure(
             start_date=dt.date(1970, 1, 1),
             end_date=self._end_date
-            #end_date=self._end_date
         )
         fund_monthly_exposures=fund_monthly_exposures[['InvestmentGroupName','Date','GrossNotional']]
         fund_monthly_exposures=fund_monthly_exposures.groupby(['InvestmentGroupName','Date']).agg({'GrossNotional': 'sum'}).reset_index()

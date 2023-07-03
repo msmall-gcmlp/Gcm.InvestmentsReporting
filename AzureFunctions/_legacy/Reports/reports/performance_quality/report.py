@@ -1636,6 +1636,44 @@ class PerformanceQualityReport(ReportingRunnerBase):
             index=["SCL"],
         )
         return summary
+    
+    
+    def build_outsize_positive_performance_summary(self):
+        returns = self._fund_returns.copy()
+        if returns.shape[0] > 0:
+            drawup = self._analytics.compute_max_trough_to_peak(
+                ror=returns,
+                window=12,
+                as_of_date=self._as_of_date,
+                periodicity=Periodicity.Monthly,
+            )
+
+            drawup = drawup.squeeze()
+        else:
+            drawup = None
+
+        trigger = np.absolute(self._fle_scl.copy())
+
+        if drawup is not None:
+            drawup = round(drawup, 2)
+
+            if drawup > trigger:
+                pass_fail = "Fail"
+            else:
+                pass_fail = "Pass"
+        else:
+            pass_fail = ""
+            drawdown = ""
+
+        summary = pd.DataFrame(
+            {
+                "Trigger": trigger,
+                "Drawdown": drawup,
+                "Pass/Fail": pass_fail,
+            },
+            index=["SCL"],
+        )
+        return summary
 
     def build_risk_model_expectations_summary(self):
         summary = pd.DataFrame(
@@ -1808,6 +1846,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         header_info = self.get_header_info()
         
         
+        shortfall_summary = self.build_shortfall_summary()
+        outsize_positive_performance_summary = self.build_outsize_positive_performance_summary()
         return_summary = self.build_benchmark_summary()
         conditional_fund_return_summary = self.build_conditional_fund_return_summary()[0]
         conditional_composite_summary= self.build_conditional_fund_return_summary()[1]
@@ -1828,7 +1868,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         performance_stability_fund_summary = self.build_performance_stability_fund_summary()
         performance_stability_peer_summary = self.build_performance_stability_peer_summary()
 
-        shortfall_summary = self.build_shortfall_summary()
+        #shortfall_summary = self.build_shortfall_summary()
         risk_model_expectations = self.build_risk_model_expectations_summary()
         risk_model_implied_forwards = self.build_risk_model_implied_forwards_summary()
 
@@ -1864,6 +1904,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "pba_qtd": pba_qtd,
             "pba_ytd": pba_ytd,
             "shortfall_summary": shortfall_summary,
+            "outsize_positive_performance_summary": outsize_positive_performance_summary,
             "risk_model_expectations": risk_model_expectations,
             "exposure_summary": exposure_summary,
             "latest_exposure_heading": latest_exposure_heading,
@@ -1900,6 +1941,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "pba_qtd": pba_qtd.to_json(orient="index"),
             "pba_ytd": pba_ytd.to_json(orient="index"),
             "shortfall_summary": shortfall_summary.to_json(orient="index"),
+            "outsize_positive_performance_summary": outsize_positive_performance_summary.to_json(orient="index"),
             "risk_model_expectations": risk_model_expectations.to_json(orient="index"),
             "exposure_summary": exposure_summary.to_json(orient="index"),
             "latest_exposure_heading": latest_exposure_heading.to_json(orient="index"),
@@ -1982,5 +2024,5 @@ if __name__ == "__main__":
 
     with Scenario(dao=runner, as_of_date=dt.date(2022, 10, 31)).context():
         #for fund in ['Skye', 'Citadel', 'Element', 'D1 Capital']:
-        for fund in ['Skye']:
+        for fund in ['Element']:
             PerformanceQualityReport(fund_name=fund).execute()
