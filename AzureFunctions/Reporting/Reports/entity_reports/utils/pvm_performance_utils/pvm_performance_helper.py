@@ -108,8 +108,7 @@ class PvmPerformanceHelper(object):
                 )
             ]
         if self.entity_domain == EntityDomainTypes.Vertical:
-            # ad hoc/temporary
-            # orig_raw = raw_df.copy()
+            # adhoc - PE primary and co's only example below
             raw_df = raw_df[
                 raw_df.PredominantInvestmentType.isin(
                     [
@@ -123,80 +122,9 @@ class PvmPerformanceHelper(object):
                 raw_df.PredominantAssetClass.isin(["Private Equity"])
             ]
 
-            # sponsors = orig_raw[
-            #     orig_raw.PredominantInvestmentType.isin(
-            #         [
-            #             "Co-investment/Direct",
-                        # 'Primary Fund',
-                        # 'Secondary'
-                    # ]
-                # )
-            # ]
-            # sponsors = sponsors[
-            #     sponsors.PredominantAssetClass.isin(["Private Equity"])
-            # ]
-            # sponsors = sponsors[
-            #     sponsors.PredominantStrategy.isin(["Buyout"])
-            # ]
-            # sponsors = sponsors[
-            #     sponsors.InvestmentManagerName.isin(raw_df.InvestmentManagerName)
-            # ]
-            # tmp_rslt = pd.DataFrame()
-            # for i in raw_df.DealName.unique():
-            #     vintage_grp = raw_df[raw_df.DealName == i].VintageGroup.unique()
-            #     rng = range(int(str(vintage_grp)[len(str(vintage_grp))-12:len(str(vintage_grp))-8])-2,
-            #                 int(str(vintage_grp)[len(str(vintage_grp))-7:len(str(vintage_grp))-3])+1)
-            #     mgr_funds = sponsors[sponsors.InvestmentManagerName.isin(
-            #         raw_df[raw_df.DealName == i].InvestmentManagerName
-            #     )]
-            #     df_rslt_d = mgr_funds[mgr_funds.VintageYear.astype(int).isin(rng)]
-            #     if len(tmp_rslt) > 0:
-            #         df_rslt = df_rslt_d[~df_rslt_d.ReportingName.isin(tmp_rslt.ReportingName)]
-            #     else:
-            #         df_rslt = df_rslt_d.copy()
-            ##     df_rslt = df_rslt_d.copy()
-                # df_rslt['CoDeal'] = i
-                # df_rslt['VintageGroup'] = vintage_grp[0]
-                # tmp_rslt = pd.concat([tmp_rslt, df_rslt])
-            # tst = tmp_rslt[[
-            #     'InvestmentManagerName',
-            #     'DealName',
-            #     'ReportingName',
-            #     'CoDeal',
-            #     'VintageGroup'
-            # ]].drop_duplicates()
-            #
-            # parents = pd.DataFrame()
-            # for d in tst.CoDeal.unique():
-            #     for y in tst.VintageGroup.unique():
-            #         invs = tst[(tst.CoDeal == d) & (tst.VintageGroup == y)].DealName.sort_values().drop_duplicates()
-            #         if len(invs) == 0:
-            #             continue
-            #         if len(invs) == 1:
-            #             names = pd.DataFrame({'CoDeal': [d],
-            #                                   'VintageGroup': [y]
-            #                                      , 'ConcatPrimaries': [invs.squeeze()]})
-            #             parents = pd.concat([names, parents])
-            #         else:
-            #             concat_names = ''
-            #             for inv in invs.tolist():
-            #                 concat_names = concat_names + ' + ' + inv
-            #             names = pd.DataFrame({'CoDeal': [d],
-            #                                   'VintageGroup': [y],
-            #                                   'ConcatPrimaries': concat_names[2:]})
-            #             parents = pd.concat([names, parents])
-            # tst = tst.merge(parents, how='left',left_on=['CoDeal', 'VintageGroup'], right_on=['CoDeal', 'VintageGroup'])
-            # tst.to_csv('C:/Tmp/cos linked.csv')
-
-                # orig_raw[orig_raw.DealName == i].Name.unique()
-            # raw_df = tmp_rslt.copy()
-        # raw_df['BurgissSector'] = 'Test'
-        # TODO: DT note figure out whether we want max nav date to reflect NAV != 0
-        # makes a difference for all RMV measures at group levels (vertical/portfolio/sector/etc)
         max_nav_date = (
             raw_df[
                 (raw_df.TransactionType == "Net Asset Value")
-                # & (raw_df.BaseAmount != 0)
             ]
             .groupby(["OwnerName", "InvestmentName"])
             .TransactionDate.max()
@@ -213,7 +141,6 @@ class PvmPerformanceHelper(object):
             return raw_df
         if cf_type == PvmPerformanceHelper.Cf_Filter_Type.IrrCashflows:
             irr_cf = raw_df[raw_df.TransactionDate <= raw_df.MaxNavDate]
-            #TODO: move to ENUMs and only use R/D/T for IRR cfs
             irr_cf = irr_cf[
                 irr_cf.TransactionType.isin(
                     [

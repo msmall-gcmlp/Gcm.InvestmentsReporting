@@ -17,6 +17,142 @@ from .standards import (
 )
 
 
+
+def get_performance_report_dict(
+    owner: str,
+    list_to_iterate: List[List[str]],
+    full_cfs: pd.DataFrame,
+    irr_cfs: pd.DataFrame,
+    commitment_df: pd.DataFrame,
+    nav_df: pd.DataFrame,
+    as_of_date: dt.date,
+    _attributes_needed: List[str],
+    _trailing_periods: dict,
+) -> dict[str, pd.DataFrame]:
+
+    direct_alpha, discount_df = get_direct_alpha_rpt(
+        as_of_date=as_of_date,
+        df=irr_cfs,
+        nav_df=nav_df,
+        list_to_iterate=list_to_iterate,
+        _attributes_needed=_attributes_needed,
+        _trailing_periods=_trailing_periods,
+    )
+    ks_pme = get_ks_pme_rpt(
+        as_of_date=as_of_date,
+        df=irr_cfs,
+        nav_df=nav_df,
+        list_to_iterate=list_to_iterate,
+        _attributes_needed=_attributes_needed,
+        _trailing_periods=_trailing_periods,
+    )
+    ror_ctr_df = get_ror_ctr_df_rpt(
+        as_of_date=as_of_date,
+        df=full_cfs,
+        owner=owner,
+        list_to_iterate=list_to_iterate,
+        _attributes_needed=_attributes_needed,
+        _trailing_periods=_trailing_periods,
+    )
+
+    horizon_irr = get_horizon_irr_df_rpt(
+        as_of_date=as_of_date,
+        df=irr_cfs,
+        nav_df=nav_df,
+        list_to_iterate=list_to_iterate,
+        _attributes_needed=_attributes_needed,
+        _trailing_periods=_trailing_periods,
+    )
+    horizon_multiple = get_horizon_tvpi_df_rpt(
+        as_of_date=as_of_date,
+        df=irr_cfs,
+        nav_df=nav_df,
+        list_to_iterate=list_to_iterate,
+        _attributes_needed=_attributes_needed,
+        _trailing_periods=_trailing_periods,
+    )
+    dpi_rslt = get_dpi_df_rpt(
+        df=irr_cfs,
+        list_to_iterate=list_to_iterate,
+        _attributes_needed=_attributes_needed,
+    )
+
+    commitment_rslt = get_sum_df_rpt(
+        commitment_df, list_to_iterate, "Commitment"
+    )[["Name", "Commitment"]]
+    nav = irr_cfs[irr_cfs.TransactionType == "R"].rename(
+        columns={"BaseAmount": "Nav"}
+    )
+    nav_rslt = get_sum_df_rpt(nav, list_to_iterate, "Nav")[["Name", "Nav"]]
+
+    discount_df_with_attrib = discount_df[
+        ["Name", "Date", "Discounted", "Type"]
+    ].merge(
+        full_cfs[_attributes_needed + ["Portfolio"]].drop_duplicates(),
+        how="left",
+        left_on="Name",
+        right_on="Name",
+    )
+    assert len(discount_df) == len(discount_df_with_attrib)
+
+    holding_period_df, max_nav_date = get_holding_periods_rpt(
+        irr_cfs,
+        discount_df_with_attrib,
+        list_to_iterate,
+        _attributes_needed,
+    )
+
+    ### report specific formatting - TODO put upfront in db
+    list_of_rpt_dfs = [
+        commitment_rslt,
+        holding_period_df,
+        max_nav_date,
+        nav_rslt,
+        horizon_irr,
+        horizon_multiple,
+        ks_pme,
+        direct_alpha,
+        ror_ctr_df,
+        dpi_rslt,
+    ]
+    (
+        formatted_rslt,
+        ordered_rpt_items,
+        flat_data,
+    ) = format_performance_report(
+        list_of_rpt_dfs=list_of_rpt_dfs,
+        owner=owner,
+        list_to_iterate=list_to_iterate,
+        full_cfs=full_cfs,
+        _attributes_needed=_attributes_needed,
+    )
+
+    ordered_rpt_items.reset_index(inplace=True, drop=True)
+
+    input_data = {
+        "Data": formatted_rslt,
+        # "FlatData": flat_data
+    }
+
+    group_range_map = {1: "FormatType", 2: "FormatSector", 3: "GroupThree"}
+    for group_number in ordered_rpt_items.Layer.unique():
+        if (
+            group_number == ordered_rpt_items.Layer.min()
+            or group_number == ordered_rpt_items.Layer.max()
+        ):
+            continue
+        else:
+            input_data.update(
+                {
+                    group_range_map[group_number]: ordered_rpt_items[
+                        ordered_rpt_items.Layer == group_number
+                    ][["DisplayName"]]
+                }
+            )
+
+    return input_data
+
+
 def format_performance_report(
     owner: str,
     list_of_rpt_dfs: List[pd.DataFrame],
@@ -24,7 +160,7 @@ def format_performance_report(
     full_cfs: pd.DataFrame,
     _attributes_needed: List[str],
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    # report specific formatting
+    # report specific formatting - TODO need to fix the data upfront in db
     attrib = full_cfs[_attributes_needed].drop_duplicates()
     attrib["Portfolio"] = owner
 
@@ -79,7 +215,6 @@ def format_performance_report(
         attrib = attrib.sort_values("Order")
     if "VintageYear" in attrib.columns:
         attrib = attrib.sort_values("VintageYear")
-        # attrib.VintageYear = attrib.VintageYear.astype(int).astype(str)
     if "PredominantAssetRegion" in attrib.columns:
         attrib = attrib.sort_values("PredominantAssetRegion")
 
@@ -148,148 +283,6 @@ def format_performance_report(
               right_on="Name"
                            )
     flat_data[list_to_iterate[-1]] = flat_data['Name'].str.split('_', expand=True)
-
-    # flat_data["Name"] = np.where(
-    #     flat_data.Name.isnull(), flat_data.DisplayName, flat_data.Name
-    # )
     # attrib.to_csv('C:/Tmp/attrib output test.csv')
     rslt.drop(columns=['Name'], inplace=True)
-    flat_data.drop(columns=['Name'], inplace=True)
     return rslt, ordered_rpt_items, flat_data
-
-
-def get_performance_report_dict(
-    owner: str,
-    list_to_iterate: List[List[str]],
-    full_cfs: pd.DataFrame,
-    irr_cfs: pd.DataFrame,
-    commitment_df: pd.DataFrame,
-    nav_df: pd.DataFrame,
-    as_of_date: dt.date,
-    _attributes_needed: List[str],
-    _trailing_periods: dict,
-) -> dict[str, pd.DataFrame]:
-
-    direct_alpha, discount_df = get_direct_alpha_rpt(
-        as_of_date=as_of_date,
-        df=irr_cfs,
-        nav_df=nav_df,
-        list_to_iterate=list_to_iterate,
-        _attributes_needed=_attributes_needed,
-        _trailing_periods=_trailing_periods,
-    )
-    ks_pme = get_ks_pme_rpt(
-        as_of_date=as_of_date,
-        df=irr_cfs,
-        nav_df=nav_df,
-        list_to_iterate=list_to_iterate,
-        _attributes_needed=_attributes_needed,
-        _trailing_periods=_trailing_periods,
-    )
-    ror_ctr_df = get_ror_ctr_df_rpt(
-        as_of_date=as_of_date,
-        df=full_cfs,
-        owner=owner,
-        list_to_iterate=list_to_iterate,
-        _attributes_needed=_attributes_needed,
-        _trailing_periods=_trailing_periods,
-    )
-
-    horizon_irr = get_horizon_irr_df_rpt(
-        as_of_date=as_of_date,
-        df=irr_cfs,
-        nav_df=nav_df,
-        list_to_iterate=list_to_iterate,
-        _attributes_needed=_attributes_needed,
-        _trailing_periods=_trailing_periods,
-    )
-    horizon_multiple = get_horizon_tvpi_df_rpt(
-        as_of_date=as_of_date,
-        df=irr_cfs,
-        nav_df=nav_df,
-        list_to_iterate=list_to_iterate,
-        _attributes_needed=_attributes_needed,
-        _trailing_periods=_trailing_periods,
-    )
-    dpi_rslt = get_dpi_df_rpt(
-        df=irr_cfs,
-        list_to_iterate=list_to_iterate,
-        _attributes_needed=_attributes_needed,
-    )
-
-    commitment_rslt = get_sum_df_rpt(
-        commitment_df, list_to_iterate, "Commitment"
-    )[["Name", "Commitment"]]
-    # TODO: change to ENUM and only D/T/R for IRR cfs
-    nav = irr_cfs[irr_cfs.TransactionType == "R"].rename(
-        columns={"BaseAmount": "Nav"}
-    )
-    nav_rslt = get_sum_df_rpt(nav, list_to_iterate, "Nav")[["Name", "Nav"]]
-
-    discount_df_with_attrib = discount_df[
-        ["Name", "Date", "Discounted", "Type"]
-    ].merge(
-        full_cfs[_attributes_needed + ["Portfolio"]].drop_duplicates(),
-        how="left",
-        left_on="Name",
-        right_on="Name",
-    )
-    assert len(discount_df) == len(discount_df_with_attrib)
-
-    holding_period_df, max_nav_date = get_holding_periods_rpt(
-        irr_cfs,
-        discount_df_with_attrib,
-        list_to_iterate,
-        _attributes_needed,
-    )
-
-
-    # report specific formatting
-    list_of_rpt_dfs = [
-        commitment_rslt,
-        holding_period_df,
-        max_nav_date,
-        nav_rslt,
-        horizon_irr,
-        horizon_multiple,
-        ks_pme,
-        direct_alpha,
-        ror_ctr_df,
-        dpi_rslt,
-    ]
-    (
-        formatted_rslt,
-        ordered_rpt_items,
-        flat_data,
-    ) = format_performance_report(
-        list_of_rpt_dfs=list_of_rpt_dfs,
-        owner=owner,
-        list_to_iterate=list_to_iterate,
-        full_cfs=full_cfs,
-        _attributes_needed=_attributes_needed,
-    )
-
-    ordered_rpt_items.reset_index(inplace=True, drop=True)
-
-    input_data = {
-        "Data": formatted_rslt,
-        # "FlatData": flat_data
-    }
-
-    group_range_map = {1: "FormatType", 2: "FormatSector", 3: "GroupThree"}
-    for group_number in ordered_rpt_items.Layer.unique():
-        if (
-            group_number == ordered_rpt_items.Layer.min()
-            or group_number == ordered_rpt_items.Layer.max()
-        ):
-            continue
-        else:
-            input_data.update(
-                {
-                    group_range_map[group_number]: ordered_rpt_items[
-                        ordered_rpt_items.Layer == group_number
-                    ][["DisplayName"]]
-                }
-            )
-
-    return input_data

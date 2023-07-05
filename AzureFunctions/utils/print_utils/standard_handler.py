@@ -174,9 +174,6 @@ def merge_files(wb_list: List[Workbook]):
             ws_count = 0
             for s in k.sheetnames:
                 source_sheet: Worksheet = k[s]
-                if 'Contents' in s:
-                    continue
-
                 target_sheet_name = f"{s}_{wb_count}_{ws_count}"
                 merged.create_sheet(target_sheet_name)
                 ws2: Worksheet = merged[target_sheet_name]
