@@ -5,6 +5,7 @@ from gcm.inv.entityhierarchy.EntityDomain.entity_domain import (
     pd,
     Standards as EntityStandardNames,
 )
+from Reporting.Reports.report_names import ReportNames
 from .analytics import get_performance_report_dict
 from .helpers import (
     convert_amt_to_usd,
@@ -57,11 +58,11 @@ class PvmPerformanceHelper(object):
             self,
             entity_domain: EntityDomainTypes,
             entity_info: pd.DataFrame,
-            group_cols: List[str]
+            report_name_enum: Enum
     ):
         self.entity_domain = entity_domain
         self.entity_info = entity_info
-        self.group_cols = group_cols
+        self.report_name_enum = report_name_enum
 
 
     class Cf_Filter_Type(Enum):
@@ -73,6 +74,22 @@ class PvmPerformanceHelper(object):
     class ReportedCfType(Enum):
         AMV = auto()
         RMV = auto()
+
+    @property
+    def group_cols(self) -> List[str]:
+        __name = "__report_group_cols"
+        if getattr(self, __name, None) is None:
+            report_group_cols = None
+            if self.report_name_enum == ReportNames.PE_Portfolio_Performance_x_Vintage_Realization_Status:
+                report_group_cols = ['Portfolio', 'VintageYear', 'PredominantRealizationTypeCategory', 'DealName']
+            elif self.report_name_enum == ReportNames.PE_Portfolio_Performance_x_Investment_Manager:
+                report_group_cols = ['Portfolio', 'InvestmentManagerName', 'DealName']
+            elif self.report_name_enum == ReportNames.PE_Portfolio_Performance_x_Sector:
+                report_group_cols = ['Portfolio, VintageYear, PredominantSector', 'DealName']
+            elif self.report_name_enum == ReportNames.PE_Portfolio_Performance_x_Region:
+                report_group_cols = ['Portfolio', 'PredominantAssetRegion', 'DealName']
+            setattr(self, __name, report_group_cols)
+        return getattr(self, __name, None)
 
     def get_cfs_of_type(
         self,
@@ -405,9 +422,10 @@ class PvmPerformanceHelper(object):
 
     @property
     def recursion_iterate_controller(self) -> List[List[str]]:
+        # TODO: DT note - code currently requires 'Portfolio' to be in the group columns (which is functionally being used as the "top" owner of the report hierarchy) - revisit logic and concept
         __name = "recursion_iterate"
         if getattr(self, __name, None) is None:
-            list_of_group_cols = [self.group_cols.copy()]
+            list_of_group_cols = [self.group_cols]
             list_of_group_cols.extend(
                 [list_of_group_cols[-1][0:len(self.group_cols) - 1 - i] for i in range(len(self.group_cols) - 1)])
             recursion_iterate = [i for i in reversed(list_of_group_cols)]
@@ -429,6 +447,7 @@ class PvmPerformanceHelper(object):
 
     @property
     def attributes_needed(self) -> List[str]:
+        #TODO: DT note - 'Name' here is required and is the "atomic unit" but should be refactored and called AtomicUnit, or revisit logic and concept
         attributes_needed = ['Name' if i == 0 else self.group_cols[i] for i in range(len(self.group_cols))]
         return attributes_needed
 
@@ -507,6 +526,7 @@ class PvmPerformanceHelper(object):
         report_json.update(
             {
                 "Date": pd.DataFrame({"Date": [as_of_date]}),
+                "report_display_name": pd.DataFrame({"ReportDisplayName": [self.report_name_enum.value]}),
                 "PortfolioName": pd.DataFrame(
                     {"PortfolioName": [self.top_line_owner]},
                 ),
