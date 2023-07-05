@@ -79,6 +79,7 @@ class PvmPerformanceHelper(object):
     def group_cols(self) -> List[str]:
         __name = "__report_group_cols"
         if getattr(self, __name, None) is None:
+            # makeshift report config for summary tables and calcs
             report_group_cols = None
             if self.report_name_enum == ReportNames.PE_Portfolio_Performance_x_Vintage_Realization_Status:
                 report_group_cols = ['Portfolio', 'VintageYear', 'PredominantRealizationTypeCategory', 'DealName']
@@ -434,8 +435,7 @@ class PvmPerformanceHelper(object):
 
     @property
     def trailing_periods(self, as_of_date) -> dict:
-        # TODO: make this work so not using tmp_trailing_periods
-        # TODO: also probably should use standard trailing_period enums
+        # TODO: make this standard
         return {
             "QTD": 1,
             "YTD": int(as_of_date.month / 3),
@@ -447,7 +447,7 @@ class PvmPerformanceHelper(object):
 
     @property
     def attributes_needed(self) -> List[str]:
-        #TODO: DT note - 'Name' here is required and is the "atomic unit" but should be refactored and called AtomicUnit, or revisit logic and concept
+        #TODO: DT note - 'Name' here is a contatenation of group_cols with "_" delim... revisit logic and concept
         attributes_needed = ['Name' if i == 0 else self.group_cols[i] for i in range(len(self.group_cols))]
         return attributes_needed
 

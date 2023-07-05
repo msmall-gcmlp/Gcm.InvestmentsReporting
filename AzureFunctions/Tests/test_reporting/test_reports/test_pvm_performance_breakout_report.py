@@ -426,6 +426,7 @@ class TestPerformanceBreakDown(object):
     def test_new_report_run(self):
         as_of_date = dt.date(2023, 3, 31)
         # as_of_date = dt.date(2022, 12, 31)
+        error_df = pd.DataFrame()
 
         with Scenario(
                 as_of_date=as_of_date,
@@ -456,16 +457,14 @@ class TestPerformanceBreakDown(object):
                     }
                 }
         ).context():
-            portfolios_to_run = TestPerformanceBreakDown.get_pe_only_portfolios(active_only=True)
-            report_name = ReportNames.PE_Portfolio_Performance_x_Vintage_Realization_Status
-
-            error_df = pd.DataFrame()
+            # portfolios_to_run = TestPerformanceBreakDown.get_pe_only_portfolios(active_only=True)
             # port_list = list(reversed(list(set(portfolios_to_run.PortfolioReportingName.to_list()))))
+
+            # set report name and dimension config here
+            report_name = ReportNames.PE_Portfolio_Performance_x_Investment_Manager
+
             port_list = ['The Consolidated Edison Pension Plan Master Trust - GCM PE Account']
             for port_name in port_list:
-                # for port_name in ['The Consolidated Edison Pension Plan Master Trust - GCM PE Account']:
-                # port_name = "The Consolidated Edison Pension Plan Master Trust - GCM PE Account"
-                # port_name = 'The Consolidated Edison Pension Plan Master Trust - GCM PE Account'
                 domain = EntityDomainTypes.Portfolio
                 info = TestPerformanceBreakDown.get_entity(
                     domain=domain, name=port_name
