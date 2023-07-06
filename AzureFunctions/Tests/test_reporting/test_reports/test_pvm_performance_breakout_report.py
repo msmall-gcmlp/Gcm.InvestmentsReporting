@@ -153,56 +153,63 @@ class TestPerformanceBreakDown(object):
                     }
                 }
         ).context():
-            # portfolios_to_run = TestPerformanceBreakDown.get_pe_only_portfolios(active_only=True)
-            # port_list = list(reversed(list(set(portfolios_to_run.PortfolioReportingName.to_list()))))
 
-            # set report name and dimension config here
-            report_name = ReportNames.PE_Portfolio_Performance_x_Investment_Manager
+            # set report name and dimension config
+            reports_to_run = [
+                ReportNames.PE_Portfolio_Performance_x_Investment_Manager,
+                ReportNames.PE_Portfolio_Performance_x_Vintage_Realization_Status,
+                ReportNames.PE_Portfolio_Performance_x_Sector,
+                ReportNames.PE_Portfolio_Performance_x_Region,
+            ]
 
-            port_list = ['The Consolidated Edison Pension Plan Master Trust - GCM PE Account']
-            for port_name in port_list:
-                domain = EntityDomainTypes.Portfolio
-                info = TestPerformanceBreakDown.get_entity(
-                    domain=domain, name=port_name
-                )
-                try:
-                    this_report = PvmPerformanceBreakoutReport(
-                        report_name_enum=report_name,
-                        report_meta=ReportMeta(
-                            type=ReportType.Performance,
-                            interval=Scenario.get_attribute(
-                                "aggregate_interval"
-                            ),
-                            consumer=ReportConsumer(
-                                horizontal=[ReportConsumer.Horizontal.IC],
-                                vertical=ReportConsumer.Vertical.PE,
-                            ),
-                            frequency=Frequency(
-                                FrequencyType.Quarterly, Calendar.AllDays
-                            ),
-                            entity_domain=domain,
-                            entity_info=info,
-                        ),
+            # get relevant portfolios to run
+            portfolios_to_run = TestPerformanceBreakDown.get_pe_only_portfolios(active_only=True)
+            port_list = list(set(portfolios_to_run.PortfolioReportingName.to_list()))
+
+            for report_name_enum in reports_to_run:
+                for port_name in port_list:
+                    domain = EntityDomainTypes.Portfolio
+                    info = TestPerformanceBreakDown.get_entity(
+                        domain=domain, name=port_name
                     )
-
-                    output = print(
-                        report_structure=this_report, print_pdf=True
-                    )
-
-                except Exception as e:
-                    error_msg = getattr(e, "message", repr(e))
-                    # print(error_msg)
-                    error_df = pd.concat(
-                        [
-                            pd.DataFrame(
-                                {
-                                    "Portfolio": [port_name],
-                                    "Date": [as_of_date],
-                                    "ErrorMessage": [error_msg],
-                                }
+                    try:
+                        this_report = PvmPerformanceBreakoutReport(
+                            report_name_enum=report_name_enum,
+                            report_meta=ReportMeta(
+                                type=ReportType.Performance,
+                                interval=Scenario.get_attribute(
+                                    "aggregate_interval"
+                                ),
+                                consumer=ReportConsumer(
+                                    horizontal=[ReportConsumer.Horizontal.IC],
+                                    vertical=ReportConsumer.Vertical.PE,
+                                ),
+                                frequency=Frequency(
+                                    FrequencyType.Quarterly, Calendar.AllDays
+                                ),
+                                entity_domain=domain,
+                                entity_info=info,
                             ),
-                            error_df,
-                        ]
-                    )
-                # error_df.to_csv('C:/Tmp/error df port reports.csv')
-                # assert output is not None
+                        )
+
+                        output = print(
+                            report_structure=this_report, print_pdf=True
+                        )
+
+                    except Exception as e:
+                        error_msg = getattr(e, "message", repr(e))
+                        # print(error_msg)
+                        error_df = pd.concat(
+                            [
+                                pd.DataFrame(
+                                    {
+                                        "Portfolio": [port_name],
+                                        "Date": [as_of_date],
+                                        "ErrorMessage": [error_msg],
+                                    }
+                                ),
+                                error_df,
+                            ]
+                        )
+                    # error_df.to_csv('C:/Tmp/error df port reports.csv')
+                    # assert output is not None

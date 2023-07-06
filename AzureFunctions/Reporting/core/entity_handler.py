@@ -62,9 +62,9 @@ class EntityReportingMetadata:
     def _check_is_of_type(
         cls, avail_srcs_this_entity: List[str], source_list: List[str]
     ):
-        return any(
-            [x.upper() in source_list for x in avail_srcs_this_entity]
-        )
+        return len(
+            [source_name for source_name in list(map(str.upper, source_list)) if source_name in list(map(str.upper, avail_srcs_this_entity))]
+        ) > 0
 
     @staticmethod
     def __coerce_to_int(item: object, strict=True):
@@ -124,17 +124,15 @@ class EntityReportingMetadata:
                     for x in g[EntityStandardNames.SourceName].unique()
                 ]
             )
+
             coerced_dict = {
                 class_type.generic_entity_name: str(n[0]),
                 class_type.generic_entity_type: entity_type,
             }
-            pub = "PUB"
-            pub_med_identifiers = [
-                f"ALTSOFT.{pub}",
-                f"{pub}.INVESTMENTDIMN",
-            ]
-            pvm_med = "PVM.MED"
-            pvm_med_sources = [pvm_med, "pvm-med"]
+
+            #TODO: DT note: revisit - better solution is creating a "pub" and "pvm-med" classification above existing SourceName
+            pub_med_identifiers = ["AltSoft.Pub", "Pub.InvestmentDimn"]
+            pvm_med_sources = ["PVM.MED", "pvm-med"]
 
             if EntityReportingMetadata._check_is_of_type(
                 avail_srcs_this_entity, pub_med_identifiers
@@ -155,7 +153,7 @@ class EntityReportingMetadata:
                     EntityDomainTypes.InvestmentGroup.name: sub_class.gcm_manager_fund_group_ids,
                     EntityDomainTypes.Portfolio.name: sub_class.gcm_portfolio_ids,
                 }
-                coerced_dict[class_type.generic_entity_source] = pub
+                coerced_dict[class_type.generic_entity_source] = 'pub-med' #update
                 _mapped = mapping_type[entity_type]
                 coerced_dict[_mapped] = external_ids
             elif EntityReportingMetadata._check_is_of_type(
@@ -176,10 +174,10 @@ class EntityReportingMetadata:
                     if x is not None and isinstance(x, int)
                 ]
                 coerced_dict[class_type.generic_entity_id] = external_ids
-                coerced_dict[class_type.generic_entity_source] = pvm_med
+                coerced_dict[class_type.generic_entity_source] = 'pvm-med' #update
             else:
                 coerced_dict[class_type.generic_entity_id] = [int(n[1])]
-                coerced_dict[class_type.generic_entity_source] = "IDW"
+                coerced_dict[class_type.generic_entity_source] = "IDW" #update
 
             if coerced_dict is not None:
                 for k, v in coerced_dict.items():
