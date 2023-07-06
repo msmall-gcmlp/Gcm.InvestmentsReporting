@@ -151,35 +151,36 @@ class PvmPerformanceBreakoutReport(ReportStructure):
 
         row_count_excel_header = 21
         print_region = "B1:AC" + str(len(primary_df) + row_count_excel_header)
-        # print_region = "B1:AC50"
-        hide_columns = []
         # if (self.iteration_number + 1) <= 3:
         #     page_number = int(math.ceil((len(primary_df) + 20) / 77) + 1)
         # else:
         #     page_number = None
 
         # TODO: check portfolio inception date to set these dynamically
+        # always hide 5Y cols
+        hide_columns = [
+            "N",
+            "O",
+            "P",
+            "Q",
+            "R",
+            "S"
+        ]
         if primary_df.loc[0, "3Y_AnnRor"] is None:
             # hide 3Y and 5Y columns
             # TODO: generic:
             #    https://stackoverflow.com/questions/16060899/alphabet-range-in-python
-            hide_columns = [
-                "N",
-                "O",
-                "P",
-                "Q",
-                "R",
-                "S",
-                "T",
-                "U",
-                "V",
-                "W",
-                "X",
-                "Y",
-            ]
-        elif primary_df.loc[0, "5Y_AnnRor"] is None:
-            # hide 5Y columns
-            hide_columns = ["N", "O", "P", "Q", "R", "S"]
+            hide_columns.extend(
+                [
+                    "T",
+                    "U",
+                    "V",
+                    "W",
+                    "X",
+                    "Y",
+                ]
+            )
+
         ########## TODO: Done formatting and weird stuff ##########################################################################
 
         this_worksheet = ReportWorksheet(
