@@ -38,6 +38,8 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
         LoadOptions,
         License,
         FontConfigs,
+        PdfSaveOptions
+
     )
 
     lic = License()
@@ -64,6 +66,20 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
     )
     wb.calculateFormula(True)
     FontConfigs.setFontFolder(get_fonts_path(), True)
+
+    #DT uncomment for fixing merged cell pdf issue
+    # t1 = wb.getWorksheets().get(1).getCells().getMergedCells()
+    # for x in range(wb.getWorksheets().getCount()):
+    #     if x <= 1:
+    #         continue
+    #     wb.getWorksheets().get(x).getCells().clearMergedCells()
+    #     merged_cell_array = wb.getWorksheets().get(1).getCells().getMergedCells()
+    #     for i in range(len(merged_cell_array)):
+    #         start_row = merged_cell_array.get(i).StartRow
+    #         end_row = merged_cell_array.get(i).EndRow
+    #         start_col = merged_cell_array.get(i).StartColumn
+    #         end_col = merged_cell_array.get(i).EndColumn
+    #         wb.getWorksheets().get(x).getCells().merge(start_row+1, start_col, end_row-start_row+1, end_col-start_col+1)
 
     v = wb.saveToBytes(SaveFormat.PDF)
     dao.execute(

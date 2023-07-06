@@ -4,10 +4,13 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 
 def copy_sheet(source_sheet: Worksheet, target_sheet: Worksheet):
+    # copy_cells(
+    #     source_sheet, target_sheet
+    # )  # copy all the cel values and styles
+    copy_sheet_attributes(source_sheet, target_sheet)
     copy_cells(
         source_sheet, target_sheet
     )  # copy all the cel values and styles
-    copy_sheet_attributes(source_sheet, target_sheet)
 
 
 def copy_sheet_attributes(
@@ -19,13 +22,35 @@ def copy_sheet_attributes(
         return
     target_sheet.sheet_format = copy(source_sheet.sheet_format)
     target_sheet.sheet_properties = copy(source_sheet.sheet_properties)
-    target_sheet.merged_cells = copy(source_sheet.merged_cells)
     target_sheet.page_margins = copy(source_sheet.page_margins)
     target_sheet.freeze_panes = copy(source_sheet.freeze_panes)
+    target_sheet.conditional_formatting = copy(source_sheet.conditional_formatting)
+    if source_sheet.print_area is not None:
+        target_sheet.print_area = copy(source_sheet.print_area)
+    if source_sheet.print_options is not None:
+        target_sheet.print_options = copy(source_sheet.print_options)
+    if source_sheet.print_title_cols is not None:
+        target_sheet.print_title_cols = copy(source_sheet.print_title_cols)
+    if source_sheet.print_title_rows is not None:
+        target_sheet.print_title_rows = copy(source_sheet.print_title_rows)
+    if source_sheet.page_setup is not None:
+        target_sheet.page_setup = copy(source_sheet.page_setup)
+    target_sheet.merged_cells = copy(source_sheet.merged_cells)
     target_sheet._images = copy(source_sheet._images)
     target_sheet.sheet_view.showGridLines = copy(
-        source_sheet.show_gridlines
+        source_sheet.sheet_view.showGridLines
     )
+    target_sheet.sheet_view.view = copy(
+        source_sheet.sheet_view.view
+    )
+    target_sheet.sheet_view.zoomScaleSheetLayoutView = copy(
+        source_sheet.sheet_view.zoomScaleSheetLayoutView
+    )
+    target_sheet.sheet_view.zoomScale = copy(source_sheet.sheet_view.zoomScale)
+    target_sheet.sheet_view.zoomScalePageLayoutView = copy(source_sheet.sheet_view.zoomScalePageLayoutView)
+    target_sheet.firstFooter = copy(source_sheet.firstFooter)
+    target_sheet.firstHeader = copy(source_sheet.firstHeader)
+    target_sheet.HeaderFooter = copy(source_sheet.HeaderFooter)
 
     # set row dimensions
     # So you cannot copy the row_dimensions attribute.

@@ -17,6 +17,9 @@ def __runner() -> DaoRunner:
     return Scenario.get_attribute("dao")
 
 
+
+
+
 def discount_table(
     dates_cashflows,
     cashflows,
@@ -121,7 +124,6 @@ def discount_table(
 
 def get_investment_sector_benchmark(df):
     df_bmark_mapped = df.copy()
-    # only SPXT currently per Amy
     df_bmark_mapped["BenchmarkTicker"] = "SPXT Index"
 
     def oper(query: Query, item: DeclarativeMeta):
@@ -160,7 +162,6 @@ def format_and_get_pme_bmarks(
         _attributes_needed
         + ["TransactionDate", "TransactionType", "BaseAmount"]
     ]
-    # TODO: really need to standardize transaction type tags or use enums
     fund_cf.TransactionType = np.select(
         [
             (fund_cf.TransactionType == "Distributions"),
@@ -177,7 +178,7 @@ def format_and_get_pme_bmarks(
 
 def get_alpha_discount_table(fund_df, fund_cf, index_prices):
     discount_table_rslt = pd.DataFrame()
-    for idx in range(0, len(fund_df)):
+    for idx in range(len(fund_df)):
         print(fund_df.Name[idx])
         single_fund = fund_cf[fund_cf["Name"] == fund_df.Name[idx]].copy()
         single_fund_group_sum = (
@@ -238,6 +239,7 @@ def get_alpha_discount_table(fund_df, fund_cf, index_prices):
             dates_index=fund_specific_index.iloc[:, 0],
             index=fund_specific_index.iloc[:, 1],
         )
+        discount_table_df['IndexName'] = fund_df.BenchmarkTicker[idx]
         discount_table_df["Name"] = fund_df.Name[idx]
         discount_table_rslt = pd.concat(
             [discount_table_rslt, discount_table_df]
@@ -264,7 +266,6 @@ def get_direct_alpha_rpt(
     _attributes_needed: List[str],
     _trailing_periods: dict,
 ):
-    # bmark assignment is always at investment level
     fund_cf, index_prices = format_and_get_pme_bmarks(
         df, _attributes_needed
     )
@@ -553,7 +554,7 @@ def get_fv_cashflow_df(
     index_prices: pd.DataFrame,
 ):
     fv_cashflows_df = pd.DataFrame()
-    for idx in range(0, len(fund_df)):
+    for idx in range(len(fund_df)):
         print(fund_df.Name[idx])
 
         single_fund = fund_cf[fund_cf["Name"] == fund_df.Name[idx]].copy()
@@ -1074,7 +1075,6 @@ def get_horizon_irr_df_rpt(
 
         for group_cols in list_to_iterate:
             if starting_investment is not None:
-                # TODO can be done much cleaner...
                 # filter out items that don't meet full trailing period
                 full_period_groups = list(
                     starting_investment.apply(
@@ -1162,7 +1162,6 @@ def get_horizon_tvpi_df_rpt(
 
         for group_cols in list_to_iterate:
             if starting_investment is not None:
-                # TODO can be done much cleaner...
                 # filter out items that don't meet full trailing period
                 full_period_groups = list(
                     starting_investment.apply(
@@ -1238,31 +1237,6 @@ def calc_multiple(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
             lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
         )
         return multiple
-    # if len(cf) == 0:
-    #     return pd.DataFrame(columns=["Name", type + "Multiple"])
-    # if group_cols is None:
-    #     multiple = [
-    #         cf[cf.TransactionType.isin(["Distributions", "Net Asset Value"])].BaseAmount.sum()
-    #         / abs(cf[cf.TransactionType.isin(["Contributions"])].BaseAmount.sum())
-    #     ]
-    #     return multiple[0]
-    # else:
-    #     multiple = (
-    #         cf[cf.TransactionType.isin(["Distributions", "Net Asset Value"])]
-    #         .groupby(group_cols)
-    #         .BaseAmount.sum()
-    #         / cf[cf.TransactionType.isin(["Contributions"])]
-    #         .groupby(group_cols)
-    #         .BaseAmount.sum()
-    #         .abs()
-    #     )
-    #     multiple = multiple.reset_index().rename(
-    #         columns={"BaseAmount": type + "Multiple"}
-    #     )
-    #     multiple["Name"] = multiple.apply(
-    #         lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
-    #     )
-    #     return multiple
 
 
 def calc_dpi(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
@@ -1301,37 +1275,6 @@ def calc_dpi(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
             lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
         )
         return dpi
-    # if len(cf) == 0:
-    #     return pd.DataFrame(columns=["Name", type + "Dpi"])
-    # if group_cols is None:
-    #     dpi = [
-    #         cf[
-    #             cf.TransactionType.isin(["Distributions"])
-    #         ].BaseAmount.sum() / abs(
-    #             cf[
-    #                 cf.TransactionType.isin(["Contributions"])
-    #             ].BaseAmount.sum()
-    #         )
-    #     ]
-    #     return dpi[0]
-    # else:
-    #     dpi = (
-    #         cf[cf.TransactionType.isin(["Distributions"])]
-    #         .groupby(group_cols)
-    #         .BaseAmount.sum()
-    #         / cf[cf.TransactionType.isin(["Contributions"])]
-    #         .groupby(group_cols)
-    #         .BaseAmount.sum()
-    #         .abs()
-    #     )
-    #     dpi = dpi.reset_index().rename(
-    #         columns={"BaseAmount": type + "Dpi"}
-    #     )
-    #     dpi["Name"] = dpi.apply(
-    #         lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
-    #     )
-    #     return dpi
-
 
 def get_sum_df_rpt(
     df: pd.DataFrame, list_to_iterate: List[List[str]], sum_col: str
@@ -1352,11 +1295,9 @@ def calc_sum(df: pd.DataFrame, group_cols: List[str], sum_col: str):
     )
     return rslt
 
-
 def get_holding_periods_rpt(
     df, discount_df, list_to_iterate, _attributes_needed
 ):
-    # TODO: change to ENUM and only D/T/R for IRR cfs
     max_nav_date = (
         df[df.TransactionType.isin(["R", "Net Asset Value"])]
         .groupby(["Name"])
@@ -1437,7 +1378,6 @@ def calc_duration(discount_df, group_cols):
         lambda x: "_".join([str(x[i]) for i in group_cols]), axis=1
     )
     return df_dates
-
 
 def recurse_down_order(
     df: pd.DataFrame,

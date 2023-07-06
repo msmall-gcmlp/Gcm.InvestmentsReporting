@@ -3,10 +3,13 @@ from gcm.inv.entityhierarchy.EntityDomain.entity_domain import (
 )
 from gcm.inv.scenario import Scenario, DaoRunner
 from gcm.Dao.DaoSources import DaoSource
-
+import numpy as np
 
 def __runner() -> DaoRunner:
     return Scenario.get_attribute("dao")
+
+def __as_of_date() -> DaoRunner:
+    return Scenario.get_attribute("as_of_date")
 
 
 def get_all_os_for_all_portfolios() -> pd.DataFrame:
@@ -66,22 +69,36 @@ def get_all_manager_holdings() -> pd.DataFrame:
     )
     return manager_df
 
+# all arguments are strings
+def get_burgiss_bmark(report_date: str=None,
+                      vintage: str='All',
+                      asset_group: str = 'Buyout',
+                      geography_group: str='All'
+                      ) -> pd.DataFrame:
+    if report_date is None:
+        report_date = str(Scenario.get_attribute('as_of_date'))
 
-def get_burgiss_bmark() -> pd.DataFrame:
     def my_dao_operation(dao, params):
-        # hardcoding params
-        raw = """
-                select * 
-                from burgiss.BenchmarkFact
-                where Date = '2022-9-30'
-                and AssetGroup='Buyout'
-                and GeographyGroup='All'
-                and Vintage = 'All'
-                """
+        # assumes max date is the same across groups strategy, vintage, or geography
+        raw = f"""
+        select * from burgiss.BenchmarkFact where
+         AssetGroup='{asset_group}'
+         and GeographyGroup='{geography_group}'
+         and Vintage = '{vintage}'
+         and Date =
+            (
+            select max(Date) from burgiss.BenchmarkFact where
+            AssetGroup='{asset_group}'
+            and GeographyGroup='{geography_group}'
+            and Vintage = '{vintage}'
+            and Date <= '{report_date}'
+            )
+        """
+
         df = pd.read_sql(
-            raw,
-            dao.data_engine.session.bind,
-        )
+                raw,
+                dao.data_engine.session.bind,
+            )
         return df
 
     df = __runner().execute(
@@ -141,18 +158,6 @@ def get_burgiss_bmark() -> pd.DataFrame:
 
 def get_all_deal_attributes() -> pd.DataFrame:
     def my_dao_operation(dao, params):
-        # raw = """
-        #         select distinct
-        #             os.Ticker OsTicker,
-        #             h.ReportingName,
-        #             hrpting.PredominantSector,
-        #             d.*
-        #         from entitydata.OperationalSeries os
-        #             left join entitydata.Investment i on os.MasterId = i.OperationalSeriesId
-        #             left join entitydata.Deal d on i.DealId = d.MasterId
-        #             left join entitydata.Holding h on i.HoldingId = h.MasterId
-        #             left join entitydata.Holding hrpting on h.ReportingMasterId = hrpting.MasterId
-        #         """
         raw = """
                         select distinct
         			p.Ticker PortfolioTicker,
@@ -161,6 +166,7 @@ def get_all_deal_attributes() -> pd.DataFrame:
                     im.LegalName InvestmentManagerName,
                     hrpting.SmallAndEmerging,
 					hrpting.DiverseManager,
+					hrpting.VintageYear HoldingVintageYear,
                     hrpting.PredominantSector,
                     d.*
                 from entitydata.OperationalSeries os
@@ -177,24 +183,22 @@ def get_all_deal_attributes() -> pd.DataFrame:
             raw,
             dao.data_engine.session.bind,
         )
-        # needed when we do x-portfolio analysis where each "atomic unit" needs to be independently evaluated at portfolio level
-        # df['Name'] = df.PortfolioTicker + 'ticker_' + df.Name
+
         # TODO: move to perm location
-        import numpy as np
         df.SmallAndEmerging = np.where(df.SmallAndEmerging.isnull(), 0, df.SmallAndEmerging)
         df.DiverseManager = np.where(df.DiverseManager.isnull(), 0, df.DiverseManager)
         df['SumEmergingDiverse'] = df.SmallAndEmerging + df.DiverseManager
-        df['EmergingDiverseStatus'] = np.where((df.SmallAndEmerging + df.DiverseManager) > 0, 'Small/Emerging/Diverse', 'Other')
-        # df['EmergingDiverseStatus'] = np.where(df.Name == 'Project Rambler',
-        #                                        'Other',
-        #                                        df.EmergingDiverseStatus)
-        df.rename(columns={'Name': 'DealName'}, inplace=True)
-
+        df['EmergingDiverseStatus'] = np.where((df.SmallAndEmerging + df.DiverseManager) > 0, 'SEM/DM', 'Other')
         return df
 
-    attrib = __runner().execute(
+    df = __runner().execute(
         params={},
         source=DaoSource.PvmDwh,
         operation=my_dao_operation,
     )
-    return attrib
+
+    # TODO: DT note: revisit
+    df['VintageYear'] = df.VintageYear.astype(int).astype(str)
+    df.rename(columns={'Name': 'DealName'}, inplace=True)
+
+    return df

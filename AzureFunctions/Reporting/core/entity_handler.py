@@ -15,7 +15,7 @@ import numpy as np
 class EntityReportingMetadata:
     class gcm_entity_metadata:
         generic_entity_name = "gcm_entity_name"
-        generic_entity_id = "gcm_entity_id"
+        generic_entity_id = "gcm_entity_ids"
         generic_entity_type = "gcm_entity_type"
         generic_entity_source = "gcm_entity_source"
 
@@ -134,7 +134,7 @@ class EntityReportingMetadata:
                 f"{pub}.INVESTMENTDIMN",
             ]
             pvm_med = "PVM.MED"
-            pvm_med_sources = [pvm_med]
+            pvm_med_sources = [pvm_med, "pvm-med"]
 
             if EntityReportingMetadata._check_is_of_type(
                 avail_srcs_this_entity, pub_med_identifiers
