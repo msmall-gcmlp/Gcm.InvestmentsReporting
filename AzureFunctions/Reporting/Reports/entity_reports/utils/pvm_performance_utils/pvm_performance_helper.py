@@ -7,6 +7,7 @@ from gcm.inv.entityhierarchy.EntityDomain.entity_domain import (
 )
 from Reporting.Reports.report_names import ReportNames
 from .analytics import get_performance_report_dict
+from .analytics.standards import TransactionTypes
 from .helpers import (
     convert_amt_to_usd,
     get_ilevel_cfs,
@@ -124,7 +125,7 @@ class PvmPerformanceHelper(object):
 
         max_nav_date = (
             raw_df[
-                (raw_df.TransactionType == "Net Asset Value")
+                (raw_df.TransactionType.isin(TransactionTypes.R.value))
             ]
             .groupby(["OwnerName", "InvestmentName"])
             .TransactionDate.max()
@@ -159,18 +160,18 @@ class PvmPerformanceHelper(object):
             ]
             irr_cf["TransactionType"] = np.where(
                 irr_cf.TransactionType.str.contains("Contributions -"),
-                "Contributions",
+                "T",
                 irr_cf.TransactionType,
             )
             irr_cf["TransactionType"] = np.where(
                 irr_cf.TransactionType.str.contains("Distributions -"),
-                "Distributions",
+                "D",
                 irr_cf.TransactionType,
             )
             irr_cf.BaseAmount = irr_cf.BaseAmount * -1
             latest_reported_nav = raw_df[
                 (raw_df.TransactionDate == raw_df.MaxNavDate)
-                & (raw_df.TransactionType == "Net Asset Value")
+                & (raw_df.TransactionType.isin(TransactionTypes.R.value))
             ]
             irr_cf_rslt = (
                 pd.concat([irr_cf, latest_reported_nav])
@@ -180,7 +181,7 @@ class PvmPerformanceHelper(object):
             return irr_cf_rslt
         if cf_type == PvmPerformanceHelper.Cf_Filter_Type.NavTimeSeries:
             nav_df = (
-                raw_df[raw_df.TransactionType == "Net Asset Value"]
+                raw_df[raw_df.TransactionType.isin(TransactionTypes.R.value)]
                 .sort_values("TransactionDate")
                 .reset_index(drop=True)
             )
@@ -420,7 +421,7 @@ class PvmPerformanceHelper(object):
             reporting_type,
         )
         full_cfs = pd.concat(
-            [irr_cfs[irr_cfs.TransactionType != "Net Asset Value"], nav_df]
+            [irr_cfs[~irr_cfs.TransactionType.isin(TransactionTypes.R.value)], nav_df]
         )
         commitment_df = self.get_cfs_of_type(
             as_of_date,

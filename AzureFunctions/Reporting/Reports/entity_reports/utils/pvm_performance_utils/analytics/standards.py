@@ -1,3 +1,5 @@
+from enum import Enum
+
 import pandas as pd
 from typing import List
 from pyxirr import xirr
@@ -17,7 +19,10 @@ def __runner() -> DaoRunner:
     return Scenario.get_attribute("dao")
 
 
-
+class TransactionTypes(Enum):
+        T = ["Contributions", "Capital Call", "Contribution", "T"]
+        R = ["Net Asset Value", "R", "Value"]
+        D = ["Distribution", "Distributions", "D"]
 
 
 def discount_table(
@@ -53,10 +58,10 @@ def discount_table(
     df_cf = df_cf.reset_index(drop=True)
     # Get NAV
     if df_cf[
-        (df_cf["Type"] == "Value") & (df_cf["Amount"] == 0)
+        (df_cf.Type.isin(TransactionTypes.R.value)) & (df_cf.Amount == 0)
     ].empty:  # Checks if liquidated by looking at 0 valuations
         NAV_record = (
-            df_cf[df_cf["Type"] == "Value"]
+            df_cf[df_cf["Type"].isin(TransactionTypes.R.value)]
             .sort_values("Date", ascending=False)
             .head(1)
             .copy()
@@ -68,7 +73,7 @@ def discount_table(
         df_cf["Status"] = "Active"
     else:  # Not liquidated
         NAV_record = (
-            df_cf[df_cf["Type"] != "Value"]
+            df_cf[~df_cf["Type"].isin(TransactionTypes.R.value)]
             .sort_values("Date", ascending=False)
             .head(1)
             .copy()
@@ -92,12 +97,12 @@ def discount_table(
         df_cf.loc[idx, "Index"] = index_value
         df_cf.loc[idx, "Index_date"] = index_date
         df_cf.loc[idx, "FV_Factor"] = NAV_index_value / index_value
-        if cf["Type"] == "Distribution":
+        if cf["Type"] in TransactionTypes.D.value:
             df_cf.loc[idx, "Discounted"] = cf["Amount"] * (
                 NAV_index_value / index_value
             )
             df_cf.loc[idx, "Pre-Discounted"] = cf["Amount"]
-        elif cf["Type"] == "Capital Call":
+        elif cf["Type"] in TransactionTypes.T.value:
             df_cf.loc[idx, "Discounted"] = cf["Amount"] * (
                 NAV_index_value / index_value
             )
@@ -105,13 +110,13 @@ def discount_table(
 
     # Attach relevant NAV value
     df_cf.loc[
-        (df_cf["Date"] == NAV_date) & (df_cf["Type"] == "Value"),
+        (df_cf["Date"] == NAV_date) & (df_cf["Type"].isin(TransactionTypes.R.value)),
         "Discounted",
     ] = (
         NAV_record["Amount"].iloc[0] * NAV_scaling
     )
     df_cf.loc[
-        (df_cf["Date"] == NAV_date) & (df_cf["Type"] == "Value"),
+        (df_cf["Date"] == NAV_date) & (df_cf["Type"].isin(TransactionTypes.R.value)),
         "Pre-Discounted",
     ] = (
         NAV_record["Amount"].iloc[0] * NAV_scaling
@@ -162,14 +167,6 @@ def format_and_get_pme_bmarks(
         _attributes_needed
         + ["TransactionDate", "TransactionType", "BaseAmount"]
     ]
-    fund_cf.TransactionType = np.select(
-        [
-            (fund_cf.TransactionType == "Distributions"),
-            (fund_cf.TransactionType == "Contributions"),
-            (fund_cf.TransactionType == "Net Asset Value"),
-        ],
-        ["Distribution", "Capital Call", "Value"],
-    )
 
     # get index prices
     fund_cf_bmark, index_prices = get_investment_sector_benchmark(fund_cf)
@@ -191,21 +188,21 @@ def get_alpha_discount_table(fund_df, fund_cf, index_prices):
         if len(single_fund_group_sum.TransactionDate.unique()) < 2:
             continue
         max_nav_date = single_fund_group_sum[
-            single_fund_group_sum.TransactionType == "Value"
+            single_fund_group_sum.TransactionType.isin(TransactionTypes.R.value)
         ].TransactionDate.max()
         total_nav = single_fund_group_sum[
-            single_fund_group_sum.TransactionType == "Value"
+            single_fund_group_sum.TransactionType.isin(TransactionTypes.R.value)
         ].BaseAmount.sum()
         single_fund_group_sum = pd.concat(
             [
                 single_fund_group_sum[
-                    single_fund_group_sum.TransactionType != "Value"
+                    ~single_fund_group_sum.TransactionType.isin(TransactionTypes.R.value)
                 ],
                 pd.DataFrame(
                     {
                         "Name": single_fund_group_sum.Name.unique(),
                         "TransactionDate": [max_nav_date],
-                        "TransactionType": "Value",
+                        "TransactionType": "R",
                         "BaseAmount": total_nav,
                     }
                 ),
@@ -220,14 +217,14 @@ def get_alpha_discount_table(fund_df, fund_cf, index_prices):
         assert (
             len(
                 single_fund_group_sum[
-                    single_fund_group_sum.TransactionType == "Value"
+                    single_fund_group_sum.TransactionType.isin(TransactionTypes.R.value)
                 ]
             )
             == 1
         )
         assert (
             single_fund_group_sum[
-                single_fund_group_sum.TransactionType == "Value"
+                single_fund_group_sum.TransactionType.isin(TransactionTypes.R.value)
             ].TransactionDate.max()
             == single_fund.TransactionDate.max()
         )
@@ -426,7 +423,7 @@ def get_ks_pme_rpt(
             starting_investment.BaseAmount = (
                 starting_investment.BaseAmount * -1
             )
-            starting_investment["TransactionType"] = "Capital Call"
+            starting_investment["TransactionType"] = "T"
 
             fund_cf_filtered = fund_cf[
                 fund_cf.TransactionDate.apply(
@@ -560,7 +557,7 @@ def get_fv_cashflow_df(
         single_fund = fund_cf[fund_cf["Name"] == fund_df.Name[idx]].copy()
         if len(single_fund) <= 1:
             continue
-        if len(single_fund[single_fund.TransactionType == "Value"]) == 0:
+        if len(single_fund[single_fund.TransactionType.isin(TransactionTypes.R.value)]) == 0:
             continue
         if len(single_fund.TransactionDate.unique()) < 2:
             continue
@@ -572,21 +569,21 @@ def get_fv_cashflow_df(
             .reset_index()
         )
         max_nav_date = single_fund_group_sum[
-            single_fund_group_sum.TransactionType == "Value"
+            single_fund_group_sum.TransactionType.isin(TransactionTypes.R.value)
         ].TransactionDate.max()
         total_nav = single_fund_group_sum[
-            single_fund_group_sum.TransactionType == "Value"
+            single_fund_group_sum.TransactionType.isin(TransactionTypes.R.value)
         ].BaseAmount.sum()
         single_fund_group_sum = pd.concat(
             [
                 single_fund_group_sum[
-                    single_fund_group_sum.TransactionType != "Value"
+                    ~single_fund_group_sum.TransactionType.isin(TransactionTypes.R.value)
                 ],
                 pd.DataFrame(
                     {
                         "Name": single_fund_group_sum.Name.unique(),
                         "TransactionDate": [max_nav_date],
-                        "TransactionType": "Value",
+                        "TransactionType": "R",
                         "BaseAmount": total_nav,
                     }
                 ),
@@ -601,14 +598,14 @@ def get_fv_cashflow_df(
         assert (
             len(
                 single_fund_group_sum[
-                    single_fund_group_sum.TransactionType == "Value"
+                    single_fund_group_sum.TransactionType.isin(TransactionTypes.R.value)
                 ]
             )
             == 1
         )
         assert (
             single_fund_group_sum[
-                single_fund_group_sum.TransactionType == "Value"
+                single_fund_group_sum.TransactionType.isin(TransactionTypes.R.value)
             ].TransactionDate.max()
             == single_fund.TransactionDate.max()
         )
@@ -678,17 +675,17 @@ def KS_PME(
         index_value = index[
             _dates_index == nearest(_dates_index, cf["Date"])
         ].iloc[0]
-        if cf["Type"] == "Distribution":
+        if cf["Type"] in TransactionTypes.D.value:
             sum_fv_distributions = (
                 sum_fv_distributions + abs(cf["Amount"]) / index_value
             )
-        elif cf["Type"] == "Capital Call":
+        elif cf["Type"] in TransactionTypes.T.value:
             sum_fv_calls = sum_fv_calls + abs(cf["Amount"]) / index_value
             # Now, let us also consider the nav
     if auto_NAV:
         # Let us find the nav
         NAV_record = (
-            df_cf[df_cf["Type"] == "Value"]
+            df_cf[df_cf["Type"].isin(TransactionTypes.R.value)]
             .sort_values("Date", ascending=False)
             .head(1)
         )
@@ -915,11 +912,11 @@ def calc_tw_ror(
 
     df["Weight"] = df.DateDiff / df.TotalDays
     df["Weight"] = np.where(
-        df.TransactionType == "Net Asset Value", 0, df.Weight
+        df.TransactionType.isin(TransactionTypes.R.value), 0, df.Weight
     )
     df["wAmount"] = df.Weight * df.BaseAmount
 
-    nav = df[df.TransactionType == "Net Asset Value"].rename(
+    nav = df[df.TransactionType.isin(TransactionTypes.R.value)].rename(
         columns={"BaseAmount": "Nav"}
     )
     nav = nav.merge(
@@ -938,7 +935,7 @@ def calc_tw_ror(
         right_on=_attributes_needed
         + ["OwnerName", "InvestmentName", "lastq"],
     )
-    cf = df[df.TransactionType != "Net Asset Value"]
+    cf = df[~df.TransactionType.isin(TransactionTypes.R.value)]
 
     data = pd.concat([nav, cf])
 
@@ -1056,11 +1053,10 @@ def get_horizon_irr_df_rpt(
                 pd.to_datetime(nav_df.TransactionDate)
                 == pd.to_datetime(start_date + relativedelta(days=-1))
             ]
-            # starting_investment = starting_investment.groupby(group_cols).BaseAmount.sum().reset_index()
             starting_investment.BaseAmount = (
                 starting_investment.BaseAmount * -1
             )
-            starting_investment["TransactionType"] = "Contributions"
+            starting_investment["TransactionType"] = "T"
 
             fund_cf_filtered = df[
                 pd.to_datetime(df.TransactionDate)
@@ -1095,7 +1091,8 @@ def get_horizon_irr_df_rpt(
                 ]
 
             irr_data = calc_irr(
-                cf=fund_cf_filtered, group_cols=group_cols
+                cf=fund_cf_filtered,
+                group_cols=group_cols
             )[["Name", "GrossIrr"]]
             irr_data["Period"] = trailing_period
             rslt = pd.concat([rslt, irr_data])
@@ -1147,7 +1144,7 @@ def get_horizon_tvpi_df_rpt(
             starting_investment.BaseAmount = (
                 starting_investment.BaseAmount * -1
             )
-            starting_investment["TransactionType"] = "Contributions"
+            starting_investment["TransactionType"] = "T"
 
             fund_cf_filtered = df[
                 pd.to_datetime(df.TransactionDate)
@@ -1202,30 +1199,21 @@ def get_dpi_df_rpt(
 
 
 def calc_multiple(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
-    if len(cf[~cf.TransactionType.isin(["D", "T", "R"])]) != 0:
-        cf.TransactionType = np.select(
-            [
-                (cf.TransactionType == "Distributions"),
-                (cf.TransactionType == "Contributions"),
-                (cf.TransactionType == "Net Asset Value"),
-            ],
-            ["D", "T", "R"],
-        )
     # all funds/deals in cfs dataframe are what the result will reflect (i.e. do filtering beforehand)
     if len(cf) == 0:
         return pd.DataFrame(columns=["Name", type + "Multiple"])
     if group_cols is None:
         multiple = [
-            cf[cf.TransactionType.isin(["D", "R"])].BaseAmount.sum()
-            / abs(cf[cf.TransactionType.isin(["T"])].BaseAmount.sum())
+            cf[cf.TransactionType.isin(TransactionTypes.D.value + TransactionTypes.R.value)].BaseAmount.sum()
+            / abs(cf[cf.TransactionType.isin(TransactionTypes.T.value)].BaseAmount.sum())
         ]
         return multiple[0]
     else:
         multiple = (
-            cf[cf.TransactionType.isin(["D", "R"])]
+            cf[cf.TransactionType.isin(TransactionTypes.D.value + TransactionTypes.R.value)]
             .groupby(group_cols)
             .BaseAmount.sum()
-            / cf[cf.TransactionType.isin(["T"])]
+            / cf[cf.TransactionType.isin(TransactionTypes.T.value)]
             .groupby(group_cols)
             .BaseAmount.sum()
             .abs()
@@ -1241,29 +1229,20 @@ def calc_multiple(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
 
 def calc_dpi(cf: pd.DataFrame, group_cols=List[str], type="Gross"):
     # all funds/deals in cfs dataframe are what the result will reflect (i.e. do filtering beforehand)
-    if len(cf[~cf.TransactionType.isin(["D", "T", "R"])]) != 0:
-        cf.TransactionType = np.select(
-            [
-                (cf.TransactionType == "Distributions"),
-                (cf.TransactionType == "Contributions"),
-                (cf.TransactionType == "Net Asset Value"),
-            ],
-            ["D", "T", "R"],
-        )
     if len(cf) == 0:
         return pd.DataFrame(columns=["Name", type + "Dpi"])
     if group_cols is None:
         dpi = [
-            cf[cf.TransactionType.isin(["D"])].BaseAmount.sum()
-            / abs(cf[cf.TransactionType.isin(["T"])].BaseAmount.sum())
+            cf[cf.TransactionType.isin(TransactionTypes.D.value)].BaseAmount.sum()
+            / abs(cf[cf.TransactionType.isin(TransactionTypes.T.value)].BaseAmount.sum())
         ]
         return dpi[0]
     else:
         dpi = (
-            cf[cf.TransactionType.isin(["D"])]
+            cf[cf.TransactionType.isin(TransactionTypes.D.value)]
             .groupby(group_cols)
             .BaseAmount.sum()
-            / cf[cf.TransactionType.isin(["T"])]
+            / cf[cf.TransactionType.isin(TransactionTypes.T.value)]
             .groupby(group_cols)
             .BaseAmount.sum()
             .abs()
@@ -1299,7 +1278,7 @@ def get_holding_periods_rpt(
     df, discount_df, list_to_iterate, _attributes_needed
 ):
     max_nav_date = (
-        df[df.TransactionType.isin(["R", "Net Asset Value"])]
+        df[df.TransactionType.isin(TransactionTypes.R.value)]
         .groupby(["Name"])
         .TransactionDate.max()
         .reset_index()
@@ -1350,14 +1329,14 @@ def calc_duration(discount_df, group_cols):
     df["DateInt"] = [i.toordinal() for i in df.Date]
     df["DurationCtr"] = df.DateInt * df.Discounted
 
-    inflows = df[df.Type == "Capital Call"]
+    inflows = df[df.Type.isin(TransactionTypes.T.value)]
     inflows = (
         inflows.groupby(group_cols).DurationCtr.sum()
         / inflows.groupby(group_cols).Discounted.sum()
     ).reset_index()
     inflows["avg_inflow_date"] = inflows[0].apply(convert_back_to_date)
 
-    outflows = df[df.Type.isin(["Distribution", "Value"])]
+    outflows = df[df.Type.isin(TransactionTypes.D.value + TransactionTypes.R.value)]
     outflows = (
         outflows.groupby(group_cols).DurationCtr.sum()
         / outflows.groupby(group_cols).Discounted.sum()

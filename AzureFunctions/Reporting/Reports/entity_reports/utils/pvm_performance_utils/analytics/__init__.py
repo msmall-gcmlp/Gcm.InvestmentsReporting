@@ -14,6 +14,7 @@ from .standards import (
     get_horizon_tvpi_df_rpt,
     get_dpi_df_rpt,
     get_hit_rate,
+    TransactionTypes,
 )
 
 
@@ -80,7 +81,9 @@ def get_performance_report_dict(
     commitment_rslt = get_sum_df_rpt(
         commitment_df, list_to_iterate, "Commitment"
     )[["Name", "Commitment"]]
-    nav = irr_cfs[irr_cfs.TransactionType == "R"].rename(
+    nav = irr_cfs[
+        irr_cfs.TransactionType.isin(TransactionTypes.R.value)
+    ].rename(
         columns={"BaseAmount": "Nav"}
     )
     nav_rslt = get_sum_df_rpt(nav, list_to_iterate, "Nav")[["Name", "Nav"]]
@@ -274,6 +277,10 @@ def format_performance_report(
     for col in columns:
         if col not in list(rslt.columns):
             rslt[col] = None
+    # set perf metrics to null where no investment duration (eliminate bizarre/not useful metrics)
+    for col in columns:
+        if col not in ['DisplayName', 'MaxNavDate', 'Commitment', 'Nav', 'Duration']:
+            rslt[col] = np.where(rslt.Duration.astype(float) > 0, rslt[col], None)
     rslt = rslt[columns]
     rslt = rslt[~rslt.DisplayName.isnull()]
 
