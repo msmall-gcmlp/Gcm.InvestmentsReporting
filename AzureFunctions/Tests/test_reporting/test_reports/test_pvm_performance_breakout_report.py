@@ -165,9 +165,8 @@ class TestPerformanceBreakDown(object):
             # get relevant portfolios to run
             portfolios_to_run = TestPerformanceBreakDown.get_pe_only_portfolios(active_only=True)
             port_list = list(set(portfolios_to_run.PortfolioReportingName.to_list()))
-
-            for report_name_enum in reports_to_run:
-                for port_name in port_list:
+            for port_name in port_list:
+                for report_name_enum in reports_to_run:
                     domain = EntityDomainTypes.Portfolio
                     info = TestPerformanceBreakDown.get_entity(
                         domain=domain, name=port_name

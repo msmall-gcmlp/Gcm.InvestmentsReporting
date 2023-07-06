@@ -87,7 +87,7 @@ class PvmPerformanceHelper(object):
             elif self.report_name_enum == ReportNames.PE_Portfolio_Performance_x_Investment_Manager:
                 report_group_cols = ['Portfolio', 'InvestmentManagerName', 'DealName']
             elif self.report_name_enum == ReportNames.PE_Portfolio_Performance_x_Sector:
-                report_group_cols = ['Portfolio, VintageYear, PredominantSector', 'DealName']
+                report_group_cols = ['Portfolio', 'PredominantSector', 'DealName']
             elif self.report_name_enum == ReportNames.PE_Portfolio_Performance_x_Region:
                 report_group_cols = ['Portfolio', 'PredominantAssetRegion', 'DealName']
             setattr(self, __name, report_group_cols)
