@@ -5,23 +5,61 @@ import scipy
 from gcm.inv.scenario import Scenario
 from scipy.stats import spearmanr, percentileofscore
 
+def _clean_firmwide_xpfund_data(df):
+        df = df.fillna(value=np.nan)
+        df = df.replace(r'^\s*$', np.nan, regex=True)
+        df = df[df['FirmwideAllocation'].notna()]
+        df.FirmwideAllocation = df.FirmwideAllocation.round()
+        df['FirmwideAllocation'].replace(0.0, np.nan, inplace=True)
+        df=df.dropna(subset=['FirmwideAllocation'])
+        df=df.dropna(subset=["('AbsoluteReturnBenchmarkExcess', 'MTD')",
+                             "('AbsoluteReturnBenchmarkExcess', 'ITD')"], 
+                            how='all'
+                    )
+        return df
+
 def _3y_arb_xs_analysis(df):
     #copy_df=df.copy()
     #copy_df["filled_3y"]=df["('AbsoluteReturnBenchmarkExcess', '3Y')"] if not nan, 
              #   else df["('AbsoluteReturnBenchmarkExcess', 'ITD')"]
+             
+    df['default_3y']=pd.DataFrame(df["('AbsoluteReturnBenchmarkExcess', '3Y')"])
+    df['default_3y'] = df['default_3y'].fillna(df["('AbsoluteReturnBenchmarkExcess', 'ITD')"])
     
-    return
+    #sort by default_3y
+    df = df.sort_values(by='default_3y').reset_index()
+    df = df.drop('index', axis=1)
+    
+    return df
 
 def _3y_arb_xs_emm_percentiles(df):
     #3y_filled_list=df['filled_3y'].tolist()
     #df["3y_ptiles"]=percentileofscore(3y_filled_list, df["filled_3y"], kind='rank')
     #x.loc[:, 'pcta'] = x.rank(pct=True)
     #df['3y_ptiles'] = df.filled_3y.rank(pct = True)
-    return
+    df['copy_default_3y']=pd.DataFrame(df['default_3y'])
+    df['3y_ptiles'] = pd.DataFrame(df.copy_default_3y).rank(numeric_only=True, pct = True)
+    df=df.drop('copy_default_3y', axis=1)
+    df=df.drop('default_3y', axis=1)
+    df_high=df.tail(40)
+    return df
 
 def _5y_arb_xs_emm_percentiles(df):
-    df['x']=df["('AbsoluteReturnBenchmarkExcess', '5Y')"]
-    df['5y_ptiles'] = df.x.rank(pct = True)
+    df['copy_5y']=pd.DataFrame(df["('AbsoluteReturnBenchmarkExcess', '5Y')"])
+    df['5y_ptiles'] = pd.DataFrame(df.copy_5y).rank(numeric_only=True, pct = True)
+    df=df.drop('copy_5y', axis=1)
+    return df
+
+def _10y_arb_xs_emm_percentiles(df):
+    df['copy_10y']=pd.DataFrame(df["('AbsoluteReturnBenchmarkExcess', '10Y')"])
+    df['10y_ptiles'] = pd.DataFrame(df.copy_10y).rank(numeric_only=True, pct = True)
+    df=df.drop('copy_10y', axis=1)
+    return df
+
+def _TTM_arb_xs_emm_percentiles(df):
+    df['copy_TTM']=pd.DataFrame(df["('AbsoluteReturnBenchmarkExcess', 'TTM')"])
+    df['TTM_ptiles'] = pd.DataFrame(df.copy_TTM).rank(numeric_only=True, pct = True)
+    df=df.drop('copy_TTM', axis=1)
     return df
 
 def _get_high_performing_df(df):
@@ -37,8 +75,14 @@ def _get_low_performing_df(df):
     return
 
 def _xpfund_data_to_highlow_df(df):
+    df=_clean_firmwide_xpfund_data(df=df)
+    df=_3y_arb_xs_analysis(df=df)
+    df=_3y_arb_xs_emm_percentiles(df=df)
+    df=_5y_arb_xs_emm_percentiles(df=df)
+    df=_10y_arb_xs_emm_percentiles(df=df)
+    df=_TTM_arb_xs_emm_percentiles(df=df)
     #a=_3y_arb_xs_analysis(df)
     #b=_3y_arb_xs_emm_percentiles(a)
     #c=_5y_arb_xs_emm_percentiles(b)
     #d,e=_get_high_performing_df(c)
-    return 
+    return df
