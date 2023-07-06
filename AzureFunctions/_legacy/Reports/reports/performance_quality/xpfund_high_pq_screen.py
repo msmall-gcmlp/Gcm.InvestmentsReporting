@@ -75,19 +75,6 @@ class XPfundHighPQScreen(ReportingRunnerBase):
             m=firm_xpfund_report_data["('AbsoluteReturnBenchmarkExcess', '3Y')"]
             firm_xpfund_highlow_df=firm_xpfund_report_data.copy()
             firm_xpfund_highlow_df=_xpfund_data_to_highlow_df(firm_xpfund_highlow_df)
-            
-            # firm_xpfund_report_data=firm_xpfund_report_data.copy()
-            # firm_xpfund_report_data=_clean_firmwide_xpfund_data(firm_xpfund_report_data)
-            # firm_xpfund_report_data=_3y_arb_xs_analysis(firm_xpfund_report_data)
-            # firm_xpfund_report_data=_3y_arb_xs_emm_percentiles(firm_xpfund_report_data)
-            # firm_xpfund_report_data=_5y_arb_xs_emm_percentiles(firm_xpfund_report_data)
-
-            #n=_5y_arb_xs_emm_percentiles(y)
-            #g=y['5y_ptiles']
-            #call fxn that sends y to inv models to manipulate it -> z
-            #call fxn that sends z to inv models to break into high and low
-            #input data, and input data json
-            #write to datalake
 
         return firm_xpfund_highlow_df
     
