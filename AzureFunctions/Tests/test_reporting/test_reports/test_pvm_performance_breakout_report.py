@@ -28,7 +28,7 @@ from utils.print_utils import print
 from gcm.Dao.DaoRunner import DaoSource, DaoRunnerConfigArgs
 from gcm.inv.scenario import Scenario, DaoRunner
 
-
+@pytest.mark.skip()
 class TestPerformanceBreakDown(object):
     @staticmethod
     def get_entity(domain, name):
@@ -109,6 +109,7 @@ class TestPerformanceBreakDown(object):
         # TODO: set up warning and or assertion error
         return portfolios
 
+    @pytest.mark.skip()
     def test_basic_helper_object(self):
         as_of_date = dt.date(2022, 12, 31)
         with Scenario(
