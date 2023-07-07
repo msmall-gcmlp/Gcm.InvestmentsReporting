@@ -28,6 +28,7 @@ from utils.print_utils import print
 from gcm.Dao.DaoRunner import DaoSource, DaoRunnerConfigArgs
 from gcm.inv.scenario import Scenario, DaoRunner
 
+
 @pytest.mark.skip()
 class TestPerformanceBreakDown(object):
     @staticmethod
