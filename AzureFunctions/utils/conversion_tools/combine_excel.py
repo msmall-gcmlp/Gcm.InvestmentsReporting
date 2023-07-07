@@ -24,7 +24,9 @@ def copy_sheet_attributes(
     target_sheet.sheet_properties = copy(source_sheet.sheet_properties)
     target_sheet.page_margins = copy(source_sheet.page_margins)
     target_sheet.freeze_panes = copy(source_sheet.freeze_panes)
-    target_sheet.conditional_formatting = copy(source_sheet.conditional_formatting)
+    target_sheet.conditional_formatting = copy(
+        source_sheet.conditional_formatting
+    )
     if source_sheet.print_area is not None:
         target_sheet.print_area = copy(source_sheet.print_area)
     if source_sheet.print_options is not None:
@@ -40,14 +42,16 @@ def copy_sheet_attributes(
     target_sheet.sheet_view.showGridLines = copy(
         source_sheet.sheet_view.showGridLines
     )
-    target_sheet.sheet_view.view = copy(
-        source_sheet.sheet_view.view
-    )
+    target_sheet.sheet_view.view = copy(source_sheet.sheet_view.view)
     target_sheet.sheet_view.zoomScaleSheetLayoutView = copy(
         source_sheet.sheet_view.zoomScaleSheetLayoutView
     )
-    target_sheet.sheet_view.zoomScale = copy(source_sheet.sheet_view.zoomScale)
-    target_sheet.sheet_view.zoomScalePageLayoutView = copy(source_sheet.sheet_view.zoomScalePageLayoutView)
+    target_sheet.sheet_view.zoomScale = copy(
+        source_sheet.sheet_view.zoomScale
+    )
+    target_sheet.sheet_view.zoomScalePageLayoutView = copy(
+        source_sheet.sheet_view.zoomScalePageLayoutView
+    )
     target_sheet.firstFooter = copy(source_sheet.firstFooter)
     target_sheet.firstHeader = copy(source_sheet.firstHeader)
     target_sheet.HeaderFooter = copy(source_sheet.HeaderFooter)

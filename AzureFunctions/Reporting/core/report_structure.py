@@ -165,8 +165,7 @@ class AvailableMetas(object):
 
 
 class ReportStructure(SerializableBase):
-    def __init__(self, report_name: Enum,
-                 report_meta: ReportMeta):
+    def __init__(self, report_name: Enum, report_meta: ReportMeta):
         self.report_name = report_name
         self.report_meta = report_meta
         # this is to be set via overriding

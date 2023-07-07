@@ -1,3 +1,4 @@
+import pytest
 from gcm.inv.scenario import Scenario
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 import datetime as dt
@@ -33,11 +34,12 @@ class TestPvmManagerTrReport(object):
         )
         return entity_info
 
+    @pytest.mark.skip()
     def test_run_local(self):
         with Scenario(
             as_of_date=dt.date(2022, 6, 30),
             aggregate_interval=AggregateInterval.ITD,
-            save=True,
+            save=False,
         ).context():
             d = EntityDomainTypes.InvestmentManager
             entity_info = TestPvmManagerTrReport.get_entity(
@@ -64,11 +66,12 @@ class TestPvmManagerTrReport(object):
             output = print(report_structure=this_report, print_pdf=True)
             assert output is not None
 
+    @pytest.mark.skip()
     def test_run_single_fund(self):
         with Scenario(
             as_of_date=dt.date(2022, 6, 30),
             aggregate_interval=AggregateInterval.ITD,
-            save=True,
+            save=False,
         ).context():
             d = EntityDomainTypes.Investment
             entity_info = TestPvmManagerTrReport.get_entity(

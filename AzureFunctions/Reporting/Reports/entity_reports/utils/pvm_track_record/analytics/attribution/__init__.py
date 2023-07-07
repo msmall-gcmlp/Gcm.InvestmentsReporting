@@ -1,20 +1,18 @@
-from ...data_handler.investment_container import InvestmentContainerBase
 from typing import List
 from functools import cached_property, reduce
 import pandas as pd
-from enum import Enum, auto
+from enum import Enum
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 import numpy as np
 from ....pvm_performance_utils.analytics.standards import (
     calc_irr,
     calc_multiple,
     calc_dpi,
-    calc_sum
+    calc_sum,
 )
 
 
 def generate_fund_rpt_dict(
-    manager_attrib: pd.DataFrame,
     fund_attrib: pd.DataFrame,
     investment_cf: pd.DataFrame,
     deal_attrib: pd.DataFrame,
@@ -42,7 +40,6 @@ def generate_fund_rpt_dict(
         group_cols=["InvestmentName"],
         gross_metrics=gross_metrics,
         net_metrics=net_metrics,
-        manager_dimn=manager_attrib,
         investment_dimn=fund_attrib,
         investment_cf=investment_cf,
         position_dimn=deal_attrib,
@@ -54,7 +51,6 @@ def generate_fund_rpt_dict(
         group_cols=["AssetName"],
         gross_metrics=gross_metrics,
         net_metrics=net_metrics,
-        manager_dimn=manager_attrib,
         investment_dimn=fund_attrib,
         investment_cf=investment_cf,
         position_dimn=deal_attrib[deal_attrib.Status == "Realized"],
@@ -67,7 +63,6 @@ def generate_fund_rpt_dict(
     realized_investment_tr_total = get_tr_stats(
         rpt_dimn=fund_attrib[["InvestmentName"]],
         group_cols=["InvestmentName"],
-        manager_dimn=manager_attrib,
         gross_metrics=gross_metrics,
         net_metrics=net_metrics,
         investment_dimn=fund_attrib,
@@ -85,7 +80,6 @@ def generate_fund_rpt_dict(
         group_cols=["InvestmentName"],
         gross_metrics=gross_metrics,
         net_metrics=net_metrics,
-        manager_dimn=manager_attrib,
         investment_dimn=fund_attrib,
         investment_cf=investment_cf,
         position_dimn=deal_attrib[deal_attrib.Status == "Unrealized"],
@@ -100,7 +94,6 @@ def generate_fund_rpt_dict(
         group_cols=["InvestmentName"],
         gross_metrics=gross_metrics,
         net_metrics=net_metrics,
-        manager_dimn=manager_attrib,
         investment_dimn=fund_attrib,
         investment_cf=investment_cf,
         position_dimn=deal_attrib[deal_attrib.Status == "Unrealized"],
@@ -346,8 +339,24 @@ def get_distrib_returns_rpt(
 
     return rpt_stats
 
-    return input_data
 
+def get_perf_concentration_rpt(
+    rpt_dimn: pd.DataFrame,
+    group_cols: List[str],
+    df: pd.DataFrame,
+    cf: pd.DataFrame,
+    realized_only=False,
+):
+    gross_metrics = [
+        PvmPerformanceResults.MeasureNames.EquityInvested,
+        PvmPerformanceResults.MeasureNames.UnrealizedValueGross,
+        PvmPerformanceResults.MeasureNames.TotalValue,
+        PvmPerformanceResults.MeasureNames.InvestmentGain,
+        PvmPerformanceResults.MeasureNames.GrossMultiple,
+        PvmPerformanceResults.MeasureNames.GrossIrr,
+        PvmPerformanceResults.MeasureNames.PctRealizedGain,
+        PvmPerformanceResults.MeasureNames.PctTotalGain,
+    ]
 
     df[PvmPerformanceResults.MeasureNames.PctTotalGain.value] = (
         df.InvestmentGain / df.InvestmentGain.sum()
@@ -392,7 +401,7 @@ def get_distrib_returns_rpt(
     assert len(cf_ranked) == len(cf)
 
     perf_rslt = PvmPerformanceResults(
-        cleaned_cashflows=None, aggregate_interval=AggregateInterval.ITD
+        aggregate_interval=AggregateInterval.ITD
     )
 
     rpt_stats = reduce(
@@ -435,29 +444,6 @@ def get_distrib_returns_rpt(
 
     return rpt_stats
 
-def get_perf_concentration_rpt(
-    rpt_dimn: pd.DataFrame,
-    group_cols: List[str],
-    df: pd.DataFrame,
-    cf: pd.DataFrame,
-    realized_only=False,
-):
-    gross_metrics = [
-        PvmPerformanceResults.MeasureNames.EquityInvested,
-        PvmPerformanceResults.MeasureNames.UnrealizedValueGross,
-        PvmPerformanceResults.MeasureNames.TotalValue,
-        PvmPerformanceResults.MeasureNames.InvestmentGain,
-        PvmPerformanceResults.MeasureNames.GrossMultiple,
-        PvmPerformanceResults.MeasureNames.GrossIrr,
-        PvmPerformanceResults.MeasureNames.PctRealizedGain,
-        PvmPerformanceResults.MeasureNames.PctTotalGain,
-    ]
-    """ 
-    DT TODO: there's likely a better way to get 2 rpt_dicts: 1st for all positions and 2nd for just realized positions:
-    issue is you can't filter to realized investments beforehand because
-    all cashflows are needed to determine the % of Total.
-    So, if realized_only=True, then PctCapital has to be recomputed with the filtered realized df
-    """
 
 def get_mgr_rpt_dict(
     manager_attrib: pd.DataFrame,
@@ -489,7 +475,6 @@ def get_mgr_rpt_dict(
         group_cols=["InvestmentName"],
         gross_metrics=gross_metrics,
         net_metrics=net_metrics,
-        manager_dimn=manager_attrib,
         investment_dimn=fund_attrib,
         investment_cf=investment_cf,
         position_dimn=deal_attrib,
@@ -500,7 +485,6 @@ def get_mgr_rpt_dict(
         group_cols=["InvestmentManagerName"],
         gross_metrics=gross_metrics,
         net_metrics=net_metrics,
-        manager_dimn=manager_attrib,
         investment_dimn=fund_attrib,
         investment_cf=investment_cf,
         position_dimn=deal_attrib,
@@ -514,7 +498,6 @@ def get_mgr_rpt_dict(
         group_cols=["InvestmentName"],
         gross_metrics=gross_metrics,
         net_metrics=net_metrics,
-        manager_dimn=manager_attrib,
         investment_dimn=fund_attrib,
         investment_cf=investment_cf,
         position_dimn=deal_attrib[deal_attrib.Status == "Realized"],
@@ -547,7 +530,6 @@ def get_mgr_rpt_dict(
         group_cols=["InvestmentName"],
         gross_metrics=gross_metrics,
         net_metrics=net_metrics,
-        manager_dimn=manager_attrib,
         investment_dimn=fund_attrib,
         investment_cf=investment_cf,
         position_dimn=deal_attrib[deal_attrib.Status == "Unrealized"],
@@ -562,7 +544,6 @@ def get_mgr_rpt_dict(
         group_cols=["InvestmentManagerName"],
         gross_metrics=gross_metrics,
         net_metrics=net_metrics,
-        manager_dimn=manager_attrib,
         investment_dimn=fund_attrib,
         investment_cf=investment_cf,
         position_dimn=deal_attrib[deal_attrib.Status == "Unrealized"],
@@ -603,7 +584,6 @@ def get_tr_stats(
     rpt_dimn: pd.DataFrame,
     gross_metrics: List[Enum],
     net_metrics: List[Enum],
-    manager_dimn: pd.DataFrame,
     investment_dimn: pd.DataFrame,
     investment_cf: pd.DataFrame,
     position_dimn: pd.DataFrame,
@@ -619,7 +599,7 @@ def get_tr_stats(
     ] = 1
 
     perf_rslt = PvmPerformanceResults(
-        cleaned_cashflows=None, aggregate_interval=AggregateInterval.ITD
+        aggregate_interval=AggregateInterval.ITD
     )
     gross_stats = reduce(
         lambda left, right: pd.merge(
@@ -662,10 +642,8 @@ def get_tr_stats(
 class PvmPerformanceResults(object):
     def __init__(
         self,
-        cleaned_cashflows: pd.DataFrame,
         aggregate_interval: AggregateInterval,
     ):
-        self.cleaned_cashflows = cleaned_cashflows
         self.aggregate_interval = aggregate_interval
 
     class MeasureNames(Enum):
@@ -739,102 +717,3 @@ class PvmPerformanceResults(object):
             return calc_loss_ratio(df=attribute_df, group_cols=group_cols)
         else:
             raise NotImplementedError(f"{metric} not implemented")
-
-    @cached_property
-    def total_investment_gain(self):
-        return sum(self.cleaned_cashflows["AmountUSD"])
-
-
-class PvmPerformanceContribution(object):
-    # % gain of total
-    def __init__(self, performance_results: List[PvmPerformanceResults]):
-        self.performance_results = performance_results
-
-    @cached_property
-    def contribution(self):
-        total_pnl = sum(
-            [x.total_investment_gain for x in self.performance_results]
-        )
-        final = []
-        for k in self.performance_results:
-            final.append(k.total_investment_gain / total_pnl)
-        return final
-
-
-class PvmTrackRecordAttribution(object):
-    def __init__(self, investments: List[InvestmentContainerBase]):
-        self.investments = investments
-
-    class AttributionResults(object):
-        def __init__(
-            self,
-            position_cashflows: pd.DataFrame,
-            position_dimn: pd.DataFrame,
-            position_fact: pd.DataFrame,
-            aggregate_interval: AggregateInterval,
-            attribute_by: List[str],
-        ):
-            self.position_cashflows = position_cashflows
-            self.position_dimn = position_dimn
-            self.position_fact = position_fact
-            self.aggregate_interval = aggregate_interval
-            self.attribute_by = attribute_by
-
-        class PerformanceConcentrationType(Enum):
-            One_Three_Five = auto()
-
-        def performance_concentration(
-            self, run_on: PerformanceConcentrationType
-        ) -> dict[str, PvmPerformanceContribution]:
-            # for each thing that we run attribution on
-            #   (example, RealizationStatus should give us "Realized","Unrealized","Partially Realized")
-            # AND an "ALL"
-            # run 1-3-5 analysis for each group
-            pass
-
-        def get_performance_details(
-            self,
-        ) -> dict[str, PvmPerformanceResults]:
-            # dict: results of realized/unrealized/all
-            pass
-
-    def run_position_attribution(
-        self,
-        run_attribution_levels_by: List[str] = ["RealizationStatus"],
-        aggregate_interval: AggregateInterval = AggregateInterval.ITD,
-        position_cashflows=None,
-        position_dimn=None,
-        position_fact=None,
-    ) -> AttributionResults:
-        if position_cashflows is None:
-            position_cashflows: List[pd.DataFrame] = [
-                x.position_cashflows for x in self.investments
-            ]
-            position_cashflows = pd.concat(position_cashflows)
-        if position_dimn is None:
-            position_dimn: List[pd.DataFrame] = [
-                x.position_dimn for x in self.investments
-            ]
-            position_dimn = pd.concat(position_dimn)
-        if position_fact is None:
-            position_fact: List[pd.DataFrame] = [
-                x.position_fact for x in self.investments
-            ]
-            position_fact = pd.concat(position_fact)
-        return PvmTrackRecordAttribution.AttributionResults(
-            position_cashflows=position_cashflows,
-            position_dimn=position_dimn,
-            position_fact=position_fact,
-            aggregate_interval=aggregate_interval,
-            attribute_by=run_attribution_levels_by,
-        )
-
-    def net_performance_results(
-        self, aggregate_interval: AggregateInterval = AggregateInterval.ITD
-    ) -> PvmPerformanceResults:
-        net_cfs: List[pd.DataFrame] = [
-            x.investment_cashflows for x in self.investments
-        ]
-        # DT: comment out because failing
-        # net_cfs = pd.concat(net_cfs)
-        return PvmPerformanceResults(net_cfs, aggregate_interval)

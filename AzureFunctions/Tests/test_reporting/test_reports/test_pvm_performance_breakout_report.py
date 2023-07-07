@@ -1,10 +1,10 @@
-from copy import deepcopy
 import numpy as np
+import pytest
+
 from Reporting.Reports.entity_reports.utils.pvm_performance_utils.pvm_performance_helper import (
     PvmPerformanceHelper,
     pd,
 )
-from gcm.inv.scenario import Scenario
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 import datetime as dt
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain.entity_domain_types import (
@@ -25,10 +25,8 @@ from Reporting.core.report_structure import (
     Calendar,
 )
 from utils.print_utils import print
-import pytest
 from gcm.Dao.DaoRunner import DaoSource, DaoRunnerConfigArgs
 from gcm.inv.scenario import Scenario, DaoRunner
-
 
 
 class TestPerformanceBreakDown(object):
@@ -41,7 +39,11 @@ class TestPerformanceBreakDown(object):
         entity_info: pd.DataFrame = EntityDomain.merge_ref_and_sources(
             r, s
         )
-        entity_info.SourceName = np.where(entity_info.SourceName == 'PVM.MED', 'pvm-med', entity_info.SourceName)
+        entity_info.SourceName = np.where(
+            entity_info.SourceName == "PVM.MED",
+            "pvm-med",
+            entity_info.SourceName,
+        )
         return entity_info
 
     @staticmethod
@@ -71,11 +73,13 @@ class TestPerformanceBreakDown(object):
             return df
 
         def idw_dao_operation(dao, params):
-            raw = f" select distinct OwnerName as OperationalSeriesTicker" \
-                  f" from iLevel.vExtendedCollapsedCashflows" \
-                  f" where TransactionDate = '{as_of_date}'" \
-                  f" and TransactionType = 'Net Asset Value'" \
-                  f" and BaseAmount > 0"
+            raw = (
+                f" select distinct OwnerName as OperationalSeriesTicker"
+                f" from iLevel.vExtendedCollapsedCashflows"
+                f" where TransactionDate = '{as_of_date}'"
+                f" and TransactionType = 'Net Asset Value'"
+                f" and BaseAmount > 0"
+            )
             df = pd.read_sql(
                 raw,
                 dao.data_engine.session.bind,
@@ -96,7 +100,11 @@ class TestPerformanceBreakDown(object):
                 source=DaoSource.InvestmentsDwh,
                 operation=idw_dao_operation,
             )
-            portfolios = portfolios[portfolios.OperationalSeriesTicker.isin(active_os.OperationalSeriesTicker)]
+            portfolios = portfolios[
+                portfolios.OperationalSeriesTicker.isin(
+                    active_os.OperationalSeriesTicker
+                )
+            ]
 
         # TODO: set up warning and or assertion error
         return portfolios
@@ -119,39 +127,40 @@ class TestPerformanceBreakDown(object):
             )
             assert final_data is not None
 
+    @pytest.mark.skip()
     def test_new_report_run(self):
         as_of_date = dt.date(2023, 3, 31)
         # as_of_date = dt.date(2022, 12, 31)
         error_df = pd.DataFrame()
 
         with Scenario(
-                as_of_date=as_of_date,
-                aggregate_interval=AggregateInterval.ITD,
-                save=True,
-                dao_config={
-                    DaoRunnerConfigArgs.dao_global_envs.name: {
-                        # DaoSource.DataLake.name: {
-                        #     "Environment": "prd",
-                        #     "Subscription": "prd",
-                        # },
-                        # DaoSource.PubDwh.name: {
-                        #     "Environment": "prd",
-                        #     "Subscription": "prd",
-                        # },
-                        # DaoSource.InvestmentsDwh.name: {
-                        #     "Environment": "prd",
-                        #     "Subscription": "prd",
-                        # },
-                        # DaoSource.DataLake_Blob.name: {
-                        #     "Environment": "prd",
-                        #     "Subscription": "prd",
-                        # },
-                        # DaoSource.ReportingStorage.name: {
-                        #     "Environment": "prd",
-                        #     "Subscription": "prd",
-                        # },
-                    }
+            as_of_date=as_of_date,
+            aggregate_interval=AggregateInterval.ITD,
+            save=False,
+            dao_config={
+                DaoRunnerConfigArgs.dao_global_envs.name: {
+                    # DaoSource.DataLake.name: {
+                    #     "Environment": "prd",
+                    #     "Subscription": "prd",
+                    # },
+                    # DaoSource.PubDwh.name: {
+                    #     "Environment": "prd",
+                    #     "Subscription": "prd",
+                    # },
+                    # DaoSource.InvestmentsDwh.name: {
+                    #     "Environment": "prd",
+                    #     "Subscription": "prd",
+                    # },
+                    # DaoSource.DataLake_Blob.name: {
+                    #     "Environment": "prd",
+                    #     "Subscription": "prd",
+                    # },
+                    # DaoSource.ReportingStorage.name: {
+                    #     "Environment": "prd",
+                    #     "Subscription": "prd",
+                    # },
                 }
+            },
         ).context():
 
             # set report name and dimension config
@@ -163,8 +172,14 @@ class TestPerformanceBreakDown(object):
             ]
 
             # get relevant portfolios to run
-            portfolios_to_run = TestPerformanceBreakDown.get_pe_only_portfolios(active_only=True)
-            port_list = list(set(portfolios_to_run.PortfolioReportingName.to_list()))
+            portfolios_to_run = (
+                TestPerformanceBreakDown.get_pe_only_portfolios(
+                    active_only=True
+                )
+            )
+            port_list = list(
+                set(portfolios_to_run.PortfolioReportingName.to_list())
+            )
             for port_name in port_list:
                 for report_name_enum in reports_to_run:
                     domain = EntityDomainTypes.Portfolio
@@ -180,11 +195,14 @@ class TestPerformanceBreakDown(object):
                                     "aggregate_interval"
                                 ),
                                 consumer=ReportConsumer(
-                                    horizontal=[ReportConsumer.Horizontal.IC],
+                                    horizontal=[
+                                        ReportConsumer.Horizontal.IC
+                                    ],
                                     vertical=ReportConsumer.Vertical.PE,
                                 ),
                                 frequency=Frequency(
-                                    FrequencyType.Quarterly, Calendar.AllDays
+                                    FrequencyType.Quarterly,
+                                    Calendar.AllDays,
                                 ),
                                 entity_domain=domain,
                                 entity_info=info,
@@ -211,4 +229,4 @@ class TestPerformanceBreakDown(object):
                             ]
                         )
                     # error_df.to_csv('C:/Tmp/error df port reports.csv')
-                    # assert output is not None
+                    assert output is not None

@@ -38,8 +38,6 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
         LoadOptions,
         License,
         FontConfigs,
-        PdfSaveOptions
-
     )
 
     lic = License()
@@ -67,7 +65,7 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
     wb.calculateFormula(True)
     FontConfigs.setFontFolder(get_fonts_path(), True)
 
-    #DT uncomment for fixing merged cell pdf issue
+    # DT uncomment for fixing merged cell pdf issue
     # t1 = wb.getWorksheets().get(1).getCells().getMergedCells()
     # for x in range(wb.getWorksheets().getCount()):
     #     if x <= 1:

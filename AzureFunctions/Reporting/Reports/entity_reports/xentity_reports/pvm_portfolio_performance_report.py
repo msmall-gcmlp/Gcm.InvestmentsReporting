@@ -1,4 +1,3 @@
-
 from enum import Enum
 from ....core.report_structure import (
     ReportStructure,
@@ -19,7 +18,6 @@ from ....core.report_structure import (
 import pandas as pd
 from ....core.components.report_table import ReportTable
 from typing import List, Callable
-from ...report_names import ReportNames
 from ..utils.pvm_performance_utils.pvm_performance_helper import (
     PvmPerformanceHelper,
 )
@@ -39,22 +37,18 @@ from gcm.inv.dataprovider.entity_provider.entity_domains.synthesis_unit.type_con
     PvmDealAssetClass,
 )
 
+
 class PvmPerformanceBreakoutReport(ReportStructure):
 
     # TODO: DT note: move report_name_enum into report_meta. It belongs under the report_meta scope
-    # TODO: DT note: ReportName.py functionality has changed:
-    #  ReportName.name.name is currently being used to:
+    #  report_name_enum is currently being used to:
     #       1. determine report file name
     #       2. is part of DL unique key
-    #   Now, ReportName.name.value is used for the above and is also referenced in report code
-    #       to determine calc and query params (x sector, x vintage & realization type etc)
+    #       3. determine calc and query params (x sector, x vintage & realization type etc)
 
-    def __init__(self,
-                 report_meta: ReportMeta,
-                 report_name_enum: Enum):
+    def __init__(self, report_meta: ReportMeta, report_name_enum: Enum):
         super().__init__(
-            report_meta=report_meta,
-            report_name=report_name_enum
+            report_meta=report_meta, report_name=report_name_enum
         )
         self.report_name_enum = report_name_enum
 
@@ -101,8 +95,6 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         else:
             return domain.get_perei_med_entities
 
-
-
     def assign_components(self) -> List[ReportWorkBookHandler]:
         entity_name: str = self.report_meta.entity_info[
             "EntityName"
@@ -122,9 +114,11 @@ class PvmPerformanceBreakoutReport(ReportStructure):
         domain = self.report_meta.entity_domain
         entity_info = self.report_meta.entity_info
 
-        p = PvmPerformanceHelper(domain,
-                                 entity_info=entity_info,
-                                 report_name_enum=self.report_name_enum)
+        p = PvmPerformanceHelper(
+            domain,
+            entity_info=entity_info,
+            report_name_enum=self.report_name_enum,
+        )
         final_data: dict = p.generate_components_for_this_entity(
             as_of_date,
         )
@@ -135,22 +129,22 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             this_table = ReportTable(k, v)
             tables.append(this_table)
 
-
-        ########## TODO: Begin formatting and weird stuff #######################################################
+        #TODO: Begin formatting and weird stuff ###############
         # below is this-report specific logic to derive render params
 
         sheet_name = "Performance Breakout"
         primary_named_range = "Data"
         primary_df = [
-            x.df for x in tables
-            if x.component_name == primary_named_range
+            x.df for x in tables if x.component_name == primary_named_range
         ][0]
 
         # trim rows for all ranges in this sheet
         # regions_to_trim: List[str] = [x.component_name for x in tables]
 
         row_count_excel_header = 21
-        print_region = "B1:AC" + str(len(primary_df) + row_count_excel_header)
+        print_region = "B1:AC" + str(
+            len(primary_df) + row_count_excel_header
+        )
         # if (self.iteration_number + 1) <= 3:
         #     page_number = int(math.ceil((len(primary_df) + 20) / 77) + 1)
         # else:
@@ -158,14 +152,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
 
         # TODO: check portfolio inception date to set these dynamically
         # always hide 5Y cols
-        hide_columns = [
-            "N",
-            "O",
-            "P",
-            "Q",
-            "R",
-            "S"
-        ]
+        hide_columns = ["N", "O", "P", "Q", "R", "S"]
         if primary_df.loc[0, "3Y_AnnRor"] is None:
             # hide 3Y and 5Y columns
             # TODO: generic:
@@ -181,7 +168,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
                 ]
             )
 
-        ########## TODO: Done formatting and weird stuff ##########################################################################
+        #TODO: Done formatting and weird stuff ######################
 
         this_worksheet = ReportWorksheet(
             sheet_name,
@@ -198,4 +185,3 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             report_sheets=[this_worksheet],
         )
         return [workbook]
-

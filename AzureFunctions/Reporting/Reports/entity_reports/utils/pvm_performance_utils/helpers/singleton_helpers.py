@@ -5,8 +5,10 @@ from gcm.inv.scenario import Scenario, DaoRunner
 from gcm.Dao.DaoSources import DaoSource
 import numpy as np
 
+
 def __runner() -> DaoRunner:
     return Scenario.get_attribute("dao")
+
 
 def __as_of_date() -> DaoRunner:
     return Scenario.get_attribute("as_of_date")
@@ -69,14 +71,16 @@ def get_all_manager_holdings() -> pd.DataFrame:
     )
     return manager_df
 
+
 # all arguments are strings
-def get_burgiss_bmark(report_date: str=None,
-                      vintage: str='All',
-                      asset_group: str = 'Buyout',
-                      geography_group: str='All'
-                      ) -> pd.DataFrame:
+def get_burgiss_bmark(
+    report_date: str = None,
+    vintage: str = "All",
+    asset_group: str = "Buyout",
+    geography_group: str = "All",
+) -> pd.DataFrame:
     if report_date is None:
-        report_date = str(Scenario.get_attribute('as_of_date'))
+        report_date = str(Scenario.get_attribute("as_of_date"))
 
     def my_dao_operation(dao, params):
         # assumes max date is the same across groups strategy, vintage, or geography
@@ -95,11 +99,11 @@ def get_burgiss_bmark(report_date: str=None,
             )
         """
 
-        df = pd.read_sql(
-                raw,
-                dao.data_engine.session.bind,
-            )
-        return df
+        burgiss_data = pd.read_sql(
+            raw,
+            dao.data_engine.session.bind,
+        )
+        return burgiss_data
 
     df = __runner().execute(
         params={},
@@ -131,7 +135,7 @@ def get_burgiss_bmark(report_date: str=None,
         "TWR - QTD",
         "CTR - QTD",
     ]
-    rslt = df.set_index("Measure").T.reindex(
+    df = df.set_index("Measure").T.reindex(
         [
             "Pooled",
             "TopFivePercentile",
@@ -143,9 +147,9 @@ def get_burgiss_bmark(report_date: str=None,
     )
 
     for col in report_columns:
-        if col not in list(rslt.columns):
-            rslt[col] = None
-    rslt = rslt[report_columns]
+        if col not in list(df.columns):
+            df[col] = None
+    rslt = df[report_columns]
     # quick solution, should be done in dataprovider
     rslt[rslt.columns[rslt.columns.str.contains("IRR")]] = (
         rslt[rslt.columns[rslt.columns.str.contains("IRR")]] / 100
@@ -159,37 +163,32 @@ def get_burgiss_bmark(report_date: str=None,
 def get_all_deal_attributes() -> pd.DataFrame:
     def my_dao_operation(dao, params):
         raw = """
-                        select distinct
-        			p.Ticker PortfolioTicker,
-                    os.Ticker OsTicker,
-                    h.ReportingName,
-                    im.LegalName InvestmentManagerName,
-                    hrpting.SmallAndEmerging,
-					hrpting.DiverseManager,
-					hrpting.VintageYear HoldingVintageYear,
-                    hrpting.PredominantSector,
-                    d.*
-                from entitydata.OperationalSeries os
-                    left join entitydata.Investment i on os.MasterId = i.OperationalSeriesId
-        			left join entitydata.PortfolioSeries ps on os.PortfolioSeriesId=ps.MasterId
-        			left join entitydata.Portfolio p on ps.PortfolioId=p.MasterId
-                    left join entitydata.Deal d on i.DealId = d.MasterId
-                    left join entitydata.Holding h on i.HoldingId = h.MasterId
-                    left join entitydata.Holding hrpting on h.ReportingMasterId = hrpting.MasterId
-                    left join entitydata.InvestmentManager im on hrpting.InvestmentManagerId = im.MasterId
-                    where d.Name is not null
-                        """
-        df = pd.read_sql(
+        select distinct
+        p.Ticker PortfolioTicker,
+        os.Ticker OsTicker,
+        h.ReportingName,
+        im.LegalName InvestmentManagerName,
+        hrpting.SmallAndEmerging,
+        hrpting.DiverseManager,
+        hrpting.VintageYear HoldingVintageYear,
+        hrpting.PredominantSector,
+        d.*
+        from entitydata.OperationalSeries os
+        left join entitydata.Investment i on os.MasterId = i.OperationalSeriesId
+        left join entitydata.PortfolioSeries ps on os.PortfolioSeriesId=ps.MasterId
+        left join entitydata.Portfolio p on ps.PortfolioId=p.MasterId
+        left join entitydata.Deal d on i.DealId = d.MasterId
+        left join entitydata.Holding h on i.HoldingId = h.MasterId
+        left join entitydata.Holding hrpting on h.ReportingMasterId = hrpting.MasterId
+        left join entitydata.InvestmentManager im on hrpting.InvestmentManagerId = im.MasterId
+        where d.Name is not null
+        """
+        med_data = pd.read_sql(
             raw,
             dao.data_engine.session.bind,
         )
 
-        # TODO: move to perm location
-        df.SmallAndEmerging = np.where(df.SmallAndEmerging.isnull(), 0, df.SmallAndEmerging)
-        df.DiverseManager = np.where(df.DiverseManager.isnull(), 0, df.DiverseManager)
-        df['SumEmergingDiverse'] = df.SmallAndEmerging + df.DiverseManager
-        df['EmergingDiverseStatus'] = np.where((df.SmallAndEmerging + df.DiverseManager) > 0, 'SEM/DM', 'Other')
-        return df
+        return med_data
 
     df = __runner().execute(
         params={},
@@ -197,8 +196,22 @@ def get_all_deal_attributes() -> pd.DataFrame:
         operation=my_dao_operation,
     )
 
+    # TODO: move to perm location
+    df.SmallAndEmerging = np.where(
+        df.SmallAndEmerging.isnull(), 0, df.SmallAndEmerging
+    )
+    df.DiverseManager = np.where(
+        df.DiverseManager.isnull(), 0, df.DiverseManager
+    )
+    df["SumEmergingDiverse"] = df.SmallAndEmerging + df.DiverseManager
+    df["EmergingDiverseStatus"] = np.where(
+        (df.SmallAndEmerging + df.DiverseManager) > 0,
+        "SEM/DM",
+        "Other",
+    )
+
     # TODO: DT note: revisit
-    df['VintageYear'] = df.VintageYear.astype(int).astype(str)
-    df.rename(columns={'Name': 'DealName'}, inplace=True)
+    df["VintageYear"] = df.VintageYear.astype(int).astype(str)
+    df.rename(columns={"Name": "DealName"}, inplace=True)
 
     return df

@@ -17,10 +17,11 @@ class ReportNames(ExtendedEnum):
     PvmInvestmentTrackRecordReport = auto()
 
     PvmPerformanceBreakoutReport = auto()
-    PE_Portfolio_Performance_x_Vintage_Realization_Status = 'PE Portfolio Performance x Vintage & Realization Status'
-    PE_Portfolio_Performance_x_Investment_Manager = 'PE Portfolio Performance x Investment Manager'
-    PE_Portfolio_Performance_x_Sector = 'PE Portfolio Performance x Sector'
-    PE_Portfolio_Performance_x_Region = 'PE Portfolio Performance x Region'
-
-
-
+    PE_Portfolio_Performance_x_Vintage_Realization_Status = (
+        "PE Portfolio Performance x Vintage & Realization Status"
+    )
+    PE_Portfolio_Performance_x_Investment_Manager = (
+        "PE Portfolio Performance x Investment Manager"
+    )
+    PE_Portfolio_Performance_x_Sector = "PE Portfolio Performance x Sector"
+    PE_Portfolio_Performance_x_Region = "PE Portfolio Performance x Region"

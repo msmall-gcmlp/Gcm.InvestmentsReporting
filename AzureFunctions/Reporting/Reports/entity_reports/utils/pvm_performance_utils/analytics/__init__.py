@@ -13,10 +13,8 @@ from .standards import (
     get_horizon_irr_df_rpt,
     get_horizon_tvpi_df_rpt,
     get_dpi_df_rpt,
-    get_hit_rate,
     TransactionTypes,
 )
-
 
 
 def get_performance_report_dict(
@@ -83,9 +81,7 @@ def get_performance_report_dict(
     )[["Name", "Commitment"]]
     nav = irr_cfs[
         irr_cfs.TransactionType.isin(TransactionTypes.R.value)
-    ].rename(
-        columns={"BaseAmount": "Nav"}
-    )
+    ].rename(columns={"BaseAmount": "Nav"})
     nav_rslt = get_sum_df_rpt(nav, list_to_iterate, "Nav")[["Name", "Nav"]]
 
     discount_df_with_attrib = discount_df[
@@ -105,7 +101,7 @@ def get_performance_report_dict(
         _attributes_needed,
     )
 
-    ### report specific formatting - TODO put upfront in db
+    # TODO: revisit report specific formatting
     list_of_rpt_dfs = [
         commitment_rslt,
         holding_period_df,
@@ -279,17 +275,25 @@ def format_performance_report(
             rslt[col] = None
     # set perf metrics to null where no investment duration (eliminate bizarre/not useful metrics)
     for col in columns:
-        if col not in ['DisplayName', 'MaxNavDate', 'Commitment', 'Nav', 'Duration']:
-            rslt[col] = np.where(rslt.Duration.astype(float) > 0, rslt[col], None)
+        if col not in [
+            "DisplayName",
+            "MaxNavDate",
+            "Commitment",
+            "Nav",
+            "Duration",
+        ]:
+            rslt[col] = np.where(
+                rslt.Duration.astype(float) > 0, rslt[col], None
+            )
     rslt = rslt[columns]
     rslt = rslt[~rslt.DisplayName.isnull()]
 
-    flat_data = rslt.merge(attrib,
-              how="left",
-              left_on="Name",
-              right_on="Name"
-                           )
-    flat_data[list_to_iterate[-1]] = flat_data['Name'].str.split('_', expand=True)
+    flat_data = rslt.merge(
+        attrib, how="left", left_on="Name", right_on="Name"
+    )
+    flat_data[list_to_iterate[-1]] = flat_data["Name"].str.split(
+        "_", expand=True
+    )
     # attrib.to_csv('C:/Tmp/attrib output test.csv')
-    rslt.drop(columns=['Name'], inplace=True)
+    rslt.drop(columns=["Name"], inplace=True)
     return rslt, ordered_rpt_items, flat_data

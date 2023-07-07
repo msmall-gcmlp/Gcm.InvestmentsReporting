@@ -26,8 +26,6 @@ class BasePvmTrackRecordReport(ReportStructure):
     def __init__(self, r_type: ReportNames, report_meta: ReportMeta):
         super().__init__(r_type, report_meta)
 
-        __IDW_PVM_TR = "IDW.PVM.TR"
-
     @abstractproperty
     def manager_name(self) -> str:
         raise NotImplementedError()

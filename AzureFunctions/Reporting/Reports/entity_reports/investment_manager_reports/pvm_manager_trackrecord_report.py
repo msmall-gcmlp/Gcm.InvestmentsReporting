@@ -21,10 +21,8 @@ from ..utils.pvm_track_record.base_pvm_tr_report import (
     BasePvmTrackRecordReport,
 )
 from functools import cached_property
-from typing import List
-from ..utils.pvm_track_record.analytics.attribution import (
-    PvmTrackRecordAttribution,
-)
+from typing import List, Hashable
+
 from ..utils.pvm_track_record.analytics.attribution import (
     get_mgr_rpt_dict,
     get_perf_concentration_rpt_dict,
@@ -46,18 +44,7 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             sources="investmentsreporting",
             entity="exceltemplates",
             path=["PvmManagerTrackRecordTemplate.xlsx"],
-            # path=["Underwriting_Packet_Template.xlsx"]
         )
-
-    @cached_property
-    def manager_name(self):
-        manager_name: pd.DataFrame = self.report_meta.entity_info[
-            [EntityStandardNames.EntityName]
-        ].drop_duplicates()
-        manager_name = "_".join(
-            manager_name[EntityStandardNames.EntityName].to_list()
-        )
-        return manager_name
 
     @classmethod
     def level(cls):
@@ -80,7 +67,7 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
     @cached_property
     def children_reports(
         self,
-    ) -> dict[str, PvmInvestmentTrackRecordReport]:
+    ) -> dict[Hashable, PvmInvestmentTrackRecordReport]:
         cach_dict = {}
         for g, n in self.children.groupby(EntityStandardNames.EntityName):
             meta = copy.deepcopy(self.report_meta)
@@ -93,10 +80,6 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         return cach_dict
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
-        entity_name: str = self.report_meta.entity_info[
-            "EntityName"
-        ].unique()[0]
-
         # get report dictionaries
         tr_json = get_mgr_rpt_dict(
             manager_attrib=self.manager_handler.manager_dimn,
@@ -142,13 +125,6 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             ),
         ]
 
-        all_investments = [
-            self.children_reports[k].investment_handler
-            for k in self.children_reports
-        ]
-        attribution = PvmTrackRecordAttribution(all_investments)
-        attribution.net_performance_results()
-
         name = f"ManagerTR_{self.manager_name}"
         wb_handler = ReportWorkBookHandler(
             name,
@@ -156,8 +132,4 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             template_location=self.excel_template_location,
         )
 
-        final_list = [wb_handler]
-        for k, v in self.children_reports.items():
-            components: List[ReportWorkBookHandler] = v.components
-            final_list = final_list + components
-        return final_list
+        return [wb_handler]
