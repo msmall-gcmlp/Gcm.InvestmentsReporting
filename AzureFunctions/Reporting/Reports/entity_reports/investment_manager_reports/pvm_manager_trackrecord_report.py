@@ -21,9 +21,11 @@ from ..utils.pvm_track_record.base_pvm_tr_report import (
     BasePvmTrackRecordReport,
 )
 from functools import cached_property
-from typing import List
+from typing import List, Hashable
+
 from ..utils.pvm_track_record.analytics.attribution import (
-    PvmTrackRecordAttribution,
+    get_mgr_rpt_dict,
+    get_perf_concentration_rpt_dict,
 )
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
@@ -44,16 +46,6 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             path=["PvmManagerTrackRecordTemplate.xlsx"],
         )
 
-    @cached_property
-    def manager_name(self):
-        manager_name: pd.DataFrame = self.report_meta.entity_info[
-            [EntityStandardNames.EntityName]
-        ].drop_duplicates()
-        manager_name = "_".join(
-            manager_name[EntityStandardNames.EntityName].to_list()
-        )
-        return manager_name
-
     @classmethod
     def level(cls):
         return EntityDomainTypes.InvestmentManager
@@ -68,12 +60,14 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         children = structure.get_entities_directly_related_by_name(
             self.child_type
         )
+        # DT: filtering below because funky stuff going on with get_entities_directly_related_by_name
+        children = children[children.SourceName == "PVM.TR.Investment.Id"]
         return children
 
     @cached_property
     def children_reports(
         self,
-    ) -> dict[str, PvmInvestmentTrackRecordReport]:
+    ) -> dict[Hashable, PvmInvestmentTrackRecordReport]:
         cach_dict = {}
         for g, n in self.children.groupby(EntityStandardNames.EntityName):
             meta = copy.deepcopy(self.report_meta)
@@ -85,35 +79,57 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             cach_dict[g] = this_report
         return cach_dict
 
-    def assign_components(self):
-        tables = [
-            ReportTable(
-                "manager_name",
-                pd.DataFrame({"m_name": [self.manager_name]}),
-            ),
-        ]
-        all_investments = [
-            self.children_reports[k].investment_handler
-            for k in self.children_reports
-        ]
-        attribution = PvmTrackRecordAttribution(all_investments)
-        attribution.net_performance_results()
-        name = f"ManagerTR_{self.manager_name}"
+    def assign_components(self) -> List[ReportWorkBookHandler]:
+        # get report dictionaries
+        tr_json = get_mgr_rpt_dict(
+            manager_attrib=self.manager_handler.manager_dimn,
+            fund_attrib=self.manager_handler.investment_attrib,
+            investment_cf=self.manager_handler.investment_cf,
+            deal_attrib=self.manager_handler.position_dimn,
+            deal_cf=self.manager_handler.position_cf,
+        )
+
+        perf_concen_json = get_perf_concentration_rpt_dict(
+            deal_attrib=self.manager_handler.position_dimn,
+            deal_cf=self.manager_handler.position_cf,
+        )
+
+        # set sheet-specific ReportTables
+        tr_tables: List[ReportTable] = []
+        for k, v in tr_json.items():
+            this_table = ReportTable(k, v)
+            tr_tables.append(this_table)
+
+        perf_concen_tbls: List[ReportTable] = []
+        for k, v in perf_concen_json.items():
+            this_table = ReportTable(k, v)
+            perf_concen_tbls.append(this_table)
+
+        # set ReportWorksheets
         worksheets = [
             ReportWorksheet(
-                "Sheet1",
-                report_tables=tables,
-                render_params=ReportWorksheet.ReportWorkSheetRenderer(),
-            )
+                "Manager TR",
+                report_tables=tr_tables,
+                render_params=ReportWorksheet.ReportWorkSheetRenderer(
+                    trim_region=[x.component_name for x in tr_tables]
+                ),
+            ),
+            ReportWorksheet(
+                "Performance Concentration",
+                report_tables=perf_concen_tbls,
+                render_params=ReportWorksheet.ReportWorkSheetRenderer(
+                    trim_region=[
+                        x.component_name for x in perf_concen_tbls
+                    ]
+                ),
+            ),
         ]
+
+        name = f"ManagerTR_{self.manager_name}"
         wb_handler = ReportWorkBookHandler(
             name,
             report_sheets=worksheets,
             template_location=self.excel_template_location,
         )
 
-        final_list = [wb_handler]
-        for k, v in self.children_reports.items():
-            components: List[ReportWorkBookHandler] = v.components
-            final_list = final_list + components
-        return final_list
+        return [wb_handler]
