@@ -15,6 +15,15 @@ from _legacy.Reports.reports.performance_quality.helper import PerformanceQualit
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
+from _legacy.core.ReportStructure.report_structure import (
+    ReportingEntityTypes,
+    ReportType,
+    AggregateInterval,
+    ReportVertical,
+)
+from _legacy.core.Runners.investmentsreporting import (
+    InvestmentsReportRunner,
+)
 
 class XPfundHighPQScreen(ReportingRunnerBase):
     def __init__(self, runner, as_of_date):
@@ -72,10 +81,34 @@ class XPfundHighPQScreen(ReportingRunnerBase):
         with Scenario(dao=self._runner, as_of_date=self._as_of_date).context():
             date_q_minus_1 = pd.to_datetime(self._as_of_date - pd.tseries.offsets.QuarterEnd(1)).date()
             firm_xpfund_report_data = self._get_xpfund_pq_report(runner=self._runner, as_of_date=date_q_minus_1)
-            m=firm_xpfund_report_data["('AbsoluteReturnBenchmarkExcess', '3Y')"]
             firm_xpfund_highlow_df=firm_xpfund_report_data.copy()
             firm_xpfund_highlow_df=_xpfund_data_to_highlow_df(firm_xpfund_highlow_df)
-
+            
+        report_name="ARS Performance Quality - Firmwide High Performance Screen"
+        high_rep_data= {
+            "high_perf_summary": firm_xpfund_highlow_df[0],
+            "low_perf_summary": firm_xpfund_highlow_df[1],
+        }
+        with Scenario(as_of_date=date).context():
+            InvestmentsReportRunner().execute(
+                    data=high_rep_data,
+                    template="highlow_pq_1.xlsx",
+                    save=True,
+                    runner=self._runner,
+                    entity_type=ReportingEntityTypes.cross_entity,
+                    entity_name='FIRM',
+                    entity_display_name='FIRM',
+                    report_name=report_name,
+                    report_type=ReportType.Performance,
+                    report_vertical=ReportVertical.ARS,
+                    report_frequency="Monthly",
+                    aggregate_intervals=AggregateInterval.MTD,
+                    # print_areas=print_areas,
+                    # output_dir="cleansed/investmentsreporting/printedexcels/",
+                    #report_output_source=DaoSource.DataLake
+            )
+        
+        
         return firm_xpfund_highlow_df
     
     def run(self, **kwargs):
@@ -101,6 +134,10 @@ if __name__ == "__main__":
                 DaoSource.PubDwh.name: {
                     "Environment": "prd",
                     "Subscription": "prd",
+                },
+                DaoSource.ReportingStorage.name: {
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
             }
         },
