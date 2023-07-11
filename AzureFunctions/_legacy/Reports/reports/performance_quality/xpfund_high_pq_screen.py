@@ -87,7 +87,9 @@ class XPfundHighPQScreen(ReportingRunnerBase):
         report_name="ARS Performance Quality - Firmwide High Performance Screen"
         high_rep_data= {
             "high_perf_summary": firm_xpfund_highlow_df[0],
-            "low_perf_summary": firm_xpfund_highlow_df[1],
+            "high_perf_data": firm_xpfund_highlow_df[1],
+            "low_perf_summary": firm_xpfund_highlow_df[2],
+            "low_perf_data": firm_xpfund_highlow_df[3],
         }
         with Scenario(as_of_date=date).context():
             InvestmentsReportRunner().execute(

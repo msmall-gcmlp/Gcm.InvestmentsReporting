@@ -131,6 +131,19 @@ def _format_benchmark_excess_summary(full_stats):
                                            level_2_cols=periods)
     return formatted_summary
 
+def _format_benchmark_excess_1q_lag_summary(q_lag_stats):
+    data = q_lag_stats['benchmark_summary']
+    data['AbsoluteReturnBenchmarkExcessLag']=data[['AbsoluteReturnBenchmarkExcess']]
+    # Excludes: AbsoluteReturnBenchmark, GcmPeer, EHI50, EHI200
+    cols = ['AbsoluteReturnBenchmarkExcessLag']
+    periods = ['3Y','ITD']
+    formatted_summary = _pivot_and_reindex(data=data,
+                                           level_1_cols=cols,
+                                           level_2_cols=periods)
+    #formatted_summary.rename({'AbsoluteReturnBenchmarkExcess','AbsoluteReturnBenchmarkExcessLag'}, axis=1, inplace=True)
+    #formatted_summary=pd.DataFrame(formatted_summary.columns.set_levels(['AbsoluteReturnBenchmarkExcessLag'],level=0))
+    return formatted_summary
+
 
 def _format_benchmark_ptile_summary(full_stats):
     data = full_stats['benchmark_summary']
@@ -238,8 +251,9 @@ def _format_exposure_summary(full_stats):
     return formatted_summary
 
 
-def _generate_final_summary(emm_dimn, pq_stats, peer_rankings, peer_rankings_lag):
+def _generate_final_summary(emm_dimn, pq_stats, peer_rankings, peer_rankings_lag, q_lag_stats):
     ar_benchmark_definition = _format_ar_benchmark_definition(full_stats=pq_stats)
+    q_lag_3y_xs = _format_benchmark_excess_1q_lag_summary(q_lag_stats=q_lag_stats)
     benchmark_excess = _format_benchmark_excess_summary(full_stats=pq_stats)
     benchmark_ptile = _format_benchmark_ptile_summary(full_stats=pq_stats)
     perf_stability = _format_perf_stability_summary(full_stats=pq_stats)
@@ -251,6 +265,7 @@ def _generate_final_summary(emm_dimn, pq_stats, peer_rankings, peer_rankings_lag
     exposure = _format_exposure_summary(full_stats=pq_stats)
 
     final_summary = pd.concat([ar_benchmark_definition,
+                               q_lag_3y_xs,
                                benchmark_excess,
                                benchmark_ptile,
                                perf_stability,
@@ -295,6 +310,35 @@ def _get_peer_rankings(runner, as_of_date, emm_dimn):
 
     return rankings
 
+def _get_emm_rankings(runner, as_of_date, emm_dimn):
+    stats = {}
+    pq_location = "raw/investmentsreporting/summarydata/performancequality"
+    for fund_name in emm_dimn.index:
+        fund_data = _download_inputs(runner=runner,
+                                     dl_location=pq_location,
+                                     file_path=_fund_file_path(fund_name, as_of_date))
+        if fund_data is not None:
+            for named_range in ['benchmark_summary']:
+                summary = _filter_summary(json_data=fund_data, named_range=named_range, fund_name=fund_name)
+                if named_range in stats.keys():
+                    stats[named_range] = pd.concat([stats[named_range], summary])
+                else:
+                    stats[named_range] = summary
+    return stats
+    # data = stats['benchmark_summary']
+    # # Excludes: AbsoluteReturnBenchmark, GcmPeer, EHI50, EHI200
+    # cols = ['AbsoluteReturnBenchmarkExcess']
+    # periods = ['3Y','ITD']
+    # formatted_summary = _pivot_and_reindex(data=data,
+    #                                        level_1_cols=cols,
+    #                                        level_2_cols=periods)
+    
+    # formatted_summary.columns.set_levels('[AbsoluteReturnBenchmarkExcessLag]',level=0,inplace=True)
+    #formatted_summary['AbsoluteReturnBenchmarkExcessLag']=formatted_summary['AbsoluteReturnBenchmarkExcess']
+    #formatted_summary=formatted_summary.drop('AbsoluteReturnBenchmarkExcess', axis=1)
+    
+    #formatted_summary.rename({'AbsoluteReturnBenchmarkExcess','AbsoluteReturnBenchmarkExcessLag'}, axis=1, inplace=True)
+        #return stats
 
 def _get_performance_quality_metrics(runner, emm_dimn, as_of_date):
     stats = {}
@@ -314,7 +358,6 @@ def _get_performance_quality_metrics(runner, emm_dimn, as_of_date):
                     stats[named_range] = summary
     return stats
 
-
 def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date, inv_group_ids=None, additional_ids=None):
     with Scenario(dao=runner, as_of_date=date).context():
         fund_dimn = _get_fund_dimn(as_of_date=date, inv_group_ids=inv_group_ids,
@@ -322,14 +365,17 @@ def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date, inv_group_i
 
         date_q_minus_1 = pd.to_datetime(date - pd.tseries.offsets.QuarterEnd(1)).date()
         peer_rankings = _get_peer_rankings(runner=runner, as_of_date=date_q_minus_1, emm_dimn=fund_dimn)
+        emm_rankings = _get_emm_rankings(runner=runner, as_of_date=date_q_minus_1, emm_dimn=fund_dimn)
         date_q_minus_2 = pd.to_datetime(date - pd.tseries.offsets.QuarterEnd(2)).date()
         peer_rankings_lag = _get_peer_rankings(runner=runner, as_of_date=date_q_minus_2, emm_dimn=fund_dimn)
+        
         pq_stats = _get_performance_quality_metrics(runner=runner, emm_dimn=fund_dimn, as_of_date=date)
         final_summary = _generate_final_summary(emm_dimn=fund_dimn,
                                                 pq_stats=pq_stats,
                                                 peer_rankings=peer_rankings,
-                                                peer_rankings_lag=peer_rankings_lag)
-    #x=final_summary.to_csv(r"c:/Code/filex2.csv")
+                                                peer_rankings_lag=peer_rankings_lag,
+                                                q_lag_stats=emm_rankings)
+    #x=final_summary.to_csv(r"c:/Code/filex3.csv")
     return final_summary
 
 
