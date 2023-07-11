@@ -4,6 +4,7 @@ import pandas as pd
 import scipy
 from gcm.inv.scenario import Scenario
 from scipy.stats import spearmanr, percentileofscore
+from gcm.inv.dataprovider.investment_group import InvestmentGroup
 
 
 def _clean_firmwide_xpfund_data(df):
@@ -91,18 +92,24 @@ def _net_exp_adj_3y(df):
     df["""('3Y', "('Equities', 'NetNotional')")"""]=df["""('3Y', "('Equities', 'NetNotional')")"""].fillna(0)
     df["""('3Y', "('Credit', 'NetNotional')")"""]=df["""('3Y', "('Credit', 'NetNotional')")"""].fillna(0)
     df['net_exp_adj_3y']=df["""('3Y', "('Equities', 'NetNotional')")"""]+0.35*df["""('3Y', "('Credit', 'NetNotional')")"""]
+    #df['net_exp_adj_3y'] = pd.DataFrame(df['net_exp_adj_3y'].apply(lambda x: x*100).round(0).astype(int))
+    df['net_exp_adj_3y'].replace(0, np.nan, inplace=True)
     return df
 
 def _net_exp_adj_5y(df):
     df["""('5Y', "('Equities', 'NetNotional')")"""]=df["""('5Y', "('Equities', 'NetNotional')")"""].fillna(0)
     df["""('5Y', "('Credit', 'NetNotional')")"""]=df["""('5Y', "('Credit', 'NetNotional')")"""].fillna(0)
     df['net_exp_adj_5y']=df["""('5Y', "('Equities', 'NetNotional')")"""]+0.35*df["""('5Y', "('Credit', 'NetNotional')")"""]
+    #df['net_exp_adj_5y'] = pd.DataFrame(df['net_exp_adj_5y'].apply(lambda x: x*100).round(0).astype(int))
+    df['net_exp_adj_5y'].replace(0, np.nan, inplace=True)
     return df
 
 def _net_exp_adj_latest(df):
     df["""('Latest', "('Equities', 'NetNotional')")"""]=df["""('Latest', "('Equities', 'NetNotional')")"""].fillna(0)
     df["""('Latest', "('Credit', 'NetNotional')")"""]=df["""('Latest', "('Credit', 'NetNotional')")"""].fillna(0)
     df['net_exp_adj_latest']=df["""('Latest', "('Equities', 'NetNotional')")"""]+0.35*df["""('Latest', "('Credit', 'NetNotional')")"""]
+    #df['net_exp_adj_latest'] = pd.DataFrame(df['net_exp_adj_latest'].apply(lambda x: x*100).round(0).astype(int))
+    df['net_exp_adj_latest'].replace(0, np.nan, inplace=True)
     return df
 
 def _ar_xs_ret_summary(df):
@@ -112,9 +119,19 @@ def _ar_xs_ret_summary(df):
                           "('AbsoluteReturnBenchmarkExcess', '5Y')",
                           "('AbsoluteReturnBenchmarkExcess', '10Y')",
                           "('AbsoluteReturnBenchmarkExcess', 'ITD')"]]
+    #ar_xs_ret_sum_df = ar_xs_ret_sum_df.mul(100)
     return ar_xs_ret_sum
 
 def _xs_emm_rank_ptile_summary(df):
+    df['3y_ptiles'] = pd.DataFrame(df['3y_ptiles'].apply(lambda x: x*100).round(0).astype(pd.Int64Dtype()))
+    df['5y_ptiles'] = pd.DataFrame(df['5y_ptiles'].apply(lambda x: x*100).round(0))
+    df['10y_ptiles'] = pd.DataFrame(df['10y_ptiles'].apply(lambda x: x*100).round(0))
+    df['TTM_ptiles'] = pd.DataFrame(df['TTM_ptiles'].apply(lambda x: x*100).round(0))
+    #df['5y_ptiles'] = pd.DataFrame(df['5y_ptiles'].apply(lambda x: x*100  if(np.all(pd.notna(x))) else x).round(0).astype(int))
+    #df['5y_ptiles'] = pd.to_numeric(df['5y_ptiles'])
+    # df['10y_ptiles'] = pd.DataFrame(df['10y_ptiles'].apply(lambda x: x*100).round(0).astype(pd.Int64Dtype()))
+    # df['TTM_ptiles'] = pd.DataFrame(df['TTM_ptiles'].apply(lambda x: x*100).round(0).astype(pd.Int64Dtype()))
+    #df=df.round({'3y_ptiles': 0,'5y_ptiles': 0,'10y_ptiles': 0,'TTM_ptiles': 0,}).astype(int)
     xs_emm_ptile_sum=df[["TTM_ptiles",
                           "3y_ptiles",
                           "5y_ptiles",
@@ -122,6 +139,8 @@ def _xs_emm_rank_ptile_summary(df):
     return xs_emm_ptile_sum
 
 def _non_factor_rba_summary(df):
+    #df["('NON_FACTOR_RISK', '3Y')"] = pd.DataFrame(df["('NON_FACTOR_RISK', '3Y')"].apply(lambda x: x*100).round(0).astype(pd.Int64Dtype()))
+    #df["('NON_FACTOR_RISK', '3Y')"] = pd.DataFrame(df["('NON_FACTOR_RISK', '3Y')"].apply(lambda x: x*100).round(0).astype(int))
     rba_risk_decomp_sum=df[["('NON_FACTOR_RISK', '3Y')"]]
     return rba_risk_decomp_sum
 
@@ -156,6 +175,20 @@ def _arb_definition(df):
     #shortfall_sum['Drawdown']=""
     return arb_definition
 
+def _status_wl(self):
+    include_filters = dict(status=["EMM"])
+    exclude_filters = dict(strategy=["Other", "Aggregated Prior Period Adjustment"])
+    exclude_gcm_portfolios = True
+
+    fund_dimn = InvestmentGroup(investment_group_ids=self._inv_group_ids).get_dimensions(
+        exclude_gcm_portfolios=exclude_gcm_portfolios,
+        include_filters=include_filters,
+        exclude_filters=exclude_filters,
+    )
+    wl=fund_dimn[['InvestmentGroupName', 'IsWatchList']]
+    #fund_dimn.drop(fund_dimn[fund_dimn['IsWatchList']==False].index)['IsWatchList']
+    return wl
+
 
 def _summarize_data(df):
     sum0=df[['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation']]
@@ -182,24 +215,29 @@ def _summarize_data(df):
 def _get_high_performing_summary(df):
     #high_perf=df.drop(df.columns[len(df.columns)-1], axis=1)
     high_perf=df
-    high_perf=high_perf.loc[(df['3y_ptiles'] >= 0.75) | (df['5y_ptiles'] >= 0.77)]
+    high_perf=high_perf.loc[(df['3y_ptiles'] >= 75) | (df['5y_ptiles'] >= 77)]
     high_perf=high_perf.iloc[::-1]
     high_perf['Pass/Fail']=""
+    high_perf_sum=high_perf[['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'Drawdown', 'absolute_return_benchmark']]
+    high_perf_data=high_perf.drop(['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'Drawdown', 'absolute_return_benchmark'], axis=1)
+    #df = df.drop('copy_5y', axis=1)
     #high_perf = high_perf.drop('rank_3y_ptiles', axis=1)
     #high_perf['Pass/Fail'] = high_perf['Pass/Fail'].replace('Pass', np.nan)
     #high_perf['Drawdown'] = high_perf['Drawdown'].replace('value', np.nan)
     #df[apply(df>10,1,any),]
-    return high_perf
+    return high_perf_sum,high_perf_data
 
 
 def _get_low_performing_summary(df):
     #low_perf=df
-    low_perf=df.loc[(df['3y_ptiles'] <= 0.25) | (df['5y_ptiles'] <= 0.25) | (df['Pass/Fail'] == 'Fail')]
+    low_perf=df.loc[(df['3y_ptiles'] <= 25) | (df['5y_ptiles'] <= 25) | (df['Pass/Fail'] == 'Fail')]
     #low_perf = low_perf.drop('rank_3y_ptiles', axis=1)
     #ow_perf['Drawdown'] = low_perf['Drawdown'].replace('value', np.nan)
     #low_perf=low_perf.iloc[::-1]
     #df[apply(df>10,1,any),]
-    return low_perf
+    low_perf_sum=low_perf[['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'Drawdown', 'absolute_return_benchmark']]
+    low_perf_data=low_perf.drop(['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'Drawdown', 'absolute_return_benchmark'], axis=1)
+    return low_perf_sum, low_perf_data
 
 
 def _xpfund_data_to_highlow_df(df):
@@ -219,4 +257,4 @@ def _xpfund_data_to_highlow_df(df):
     low_perf=_get_low_performing_summary(df=df)
 
 
-    return high_perf, low_perf
+    return high_perf[0], high_perf[1], low_perf[0], low_perf[1]
