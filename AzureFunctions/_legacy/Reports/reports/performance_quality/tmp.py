@@ -164,7 +164,7 @@ def _net_equivs_exposure_summary(df):
                           'net_exp_adj_5y']]
     return net_equivs_sxp_sum
 
-def _shortfall_pass_fail_summary(df, wl, alloc_status):
+def _shortfall_pass_fail_summary(df, wl, alloc_status, close_end):
     shortfall_sum=df[['InvestmentGroupName','Pass/Fail', 'Drawdown']]
     shortfall_sum=shortfall_sum.merge(wl, on='InvestmentGroupName', how='left')
     shortfall_sum['status']=shortfall_sum['IsWatchList'].replace([True], 'WL')
@@ -172,7 +172,11 @@ def _shortfall_pass_fail_summary(df, wl, alloc_status):
     shortfall_sum=shortfall_sum.merge(alloc_status, on='InvestmentGroupName', how='left')
     #shortfall_sum['Drawdown']=""
     shortfall_sum['status']=shortfall_sum['status'].fillna(shortfall_sum['Acronym'])
-    shortfall_sum=shortfall_sum.drop(['Drawdown','InvestmentGroupName','IsWatchList','Acronym'], axis=1)
+    shortfall_sum=shortfall_sum.drop(['Drawdown','IsWatchList','Acronym'], axis=1)
+    
+    shortfall_sum=shortfall_sum.merge(close_end, on='InvestmentGroupName', how='left')
+    shortfall_sum['status']=shortfall_sum['status'].fillna(shortfall_sum['ce_status'])
+    shortfall_sum=shortfall_sum.drop(['ce_status', 'InvestmentGroupName'], axis=1)
     return shortfall_sum
 
 def _lagging_quarter_ptiles(df):
@@ -216,6 +220,16 @@ def _status_wl():
     #fund_dimn.drop(fund_dimn[fund_dimn['IsWatchList']==False].index)['IsWatchList']
     return wl
 
+def _status_close_end():
+    close_end=InvestmentGroup(investment_group_ids=None).get_attributes_long()
+    close_end=close_end[((close_end['Field']=='IsDrawdownFund') & (close_end['Value']=='1')) | 
+        ((close_end['Field']=='IsInvestable') & (close_end['Value']=='0')) | 
+        ((close_end['Field']=='IsSLF') & (close_end['Value']=='1'))]
+    close_end=close_end.drop_duplicates(subset=['InvestmentGroupName'])
+    close_end['ce_status']='CE'
+    close_end=close_end.drop(['Field', 'Value'], axis=1)
+    return close_end
+
 def test_get_holdings(df, as_of_date):
     start_date=as_of_date.replace(day=1)
     #acronyms = ["GMSF", "SPECTRUM"]
@@ -247,8 +261,9 @@ def test_get_holdings(df, as_of_date):
 def _summarize_data(df, as_of_date):
     x=_status_wl()
     y=test_get_holdings(df=df, as_of_date=as_of_date)
+    z=_status_close_end()
     sum0=df[['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation']]
-    sum7=_shortfall_pass_fail_summary(df=df, wl=x, alloc_status=y)
+    sum7=_shortfall_pass_fail_summary(df=df, wl=x, alloc_status=y, close_end=z)
     sum8=_arb_definition(df=df)
     sum1=_ar_xs_ret_summary(df=df)
     sum2=_xs_emm_rank_ptile_summary(df=df)
@@ -301,6 +316,7 @@ def _get_low_performing_summary(df):
 
 def _xpfund_data_to_highlow_df(df, as_of_date):
     #x=test_get_holdings(df=df, as_of_date=as_of_date)
+    #x=_status_close_end()
     df = _clean_firmwide_xpfund_data(df=df)
     df = _3y_arb_xs_analysis(df=df)
     df = _fund_return_peer_percentiles(df=df)
