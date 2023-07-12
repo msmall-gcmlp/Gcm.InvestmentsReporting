@@ -5,6 +5,7 @@ import scipy
 from gcm.inv.scenario import Scenario
 from scipy.stats import spearmanr, percentileofscore
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
+from gcm.inv.dataprovider.portfolio import Portfolio
 
 
 def _clean_firmwide_xpfund_data(df):
@@ -163,11 +164,35 @@ def _net_equivs_exposure_summary(df):
                           'net_exp_adj_5y']]
     return net_equivs_sxp_sum
 
-def _shortfall_pass_fail_summary(df):
-    shortfall_sum=df[['Pass/Fail', 'Drawdown']]
-    #shortfall_sum['Pass/Fail']=np.nan
-    shortfall_sum['Drawdown']=""
+def _shortfall_pass_fail_summary(df, wl, alloc_status):
+    shortfall_sum=df[['InvestmentGroupName','Pass/Fail', 'Drawdown']]
+    shortfall_sum=shortfall_sum.merge(wl, on='InvestmentGroupName', how='left')
+    shortfall_sum['status']=shortfall_sum['IsWatchList'].replace([True], 'WL')
+    shortfall_sum=shortfall_sum.replace(False, np.nan)
+    shortfall_sum=shortfall_sum.merge(alloc_status, on='InvestmentGroupName', how='left')
+    #shortfall_sum['Drawdown']=""
+    shortfall_sum['status']=shortfall_sum['status'].fillna(shortfall_sum['Acronym'])
+    shortfall_sum=shortfall_sum.drop(['Drawdown','InvestmentGroupName','IsWatchList','Acronym'], axis=1)
     return shortfall_sum
+
+def _lagging_quarter_ptiles(df):
+    df['ITD_lag_tmp']=pd.DataFrame(df["('AbsoluteReturnBenchmarkExcessLag', 'ITD')"])
+    df['ITD_ptiles_default_lag'] = pd.DataFrame(df.ITD_lag_tmp).rank(numeric_only=True, pct = True)
+    
+    df['default_3y_lag'] = pd.DataFrame(df["('AbsoluteReturnBenchmarkExcessLag', '3Y')"])
+    
+    df['3y_lag_ptiles'] = pd.DataFrame(df.default_3y_lag).rank(numeric_only=True, pct = True)
+
+    df['3y_lag_ptiles']=df['3y_lag_ptiles'].fillna(df['ITD_ptiles_default_lag'])
+
+    return df
+
+def _lagging_quarter_ptiles_summary(df):
+    df['3y_lag_ptiles'] = pd.DataFrame(df['3y_lag_ptiles'].apply(lambda x: x*100).round(0))
+    
+    quarter_lagging_ptile_sum=df[["3y_lag_ptiles"]]
+
+    return quarter_lagging_ptile_sum
 
 def _arb_definition(df):
     arb_definition=df[['absolute_return_benchmark']]
@@ -175,24 +200,55 @@ def _arb_definition(df):
     #shortfall_sum['Drawdown']=""
     return arb_definition
 
-def _status_wl(self):
+def _status_wl():
     include_filters = dict(status=["EMM"])
     exclude_filters = dict(strategy=["Other", "Aggregated Prior Period Adjustment"])
     exclude_gcm_portfolios = True
 
-    fund_dimn = InvestmentGroup(investment_group_ids=self._inv_group_ids).get_dimensions(
+    fund_dimn = InvestmentGroup(investment_group_ids=None).get_dimensions(
         exclude_gcm_portfolios=exclude_gcm_portfolios,
         include_filters=include_filters,
         exclude_filters=exclude_filters,
     )
+
+
     wl=fund_dimn[['InvestmentGroupName', 'IsWatchList']]
     #fund_dimn.drop(fund_dimn[fund_dimn['IsWatchList']==False].index)['IsWatchList']
     return wl
 
+def test_get_holdings(df, as_of_date):
+    start_date=as_of_date.replace(day=1)
+    #acronyms = ["GMSF", "SPECTRUM"]
 
-def _summarize_data(df):
+    with Scenario(as_of_date=dt.date.today()).context():
+        portfolio = Portfolio()
+        #portfolio = Portfolio(acronyms=acronyms)
+    # holdings = portfolio.get_holdings(start_date=dt.date(2022, 1, 1),
+    #                                       end_date=dt.date(2022, 3, 1))
+
+    holdings = portfolio.get_holdings(start_date=start_date,
+                                          end_date=as_of_date)
+
+    portfolio_allocation_status=holdings[['Acronym', 'InvestmentGroupName']]
+    
+    #fill status column with portfolio_allocation_status if empty
+    df=df.merge(portfolio_allocation_status, on='InvestmentGroupName', how='left')
+
+    portfolio_allocation_status=df[['InvestmentGroupName', 'Acronym']]
+    portfolio_allocation_status=portfolio_allocation_status.groupby("InvestmentGroupName", group_keys=True).apply(lambda x: x)
+    portfolio_allocation_status=portfolio_allocation_status.drop_duplicates(subset=['InvestmentGroupName'], keep=False)
+    portfolio_allocation_status=portfolio_allocation_status[(portfolio_allocation_status['Acronym']=='GMSF') | (portfolio_allocation_status['Acronym']=='SPECTRUM')]
+    #only_alloc_status={'GMSF', 'SPECTRUM'}
+    #portfolio_allocation_status=portfolio_allocation_status.groupby('InvestmentGroupName').filter(lambda g: only_alloc_status.issubset(g['Acronym']))
+    status_alloc=portfolio_allocation_status[['InvestmentGroupName','Acronym']]
+    status_alloc.index.names = ['ind1','ind2']
+    return status_alloc
+    
+def _summarize_data(df, as_of_date):
+    x=_status_wl()
+    y=test_get_holdings(df=df, as_of_date=as_of_date)
     sum0=df[['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation']]
-    sum7=_shortfall_pass_fail_summary(df=df)
+    sum7=_shortfall_pass_fail_summary(df=df, wl=x, alloc_status=y)
     sum8=_arb_definition(df=df)
     sum1=_ar_xs_ret_summary(df=df)
     sum2=_xs_emm_rank_ptile_summary(df=df)
@@ -200,6 +256,7 @@ def _summarize_data(df):
     sum4=_gcm_peer_ptile_summary(df=df)
     sum5=_gcm_peer_screener_rank(df=df)
     sum6=_net_equivs_exposure_summary(df=df)
+    sum9=_lagging_quarter_ptiles_summary(df=df)
     
     summary=pd.concat([sum0, sum7], axis=1)
     summary=pd.concat([summary, sum8], axis=1)
@@ -209,17 +266,19 @@ def _summarize_data(df):
     summary=pd.concat([summary, sum4], axis=1)
     summary=pd.concat([summary, sum5], axis=1)
     summary=pd.concat([summary, sum6], axis=1)
+    summary=pd.concat([summary, sum9], axis=1)
     #summary=pd.concat([summary, sum7], axis=1)
     return summary
 
 def _get_high_performing_summary(df):
     #high_perf=df.drop(df.columns[len(df.columns)-1], axis=1)
+    
     high_perf=df
     high_perf=high_perf.loc[(df['3y_ptiles'] >= 75) | (df['5y_ptiles'] >= 77)]
     high_perf=high_perf.iloc[::-1]
     high_perf['Pass/Fail']=""
-    high_perf_sum=high_perf[['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'Drawdown', 'absolute_return_benchmark']]
-    high_perf_data=high_perf.drop(['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'Drawdown', 'absolute_return_benchmark'], axis=1)
+    high_perf_sum=high_perf[['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'status', 'absolute_return_benchmark']]
+    high_perf_data=high_perf.drop(['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
     #df = df.drop('copy_5y', axis=1)
     #high_perf = high_perf.drop('rank_3y_ptiles', axis=1)
     #high_perf['Pass/Fail'] = high_perf['Pass/Fail'].replace('Pass', np.nan)
@@ -235,12 +294,13 @@ def _get_low_performing_summary(df):
     #ow_perf['Drawdown'] = low_perf['Drawdown'].replace('value', np.nan)
     #low_perf=low_perf.iloc[::-1]
     #df[apply(df>10,1,any),]
-    low_perf_sum=low_perf[['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'Drawdown', 'absolute_return_benchmark']]
-    low_perf_data=low_perf.drop(['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'Drawdown', 'absolute_return_benchmark'], axis=1)
+    low_perf_sum=low_perf[['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'status', 'absolute_return_benchmark']]
+    low_perf_data=low_perf.drop(['InvestmentGroupName','ReportingPeerGroup','FirmwideAllocation','Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
     return low_perf_sum, low_perf_data
 
 
-def _xpfund_data_to_highlow_df(df):
+def _xpfund_data_to_highlow_df(df, as_of_date):
+    #x=test_get_holdings(df=df, as_of_date=as_of_date)
     df = _clean_firmwide_xpfund_data(df=df)
     df = _3y_arb_xs_analysis(df=df)
     df = _fund_return_peer_percentiles(df=df)
@@ -248,11 +308,12 @@ def _xpfund_data_to_highlow_df(df):
     df = _5y_arb_xs_emm_percentiles(df=df)
     df = _10y_arb_xs_emm_percentiles(df=df)
     df = _TTM_arb_xs_emm_percentiles(df=df)
+    df=_lagging_quarter_ptiles(df)
     df = _net_exp_adj_3y(df=df)
     df = _net_exp_adj_5y(df=df)
     df = _net_exp_adj_latest(df=df)
     
-    df = _summarize_data(df=df)
+    df = _summarize_data(df=df, as_of_date=as_of_date)
     high_perf=_get_high_performing_summary(df=df)
     low_perf=_get_low_performing_summary(df=df)
 
