@@ -45,8 +45,8 @@ class RunXPFundPqReport(ReportingRunnerBase):
         report_data.loc[report_data['InvestmentGroupName'] == 'D1 Liquid Class', 'InvestmentGroupName'] \
             = 'D1 - Publics Only'
         report_data_orig=report_data.drop('absolute_return_benchmark', axis=1)
-        report_data_orig=report_data_orig.drop("('AbsoluteReturnBenchmarkExcessLag','3Y')", axis=1)
-        report_data_orig=report_data_orig.drop("('AbsoluteReturnBenchmarkExcessLag','ITD')", axis=1)
+        report_data_orig=report_data_orig.drop(('AbsoluteReturnBenchmarkExcessLag', '3Y'), axis=1)
+        report_data_orig=report_data_orig.drop(('AbsoluteReturnBenchmarkExcessLag', 'ITD'), axis=1)
         input_data = {
             'as_of_date': pd.DataFrame({'date': [self._as_of_date]}),
             'report_data': report_data_orig

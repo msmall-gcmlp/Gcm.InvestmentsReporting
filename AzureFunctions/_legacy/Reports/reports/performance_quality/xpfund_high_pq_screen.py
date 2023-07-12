@@ -82,7 +82,7 @@ class XPfundHighPQScreen(ReportingRunnerBase):
             date_q_minus_1 = pd.to_datetime(self._as_of_date - pd.tseries.offsets.QuarterEnd(1)).date()
             firm_xpfund_report_data = self._get_xpfund_pq_report(runner=self._runner, as_of_date=date_q_minus_1)
             firm_xpfund_highlow_df=firm_xpfund_report_data.copy()
-            firm_xpfund_highlow_df=_xpfund_data_to_highlow_df(firm_xpfund_highlow_df)
+            firm_xpfund_highlow_df=_xpfund_data_to_highlow_df(firm_xpfund_highlow_df, self._as_of_date)
             
         report_name="ARS Performance Quality - Firmwide High Performance Screen"
         high_rep_data= {
