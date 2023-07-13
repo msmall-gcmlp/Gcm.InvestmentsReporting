@@ -10,7 +10,6 @@ from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
 from _legacy.Reports.reports.performance_quality.helper import PerformanceQualityHelper
-#from _legacy.Reports.reports.performance_quality.report import PerformanceQualityReport
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario

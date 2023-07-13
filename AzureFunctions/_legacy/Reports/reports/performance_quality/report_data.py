@@ -157,15 +157,21 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             start_date=dt.date(1970, 1, 1),
             end_date=self._end_date
         )
-        fund_exp_net_df = fund_monthly_exposures[['InvestmentGroupName', 'Date', 'ExposureStrategy', 'NetNotional']]
-        fund_exp_net_df = fund_monthly_exposures[fund_monthly_exposures['ExposureStrategy'].isin(['Credit', 'Equities'])]
-        fund_exp_net_df = fund_exp_net_df.groupby(['InvestmentGroupName', 'Date']).agg({'NetNotional': 'sum'}).reset_index()
-        fund_exp_net_timeseries = fund_exp_net_df.sort_values(by=['InvestmentGroupName', 'Date'])
+        fund_exp_net_df = fund_monthly_exposures[[
+            'InvestmentGroupName', 'Date', 'ExposureStrategy', 'NetNotional']]
+        fund_exp_net_df = fund_monthly_exposures[fund_monthly_exposures[
+            'ExposureStrategy'].isin(['Credit', 'Equities'])]
+        fund_exp_net_df = fund_exp_net_df.groupby([
+            'InvestmentGroupName', 'Date']).agg({'NetNotional': 'sum'}).reset_index()
+        fund_exp_net_timeseries = fund_exp_net_df.sort_values(by=[
+            'InvestmentGroupName', 'Date'])
         i = pd.date_range(dt.date(1970, 1, 1), self._end_date, freq='M', name='Date')
-        fund_exp_net_timeseries = fund_exp_net_timeseries.set_index('Date').groupby('InvestmentGroupName', group_keys=False)\
+        fund_exp_net_timeseries = fund_exp_net_timeseries.set_index(
+            'Date').groupby('InvestmentGroupName', group_keys=False)\
             .apply(lambda s: s.reindex(i).ffill()).reset_index()
 
-        fund_exp_net_timeseries = fund_exp_net_timeseries.pivot_table(index='Date', columns='InvestmentGroupName', values='NetNotional', dropna=False)
+        fund_exp_net_timeseries = fund_exp_net_timeseries.pivot_table(
+            index='Date', columns='InvestmentGroupName', values='NetNotional', dropna=False)
         fund_exp_net_timeseries.fillna(method='ffill', inplace=True)
 
         return fund_exp_net_timeseries
@@ -176,11 +182,15 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             start_date=dt.date(1970, 1, 1),
             end_date=self._end_date
         )
-        fund_monthly_exposures = fund_monthly_exposures[['InvestmentGroupName', 'Date', 'GrossNotional']]
-        fund_monthly_exposures = fund_monthly_exposures.groupby(['InvestmentGroupName', 'Date']).agg({'GrossNotional': 'sum'}).reset_index()
-        fund_monthly_gross_exposures = fund_monthly_exposures.sort_values(by=['InvestmentGroupName', 'Date'])
+        fund_monthly_exposures = fund_monthly_exposures[[
+            'InvestmentGroupName', 'Date', 'GrossNotional']]
+        fund_monthly_exposures = fund_monthly_exposures.groupby(
+            ['InvestmentGroupName', 'Date']).agg({'GrossNotional': 'sum'}).reset_index()
+        fund_monthly_gross_exposures = fund_monthly_exposures.sort_values(
+            by=['InvestmentGroupName', 'Date'])
         i = pd.date_range(dt.date(1970, 1, 1), self._end_date, freq='M', name='Date')
-        fund_monthly_gross_exposures = fund_monthly_gross_exposures.set_index('Date').groupby('InvestmentGroupName', group_keys=False)\
+        fund_monthly_gross_exposures = fund_monthly_gross_exposures.set_index('Date').groupby(
+            'InvestmentGroupName', group_keys=False)\
             .apply(lambda s: s.reindex(i).ffill()).reset_index()
 
         fund_monthly_exposures_timeseries = fund_monthly_gross_exposures.pivot_table(
@@ -189,7 +199,8 @@ class PerformanceQualityReportData(ReportingRunnerBase):
         fund_monthly_exposures_timeseries.fillna(method='ffill', inplace=True)
         fund_monthly_exposures_timeseries = fund_monthly_exposures_timeseries.reset_index()
 
-        fund_monthly_exposures_timeseries['Date'] = pd.to_datetime(fund_monthly_exposures_timeseries['Date'])
+        fund_monthly_exposures_timeseries['Date'] = pd.to_datetime(
+            fund_monthly_exposures_timeseries['Date'])
         fund_monthly_exposures_timeseries.set_index('Date', inplace=True)
         return fund_monthly_exposures_timeseries
 

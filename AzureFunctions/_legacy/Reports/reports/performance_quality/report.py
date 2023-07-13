@@ -220,7 +220,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _primary_peer_returns(self):
         if self._primary_peer_analytics is not None:
-            #returns = pd.read_json(self._primary_peer_analytics["gcm_peer_returns"], orient="index")
+            # returns = pd.read_json(self._primary_peer_analytics["gcm_peer_returns"], orient="index")
             returns = pd.read_json(self._peer_inputs["gcm_peer_returns"], orient="index")
             return returns.squeeze()
         else:
@@ -228,7 +228,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _primary_peer_constituent_returns(self):
-        #pd.read_json(self._peer_inputs["gcm_peer_constituent_returns"], orient="index")
+        # pd.read_json(self._peer_inputs["gcm_peer_constituent_returns"], orient="index")
         if self._peer_inputs is not None:
             returns = pd.read_json(self._peer_inputs["gcm_peer_constituent_returns"], orient="index")
             return returns.squeeze()
@@ -567,12 +567,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
         else:
             return pd.DataFrame({"peer_ptile_1_heading": [""]})
 
-    def get_peer_ptile_2_heading(self):
-        if self._secondary_peer_group is not None:
-            group = self._secondary_peer_group.replace("GCM ", "")
-            return pd.DataFrame({"peer_ptile_2_heading": [group]})
-        else:
-            return pd.DataFrame({"peer_ptile_2_heading": [""]})
+    # def get_peer_ptile_2_heading(self):
+    #     if self._secondary_peer_group is not None:
+    #         group = self._secondary_peer_group.replace("GCM ", "")
+    #         return pd.DataFrame({"peer_ptile_2_heading": [group]})
+    #     else:
+    #         return pd.DataFrame({"peer_ptile_2_heading": [""]})
 
     def get_latest_exposure_heading(self):
         if self._latest_exposure_date is not None:
@@ -791,7 +791,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def peer_3y_data(self, excess_peer_data):
         ret_3y = pd.DataFrame()
         for col in excess_peer_data.columns:
-            #monthly_ret_total_data=total_peer_data[col]
+            # monthly_ret_total_data=total_peer_data[col]
             monthly_ret_excess_data = excess_peer_data[col]
             ret_3y[col] = self._analytics.compute_trailing_return(
                 ror=monthly_ret_excess_data,
@@ -829,7 +829,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                     betas.append(beta)
 
                     beta_adj_index = peer_bmrk_ror[passive_bmrk] * beta + (1 - beta) * risk_free
-                    peer_beta_adj_index[fund] = beta_adj_index     
+                    peer_beta_adj_index[fund] = beta_adj_index
         else:
             for fund in peer_bmrk_ror.columns[:-1]:
                 peer_beta_adj_index[fund] = risk_free
@@ -839,29 +839,29 @@ class PerformanceQualityReport(ReportingRunnerBase):
         for col in peer_rors.columns:
             peer_fund_summary = self._get_return_summary(returns=peer_rors[col], return_type="Fund")
             peer_fund_xs = self._get_excess_return_summary(
-                fund_returns = peer_fund_summary,
-                benchmark_returns = peer_beta_adj_index[col],
-                benchmark_name = "AbsoluteReturnBenchmark",
+                fund_returns=peer_fund_summary,
+                benchmark_returns=peer_beta_adj_index[col],
+                benchmark_name="AbsoluteReturnBenchmark",
             )
             peer_fund_xs['AbsoluteReturnBenchmarkExcess'].replace('', np.nan, inplace=True)
             curr_peer_xs = pd.DataFrame(peer_fund_xs["AbsoluteReturnBenchmarkExcess"])
             curr_peer_xs = curr_peer_xs.rename(columns={'AbsoluteReturnBenchmarkExcess': col})
             curr_peer_xs = curr_peer_xs.transpose()
             peer_xs_ret_summary = pd.concat([peer_xs_ret_summary, curr_peer_xs])
-        peer_xs_ret_summary.dropna(how = 'all', inplace = True)
+        peer_xs_ret_summary.dropna(how='all', inplace=True)
         peer_excess_df = peer_xs_ret_summary.iloc[:, :-1]
 
-        peer_excess_df.rename(columns = {'MTD': 'M', 'QTD': 'Q', 'YTD': 'Y', 'TTM': 'T12', '3Y': 'T36', '5Y': 'T60', '10Y': 'T120'
-                                         }, inplace = True)
+        peer_excess_df.rename(columns={'MTD': 'M', 'QTD': 'Q', 'YTD': 'Y', 'TTM': 'T12', '3Y': 'T36', '5Y': 'T60', '10Y': 'T120'
+                                       }, inplace=True)
         peer_excess_df = {peer_excess_df[column].name: [y for y in peer_excess_df[column] if not pd.isna(y)] for column in peer_excess_df}
         return peer_excess_df
 
     def build_benchmark_summary(self):
         fund_returns = self._get_return_summary(returns=self._fund_returns, return_type="Fund")
         absolute_return_summary = self._get_excess_return_summary(
-            fund_returns = fund_returns,
-            benchmark_returns = self._abs_bmrk_returns,
-            benchmark_name = "AbsoluteReturnBenchmark",
+            fund_returns=fund_returns,
+            benchmark_returns=self._abs_bmrk_returns,
+            benchmark_name="AbsoluteReturnBenchmark",
         )
         gcm_peer_summary = self._get_excess_return_summary(
             fund_returns=fund_returns,
@@ -881,16 +881,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
         fund_excess_returns = pd.DataFrame(absolute_return_summary.iloc[:, -1])
         peer_excess_dict = self.build_ar_peer_excess()
 
-        primary_peer_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="Peer1Ptile",
+        primary_peer_percentiles = self._get_percentile_summary(fund_returns=fund_returns,
+                                                                group_name="Peer1Ptile",
                                                                 constituent_total_returns=self._primary_peer_total_returns)
 
-        primary_peer_excess_arb_percentiles = self._get_percentile_summary(fund_returns=fund_excess_returns, group_name="Peer1Ptile",
+        primary_peer_excess_arb_percentiles = self._get_percentile_summary(
+                                                                fund_returns=fund_excess_returns,
+                                                                group_name="Peer1Ptile",
                                                                 constituent_total_returns=peer_excess_dict)
 
-        eurekahedge_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="EH50Ptile",
+        eurekahedge_percentiles = self._get_percentile_summary(fund_returns=fund_returns,
+                                                               group_name="EH50Ptile",
                                                                constituent_monthly_rors=self._eurekahedge_constituent_returns)
 
-        ehi200_percentiles = self._get_percentile_summary(fund_returns=fund_returns, group_name="EHI200Ptile",
+        ehi200_percentiles = self._get_percentile_summary(fund_returns=fund_returns,
+                                                          group_name="EHI200Ptile",
                                                           constituent_monthly_rors=self._ehi200_constituent_returns)
 
         summary = absolute_return_summary.copy()
@@ -909,18 +914,29 @@ class PerformanceQualityReport(ReportingRunnerBase):
             left_index=True,
             right_index=True,
         )
-        summary = summary.merge(primary_peer_percentiles, left_index=True, right_index=True, how='left')
-        #summary = summary.merge(secondary_peer_percentiles, left_index=True, right_index=True, how='left')
-        summary = summary.merge(primary_peer_excess_arb_percentiles, left_index=True, right_index=True, how='left')
-        summary = summary.merge(eurekahedge_percentiles, left_index=True, right_index=True, how='left')
-        summary = summary.merge(ehi200_percentiles, left_index=True, right_index=True, how='left')
+        summary = summary.merge(primary_peer_percentiles,
+                                left_index=True, right_index=True,
+                                how='left')
+        summary = summary.merge(primary_peer_excess_arb_percentiles,
+                                left_index=True, right_index=True,
+                                how='left')
+        summary = summary.merge(eurekahedge_percentiles,
+                                left_index=True,
+                                right_index=True,
+                                how='left')
+        summary = summary.merge(ehi200_percentiles,
+                                left_index=True,
+                                right_index=True,
+                                how='left')
 
         summary = summary.fillna("")
         return summary
 
     def build_constituent_count_summary(self):
-        eureka = self._helper.summarize_counts(returns=self._eurekahedge_constituent_returns)
-        ehi200 = self._helper.summarize_counts(returns=self._ehi200_constituent_returns)
+        eureka = self._helper.summarize_counts(
+            returns=self._eurekahedge_constituent_returns)
+        ehi200 = self._helper.summarize_counts(
+            returns=self._ehi200_constituent_returns)
 
         summary = pd.DataFrame({"primary": self._primary_peer_counts,
                                 "secondary": self._primary_peer_counts,
@@ -932,17 +948,21 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _get_exposure_summary(exposure):
         strategies = ["Equities", "Credit", "Macro"]
         exposures = [x + "Notional" for x in ["Long", "Short", "Gross", "Net"]]
-        column_index = pd.MultiIndex.from_product([strategies, exposures], names=["ExposureStrategy", "ExposureType"])
+        column_index = pd.MultiIndex.from_product(
+            [strategies, exposures], names=["ExposureStrategy", "ExposureType"])
         periods = ["Latest", "3Y", "5Y", "10Y"]
 
-        exposure_summary = exposure.drop(columns={"InvestmentGroupName", "InvestmentGroupId", "Date"})
+        exposure_summary = exposure.drop(
+            columns={"InvestmentGroupName", "InvestmentGroupId", "Date"})
 
         if all(exposure_summary.isna().all()):
             return pd.DataFrame(index=periods, columns=column_index)
 
-        macro_strat = ~exposure_summary["ExposureStrategy"].isin(["Equities", "Credit"])
+        macro_strat = ~exposure_summary[
+            "ExposureStrategy"].isin(["Equities", "Credit"])
         exposure_summary.loc[macro_strat, "ExposureStrategy"] = "Macro"
-        exposure_summary = exposure_summary.groupby(["Period", "ExposureStrategy"]).sum()
+        exposure_summary = exposure_summary.groupby(
+            ["Period", "ExposureStrategy"]).sum()
         exposure_summary = exposure_summary.reset_index().set_index("Period")
         exposure_summary = exposure_summary.pivot(columns=["ExposureStrategy"])
         exposure_summary.columns = exposure_summary.columns.reorder_levels([1, 0])
@@ -986,16 +1006,26 @@ class PerformanceQualityReport(ReportingRunnerBase):
             as_of_date=self._as_of_date,
         )
 
-        mtd = p_return_attribution(window=1, annualize=False).rename(columns={"CTR": "MTD"})
-        qtd = p_return_attribution(window=qtd_window, annualize=False).rename(columns={"CTR": "QTD"})
-        ytd = p_return_attribution(window=ytd_window, annualize=False).rename(columns={"CTR": "YTD"})
-        ttm = p_return_attribution(window=12, annualize=False).rename(columns={"CTR": "TTM"})
-        t3y = p_return_attribution(window=36, annualize=True).rename(columns={"CTR": "T3Y"})
-        t5y = p_return_attribution(window=60, annualize=True).rename(columns={"CTR": "T5Y"})
-        t10y = p_return_attribution(window=120, annualize=True).rename(columns={"CTR": "T10Y"})
+        mtd = p_return_attribution(window=1, annualize=False).rename(
+            columns={"CTR": "MTD"})
+        qtd = p_return_attribution(window=qtd_window, annualize=False).rename(
+            columns={"CTR": "QTD"})
+        ytd = p_return_attribution(window=ytd_window, annualize=False).rename(
+            columns={"CTR": "YTD"})
+        ttm = p_return_attribution(window=12, annualize=False).rename(
+            columns={"CTR": "TTM"})
+        t3y = p_return_attribution(window=36, annualize=True).rename(
+            columns={"CTR": "T3Y"})
+        t5y = p_return_attribution(window=60, annualize=True).rename(
+            columns={"CTR": "T5Y"})
+        t10y = p_return_attribution(window=120, annualize=True).rename(
+            columns={"CTR": "T10Y"})
 
         # TODO only fill na if some non na's
-        summary = factor_group_index.merge(mtd, left_index=True, right_index=True, how="left")
+        summary = factor_group_index.merge(mtd,
+                                           left_index=True,
+                                           right_index=True,
+                                           how="left")
         summary = summary.merge(qtd, left_index=True, right_index=True, how="left")
         summary = summary.merge(ytd, left_index=True, right_index=True, how="left")
         summary = summary.merge(ttm, left_index=True, right_index=True, how="left")
@@ -1007,7 +1037,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = summary.round(2)
 
         # fill na unless everything is NA
-        summary[~summary.isna().all(axis=1)] = summary[~summary.isna().all(axis=1)].fillna(0)
+        summary[~summary.isna().all(axis=1)] = summary[~summary
+                                                       .isna()
+                                                       .all(axis=1)
+                                                       ].fillna(0)
         return summary
 
     def _get_pba_summary(self):
@@ -1111,12 +1144,30 @@ class PerformanceQualityReport(ReportingRunnerBase):
             )
 
         # TODO only fill na if some non na's
-        summary = factor_group_index.merge(mtd_publics, left_index=True, right_index=True, how="left")
-        summary = summary.merge(mtd_privates, left_index=True, right_index=True, how="left")
-        summary = summary.merge(qtd_publics, left_index=True, right_index=True, how="left")
-        summary = summary.merge(qtd_privates, left_index=True, right_index=True, how="left")
-        summary = summary.merge(ytd_publics, left_index=True, right_index=True, how="left")
-        summary = summary.merge(ytd_privates, left_index=True, right_index=True, how="left")
+        summary = factor_group_index.merge(mtd_publics,
+                                           left_index=True,
+                                           right_index=True,
+                                           how="left")
+        summary = summary.merge(mtd_privates,
+                                left_index=True,
+                                right_index=True,
+                                how="left")
+        summary = summary.merge(qtd_publics,
+                                left_index=True,
+                                right_index=True,
+                                how="left")
+        summary = summary.merge(qtd_privates,
+                                left_index=True,
+                                right_index=True,
+                                how="left")
+        summary = summary.merge(ytd_publics,
+                                left_index=True,
+                                right_index=True,
+                                how="left")
+        summary = summary.merge(ytd_privates,
+                                left_index=True,
+                                right_index=True,
+                                how="left")
         summary.columns = [
             "MTD - Publics",
             "MTD - Privates",
@@ -1129,7 +1180,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         summary = summary.round(2)
 
         # fill na unless everything is NA
-        summary[~summary.isna().all(axis=1)] = summary[~summary.isna().all(axis=1)].fillna(0)
+        summary[~summary.isna().all(axis=1)] = summary[
+            ~summary.isna().all(axis=1)].fillna(0)
         return summary
 
     def build_exposure_summary(self):
@@ -1154,8 +1206,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     def build_rba_summary(self):
         if self._fund_rba.shape[0] > 0:
-            # fund_returns = self._get_return_summary(returns=self._fund_returns, return_type='Fund')
-            # fund_returns.rename(columns={'Fund': 'Total'}, inplace=True)
+
             rba = self._get_rba_summary()
             # summary = fund_returns.merge(rba, left_index=True, right_index=True)
             summary = rba.copy()
@@ -1425,33 +1476,37 @@ class PerformanceQualityReport(ReportingRunnerBase):
         prim_peer_ret = pd.DataFrame(self._primary_peer_returns)
         prim_peer_ret.rename(columns={'0': self._primary_peer_group})
 
-        ptile_25, ptile_mean, ptile_75 = np.percentile(rolling_rors['Excess'], 25), np.mean(rolling_rors['Excess']), np.percentile(rolling_rors['Excess'], 75)
+        ptile_25, ptile_mean, ptile_75 = np.percentile(
+            rolling_rors['Excess'], 25), np.mean(rolling_rors['Excess']), np.percentile(rolling_rors['Excess'], 75)
 
         const_ret = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._constituent_returns
         bmrk_ret = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._peer_arb_benchmark_returns
-        #const_ret=self._primary_peer_constituent_returns
-        #bmrk_ret=self._abs_bmrk_returns
+        # const_ret=self._primary_peer_constituent_returns
+        # bmrk_ret=self._abs_bmrk_returns
         market_scenarios, conditional_ptile_summary = \
             generate_peer_conditional_excess_returns(peer_returns=const_ret,
                                                      benchmark_returns=bmrk_ret)
 
-        rolling_excess, _ = _compute_rolling_excess_metrics(const_ret, bmrk_ret, percentiles=[10, 25, 50, 75, 90], window=36)
+        rolling_excess, _ = _compute_rolling_excess_metrics(
+            const_ret, bmrk_ret, percentiles=[10, 25, 50, 75, 90], window=36)
         passive_bmrk = bmrk_ret.columns[0]
         if passive_bmrk == 'MOVE Index':
             rolling_3y_bmrk = bmrk_ret.rolling(36).mean().dropna()
         else:
-            rolling_3y_bmrk = self._analytics.compute_trailing_return(ror=bmrk_ret,
-                                                              window=36,
-                                                              as_of_date=bmrk_ret.index.max().date(),
-                                                              method='geometric',
-                                                              periodicity=Periodicity.Monthly,
-                                                              annualize=True,
-                                                              include_history=True)
+            rolling_3y_bmrk = self._analytics.compute_trailing_return(
+                ror=bmrk_ret,
+                window=36,
+                as_of_date=bmrk_ret.index.max().date(),
+                method='geometric',
+                periodicity=Periodicity.Monthly,
+                annualize=True,
+                include_history=True)
 
         spx_ror_cutoffs = [-np.inf] + [np.inf]
-        rolling_3y_bmrk['MarketScenario'] = pd.cut(rolling_3y_bmrk.iloc[:, 0],
-                                            bins=spx_ror_cutoffs,
-                                            labels=['composite'])
+        rolling_3y_bmrk['MarketScenario'] = pd.cut(
+            rolling_3y_bmrk.iloc[:, 0],
+            bins=spx_ror_cutoffs,
+            labels=['composite'])
 
         conditional_ptiles = rolling_3y_bmrk.merge(rolling_excess, how='left', left_index=True, right_index=True)
         conditional_ptile_summary = conditional_ptiles.groupby('MarketScenario').mean()
@@ -1761,9 +1816,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         net_exps = self._fund_net_exposures.copy()
         net_exps['Month'] = net_exps.index.month
         net_exps['Year'] = net_exps.index.year
-        #net_exps.index=net_exps.index.map(ast.literal_eval)
-        #net_exps['Year']=[index[0] for index in net_exps.index]
-        #net_exps['Month']=[index[1] for index in net_exps.index]
+        # net_exps.index=net_exps.index.map(ast.literal_eval)
+        # net_exps['Year']=[index[0] for index in net_exps.index]
+        # net_exps['Month']=[index[1] for index in net_exps.index]
 
         # pivot long to wide
         monthly_net_exps = net_exps.pivot(index=["Year"], columns=["Month"])
@@ -1792,9 +1847,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         gross_exps = self._fund_gross_exposures.copy()
         gross_exps['Month'] = gross_exps.index.month
         gross_exps['Year'] = gross_exps.index.year
-        #gross_exps.index=gross_exps.index.map(ast.literal_eval)
-        #gross_exps['Year']=[index[0] for index in gross_exps.index]
-        #gross_exps['Month']=[index[1] for index in gross_exps.index]
+        # gross_exps.index=gross_exps.index.map(ast.literal_eval)
+        # gross_exps['Year']=[index[0] for index in gross_exps.index]
+        # gross_exps['Month']=[index[1] for index in gross_exps.index]
 
         # pivot long to wide
         monthly_gross_exps = gross_exps.pivot(index=["Year"], columns=["Month"])
@@ -1835,7 +1890,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         peer_group_heading = self.get_peer_group_heading()
         eurekahedge_benchmark_heading = self.get_eurekahedge_benchmark_heading()
         peer_ptile_1_heading = self.get_peer_ptile_1_heading()
-        peer_ptile_2_heading = self.get_peer_ptile_2_heading()
+        # peer_ptile_2_heading = self.get_peer_ptile_2_heading()
 
         rba_summary = self.build_rba_summary()
         adj_r2 = self.get_adj_r2()
@@ -1847,7 +1902,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         performance_stability_fund_summary = self.build_performance_stability_fund_summary()
         performance_stability_peer_summary = self.build_performance_stability_peer_summary()
 
-        #shortfall_summary = self.build_shortfall_summary()
+        # shortfall_summary = self.build_shortfall_summary()
         risk_model_expectations = self.build_risk_model_expectations_summary()
         risk_model_implied_forwards = self.build_risk_model_implied_forwards_summary()
 
@@ -1866,13 +1921,15 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "header_info_1": header_info,
             "header_info_2": header_info,
             "header_info_3": header_info,
+            "header_info_4": header_info,
+            "header_info_5": header_info,
             "benchmark_summary": return_summary,
             "constituent_count_summary": constituent_count_summary,
             "absolute_return_benchmark": absolute_return_benchmark,
             "peer_group_heading": peer_group_heading,
             "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading,
             "peer_ptile_1_heading": peer_ptile_1_heading,
-            #"peer_ptile_2_heading": peer_ptile_2_heading,
+            # "peer_ptile_2_heading": peer_ptile_2_heading,
             "performance_stability_fund_summary": performance_stability_fund_summary,
             "performance_stability_peer_summary": performance_stability_peer_summary,
             "rba_summary": rba_summary,
@@ -1909,7 +1966,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             "peer_group_heading": peer_group_heading.to_json(orient="index"),
             "eurekahedge_benchmark_heading": eurekahedge_benchmark_heading.to_json(orient="index"),
             "peer_ptile_1_heading": peer_ptile_1_heading.to_json(orient="index"),
-            "peer_ptile_2_heading": peer_ptile_2_heading.to_json(orient="index"),
+            # "peer_ptile_2_heading": peer_ptile_2_heading.to_json(orient="index"),
             "performance_stability_fund_summary": performance_stability_fund_summary.to_json(orient="index"),
             "performance_stability_peer_summary": performance_stability_peer_summary.to_json(orient="index"),
             "rba_summary": rba_summary.to_json(orient="index"),
@@ -2000,6 +2057,6 @@ if __name__ == "__main__":
     )
 
     with Scenario(dao=runner, as_of_date=dt.date(2022, 10, 31)).context():
-        #for fund in ['Skye', 'Citadel', 'Element', 'D1 Capital']:
-        for fund in ['Element']:
+        for fund in ['Skye', 'Citadel', 'Element', 'D1 Capital']:
+            # for fund in ['Skye', 'Element']:
             PerformanceQualityReport(fund_name=fund).execute()
