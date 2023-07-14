@@ -103,8 +103,8 @@ class TestPerformanceQualityReport:
             "EHI50Excess",
             "EHI200",
             "EHI200Excess",
-            "Peer1Ptile",
-            "Peer2Ptile",
+            "Peer1Ptile_x",
+            "Peer1Ptile_y",
             "EH50Ptile",
             "EHI200Ptile",
         ]
@@ -123,8 +123,8 @@ class TestPerformanceQualityReport:
             "EHI50Excess",
             "EHI200",
             "EHI200Excess",
-            "Peer1Ptile",
-            "Peer2Ptile",
+            "Peer1Ptile_x",
+            "Peer1Ptile_y",
             "EH50Ptile",
             "EHI200Ptile",
         ]

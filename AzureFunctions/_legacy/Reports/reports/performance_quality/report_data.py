@@ -558,7 +558,7 @@ if __name__ == "__main__":
         },
     )
 
-    as_of_date = dt.date(2022, 10, 31)
+    as_of_date = dt.date(2022, 9, 30)
     with Scenario(dao=runner, as_of_date=as_of_date).context():
         ids = [20016, 23441, 75614, 28015]  # prd
         # ids = [19224, 23319, 74984]  # dev

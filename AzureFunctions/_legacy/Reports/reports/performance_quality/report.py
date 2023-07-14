@@ -19,6 +19,7 @@ from _legacy.core.Runners.investmentsreporting import (
     InvestmentsReportRunner,
 )
 from gcm.inv.quantlib.enum_source import PeriodicROR, Periodicity
+from gcm.inv.quantlib.timeseries.transformer.aggregate_from_daily import AggregateFromDaily
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
@@ -27,11 +28,9 @@ from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario
 from gcm.inv.models.ars_peer_analysis.peer_conditional_excess_returns import _compute_rolling_excess_metrics
 from gcm.inv.models.ars_peer_analysis.peer_conditional_excess_returns import generate_peer_conditional_excess_returns
-from _legacy.Reports.reports.performance_quality.peer_level_analytics import PerformanceQualityPeerLevelAnalytics
 
 
 class PerformanceQualityReport(ReportingRunnerBase):
-
     def __init__(self, fund_name):
         super().__init__(runner=Scenario.get_attribute("dao"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
@@ -184,6 +183,25 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return returns
 
     @cached_property
+    def _peer_arb_benchmark_returns(self):
+        daily_returns = pd.read_json(self._peer_inputs["peer_group_abs_return_bmrk_returns"], orient="index")
+        if daily_returns.columns[0] == 'MOVE Index':
+            returns = AggregateFromDaily().transform(
+                data=daily_returns,
+                method="last",
+                period=Periodicity.Monthly,
+                first_of_day=True
+            )
+        else:
+            returns = AggregateFromDaily().transform(
+                data=daily_returns,
+                method="geometric",
+                period=Periodicity.Monthly,
+                first_of_day=True
+            )
+        return returns
+
+    @cached_property
     def _abs_bmrk_betas(self):
         return pd.read_json(self._fund_inputs["abs_bmrk_betas"], orient="index")
 
@@ -229,11 +247,22 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _primary_peer_constituent_returns(self):
         # pd.read_json(self._peer_inputs["gcm_peer_constituent_returns"], orient="index")
-        if self._peer_inputs is not None:
-            returns = pd.read_json(self._peer_inputs["gcm_peer_constituent_returns"], orient="index")
-            return returns.squeeze()
+        returns = pd.read_json(self._peer_inputs["gcm_peer_constituent_returns"], orient="index")
+        #return returns.squeeze()
+        returns_columns = [ast.literal_eval(x) for x in returns.columns]
+        returns_columns = pd.MultiIndex.from_tuples(
+            returns_columns,
+            names=["PeerGroupName", "InvestmentGroupName"],
+        )
+        returns.columns = returns_columns
+
+        peer_group_index = returns.columns.get_level_values(0) == self._primary_peer_group
+        if any(peer_group_index):
+            returns = returns.loc[:, peer_group_index]
+            returns = returns.droplevel(0, axis=1)
         else:
-            return pd.Series(name='PrimaryPeer')
+            returns = pd.DataFrame()
+        return returns
 
     @cached_property
     def _primary_peer_counts(self):
@@ -804,8 +833,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
         return ret_3y
 
     def build_ar_peer_excess(self):
-        peer_arb_bmrk = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._peer_arb_benchmark_returns
-        peer_rors = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._constituent_returns
+        #peer_arb_bmrk1 = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._peer_arb_benchmark_returns
+        #peer_rors1 = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._constituent_returns
+
+        peer_rors = self._primary_peer_constituent_returns
+        #peer_arb_bmrk = self._abs_bmrk_returns
+        peer_arb_bmrk = self._peer_arb_benchmark_returns
 
         rf_ret = self._helper.rf_return
         rf_df = pd.DataFrame(rf_ret)
@@ -929,7 +962,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                 right_index=True,
                                 how='left')
 
-        summary = summary.fillna("")
+        #summary = summary.fillna("")
         return summary
 
     def build_constituent_count_summary(self):
@@ -1479,10 +1512,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
         ptile_25, ptile_mean, ptile_75 = np.percentile(
             rolling_rors['Excess'], 25), np.mean(rolling_rors['Excess']), np.percentile(rolling_rors['Excess'], 75)
 
-        const_ret = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._constituent_returns
-        bmrk_ret = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._peer_arb_benchmark_returns
-        # const_ret=self._primary_peer_constituent_returns
-        # bmrk_ret=self._abs_bmrk_returns
+        #const_ret = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._constituent_returns
+        #bmrk_ret = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._peer_arb_benchmark_returns
+        const_ret = self._primary_peer_constituent_returns
+        bmrk_ret = self._peer_arb_benchmark_returns
         market_scenarios, conditional_ptile_summary = \
             generate_peer_conditional_excess_returns(peer_returns=const_ret,
                                                      benchmark_returns=bmrk_ret)
@@ -2058,5 +2091,5 @@ if __name__ == "__main__":
 
     with Scenario(dao=runner, as_of_date=dt.date(2022, 10, 31)).context():
         for fund in ['Skye', 'Citadel', 'Element', 'D1 Capital']:
-            # for fund in ['Skye', 'Element']:
+            #for fund in ['Citadel']:
             PerformanceQualityReport(fund_name=fund).execute()
