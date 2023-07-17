@@ -25,13 +25,6 @@ def _download_inputs(runner, dl_location, file_path) -> dict:
         inputs = None
     return inputs
 
-# #@cached_property
-# def _fund_inputs(self):
-#     as_of_date = self._as_of_date.strftime("%Y-%m-%d")
-#     file = self._fund_name.replace("/", "") + "_fund_inputs_" + as_of_date + ".json"
-#     inputs = self._download_inputs(runner=runner, location="raw/investmentsreporting/summarydata/xpfund_performance_quality", file_path=file)
-#     return inputs
-
 
 def _parse_json(fund_data, item):
     return pd.read_json(fund_data[item], orient="index")
@@ -110,6 +103,7 @@ def _pivot_and_reindex(data, level_1_cols, level_2_cols):
     data = data.reindex(columns=col_order)
     return data
 
+
 def _format_ar_benchmark_definition(full_stats):
     data = full_stats['absolute_return_benchmark']
     data = data.set_index('FundName')
@@ -131,12 +125,13 @@ def _format_benchmark_excess_summary(full_stats):
                                            level_2_cols=periods)
     return formatted_summary
 
+
 def _format_benchmark_excess_1q_lag_summary(q_lag_stats):
     data = q_lag_stats['benchmark_summary']
-    data['AbsoluteReturnBenchmarkExcessLag']=data[['AbsoluteReturnBenchmarkExcess']]
+    data['AbsoluteReturnBenchmarkExcessLag'] = data[['AbsoluteReturnBenchmarkExcess']]
     # Excludes: AbsoluteReturnBenchmark, GcmPeer, EHI50, EHI200
     cols = ['AbsoluteReturnBenchmarkExcessLag']
-    periods = ['3Y','ITD']
+    periods = ['3Y', 'ITD']
     formatted_summary = _pivot_and_reindex(data=data,
                                            level_1_cols=cols,
                                            level_2_cols=periods)
@@ -287,10 +282,7 @@ def _get_peer_rankings(runner, as_of_date, emm_dimn):
     peer_screen_location = "raw/investmentsreporting/summarydata/ars_performance_screener"
     peers = sorted([x for x in emm_dimn['ReportingPeerGroup'].unique().tolist() if str(x) != 'nan' and x is not None])
     peer_rankings = pd.DataFrame(columns=['InvestmentGroupNameRaw', 'Peer', 'Decile', 'Confidence', 'Persistence'])
-    
-    # file1 = "raw/investmentsreporting/summarydata/xpfund_performance_quality"
-    # inputs = _download_inputs(runner=runner,dl_location="raw/investmentsreporting/summarydata/xpfund_performance_quality", file_path="_firm_x_portfolio_fund2023-03-31.json")
-    # x=pd.read_json(inputs['report_data'], orient='index')
+
     for peer in peers:
         print(peer)
         peer_ranks = _download_inputs(runner=runner,
@@ -309,6 +301,7 @@ def _get_peer_rankings(runner, as_of_date, emm_dimn):
     rankings = rankings.set_index('InvestmentGroupName')
 
     return rankings
+
 
 def _get_emm_rankings(runner, as_of_date, emm_dimn):
     stats = {}
@@ -332,13 +325,14 @@ def _get_emm_rankings(runner, as_of_date, emm_dimn):
     # formatted_summary = _pivot_and_reindex(data=data,
     #                                        level_1_cols=cols,
     #                                        level_2_cols=periods)
-    
+
     # formatted_summary.columns.set_levels('[AbsoluteReturnBenchmarkExcessLag]',level=0,inplace=True)
     #formatted_summary['AbsoluteReturnBenchmarkExcessLag']=formatted_summary['AbsoluteReturnBenchmarkExcess']
     #formatted_summary=formatted_summary.drop('AbsoluteReturnBenchmarkExcess', axis=1)
-    
+
     #formatted_summary.rename({'AbsoluteReturnBenchmarkExcess','AbsoluteReturnBenchmarkExcessLag'}, axis=1, inplace=True)
-        #return stats
+    #return stats
+
 
 def _get_performance_quality_metrics(runner, emm_dimn, as_of_date):
     stats = {}
@@ -350,13 +344,14 @@ def _get_performance_quality_metrics(runner, emm_dimn, as_of_date):
         if fund_data is not None:
             for named_range in ['benchmark_summary', 'performance_stability_fund_summary',
                                 'rba_summary', 'pba_mtd', 'pba_qtd', 'pba_ytd', 'shortfall_summary',
-                                'risk_model_expectations', 'exposure_summary','absolute_return_benchmark']:
+                                'risk_model_expectations', 'exposure_summary', 'absolute_return_benchmark']:
                 summary = _filter_summary(json_data=fund_data, named_range=named_range, fund_name=fund_name)
                 if named_range in stats.keys():
                     stats[named_range] = pd.concat([stats[named_range], summary])
                 else:
                     stats[named_range] = summary
     return stats
+
 
 def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date, inv_group_ids=None, additional_ids=None):
     with Scenario(dao=runner, as_of_date=date).context():
@@ -368,7 +363,7 @@ def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date, inv_group_i
         emm_rankings = _get_emm_rankings(runner=runner, as_of_date=date_q_minus_1, emm_dimn=fund_dimn)
         date_q_minus_2 = pd.to_datetime(date - pd.tseries.offsets.QuarterEnd(2)).date()
         peer_rankings_lag = _get_peer_rankings(runner=runner, as_of_date=date_q_minus_2, emm_dimn=fund_dimn)
-        
+
         pq_stats = _get_performance_quality_metrics(runner=runner, emm_dimn=fund_dimn, as_of_date=date)
         final_summary = _generate_final_summary(emm_dimn=fund_dimn,
                                                 pq_stats=pq_stats,
