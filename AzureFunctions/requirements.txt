@@ -9,7 +9,7 @@ datetime
 openpyxl
 pillow
 classes
-gcm-investmentsdataprovider>=0.15.0
+gcm-investmentsdataprovider=0.68.0.dev2307141938
 gcm-investmentsquantlib>=0.8.0
 gcm-investmentsutils>=0.16.0
 gcm-investmentsmodels>=0.16.0
