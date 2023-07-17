@@ -1,9 +1,7 @@
 from . import PvmPerformanceResultsBase, AggregateInterval, PvmCashflows
 from .aggregated import PvmAggregatedPerformanceResults
 from typing import List
-from ..pvm_track_record.data_handler.investment_container import (
-    InvestmentContainerBase,
-)
+from gcm.inv.utils.pvm.investment_container import InvestmentContainerBase
 from .position_attribution_results import PositionAttributionResults
 
 

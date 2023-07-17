@@ -1,8 +1,4 @@
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
-
-from ..utils.pvm_track_record.data_handler.gross_atom import (
-    GrossAttributionAtom,
-)
 from ....core.report_structure import (
     ReportMeta,
 )
@@ -16,10 +12,10 @@ from ....core.report_structure import (
 )
 import pandas as pd
 from ...report_names import ReportNames
-from ..utils.pvm_track_record.data_handler.investment_container import (
+from gcm.inv.utils.pvm.investment_container import (
     InvestmentContainerBase,
 )
-from ..utils.pvm_track_record.data_handler.pvm_track_record_handler import (
+from gcm.inv.dataprovider.entity_data.investment_manager.pvm.tr import (
     TrackRecordHandler,
 )
 from functools import cached_property
@@ -104,24 +100,6 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             position_dimn = self.filter_by_inv_id(position_dimn)
             return position_dimn
 
-        def get_atom_level_performance_result_cache(
-            self, agg: AggregateInterval
-        ):
-            result_set = (
-                self.manager_handler.gross_atom_level_performance_cache(
-                    agg
-                )
-            )
-            atom_id = f"{self.gross_atom.name}Id"
-            set = list(self.position_dimn[atom_id].unique())
-            items = {}
-            for p in set:
-                items[p] = result_set[p]
-            return items
-
-        @property
-        def gross_atom(self) -> GrossAttributionAtom:
-            return GrossAttributionAtom.Position
 
     @property
     def excel_template_location(self):
