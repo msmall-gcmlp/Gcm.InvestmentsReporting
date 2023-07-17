@@ -10,7 +10,7 @@ from gcm.inv.dataprovider.entity_provider.hierarchy_controller.hierarchy_handler
 )
 from .entity_handler import EntityReportingMetadata
 from openpyxl import Workbook
-from typing import List, Optional, Callable
+from typing import List, Optional, Callable, Union
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType, Calendar
@@ -176,19 +176,7 @@ class ReportStructure(SerializableBase):
         EntityDomainTypes.NONE: "XENTITY",
     }
 
-    @cached_property
-    def base_file_name(self):
-        report_name = self.report_name.name
-        entity_name: str = None
-        entity_type_display: str = None
-        # no need to add "Other" to string
-        report_type = (
-            self.report_meta.type.name
-            if self.report_meta.type != ReportType.Other
-            else None
-        )
-        date: dt.date = Scenario.get_attribute("as_of_date")
-        date_str = date.strftime("%Y-%m-%d")
+    def _get_entity_file_display_name(self) -> Union[str, None]:
         if (
             self.report_meta.entity_domain is not None
             and self.report_meta.entity_info is not None
@@ -213,7 +201,40 @@ class ReportStructure(SerializableBase):
                 raise RuntimeError(
                     "More than one entity. Can't construct file name"
                 )
+            return entity_type_display
 
+    @cached_property
+    def base_file_name(self):
+        report_name = self.report_name.name
+        entity_name: str = None
+        entity_type_display = self._get_entity_file_display_name()
+        # no need to add "Other" to string
+        report_type = (
+            self.report_meta.type.name
+            if self.report_meta.type != ReportType.Other
+            else None
+        )
+        date: dt.date = Scenario.get_attribute("as_of_date")
+        date_str = date.strftime("%Y-%m-%d")
+        aggregate_interval: AggregateInterval = Scenario.get_attribute(
+            "aggregate_interval"
+        )
+        if len(self.available_metas().aggregate_intervals) > 1:
+            aggregate_interval = (
+                AggregateInterval.Multi
+                if (
+                    aggregate_interval is None
+                    or type(aggregate_interval) != AggregateInterval
+                )
+                else aggregate_interval
+            ).name
+        else:
+            aggregate_interval = None
+        frequency_id = (
+            self.report_meta.frequency.type.name
+            if len(self.available_metas().frequencies) > 1
+            else None
+        )
         s = [
             str(x)
             for x in [
@@ -221,6 +242,8 @@ class ReportStructure(SerializableBase):
                 entity_name,
                 entity_type_display,
                 report_type,
+                aggregate_interval,
+                frequency_id,
                 date_str,
             ]
             if x is not None
