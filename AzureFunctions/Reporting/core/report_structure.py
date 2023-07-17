@@ -219,15 +219,22 @@ class ReportStructure(SerializableBase):
         aggregate_interval: AggregateInterval = Scenario.get_attribute(
             "aggregate_interval"
         )
-        aggregate_interval = (
-            AggregateInterval.Multi
-            if (
-                aggregate_interval is None
-                or type(aggregate_interval) != AggregateInterval
-            )
-            else aggregate_interval
-        ).name
-        frequency_id = self.report_meta.frequency.type.name
+        if len(self.available_metas().aggregate_intervals) > 1:
+            aggregate_interval = (
+                AggregateInterval.Multi
+                if (
+                    aggregate_interval is None
+                    or type(aggregate_interval) != AggregateInterval
+                )
+                else aggregate_interval
+            ).name
+        else:
+            aggregate_interval = None
+        frequency_id = (
+            self.report_meta.frequency.type.name
+            if len(self.available_metas().frequencies) > 1
+            else None
+        )
         s = [
             str(x)
             for x in [
