@@ -31,16 +31,22 @@ from ..utils.pvm_track_record.renderers.position_summary import (
 from ..utils.pvm_track_record.renderers.position_concentration_1_3_5 import (
     PositionConcentration,
 )
+from ..utils.pvm_track_record.renderers.position_attribution import (
+    PositionAttribution,
+)
 from enum import Enum, auto
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
 
 class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
-    def __init__(self, report_meta: ReportMeta):
+    def __init__(
+        self, report_meta: ReportMeta, fund_name_contains: str = None
+    ):
         super().__init__(
             ReportNames.PvmManagerTrackRecordReport, report_meta
         )
+        self.fund_name_contains = fund_name_contains
 
     @property
     def excel_template_location(self):
@@ -91,18 +97,63 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
     ) -> dict[str, PvmInvestmentTrackRecordReport]:
         cach_dict = {}
         for g, n in self.children.groupby(EntityStandardNames.EntityName):
-            meta = copy.deepcopy(self.report_meta)
-            meta.entity_domain = self.child_type
-            meta.entity_info = n
-            this_report = PvmInvestmentTrackRecordReport(
-                meta, self.manager_name
-            )
-            cach_dict[g] = this_report
+            assert g is not None
+            if self.fund_name_contains is None or (
+                g.upper().__contains__(self.fund_name_contains.upper())
+            ):
+                meta = copy.deepcopy(self.report_meta)
+                meta.entity_domain = self.child_type
+                meta.entity_info = n
+                this_report = PvmInvestmentTrackRecordReport(
+                    meta, self.manager_name
+                )
+                cach_dict[g] = this_report
         return cach_dict
+
+    @cached_property
+    def base_file_name(self):
+        file_name = super().base_file_name
+        if self.fund_name_contains is not None:
+            file_name = file_name + "_" + self.fund_name_contains.upper()
+        return file_name
+
+    @property
+    def run_attribution_on(self) -> List[List[str]]:
+        return [
+            ["Deal Team Lead"],
+            ["Deal Sourcing"],
+            ["Country"],
+            ["Property Type"],
+            ["Year Built"],
+            ["Hold Period Bucket"],
+            ["Deal Size Bucket"],
+            ["Deal Source"],
+            ["Strategy / Risk Profile"],
+            ["Investment Type"],
+            ["Sourcing"],
+            ["ImpliedAssetClass"],
+        ]
+
+    @property
+    def attribution_template(self):
+        return AzureDataLakeDao.BlobFileStructure(
+            zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+            sources="investmentsreporting",
+            entity="exceltemplates",
+            path=["AttributionResults.xlsx"],
+        )
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
         manager_tr = ManagerTrackRecordTabRenderer(self)
         performance_concentration = PositionConcentration(self)
+        attribution_cache = []
+        for i in self.run_attribution_on:
+            attribution = PositionAttribution(self, i)
+            ws = attribution.to_worksheet()
+            wb = ReportWorkBookHandler(
+                "Attribution Results", self.attribution_template, [ws]
+            )
+            attribution_cache.append(wb)
         m_ws = manager_tr.to_worksheet()
         report_name = self.manager_name
         final_list = [
@@ -112,10 +163,14 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
                 [m_ws],
             )
         ]
-        final_list = final_list + [performance_concentration.to_workbook()]
-        for k, v in self.children_reports.items():
-            components: List[ReportWorkBookHandler] = v.components
-            final_list = final_list + components
+        final_list = (
+            final_list
+            + [performance_concentration.to_workbook()]
+            + attribution_cache
+        )
+        # for k, v in self.children_reports.items():
+        #     components: List[ReportWorkBookHandler] = v.components
+        #     final_list = final_list + components
         return final_list
 
 

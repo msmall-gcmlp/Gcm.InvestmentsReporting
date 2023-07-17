@@ -18,6 +18,7 @@ from ......core.components.report_workbook_handler import (
 class PositionConcentration(PositionSummarySheet):
     top_deal_count = 5
     _percent_realized_gain = "percent realized gain"
+    _percent_unrealized_gain = "percent unrealized gain"
     _percent_capital = "percent_in_group_capital"
 
     concentration_columns = [
@@ -105,6 +106,15 @@ class PositionConcentration(PositionSummarySheet):
         return item
 
     @cached_property
+    def unrealized_1_3_5_other(
+        self,
+    ) -> dict[object, ReportingLayerAggregatedResults]:
+        item = self.report.performance_details._1_3_5_objects(
+            self.report.unrealized_reporting_layer
+        )
+        return item
+
+    @cached_property
     def total_performance_distribution(
         self,
     ) -> ReportingLayerAggregatedResults:
@@ -121,6 +131,16 @@ class PositionConcentration(PositionSummarySheet):
         return (
             self.report.performance_details.get_performance_distribution(
                 self.report.realized_reporting_layer
+            )
+        )
+
+    @cached_property
+    def unrealized_performance_distribution(
+        self,
+    ) -> ReportingLayerAggregatedResults:
+        return (
+            self.report.performance_details.get_performance_distribution(
+                self.report.unrealized_reporting_layer
             )
         )
 
@@ -177,6 +197,16 @@ class PositionConcentration(PositionSummarySheet):
             realized_df, self.realized_1_3_5_other
         )
 
+    def top_unrealized_deals_df(self):
+        sort_by = PositionSummarySheet.base_measures.pnl.name
+        unrealized_df = self.position_breakout(
+            BasePvmTrackRecordReport._KnownRealizationStatusBuckets.UNREALIZED,
+            sort_by,
+        )
+        return self.top_in_group_deals_df(
+            unrealized_df, self.unrealized_1_3_5_other
+        )
+
     def generate_concentration_item(
         self, obj_1_3_5: dict[str, ReportingLayerAggregatedResults]
     ):
@@ -212,8 +242,21 @@ class PositionConcentration(PositionSummarySheet):
         total = self.generate_concentration_item(self.realized_1_3_5_other)
         return total
 
+    def unrealized_concen(self):
+        total = self.generate_concentration_item(
+            self.unrealized_1_3_5_other
+        )
+        return total
+
     def realized_concen_total(self):
         total = self.total_realized_investments_formatted()
+        total = self.construct_rendered_frame(
+            total, PositionConcentration.concentration_columns
+        )
+        return total
+
+    def unrealized_concen_total(self):
+        total = self.total_unrealized_investments_formatted()
         total = self.construct_rendered_frame(
             total, PositionConcentration.concentration_columns
         )
@@ -265,8 +308,18 @@ class PositionConcentration(PositionSummarySheet):
         final = self._generate_distribution_frame(total)
         return final
 
+    def unrealized_distrib(self):
+        total = self.unrealized_performance_distribution
+        final = self._generate_distribution_frame(total)
+        return final
+
     def realized_distrib_total(self):
         total = self.realized_performance_distribution
+        final = self._generate_distribution_frame(total, expand_down=False)
+        return final
+
+    def unrealized_distrib_total(self):
+        total = self.unrealized_performance_distribution
         final = self._generate_distribution_frame(total, expand_down=False)
         return final
 
@@ -284,6 +337,13 @@ class PositionConcentration(PositionSummarySheet):
             "all_distrib_total": self.all_distrib_total,
             "realized_distrib": self.realized_distrib,
             "realized_distrib_total": self.realized_distrib_total,
+            ## unrealized
+            "top_unrealized_deals": self.top_unrealized_deals_df,
+            "top_unrealized_deals_total": self.total_unrealized_investments_formatted,
+            "unrealized_concen": self.unrealized_concen,
+            "unrealized_concen_total": self.unrealized_concen_total,
+            "unrealized_distrib": self.unrealized_distrib,
+            "unrealized_distrib_total": self.unrealized_distrib_total,
         }
         to_render = []
         for k, v in d_items.items():

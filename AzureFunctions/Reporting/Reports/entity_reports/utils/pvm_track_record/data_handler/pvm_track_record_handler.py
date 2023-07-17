@@ -133,12 +133,44 @@ class TrackRecordHandler(object):
         execute_remap = False
         for c in pos.columns:
             if c in TrackRecordHandler._position_attribution_map:
-                remap_dict[
-                    c
-                ] = TrackRecordHandler._position_attribution_map[c]
+                if TrackRecordHandler._position_attribution_map[c] not in [
+                    remap_dict[x] for x in remap_dict
+                ]:
+                    remap_dict[
+                        c
+                    ] = TrackRecordHandler._position_attribution_map[c]
                 execute_remap = True
         if execute_remap:
             pos.rename(columns=remap_dict, inplace=True)
+        to_clean = [
+            ["Deal Team Lead"],
+            ["Deal Sourcing"],
+            ["Country"],
+            ["Property Type"],
+            ["Year Built"],
+            ["Hold Period Bucket"],
+            ["Deal Size Bucket"],
+            ["Deal Source"],
+            ["Strategy / Risk Profile"],
+            ["Investment Type"],
+            ["Sourcing"],
+        ]
+
+        for c in to_clean:
+            pos[c[0]] = pos[c[0]].apply(lambda x: str(x).strip())
+        pos = pos[pos.columns]
+        pos = pd.merge(
+            pos,
+            self.investment_attrib[["InvestmentId", "InvestmentName"]],
+            on="InvestmentId",
+            how="left",
+        )
+        pos["ImpliedAssetClass"] = pos.apply(
+            lambda item: "Credit"
+            if str(item["InvestmentName"]).upper().__contains__("CREDIT")
+            else "Equity",
+            axis=1,
+        )
         return pos
 
     @cached_property

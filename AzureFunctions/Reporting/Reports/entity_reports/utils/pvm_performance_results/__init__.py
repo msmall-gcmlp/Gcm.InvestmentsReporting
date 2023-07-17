@@ -67,7 +67,10 @@ class PvmPerformanceResultsBase(object):
         ]
         vals = self.cfs.cfs[PvmCashflows.CashflowColumns.Amount.name]
         guess = 0.1 if self.pnl > 0 else -0.1
-        return xirr(dates, vals, guess=guess)
+        this_irr = xirr(dates, vals, guess=guess)
+        if this_irr is None:
+            this_irr = 0.0
+        return this_irr
 
     @cached_property
     def moic(self) -> float:

@@ -21,7 +21,12 @@ class PvmAggregatedPerformanceResults(PvmPerformanceResultsBase):
             cf_objects = [
                 components[x].cfs for x in components if x is not None
             ]
-            cfs = PvmCashflows(pd.concat([x.cfs for x in cf_objects]))
+            inputted = (
+                PvmCashflows.empty_df()
+                if len(cf_objects) == 0
+                else pd.concat([x.cfs for x in cf_objects])
+            )
+            cfs = PvmCashflows(inputted)
         super().__init__(cfs, aggregate_interval)
 
     @classmethod

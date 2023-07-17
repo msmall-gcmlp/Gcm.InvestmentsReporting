@@ -34,23 +34,24 @@ class TestPvmManagerTrReport(object):
         return entity_info
 
     def test_run_local(self):
-        with Scenario(
-            as_of_date=dt.date(2022, 6, 30),
-            aggregate_interval=AggregateInterval.ITD,
-            save=True,
-        ).context():
-            d = EntityDomainTypes.InvestmentManager
-            entity_info = TestPvmManagerTrReport.get_entity(
-                d, "Coalesce Fund I"
-            )
+        aggs = [AggregateInterval.FullLife]
+        for a in aggs:
+            with Scenario(
+                as_of_date=dt.date(2022, 12, 31),
+                aggregate_interval=a,
+                save=True,
+            ).context():
 
-            this_report = PvmManagerTrackRecordReport(
-                ReportMeta(
+                d = EntityDomainTypes.InvestmentManager
+                entity_info = TestPvmManagerTrReport.get_entity(
+                    d, "Brasa Capital Management"
+                )
+                this_meta = ReportMeta(
                     type=ReportType.Performance,
                     interval=Scenario.get_attribute("aggregate_interval"),
                     consumer=ReportConsumer(
                         horizontal=[ReportConsumer.Horizontal.IC],
-                        vertical=ReportConsumer.Vertical.PE,
+                        vertical=ReportConsumer.Vertical.Real_Estate,
                     ),
                     frequency=Frequency(
                         FrequencyType.Once,
@@ -58,11 +59,17 @@ class TestPvmManagerTrReport(object):
                     ),
                     entity_domain=d,
                     entity_info=entity_info,
-                ),
-            )
-            assert this_report is not None
-            output = print(report_structure=this_report, print_pdf=True)
-            assert output is not None
+                )
+                fund_name_filters = [None, "Real Estate Fund", "Credit"]
+                for f in fund_name_filters:
+                    this_report = PvmManagerTrackRecordReport(
+                        this_meta, fund_name_contains=f
+                    )
+                    assert this_report is not None
+                    output = print(
+                        report_structure=this_report, print_pdf=False
+                    )
+                    assert output is not None
 
     def test_run_single_fund(self):
         with Scenario(

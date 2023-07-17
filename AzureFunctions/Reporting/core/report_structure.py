@@ -188,6 +188,14 @@ class ReportStructure(SerializableBase):
             else None
         )
         date: dt.date = Scenario.get_attribute("as_of_date")
+        aggregate_interval: AggregateInterval = Scenario.get_attribute(
+            "aggregate_interval"
+        )
+        aggregate_interval = (
+            AggregateInterval.ITD
+            if aggregate_interval is None
+            else aggregate_interval
+        )
         date_str = date.strftime("%Y-%m-%d")
         if (
             self.report_meta.entity_domain is not None
@@ -221,6 +229,7 @@ class ReportStructure(SerializableBase):
                 entity_name,
                 entity_type_display,
                 report_type,
+                aggregate_interval.name,
                 date_str,
             ]
             if x is not None

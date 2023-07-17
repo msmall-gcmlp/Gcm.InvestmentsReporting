@@ -8,6 +8,7 @@ from gcm.inv.utils.DaoUtils.query_utils import (
 import numpy as np
 import pandas as pd
 from gcm.Dao.DaoSources import DaoSource
+from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 
 
 def get_cfs(ids: List[int], cf_type="Position"):
@@ -17,7 +18,6 @@ def get_cfs(ids: List[int], cf_type="Position"):
     def oper(query: Query, item: dict[str, DeclarativeMeta]):
         query = filter_many(query, item, f"{cf_type}Id", ids)
         # TODO: handle aggregate_interval and scenario for projected CFs
-
         return query
 
     p = {
@@ -30,6 +30,16 @@ def get_cfs(ids: List[int], cf_type="Position"):
         source=DaoSource.InvestmentsDwh,
         operation=lambda d, pp: d.get_data(pp),
     )
+
+    aggregate_interval: AggregateInterval = Scenario.get_attribute(
+        "aggregate_interval"
+    )
+    if aggregate_interval == AggregateInterval.FullLife:
+        df = df[df["AggregateIntervalId"] == 4]
+    elif aggregate_interval == AggregateInterval.ITD:
+        df = df[df["AggregateIntervalId"] == 3]
+    else:
+        raise RuntimeError()
     # sigh...
     df.rename(
         columns={
@@ -49,11 +59,18 @@ def get_cfs(ids: List[int], cf_type="Position"):
             "CashflowType",
             "AsOfDate",
             "Amount",
+            "AggregateIntervalId",
         ]
         + item
     ]
     df.CashflowType = np.where(
         df.CashflowType.str.contains("Distrib"), "D", df.CashflowType
+    )
+    df.CashflowType = np.where(
+        df.CashflowType.str.startswith("D_"), "D", df.CashflowType
+    )
+    df.CashflowType = np.where(
+        df.CashflowType.str.startswith("T_"), "T", df.CashflowType
     )
     df.CashflowType = np.where(
         df.CashflowType.str.contains("Return of Capital"),
@@ -91,7 +108,7 @@ def get_cfs(ids: List[int], cf_type="Position"):
         df.CashflowType.str.contains("Expenses"), "T", df.CashflowType
     )
     df["Currency"] = "USD"
-    df["AggregateIntervalName"] = "ITD"
+    df["AggregateIntervalName"] = aggregate_interval.name
     df["ScenarioName"] = "Base"
     df.drop_duplicates(inplace=True)
     return df
