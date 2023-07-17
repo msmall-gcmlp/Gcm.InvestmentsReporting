@@ -32,7 +32,12 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         super().__init__(runner=Scenario.get_attribute("dao"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
         self._periodicity = Scenario.get_attribute("periodicity")
-        self._period = 'TTM' if self._periodicity == 'TTM' else self._periodicity.value + 'TD'
+        if self._periodicity == 'TTM':
+            self._period = 'TTM'
+        elif self._periodicity == 'Custom':
+            self._period = 'Custom'
+        else:
+            self._period = self._periodicity.value + 'TD'
         self._analytics = Analytics()
         self._underlying_data_location = "raw/investmentsreporting/underlyingdata/eof_rba"
         self._summary_data_location = "raw/investmentsreporting/summarydata/eof_rba"
@@ -45,6 +50,8 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             start_date = dt.date(self._as_of_date.year, 1, 1)
         elif self._period == 'TTM':
             start_date = (self._as_of_date - relativedelta(years=1) + BDay(1)).date()
+        elif self._period == 'Custom':
+            start_date = dt.date(2023, 1, 6)
         return start_date
 
     @property
@@ -423,8 +430,10 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             style_factor_summary,
         ) = self._get_factor_performance_tables()
 
-        excluded_funds = list(attribution_table.filter(regex='EOF Overlay')) + ['Rhino+KRE']
+        excluded_funds = list(attribution_table.filter(regex='EOF Overlay')) + ['Rhino+KRE - EOF']
         attribution_table = attribution_table[attribution_table.columns.drop(excluded_funds)]
+        attribution_table.columns = [x.replace(' - EOF', '') for x in attribution_table.columns]
+        attribution_table.loc[0] = attribution_table.columns.tolist()
         input_data = {
             "attribution_table": attribution_table,
             "market_factor_summary": market_factor_summary,
