@@ -23,8 +23,9 @@ from _legacy.core.Runners.investmentsreporting import (
 
 
 class XPfundHighLowPQScreen(ReportingRunnerBase):
-    def __init__(self, as_of_date):
-        super().__init__(runner=Scenario.get_attribute("runner"))
+    def __init__(self, runner, as_of_date):
+        #super().__init__(runner=Scenario.get_attribute("runner"))
+        super().__init__(runner=runner)
         self._as_of_date = as_of_date
 
     def _download_inputs(self, runner, dl_location, file_path) -> dict:
@@ -105,8 +106,8 @@ if __name__ == "__main__":
         config_params={
             DaoRunnerConfigArgs.dao_global_envs.name: {
                 DaoSource.DataLake.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 DaoSource.InvestmentsDwh.name: {
                     "Environment": "prd",
@@ -123,8 +124,8 @@ if __name__ == "__main__":
             }
         },
     )
-    date = dt.date(2023, 4, 30)
+    date = dt.date(2022, 4, 30)
     inv_group_ids = None
-    with Scenario(runner=dao_runner, as_of_date=date).context():
-        report = XPfundHighLowPQScreen(as_of_date=date)
+    with Scenario(as_of_date=date).context():
+        report = XPfundHighLowPQScreen(runner=dao_runner, as_of_date=date)
         report.execute()
