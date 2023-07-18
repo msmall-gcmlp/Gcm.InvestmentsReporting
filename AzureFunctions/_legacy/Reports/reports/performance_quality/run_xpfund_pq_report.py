@@ -20,11 +20,14 @@ from _legacy.core.reporting_runner_base import (
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs, DaoSource
 from gcm.inv.scenario import Scenario
-
+from functools import cached_property
+from _legacy.Reports.reports.performance_quality.helper import PerformanceQualityHelper
+from _legacy.Reports.reports.performance_quality.xpfund_highlow_data_analysis import _xpfund_data_to_highlow_df
 
 class RunXPFundPqReport(ReportingRunnerBase):
     def __init__(self, runner, as_of_date):
-        super().__init__(runner=dao_runner)
+        #super().__init__(runner=Scenario.get_attribute("runner"))
+        super().__init__(runner=runner)
         self._as_of_date = as_of_date
         self._underlying_data_location = "raw/investmentsreporting/summarydata/xpfund_performance_quality"
         #self._helper = PerformanceQualityHelper()
@@ -33,6 +36,7 @@ class RunXPFundPqReport(ReportingRunnerBase):
     def generate_report(self, inv_group_ids=None, additional_ids=None,
                         custom_report_name=None, write_to_reporting_hub=False):
         #x=self._fund_inputs
+        
         #fund_dimn = pd.read_json(self._fund_inputs["report_data"], orient="index")
         report_data = generate_xpfund_pq_report_data(runner=self._runner,
                                                      date=self._as_of_date,
@@ -111,14 +115,48 @@ class RunXPFundPqReport(ReportingRunnerBase):
                     report_vertical=ReportVertical.ARS,
                     report_frequency="Monthly",
                     aggregate_intervals=AggregateInterval.MTD,
-                    # print_areas=print_areas,
-                    # output_dir="cleansed/investmentsreporting/printedexcels/",
+                    print_areas=print_areas,
+                    output_dir="cleansed/investmentsreporting/printedexcels/",
                     report_output_source=DaoSource.DataLake
                 )
         #self.generate_highlow_report
 
+    # def _download_inputs(self, runner, dl_location, file_path) -> dict:
+    #     try:
+    #         read_params = AzureDataLakeDao.create_get_data_params(
+    #             dl_location,
+    #             file_path,
+    #             retry=False,
+    #         )
+    #         file = runner.execute(
+    #             params=read_params,
+    #             source=DaoSource.DataLake,
+    #             operation=lambda dao, params: dao.get_data(read_params),
+    #         )
+    #         inputs = json.loads(file.content)
+    #     except:
+    #         inputs = None
+    #     return inputs
+
+    # @cached_property
+    # def _xpfund_pq_report(self):       
+    #     as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+    #     inputs = PerformanceQualityHelper().download_inputs(
+    #         location="raw/investmentsreporting/summarydata/xpfund_performance_quality", 
+    #         file_path ="_firm_x_portfolio_fund" + as_of_date + ".json"
+    #     )
+    #     return inputs
+
+    # def _get_xpfund_pq_report(self, runner, as_of_date):
+    #     inputs = self._xpfund_pq_report
+    #     xpfund_inputs = pd.read_json(inputs['report_data'], orient='index')
+
+    #     return xpfund_inputs
+    
+    
     def generate_highlow_report(self):
         high_low_report = XPfundHighLowPQScreen(
+            runner=self._runner,
             as_of_date=self._as_of_date
         )
         return high_low_report.execute()
@@ -127,8 +165,9 @@ class RunXPFundPqReport(ReportingRunnerBase):
         self.generate_report(inv_group_ids=inv_group_ids,
                              additional_ids=kwargs.get('additional_ids'),
                              custom_report_name=kwargs.get('custom_report_name'),
-                             write_to_reporting_hub=kwargs.get('write_to_reporting_hub', True))
-        self.generate_highlow_report()
+                             write_to_reporting_hub=kwargs.get('write_to_reporting_hub', False))
+        #self.generate_highlow_report()
+        #self.generate_xpfund_high_pq_screen_data
         return "Complete"
 
 
@@ -138,8 +177,8 @@ if __name__ == "__main__":
             config_params={
                 DaoRunnerConfigArgs.dao_global_envs.name: {
                     DaoSource.DataLake.name: {
-                        "Environment": "prd",
-                        "Subscription": "prd",
+                        "Environment": "dev",
+                        "Subscription": "nonprd",
                     },
                     DaoSource.PubDwh.name: {
                         "Environment": "prd",
@@ -160,8 +199,8 @@ if __name__ == "__main__":
                 }
             })
 
-    date = dt.date(2023, 4, 30)
-    with Scenario(runner=dao_runner, as_of_date=date).context():
+    date = dt.date(2022, 4, 30)
+    with Scenario(as_of_date=date).context():
 
         report_runner = RunXPFundPqReport(runner=dao_runner, as_of_date=date)
 

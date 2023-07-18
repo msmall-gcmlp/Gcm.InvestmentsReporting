@@ -33,6 +33,19 @@ def _3y_arb_xs_analysis(df):
     return df
 
 
+# def _lagging_quarter_ptiles(df):
+#     df['ITD_lag_tmp'] = pd.DataFrame(df["('AbsoluteReturnBenchmarkExcessLag', 'ITD')"])
+#     df['ITD_ptiles_default_lag'] = pd.DataFrame(df.ITD_lag_tmp).rank(numeric_only=True, pct = True)
+
+#     df['default_3y_lag'] = pd.DataFrame(df["('AbsoluteReturnBenchmarkExcessLag', '3Y')"])
+
+#     df['3y_lag_ptiles'] = pd.DataFrame(df.default_3y_lag).rank(numeric_only=True, pct = True)
+
+#     df['3y_lag_ptiles'] = df['3y_lag_ptiles'].fillna(df['ITD_ptiles_default_lag'])
+
+#     return df
+
+
 def _arb_xs_emm_percentiles(df: pd.DataFrame,
                             period: str
                             ) -> pd.DataFrame:
@@ -56,8 +69,12 @@ def _fund_return_peer_percentiles(df):
 
 
 def _net_exposure_clean(df):
-    df['net_exp_adj_3y'] = df["""('3Y', "('Equities', 'NetNotional')")"""].fillna(0) + 0.35 * df["""('3Y', "('Credit', 'NetNotional')")"""].fillna(0)
-    df['net_exp_adj_5y'] = df["""('5Y', "('Equities', 'NetNotional')")"""].fillna(0) + 0.35 * df["""('5Y', "('Credit', 'NetNotional')")"""].fillna(0)
+    df['net_exp_adj_3y'] = df[
+        """('3Y', "('Equities', 'NetNotional')")"""
+        ].fillna(0) + 0.35 * df["""('3Y', "('Credit', 'NetNotional')")"""].fillna(0)
+    df['net_exp_adj_5y'] = df[
+        """('5Y', "('Equities', 'NetNotional')")"""
+        ].fillna(0) + 0.35 * df["""('5Y', "('Credit', 'NetNotional')")"""].fillna(0)
     df['net_exp_adj_latest'] = df[
         """('Latest', "('Equities', 'NetNotional')")"""
     ].fillna(0) + 0.35 * df[
@@ -66,27 +83,6 @@ def _net_exposure_clean(df):
     df['net_exp_adj_5y'].replace(0, np.nan, inplace=True)
     df['net_exp_adj_latest'].replace(0, np.nan, inplace=True)
     return df
-
-# def _net_exp_adj_3y(df):
-#     # df["""('3Y', "('Equities', 'NetNotional')")"""]=df["""('3Y', "('Equities', 'NetNotional')")"""].fillna(0)
-#     # df["""('3Y', "('Credit', 'NetNotional')")"""]=df["""('3Y', "('Credit', 'NetNotional')")"""].fillna(0)
-#     # df['net_exp_adj_3y']=df["""('3Y', "('Equities', 'NetNotional')")"""]+0.35*df["""('3Y', "('Credit', 'NetNotional')")"""]
-#     df['net_exp_adj_3y'].replace(0, np.nan, inplace=True)
-#     return df
-
-# def _net_exp_adj_5y(df):
-#     # df["""('5Y', "('Equities', 'NetNotional')")"""]=df["""('5Y', "('Equities', 'NetNotional')")"""].fillna(0)
-#     # df["""('5Y', "('Credit', 'NetNotional')")"""]=df["""('5Y', "('Credit', 'NetNotional')")"""].fillna(0)
-#     # df['net_exp_adj_5y']=df["""('5Y', "('Equities', 'NetNotional')")"""]+0.35*df["""('5Y', "('Credit', 'NetNotional')")"""]
-#     df['net_exp_adj_5y'].replace(0, np.nan, inplace=True)
-#     return df
-
-# def _net_exp_adj_latest(df):
-#     # df["""('Latest', "('Equities', 'NetNotional')")"""]=df["""('Latest', "('Equities', 'NetNotional')")"""].fillna(0)
-#     # df["""('Latest', "('Credit', 'NetNotional')")"""]=df["""('Latest', "('Credit', 'NetNotional')")"""].fillna(0)
-#     # df['net_exp_adj_latest']=df["""('Latest', "('Equities', 'NetNotional')")"""]+0.35*df["""('Latest', "('Credit', 'NetNotional')")"""]
-#     df['net_exp_adj_latest'].replace(0, np.nan, inplace=True)
-#     return df
 
 
 def _ar_xs_ret_summary(df):
@@ -101,7 +97,7 @@ def _ar_xs_ret_summary(df):
 
 
 def _xs_emm_rank_ptile_summary(df):
-    df['3Y_ptiles'] = pd.DataFrame(df['3y_ptiles'].apply(lambda x: x * 100).round(0).astype(pd.Int64Dtype()))
+    df['3Y_ptiles'] = pd.DataFrame(df['3y_ptiles'].apply(lambda x: x * 100).round(0))
     df['5Y_ptiles'] = pd.DataFrame(df['5Y_ptiles_y'].apply(lambda x: x * 100).round(0))
     df['10Y_ptiles'] = pd.DataFrame(df['10Y_ptiles'].apply(lambda x: x * 100).round(0))
     df['TTM_ptiles'] = pd.DataFrame(df['TTM_ptiles'].apply(lambda x: x * 100).round(0))
@@ -127,6 +123,7 @@ def _gcm_peer_ptile_summary(df):
 
 def _gcm_peer_screener_rank(df):
     gcm_peer_screener_sum = df[["Decile_x", "Confidence_x", "Persistence_x"]]
+    #gcm_peer_screener_sum = gcm_peer_screener_sum.fillna('')
     return gcm_peer_screener_sum
 
 
