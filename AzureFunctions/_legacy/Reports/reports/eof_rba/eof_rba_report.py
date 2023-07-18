@@ -6,6 +6,8 @@ import datetime as dt
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
+from pandas._libs.tslibs.offsets import relativedelta, BDay
+from openpyxl.utils.cell import get_column_letter
 from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
     ReportType,
@@ -30,16 +32,26 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         super().__init__(runner=Scenario.get_attribute("dao"))
         self._as_of_date = Scenario.get_attribute("as_of_date")
         self._periodicity = Scenario.get_attribute("periodicity")
+        if self._periodicity == 'TTM':
+            self._period = 'TTM'
+        elif self._periodicity == 'Custom':
+            self._period = 'Custom'
+        else:
+            self._period = self._periodicity.value + 'TD'
         self._analytics = Analytics()
         self._underlying_data_location = "raw/investmentsreporting/underlyingdata/eof_rba"
         self._summary_data_location = "raw/investmentsreporting/summarydata/eof_rba"
 
     @property
     def _start_date(self):
-        if self._periodicity == PeriodicROR.ITD:
+        if self._period == 'ITD':
             start_date = dt.date(2020, 10, 1)
-        elif self._periodicity == PeriodicROR.YTD:
+        elif self._period == 'YTD':
             start_date = dt.date(self._as_of_date.year, 1, 1)
+        elif self._period == 'TTM':
+            start_date = (self._as_of_date - relativedelta(years=1) + BDay(1)).date()
+        elif self._period == 'Custom':
+            start_date = dt.date(2023, 1, 6)
         return start_date
 
     @property
@@ -62,6 +74,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             "LS_EQUITY_QUALITY_GROUP",
             "LS_EQUITY_SIZE_GROUP",
             "LS_EQUITY_RESIDUAL_VOL_GROUP",
+            "LS_EQUITY_HF_CROWDING_GROUP",
             "LS_EQUITY_OTHER",
             "NON_FACTOR_SECURITY_SELECTION_PUBLICS",
             "NON_FACTOR_OUTLIER_EFFECTS",
@@ -96,6 +109,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
                 "LS_EQUITY_QUALITY_GROUP",
                 "LS_EQUITY_SIZE_GROUP",
                 "LS_EQUITY_RESIDUAL_VOL_GROUP",
+                "LS_EQUITY_HF_CROWDING_GROUP",
                 "LS_EQUITY_OTHER",
                 "NON_FACTOR",
                 "NON_FACTOR_SECURITY_SELECTION_PUBLICS",
@@ -161,6 +175,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
                 "INDUSTRY",
                 "REGION",
                 "PUBLIC_LS",
+                "LS_EQUITY_HF_CROWDING_GROUP",
                 "NON_FACTOR",
             ]
         )
@@ -183,6 +198,16 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             wide=False,
         )
 
+        decomp_hf_crowding = self._inv_group.get_average_risk_decomp_by_group(
+            start_date=self._start_date,
+            end_date=self._end_date,
+            group_type="FactorGroup4",
+            group_filter="LS_EQUITY_HF_CROWDING_GROUP",
+            frequency=Periodicity.Daily.value,
+            window=36,
+            wide=False,
+        )
+
         decomp_fg1 = decomp_fg1.pivot(
             index="FactorGroup1",
             columns="InvestmentGroupName",
@@ -193,7 +218,14 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             columns="InvestmentGroupName",
             values="AvgRiskContrib",
         )
-        decomp = pd.concat([decomp_fg1, decomp_fg2], axis=0)
+
+        decomp_hf_crowding = decomp_hf_crowding.pivot(
+            index="FactorGroup4",
+            columns="InvestmentGroupName",
+            values="AvgRiskContrib",
+        )
+
+        decomp = pd.concat([decomp_fg1, decomp_fg2, decomp_hf_crowding], axis=0)
         decomp = factors.merge(decomp, left_index=True, right_index=True, how="left")
         decomp = decomp.fillna(0)
         decomp.index = decomp.index + "_RISK_DECOMP"
@@ -303,7 +335,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
 
         current_ptd_return = rolling_returns.iloc[[-1]]
 
-        current_ptd_return["Metric"] = self._periodicity.value + "TD Return (" + str(days_ptd) + " days)"
+        current_ptd_return["Metric"] = self._period + " Return (" + str(days_ptd) + " days)"
 
         median_returns = self.calculate_median_return(returns=rolling_returns)
         median_returns["Metric"] = "Median " + str(days_ptd) + "-day Return"
@@ -311,7 +343,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         percentiles = self.calculate_return_percentile(returns=rolling_returns)
         percentiles["Metric"] = "Ptile vs Avg (Since 2000)"
 
-        summary = pd.concat([current_ptd_return, median_returns, percentiles], ignore_index=True)
+        summary = pd.concat([current_ptd_return, median_returns.to_frame().T, percentiles], ignore_index=True)
         summary = summary.set_index("Metric")
 
         summary = summary.T
@@ -354,7 +386,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
         as_of_date = self._as_of_date.strftime("%Y-%m-%d")
         write_params = AzureDataLakeDao.create_get_data_params(
             self._summary_data_location,
-            "EOF_" + self._periodicity.value + "_RBA_Report_" + as_of_date + ".json",
+            "EOF_" + self._period + "_RBA_Report_" + as_of_date + ".json",
             retry=False,
         )
         self._runner.execute(
@@ -363,9 +395,10 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             operation=lambda dao, params: dao.post_data(params, data_to_write),
         )
 
-        logging.info("JSON stored to DataLake for: " + "EOF_" + self._periodicity.value + "TD")
-
+        logging.info("JSON stored to DataLake for: " + "EOF_" + self._period)
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
+        max_col = get_column_letter(3 + input_data.get('attribution_table').shape[1])
+        print_areas = {'RBA Summary': 'B1:' + max_col + str(55)}
         with Scenario(as_of_date=as_of_date).context():
             InvestmentsReportRunner().execute(
                 data=input_data,
@@ -377,7 +410,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
                 entity_display_name="EOF",
                 entity_ids=[640],
                 entity_source=DaoSource.PubDwh,
-                report_name="RBA_" + self._periodicity.value + "TD",
+                report_name="RBA_" + self._period,
                 report_type=ReportType.Risk,
                 aggregate_intervals=AggregateInterval.MTD,
                 report_vertical=ReportVertical.ARS,
@@ -385,9 +418,10 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
                 # output_dir="eof/",
                 output_dir="cleansed/investmentsreporting/printedexcels/",
                 report_output_source=DaoSource.DataLake,
+                print_areas=print_areas,
             )
 
-        logging.info("Excel stored to DataLake for: " + "EOF_" + self._periodicity.value + "TD")
+        logging.info("Excel stored to DataLake for: " + "EOF_" + self._period)
 
     def generate_rba_report(self):
         attribution_table = self._get_attribution_table_rba()
@@ -396,6 +430,10 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
             style_factor_summary,
         ) = self._get_factor_performance_tables()
 
+        excluded_funds = list(attribution_table.filter(regex='EOF Overlay')) + ['Rhino+KRE - EOF']
+        attribution_table = attribution_table[attribution_table.columns.drop(excluded_funds)]
+        attribution_table.columns = [x.replace(' - EOF', '') for x in attribution_table.columns]
+        attribution_table.loc[0] = attribution_table.columns.tolist()
         input_data = {
             "attribution_table": attribution_table,
             "market_factor_summary": market_factor_summary,
@@ -435,7 +473,10 @@ if __name__ == "__main__":
         },
     )
 
-    as_of_date = dt.date(2023, 3, 13)
+    as_of_date = dt.date(2023, 4, 30)
+
+    with Scenario(dao=runner, as_of_date=as_of_date, periodicity='TTM').context():
+        EofReturnBasedAttributionReport().execute()
 
     with Scenario(dao=runner, as_of_date=as_of_date, periodicity=PeriodicROR.ITD).context():
         EofReturnBasedAttributionReport().execute()

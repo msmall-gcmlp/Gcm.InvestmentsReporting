@@ -150,7 +150,7 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
             operation=lambda dao, params: dao.get_data(params),
         )
         result = pd.merge(self._portfolio_holdings[['InvestmentGroupId', 'InvestmentGroupName']].drop_duplicates(),
-                          result[['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate', 'ExpNav']],
+                          result[['InvestmentGroupId', 'Issuer', 'AssetClass', 'Sector', 'AsOfDate', 'ExpNav']],
                           how='inner', on=['InvestmentGroupId'])
         return result
 
@@ -159,7 +159,7 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         single_name = self._investment_group.overlay_singlename_exposure(single_name, as_of_date=self._end_date)
         single_name['AsOfDate'] = single_name['AsOfDate'].apply(lambda x: x.strftime('%Y-%m'))
         portfolio_level = pd.merge(self._portfolio_holdings,
-                                   single_name[['InvestmentGroupId', 'Issuer', 'Sector', 'ExpNav', 'AsOfDate']],
+                                   single_name[['InvestmentGroupId', 'Issuer', 'AssetClass', 'Sector', 'ExpNav', 'AsOfDate']],
                                    how='inner',
                                    on=['InvestmentGroupId'])
         portfolio_level['PortfolioNav'] = portfolio_level['PctNav'] * portfolio_level['ExpNav']
@@ -167,11 +167,11 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         # get funds without exposure
         portfolio_level['IssuerSum'] = portfolio_level.groupby(['Issuer'])['PortfolioNav'].transform(
             'sum')
-        groupped = portfolio_level.groupby(['Issuer', 'InvestmentGroupName', 'IssuerSum', 'Sector', 'ExpNav'])[
+        groupped = portfolio_level.groupby(['Issuer', 'InvestmentGroupName', 'IssuerSum', 'AssetClass', 'Sector', 'ExpNav'])[
             'PortfolioNav'].sum().reset_index()
         groupped.sort_values(['IssuerSum', 'PortfolioNav'], ascending=False, inplace=True)
         groupped['Issuer'] = groupped['Issuer'].str[0:39]
-        return groupped[['InvestmentGroupName', 'Issuer', 'PortfolioNav', 'IssuerSum', 'Sector', 'ExpNav']]
+        return groupped[['InvestmentGroupName', 'Issuer', 'PortfolioNav', 'IssuerSum', 'AssetClass', 'Sector', 'ExpNav']]
 
     def get_header_info(self):
         return pd.DataFrame(
@@ -193,10 +193,10 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         portfolio_balance = self._portfolio_holdings[['OpeningBalance']].sum()
         single_name['portfolio_allocation'] = (portfolio_balance[0] * single_name['IssuerSum']) / 1000
         single_name['portfolio_allocation_permanager'] = (portfolio_balance[0] * single_name['PortfolioNav']) / 1000
-        manager_allocation = single_name[['Issuer', 'InvestmentGroupName',
+        manager_allocation = single_name[['Issuer', 'InvestmentGroupName', 'AssetClass',
                                           'portfolio_allocation_permanager', 'PortfolioNav', 'manager_allocation_pct']].drop_duplicates()
         manager_allocation = manager_allocation[manager_allocation['InvestmentGroupName'] != 'Atlas Enhanced Fund']
-        portfolio_allocation = single_name[['Issuer', 'Sector', 'portfolio_allocation', 'IssuerSum']].drop_duplicates()
+        portfolio_allocation = single_name[['Issuer', 'Sector', 'portfolio_allocation', 'IssuerSum', 'AssetClass']].drop_duplicates()
         dupliacted_Issuers = portfolio_allocation[portfolio_allocation[['Issuer']].duplicated()]['Issuer']
         portfolio_allocation.loc[portfolio_allocation['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
         portfolio_allocation.drop_duplicates(subset='Issuer', inplace=True)
@@ -204,13 +204,25 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
         portfolio_allocation.loc[portfolio_allocation['Sector'].str.contains('Privates'), 'Usage'] = None
         excluded_managers = self._portfolio_holdings[~ self._portfolio_holdings['InvestmentGroupName'].isin(single_name['InvestmentGroupName'].to_list())]
         excluded_managers['OpeningBalance'] = excluded_managers['OpeningBalance'] / 1000
-        manager_allocation_longs = manager_allocation[manager_allocation['manager_allocation_pct'] > 0.0]
-        manager_allocation_shorts = manager_allocation[manager_allocation['manager_allocation_pct'] <= 0.0]
-        manager_allocation_shorts.sort_values(by='manager_allocation_pct', ascending=True, inplace=True)
+        manager_allocation_longs = manager_allocation[manager_allocation['manager_allocation_pct'] >= 0.0]
+        manager_allocation_equity = manager_allocation_longs[manager_allocation_longs['AssetClass'] == 'Equity'].drop(columns=['AssetClass'])
+        manager_allocation_credit = manager_allocation_longs[manager_allocation_longs['AssetClass'] == 'Credit'].drop(columns=['AssetClass'])
+        manager_allocation_shorts = manager_allocation[manager_allocation['manager_allocation_pct'] < 0.0]
+        manager_allocation_shorts_equity = manager_allocation_shorts[manager_allocation_shorts['AssetClass'] == 'Equity'].drop(columns=['AssetClass'])
+        manager_allocation_shorts_credit = manager_allocation_shorts[manager_allocation_shorts['AssetClass'] == 'Credit'].drop(columns=['AssetClass'])
+        manager_allocation_shorts_equity.sort_values(by='manager_allocation_pct', ascending=True, inplace=True)
+        manager_allocation_shorts_credit.sort_values(by='manager_allocation_pct', ascending=True, inplace=True)
         portfolio_allocation_longs = portfolio_allocation[portfolio_allocation['IssuerSum'] >= 0.0]
+        portfolio_allocation_longs_equity = portfolio_allocation_longs[portfolio_allocation_longs['AssetClass'] == 'Equity'].drop(columns=['AssetClass'])
+        portfolio_allocation_longs_credit = portfolio_allocation_longs[portfolio_allocation_longs['AssetClass'] == 'Credit'].drop(columns=['AssetClass'])
         portfolio_allocation_shorts = portfolio_allocation[portfolio_allocation['IssuerSum'] < 0.0]
-        portfolio_allocation_shorts.sort_values(by='IssuerSum', ascending=True, inplace=True)
-        excluded_max_row = 10 + excluded_managers.shape[0]
+        portfolio_allocation_short_equity = portfolio_allocation_shorts[portfolio_allocation_shorts['AssetClass'] == 'Equity'].drop(
+            columns=['AssetClass'])
+        portfolio_allocation_short_credit = portfolio_allocation_shorts[portfolio_allocation_shorts['AssetClass'] == 'Credit'].drop(
+            columns=['AssetClass'])
+        portfolio_allocation_short_equity.sort_values(by='IssuerSum', ascending=True, inplace=True)
+        portfolio_allocation_short_credit.sort_values(by='IssuerSum', ascending=True, inplace=True)
+        excluded_max_row = 11 + excluded_managers.shape[0]
         excludedr_max_column = 'D'
         print_areas = {
                        'ExcludedManagers': 'B1:' + excludedr_max_column + str(excluded_max_row)}
@@ -220,11 +232,20 @@ class SingleNamePortfolioReport(ReportingRunnerBase):
             "header_info_3": header_info,
             "header_info_4": header_info,
             "header_info_5": header_info,
-            "manager_allocation_longs": manager_allocation_longs,
-            "manager_allocation_shorts": manager_allocation_shorts,
-            "portfolio_allocation_longs": portfolio_allocation_longs,
-            "portfolio_allocation_shorts": portfolio_allocation_shorts,
+            "header_info_6": header_info,
+            "header_info_7": header_info,
+            "header_info_8": header_info,
+            "header_info_9": header_info,
+            "manager_allocation_longs": manager_allocation_equity,
+            "manager_allocation_shorts": manager_allocation_shorts_equity,
+            "manager_allocation_longs_credit": manager_allocation_credit,
+            "manager_allocation_shorts_credit": manager_allocation_shorts_credit,
+            "portfolio_allocation_longs": portfolio_allocation_longs_equity,
+            "portfolio_allocation_shorts": portfolio_allocation_short_equity,
+            "portfolio_allocation_longs_credit": portfolio_allocation_longs_credit,
+            "portfolio_allocation_shorts_credit": portfolio_allocation_short_credit,
             "excluded_managers": excluded_managers[['InvestmentGroupName', 'OpeningBalance', 'PctNav']],
+            "total_excluded_allocation": pd.DataFrame([excluded_managers[['OpeningBalance', 'PctNav']].sum()])
 
         }
 
@@ -296,7 +317,7 @@ if __name__ == "__main__":
         },
     )
 
-    end_date = dt.date(2022, 12, 31)
+    end_date = dt.date(2023, 2, 28)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNamePortfolioReport().execute()

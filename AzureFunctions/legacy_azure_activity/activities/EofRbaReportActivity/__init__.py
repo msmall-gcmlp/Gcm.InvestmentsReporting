@@ -11,18 +11,17 @@ def main(requestBody) -> str:
     params = requestBody["params"]
     run = params["run"]
     as_of_date = params["as_of_date"]
-    periodicity = params["periodicity"]
     as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
     runner = DaoRunner()
 
-    if periodicity == "ITD":
-        periodicity = PeriodicROR.ITD
-    elif periodicity == "YTD":
-        periodicity = PeriodicROR.YTD
-
     if run == "EofRbaReport":
-        with Scenario(
-            runner=runner, as_of_date=as_of_date, periodicity=periodicity
-        ).context():
-            eof_rba = EofReturnBasedAttributionReport()
-            return eof_rba.execute()
+        with Scenario(runner=runner, as_of_date=as_of_date, periodicity=PeriodicROR.ITD).context():
+            EofReturnBasedAttributionReport().execute()
+
+        with Scenario(runner=runner, as_of_date=as_of_date, periodicity=PeriodicROR.YTD).context():
+            EofReturnBasedAttributionReport().execute()
+
+        with Scenario(runner=runner, as_of_date=as_of_date, periodicity='TTM').context():
+            EofReturnBasedAttributionReport().execute()
+
+        return 'Complete'

@@ -23,10 +23,15 @@ class RunXPFundPqReport(ReportingRunnerBase):
         super().__init__(runner=runner)
         self._as_of_date = as_of_date
 
-    def generate_report(self, inv_group_ids=None, custom_report_name=None, write_to_reporting_hub=True):
+    def generate_report(self, inv_group_ids=None, additional_ids=None,
+                        custom_report_name=None, write_to_reporting_hub=True):
         report_data = generate_xpfund_pq_report_data(runner=self._runner,
                                                      date=self._as_of_date,
-                                                     inv_group_ids=inv_group_ids)
+                                                     inv_group_ids=inv_group_ids,
+                                                     additional_ids=additional_ids)
+        report_data.loc[report_data['InvestmentGroupName'] == 'D1 Capital', 'InvestmentGroupName'] = 'D1 - GIP'
+        report_data.loc[report_data['InvestmentGroupName'] == 'D1 Liquid Class', 'InvestmentGroupName'] \
+            = 'D1 - Publics Only'
         input_data = {
             'as_of_date': pd.DataFrame({'date': [self._as_of_date]}),
             'report_data': report_data
@@ -80,6 +85,7 @@ class RunXPFundPqReport(ReportingRunnerBase):
 
     def run(self, inv_group_ids=None, **kwargs):
         self.generate_report(inv_group_ids=inv_group_ids,
+                             additional_ids=kwargs.get('additional_ids'),
                              custom_report_name=kwargs.get('custom_report_name'),
                              write_to_reporting_hub=kwargs.get('write_to_reporting_hub', True))
         return "Complete"
@@ -107,21 +113,21 @@ if __name__ == "__main__":
                         "Subscription": "prd",
                     },
                     DaoSource.ReportingStorage.name: {
-                        "Environment": "uat",
-                        "Subscription": "nonprd",
+                        "Environment": "prd",
+                        "Subscription": "prd",
                     },
                 }
             })
 
-    date = dt.date(2022, 12, 31)
+    date = dt.date(2023, 3, 31)
     with Scenario(as_of_date=date).context():
         report = RunXPFundPqReport(runner=dao_runner, as_of_date=date)
 
-        # firmwide report
-        report.execute()
+        # firmwide report. # add in D1 Liquid Class which isn't an EMM
+        report.execute(additional_ids=[23447])
 
         # esg report
-        custom_report_name = "ARS Performance Quality - ESG x Portfolio Fund"
-        report.execute(inv_group_ids=[19717, 20292, 20319, 31378, 89745, 43058, 51810, 86478, 87478, 89809],
-                       custom_report_name="ARS Performance Quality - ESG x Portfolio Fund",
-                       write_to_reporting_hub=False)
+        # custom_report_name = "ARS Performance Quality - ESG x Portfolio Fund"
+        # report.execute(inv_group_ids=[19717, 20292, 20319, 31378, 89745, 43058, 51810, 86478, 87478, 89809],
+        #                custom_report_name="ARS Performance Quality - ESG x Portfolio Fund",
+        #                write_to_reporting_hub=False)

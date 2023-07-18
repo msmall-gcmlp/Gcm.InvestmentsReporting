@@ -49,12 +49,22 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
             self.__investment_group = InvestmentGroup(investment_group_ids=self._inv_group_ids)
         return self.__investment_group
 
+    @staticmethod
+    def delete_rows(runner, as_of_date):
+        def delete(dao, params):
+            raw_sql = "DELETE FROM AnalyticsData.SingleNameEquityExposure WHERE AsOfDate = '{}'".format(as_of_date)
+            conn = dao.data_engine.get_connection
+            with conn.begin():
+                conn.execute(raw_sql)
+
+        runner.execute(params={}, source=DaoSource.InvestmentsDwh, operation=delete)
+
     def save_single_name_exposure(self):
         # short sector name mapping
         sector_short_names = dict(
-            {'HEALTH CARE': 'Health Care', 'FINANCE': 'Finance', 'INFORMATION TECHNOLOGY': 'Info Tech',
+            {'HEALTH CARE': 'Health Care', 'FINANCIALS': 'Financials', 'INFORMATION TECHNOLOGY': 'Info Tech',
              'CONSUMER DISCRETIONARY': 'Cons Discr', 'BROAD MARKET INDICES': 'Index', 'UTILITIES': 'Utilities',
-             'Other': 'Other', 'INDUSTRIALS': 'Industrials', 'COMMUNICATION SERVICES': 'Comm Svcs', 'ENERGY': 'Energy',
+             'OTHER': 'Other', 'INDUSTRIALS': 'Industrials', 'COMMUNICATION SERVICES': 'Comm Svcs', 'ENERGY': 'Energy',
              'REAL ESTATE': 'Real Estate', 'UTILITIES AND TELECOMMUNICATIONS': 'Util & Telecomm',
              'MATERIALS': 'Materials', 'CONSUMER STAPLES': 'Cons Staples', 'CONGLOMERATES': 'Conglom',
              'COMMUNICATIONS': 'Comm Svcs'})
@@ -65,11 +75,14 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
         inv_group_dimn = self._investment_group.get_dimensions()
         single_name_exposure = pd.merge(single_name, inv_group_dimn[['InvestmentGroupName', 'InvestmentGroupId']],
                                         how='inner', on=['InvestmentGroupName'])
-        exposure_to_save = single_name_exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'Cusip', 'ExpNav', 'AsOfDate']]
+        exposure_to_save = single_name_exposure[['InvestmentGroupId', 'Issuer', 'Sector', 'Cusip', 'AssetClass', 'ExpNav', 'AsOfDate']]
         remove_duplicated_pears = exposure_to_save[['Issuer', 'Sector']].drop_duplicates()
         dupliacted_Issuers = remove_duplicated_pears[remove_duplicated_pears[['Issuer']].duplicated()]['Issuer']
-        exposure_to_save.loc[exposure_to_save['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'Other'
-        exposure_to_save = exposure_to_save.groupby(['InvestmentGroupId', 'Issuer', 'Sector', 'AsOfDate']).sum('ExpNav').reset_index()
+        exposure_to_save.loc[exposure_to_save['Sector'].isnull(), 'Sector'] = 'OTHER'
+        exposure_to_save.loc[exposure_to_save['Sector'] == '', 'Sector'] = 'OTHER'
+        exposure_to_save.loc[exposure_to_save['Issuer'].isin(dupliacted_Issuers.to_list()), 'Sector'] = 'OTHER'
+
+        exposure_to_save = exposure_to_save.groupby(['InvestmentGroupId', 'Issuer', 'Sector', 'AssetClass', 'AsOfDate']).sum('ExpNav').reset_index()
         exposure_to_save['Sector'] = exposure_to_save['Sector'].map(sector_short_names)
 
         dwh_subscription = os.environ.get("Subscription", "nonprd")
@@ -93,6 +106,9 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
             container_lambda=lambda b, i: b.config.from_dict(i),
             config_params=config_params,
         )
+
+        SingleNameEquityExposureInvestmentsGroupPersist.delete_rows(runner=runner, as_of_date=self._end_date)
+
         SqlBulkInsert().execute(
             runner=runner,
             df=exposure_to_save,
@@ -130,7 +146,7 @@ if __name__ == "__main__":
         }
     )
 
-    end_date = dt.date(2022, 9, 30)
+    end_date = dt.date(2023, 2, 28)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNameEquityExposureInvestmentsGroupPersist().execute()
