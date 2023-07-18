@@ -71,10 +71,10 @@ def _fund_return_peer_percentiles(df):
 def _net_exposure_clean(df):
     df['net_exp_adj_3y'] = df[
         """('3Y', "('Equities', 'NetNotional')")"""
-        ].fillna(0) + 0.35 * df["""('3Y', "('Credit', 'NetNotional')")"""].fillna(0)
+    ].fillna(0) + 0.35 * df["""('3Y', "('Credit', 'NetNotional')")"""].fillna(0)
     df['net_exp_adj_5y'] = df[
         """('5Y', "('Equities', 'NetNotional')")"""
-        ].fillna(0) + 0.35 * df["""('5Y', "('Credit', 'NetNotional')")"""].fillna(0)
+    ].fillna(0) + 0.35 * df["""('5Y', "('Credit', 'NetNotional')")"""].fillna(0)
     df['net_exp_adj_latest'] = df[
         """('Latest', "('Equities', 'NetNotional')")"""
     ].fillna(0) + 0.35 * df[
