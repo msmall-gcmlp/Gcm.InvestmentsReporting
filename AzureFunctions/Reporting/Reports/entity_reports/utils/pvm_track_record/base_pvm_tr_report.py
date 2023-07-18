@@ -23,7 +23,10 @@ from ..pvm_performance_results.report_layer_results import (
 )
 from enum import Enum, auto
 import pandas as pd
-from gcm.inv.dataprovider.entity_data.investment_manager.pvm.tr import TrackRecordManagerProvider, TrackRecordHandler
+from gcm.inv.dataprovider.entity_data.investment_manager.pvm.tr import (
+    TrackRecordManagerProvider,
+    TrackRecordHandler,
+)
 
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
@@ -42,10 +45,8 @@ class BasePvmTrackRecordReport(ReportStructure):
     @property
     def manager_handler(self) -> TrackRecordHandler:
         # doesn't need to be cached as is already accessing singleton
-        manager_handler = (
-            TrackRecordManagerProvider().get_manager_tr_info(
-                self.manager_name
-            )
+        manager_handler = TrackRecordManagerProvider().get_manager_tr_info(
+            self.manager_name
         )
         return manager_handler
 

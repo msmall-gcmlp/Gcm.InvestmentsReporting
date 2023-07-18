@@ -2,8 +2,8 @@ from . import AggregateInterval, PvmPerformanceResultsBase
 from .aggregated import PvmAggregatedPerformanceResults
 import pandas as pd
 from typing import List, Union
-from ..pvm_track_record.data_handler.investment_container import (
-    InvestmentContainerBase,
+from gcm.inv.utils.pvm.investment_container import InvestmentContainerBase
+from gcm.inv.dataprovider.entity_data.investment_manager.pvm.tr.gross_atom import (
     GrossAttributionAtom,
 )
 from functools import cached_property

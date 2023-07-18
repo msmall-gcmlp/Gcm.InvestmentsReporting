@@ -100,7 +100,6 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
             position_dimn = self.filter_by_inv_id(position_dimn)
             return position_dimn
 
-
     @property
     def excel_template_location(self):
         return AzureDataLakeDao.BlobFileStructure(
