@@ -33,19 +33,6 @@ def _3y_arb_xs_analysis(df):
     return df
 
 
-# def _lagging_quarter_ptiles(df):
-#     df['ITD_lag_tmp'] = pd.DataFrame(df["('AbsoluteReturnBenchmarkExcessLag', 'ITD')"])
-#     df['ITD_ptiles_default_lag'] = pd.DataFrame(df.ITD_lag_tmp).rank(numeric_only=True, pct = True)
-
-#     df['default_3y_lag'] = pd.DataFrame(df["('AbsoluteReturnBenchmarkExcessLag', '3Y')"])
-
-#     df['3y_lag_ptiles'] = pd.DataFrame(df.default_3y_lag).rank(numeric_only=True, pct = True)
-
-#     df['3y_lag_ptiles'] = df['3y_lag_ptiles'].fillna(df['ITD_ptiles_default_lag'])
-
-#     return df
-
-
 def _arb_xs_emm_percentiles(df: pd.DataFrame,
                             period: str
                             ) -> pd.DataFrame:
@@ -123,7 +110,6 @@ def _gcm_peer_ptile_summary(df):
 
 def _gcm_peer_screener_rank(df):
     gcm_peer_screener_sum = df[["Decile_x", "Confidence_x", "Persistence_x"]]
-    #gcm_peer_screener_sum = gcm_peer_screener_sum.fillna('')
     return gcm_peer_screener_sum
 
 
@@ -136,6 +122,7 @@ def _net_equivs_exposure_summary(df):
 
 def _shortfall_pass_fail_summary(df, wl, alloc_status, close_end):
     shortfall_sum = df[['InvestmentGroupName', 'Pass/Fail', 'Drawdown']]
+    shortfall_sum['Pass/Fail']=shortfall_sum['Pass/Fail'].str.replace('Pass','')
     shortfall_sum = shortfall_sum.merge(wl, on='InvestmentGroupName', how='left')
     shortfall_sum['status'] = shortfall_sum['IsWatchList'].replace([True], 'WL')
     shortfall_sum = shortfall_sum.replace(False, np.nan)
@@ -259,10 +246,15 @@ def _get_high_performing_summary(df):
     high_perf = high_perf.loc[(df['3Y_ptiles'] >= 75) | (df['5Y_ptiles'] >= 77)]
     high_perf = high_perf.iloc[::-1]
     high_perf['Pass/Fail'] = ""
-    high_perf_sum = high_perf[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
-                               'Pass/Fail', 'status', 'absolute_return_benchmark']]
+    high_perf_sum = high_perf[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation',
+                               'absolute_return_benchmark']]
     high_perf_data = high_perf.drop(['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
                                      'Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
+
+    high_perf_sum=high_perf_sum.reset_index()
+    high_perf_sum['index']=np.arange(len(high_perf_sum))+1
+    high_perf_sum.at[' ', 'FirmwideAllocation'] = high_perf_sum['FirmwideAllocation'].sum()
+    high_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Sustained High PQ Capital'
     return high_perf_sum, high_perf_data
 
 
@@ -272,6 +264,10 @@ def _get_low_performing_summary(df):
                              'Pass/Fail', 'status', 'absolute_return_benchmark']]
     low_perf_data = low_perf.drop(['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
                                    'Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
+    low_perf_sum=low_perf_sum.reset_index()
+    low_perf_sum['index']=np.arange(len(low_perf_sum))+1
+    low_perf_sum.at[' ', 'FirmwideAllocation'] = low_perf_sum['FirmwideAllocation'].sum()
+    low_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Low PQ Capital'
     return low_perf_sum, low_perf_data
 
 
@@ -298,14 +294,11 @@ def _xpfund_data_to_highlow_df(df: pd.DataFrame,
         ],
     )
     df_pctiles_q_lag = _lagging_quarter_ptiles(df=df_pctiles)
-    # df_pctiles_with_exp = _net_exp_adj_3y(df=df_pctiles_q_lag)
-    # df_pctiles_with_exp = _net_exp_adj_5y(df=df_pctiles_with_exp)
-    # df_pctiles_with_exp_latest = _net_exp_adj_latest(df=df_pctiles_with_exp)
 
     df_pctiles_with_exposures = _net_exposure_clean(df=df_pctiles_q_lag)
 
     df = _summarize_data(df=df_pctiles_with_exposures, as_of_date=as_of_date)
     high_perf = _get_high_performing_summary(df=df)
     low_perf = _get_low_performing_summary(df=df)
-
+    
     return high_perf[0], high_perf[1], low_perf[0], low_perf[1]

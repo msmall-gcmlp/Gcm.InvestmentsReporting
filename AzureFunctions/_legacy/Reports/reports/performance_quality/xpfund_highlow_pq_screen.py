@@ -69,6 +69,8 @@ class XPfundHighLowPQScreen(ReportingRunnerBase):
 
         report_name = "ARS Performance Quality - Firmwide High Performance Screen"
         high_rep_data = {
+            'as_of_date1': pd.DataFrame({'date': [self._as_of_date]}),
+            'as_of_date2': pd.DataFrame({'date': [self._as_of_date]}),
             "high_perf_summary": firm_xpfund_highlow_df[0],
             "high_perf_data": firm_xpfund_highlow_df[1],
             "low_perf_summary": firm_xpfund_highlow_df[2],
@@ -106,8 +108,8 @@ if __name__ == "__main__":
         config_params={
             DaoRunnerConfigArgs.dao_global_envs.name: {
                 DaoSource.DataLake.name: {
-                    "Environment": "dev",
-                    "Subscription": "nonprd",
+                    "Environment": "prd",
+                    "Subscription": "prd",
                 },
                 DaoSource.InvestmentsDwh.name: {
                     "Environment": "prd",
@@ -124,7 +126,7 @@ if __name__ == "__main__":
             }
         },
     )
-    date = dt.date(2022, 4, 30)
+    date = dt.date(2023, 4, 30)
     inv_group_ids = None
     with Scenario(as_of_date=date).context():
         report = XPfundHighLowPQScreen(runner=dao_runner, as_of_date=date)
