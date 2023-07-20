@@ -122,7 +122,7 @@ def _net_equivs_exposure_summary(df):
 
 def _shortfall_pass_fail_summary(df, wl, alloc_status, close_end):
     shortfall_sum = df[['InvestmentGroupName', 'Pass/Fail', 'Drawdown']]
-    shortfall_sum['Pass/Fail']=shortfall_sum['Pass/Fail'].str.replace('Pass','')
+    shortfall_sum['Pass/Fail'] = shortfall_sum['Pass/Fail'].str.replace('Pass', '')
     shortfall_sum = shortfall_sum.merge(wl, on='InvestmentGroupName', how='left')
     shortfall_sum['status'] = shortfall_sum['IsWatchList'].replace([True], 'WL')
     shortfall_sum = shortfall_sum.replace(False, np.nan)
@@ -251,8 +251,8 @@ def _get_high_performing_summary(df):
     high_perf_data = high_perf.drop(['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
                                      'Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
 
-    high_perf_sum=high_perf_sum.reset_index()
-    high_perf_sum['index']=np.arange(len(high_perf_sum))+1
+    high_perf_sum = high_perf_sum.reset_index()
+    high_perf_sum['index'] = np.arange(len(high_perf_sum)) + 1
     high_perf_sum.at[' ', 'FirmwideAllocation'] = high_perf_sum['FirmwideAllocation'].sum()
     high_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Sustained High PQ Capital'
     return high_perf_sum, high_perf_data
@@ -264,8 +264,8 @@ def _get_low_performing_summary(df):
                              'Pass/Fail', 'status', 'absolute_return_benchmark']]
     low_perf_data = low_perf.drop(['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
                                    'Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
-    low_perf_sum=low_perf_sum.reset_index()
-    low_perf_sum['index']=np.arange(len(low_perf_sum))+1
+    low_perf_sum = low_perf_sum.reset_index()
+    low_perf_sum['index'] = np.arange(len(low_perf_sum)) + 1
     low_perf_sum.at[' ', 'FirmwideAllocation'] = low_perf_sum['FirmwideAllocation'].sum()
     low_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Low PQ Capital'
     return low_perf_sum, low_perf_data
@@ -299,6 +299,5 @@ def _xpfund_data_to_highlow_df(df: pd.DataFrame,
 
     df = _summarize_data(df=df_pctiles_with_exposures, as_of_date=as_of_date)
     high_perf = _get_high_performing_summary(df=df)
-    low_perf = _get_low_performing_summary(df=df)
-    
+    low_perf = _get_low_performing_summary(df=df)    
     return high_perf[0], high_perf[1], low_perf[0], low_perf[1]
