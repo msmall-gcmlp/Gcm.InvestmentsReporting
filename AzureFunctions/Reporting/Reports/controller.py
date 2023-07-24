@@ -13,9 +13,6 @@ from .entity_reports.vertical_reports.ars_pfund_attributes.aggregated_pfund_attr
 from .entity_reports.investment_manager_reports.pvm_manager_trackrecord_report import (
     PvmManagerTrackRecordReport,
 )
-from .entity_reports.investment_reports.pvm_investment_trackrecord_report import (
-    PvmInvestmentTrackRecordReport,
-)
 from .entity_reports.xentity_reports.pvm_portfolio_performance_report import (
     PvmPerformanceBreakoutReport,
 )
@@ -46,8 +43,6 @@ def get_report_class_by_name(name: ReportNames):
         return AggregatedPortolioFundAttributeReport
     if name == ReportNames.PvmManagerTrackRecordReport:
         return PvmManagerTrackRecordReport
-    if name == ReportNames.PvmInvestmentTrackRecordReport:
-        return PvmInvestmentTrackRecordReport
     if name == ReportNames.PvmPerformanceBreakoutReport:
         return PvmPerformanceBreakoutReport
     else:

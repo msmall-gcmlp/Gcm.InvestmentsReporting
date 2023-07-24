@@ -129,7 +129,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             this_table = ReportTable(k, v)
             tables.append(this_table)
 
-        #TODO: Begin formatting and weird stuff ###############
+        # TODO: Begin formatting and weird stuff ###############
         # below is this-report specific logic to derive render params
 
         sheet_name = "Performance Breakout"
@@ -168,7 +168,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
                 ]
             )
 
-        #TODO: Done formatting and weird stuff ######################
+        # TODO: Done formatting and weird stuff ######################
 
         this_worksheet = ReportWorksheet(
             sheet_name,

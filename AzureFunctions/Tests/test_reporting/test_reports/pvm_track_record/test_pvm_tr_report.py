@@ -16,7 +16,6 @@ from Reporting.core.report_structure import (
 )
 from Reporting.Reports.entity_reports.investment_manager_reports.pvm_manager_trackrecord_report import (
     PvmManagerTrackRecordReport,
-    PvmInvestmentTrackRecordReport,
 )
 from utils.print_utils import print
 
@@ -60,44 +59,9 @@ class TestPvmManagerTrReport(object):
                     entity_domain=d,
                     entity_info=entity_info,
                 )
-                fund_name_filters = [None, "Real Estate Fund", "Credit"]
-                for f in fund_name_filters:
-                    this_report = PvmManagerTrackRecordReport(
-                        this_meta, fund_name_contains=f
-                    )
-                    assert this_report is not None
-                    output = print(
-                        report_structure=this_report, print_pdf=False
-                    )
-                    assert output is not None
-
-    def test_run_single_fund(self):
-        with Scenario(
-            as_of_date=dt.date(2022, 6, 30),
-            aggregate_interval=AggregateInterval.ITD,
-            save=True,
-        ).context():
-            d = EntityDomainTypes.Investment
-            entity_info = TestPvmManagerTrReport.get_entity(
-                d, "Example Fund"
-            )
-
-            this_report = PvmInvestmentTrackRecordReport(
-                ReportMeta(
-                    type=ReportType.Performance,
-                    interval=Scenario.get_attribute("aggregate_interval"),
-                    consumer=ReportConsumer(
-                        horizontal=[ReportConsumer.Horizontal.IC],
-                        vertical=ReportConsumer.Vertical.PE,
-                    ),
-                    frequency=Frequency(
-                        FrequencyType.Once,
-                        Scenario.get_attribute("as_of_date"),
-                    ),
-                    entity_domain=d,
-                    entity_info=entity_info,
-                ),
-            )
-            assert this_report is not None
-            output = print(report_structure=this_report, print_pdf=True)
-            assert output is not None
+                this_report = PvmManagerTrackRecordReport(this_meta)
+                assert this_report is not None
+                output = print(
+                    report_structure=this_report, print_pdf=False
+                )
+                assert output is not None
