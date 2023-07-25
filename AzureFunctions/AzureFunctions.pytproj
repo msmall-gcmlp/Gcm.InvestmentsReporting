@@ -6,6 +6,9 @@
     <PublishOutputPathContent>true</PublishOutputPathContent>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+    <PythonTestCoverageTool>pytest-custom-exit-code</PythonTestCoverageTool>
+    <PythonCodeCoverageArgumentRun>--ignore-glob=* --suppress-no-test-exit-code</PythonCodeCoverageArgumentRun>
+    <PythonCodeCoverageArgumentOutput></PythonCodeCoverageArgumentOutput>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Gcm.AzureFunctions.Sdk" Version="7.*" />
