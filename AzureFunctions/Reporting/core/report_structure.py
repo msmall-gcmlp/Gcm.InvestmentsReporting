@@ -12,7 +12,7 @@ from gcm.inv.dataprovider.entity_provider.hierarchy_controller.hierarchy_handler
 )
 from .entity_handler import EntityReportingMetadata
 from openpyxl import Workbook
-from typing import List, Optional, Callable, Union
+from typing import List, Optional, Callable
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
 from gcm.inv.utils.date.AggregateInterval import AggregateInterval
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType, Calendar
@@ -178,7 +178,7 @@ class ReportStructure(SerializableBase):
         EntityDomainTypes.NONE: "XENTITY",
     }
 
-    def _get_entity_file_display_name(self) -> Union[str, None]:
+    def _get_entity_file_display_name(self) -> tuple[str, str]:
         if (
             self.report_meta.entity_domain is not None
             and self.report_meta.entity_info is not None
@@ -203,13 +203,12 @@ class ReportStructure(SerializableBase):
                 raise RuntimeError(
                     "More than one entity. Can't construct file name"
                 )
-            return entity_type_display
+            return entity_type_display, entity_name
 
     @cached_property
     def base_file_name(self):
         report_name = self.report_name.name
-        entity_name: str = None
-        entity_type_display = self._get_entity_file_display_name()
+        entity_type_display, entity_name_display = self._get_entity_file_display_name()
         # no need to add "Other" to string
         report_type = (
             self.report_meta.type.name
@@ -241,7 +240,7 @@ class ReportStructure(SerializableBase):
             str(x)
             for x in [
                 report_name,
-                entity_name,
+                entity_name_display,
                 entity_type_display,
                 report_type,
                 aggregate_interval,
