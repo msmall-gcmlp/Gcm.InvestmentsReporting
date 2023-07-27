@@ -126,7 +126,7 @@ if __name__ == "__main__":
             }
         },
     )
-    date = dt.date(2023, 4, 30)
+    date = dt.date(2023, 6, 30)
     inv_group_ids = None
     with Scenario(as_of_date=date).context():
         report = XPfundHighLowPQScreen(runner=dao_runner, as_of_date=date)
