@@ -3,6 +3,7 @@ from functools import reduce
 from typing import List
 import numpy as np
 import pandas as pd
+import re
 from gcm.inv.scenario import Scenario
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.inv.dataprovider.portfolio import Portfolio
@@ -16,6 +17,34 @@ def _clean_firmwide_xpfund_data(df):
     df['FirmwideAllocation'].replace(0.0, np.nan, inplace=True)
     df = df.dropna(subset=['FirmwideAllocation'])
     return df
+
+def _clean_ticker_names(df):
+    ar_bmrk_clean_summary=df
+    rep = {"SPXT": "US Eq", 
+           "I00078US": "Risk Free",
+           "XNDX": "Tech Eq", 
+           "GDDUWI": "Global Eq", 
+           "MXCN": "China Eq", 
+           "LF98TRUU": "High Yield Bond", 
+           "XBI": "Biotech", 
+           "\nName: 0, dtype: object": "", 
+           "nan": "", 
+           "IWM": "Small Cap Eq",
+           " * ": "*"} # define desired replacements here
+    
+    rep = dict((re.escape(k), v) for k, v in rep.items()) 
+    pattern = re.compile("|".join(rep.keys()))
+    
+    def func(text):
+        text=str(text)
+        return pattern.sub(lambda m: rep[re.escape(m.group(0))], text)
+    
+    cleaned_list=[]
+    for item in ar_bmrk_clean_summary['absolute_return_benchmark']:
+        cleaned_str=func(str(item))
+        cleaned_list.append(cleaned_str)
+    cleaned_df = pd.DataFrame(cleaned_list, columns=['absolute_return_benchmark']) 
+    return cleaned_df
 
 
 def _3y_arb_xs_analysis(df):
@@ -159,7 +188,8 @@ def _lagging_quarter_ptiles_summary(df):
 
 def _arb_definition(df):
     arb_definition = df[['absolute_return_benchmark']]
-    return arb_definition
+    arb_def_clean = _clean_ticker_names(df=arb_definition)
+    return arb_def_clean
 
 
 def _status_wl():
@@ -220,7 +250,6 @@ def _status_options(df, as_of_date):
 
 
 def _summarize_data(df, as_of_date):
-
     status_hierarchy = _status_options(df=df, as_of_date=as_of_date)
     inv_group_basics = df[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation']]
     shortfall_sum = _shortfall_pass_fail_summary(df=df, wl=status_hierarchy[0], alloc_status=status_hierarchy[1], close_end=status_hierarchy[2])
@@ -243,11 +272,11 @@ def _summarize_data(df, as_of_date):
 
 def _get_high_performing_summary(df):
     high_perf = df
-    high_perf = high_perf.loc[(df['3Y_ptiles'] >= 75) | (df['5Y_ptiles'] >= 77)]
+    high_perf = high_perf.loc[(df['3Y_ptiles'] >= 75) | (df['5Y_ptiles'] >= 75)]
     high_perf = high_perf.iloc[::-1]
     high_perf['Pass/Fail'] = ""
-    high_perf_sum = high_perf[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation',
-                               'absolute_return_benchmark']]
+    high_perf_sum = high_perf[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
+                             'Pass/Fail', 'status', 'absolute_return_benchmark']]
     high_perf_data = high_perf.drop(['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
                                      'Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
 
@@ -290,7 +319,6 @@ def _xpfund_data_to_highlow_df(df: pd.DataFrame,
         ),
         [
             _arb_xs_emm_percentiles(df_xs, period=i) for i in periods
-
         ],
     )
     df_pctiles_q_lag = _lagging_quarter_ptiles(df=df_pctiles)
