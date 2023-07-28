@@ -11,13 +11,14 @@ from ....core.report_structure import (
 )
 from ....core.components.report_workbook_handler import (
     ReportWorkBookHandler,
+    ReportWorksheet
 )
 import pandas as pd
 from ...report_names import ReportNames
 from functools import cached_property
 from typing import List
 from ..investment_reports.pvm_track_record.render_135 import (
-    PerformanceConcentrationRenderer,
+    OneThreeFiveRenderer,
 )
 from gcm.inv.models.pvm.node_evaluation.evaluation_provider import (
     PvmEvaluationProvider,
@@ -70,8 +71,7 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         )
         return children
 
-    def generate_135_tables(self) -> PerformanceConcentrationRenderer:
-
+    def generate_135_tables(self) -> ReportWorksheet:
         positions: PvmEvaluationProvider = (
             self.node_provider.position_tr_node_provider
         )
@@ -82,8 +82,10 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         )
         dimns = positions.atomic_dimensions
         position_map = self.position_to_investment_breakout
-        item = PerformanceConcentrationRenderer(
-            realized_breakout, position_map, dimns
+        item = OneThreeFiveRenderer(
+            breakout=realized_breakout,
+            position_to_investment_mapping=position_map,
+            position_dimn=dimns,
         )
         rendered = item.render()
         assert rendered is not None
@@ -98,3 +100,4 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
         results_135 = self.generate_135_tables()
+        ReportWorkBookHandler(self.manager_name, )
