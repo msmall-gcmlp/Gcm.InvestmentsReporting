@@ -359,8 +359,9 @@ def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date, inv_group_i
                                    additional_ids=additional_ids)
 
         date_q_minus_1 = pd.to_datetime(date - pd.tseries.offsets.QuarterEnd(1)).date()
+        date_m_minus_1 = pd.to_datetime(date - pd.tseries.offsets.MonthEnd(1)).date()
         peer_rankings = _get_peer_rankings(runner=runner, as_of_date=date_q_minus_1, emm_dimn=fund_dimn)
-        emm_rankings = _get_emm_rankings(runner=runner, as_of_date=date_q_minus_1, emm_dimn=fund_dimn)
+        emm_rankings = _get_emm_rankings(runner=runner, as_of_date=date_m_minus_1, emm_dimn=fund_dimn)
         date_q_minus_2 = pd.to_datetime(date - pd.tseries.offsets.QuarterEnd(2)).date()
         peer_rankings_lag = _get_peer_rankings(runner=runner, as_of_date=date_q_minus_2, emm_dimn=fund_dimn)
 
