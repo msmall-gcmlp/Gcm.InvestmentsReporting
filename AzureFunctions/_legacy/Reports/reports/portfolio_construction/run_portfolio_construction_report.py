@@ -1,8 +1,8 @@
 import datetime as dt
 from gcm.Dao.DaoSources import DaoSource
 
-from _legacy.Reports.reports.portfolio_construction.portfolio_construction_report import generate_excel_report_data, \
-    get_report_data
+from _legacy.Reports.reports.portfolio_construction.portfolio_construction_report import generate_excel_report_data
+from _legacy.Reports.reports.portfolio_construction.portfolio_construction_report_data import get_report_data
 from _legacy.core.Runners.investmentsreporting import InvestmentsReportRunner
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
@@ -24,16 +24,12 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         self._as_of_date = Scenario.get_attribute("as_of_date")
 
     def generate_excel_report(self, acronym, scenario_name, as_of_date):
-        weights, optim_inputs, reference_attributes, ms_lt = get_report_data(portfolio_acronym=acronym,
-                                                                             scenario_name=scenario_name,
-                                                                             as_of_date=as_of_date)
+        report_data = get_report_data(portfolio_acronym=acronym, scenario_name=scenario_name, as_of_date=as_of_date)
         excel_data = generate_excel_report_data(acronym=acronym,
                                                 scenario_name=scenario_name,
                                                 as_of_date=as_of_date,
-                                                weights=weights,
-                                                optim_inputs=optim_inputs,
-                                                reference_attributes=reference_attributes,
-                                                multi_strat_lookthrough=ms_lt)
+                                                report_data=report_data)
+
         portfolio_dimn = Portfolio(acronyms=[acronym]).get_dimensions()
         #
         # import json
@@ -69,8 +65,8 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                     report_vertical=ReportVertical.ARS,
                     report_frequency="Monthly",
                     aggregate_intervals=AggregateInterval.MTD,
-                    # output_dir="cleansed/investmentsreporting/printedexcels/",
-                    # report_output_source=DaoSource.DataLake,
+                    output_dir="cleansed/investmentsreporting/printedexcels/",
+                    report_output_source=DaoSource.DataLake,
                 )
         else:
             with Scenario(as_of_date=as_of_date).context():
@@ -89,8 +85,8 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                     report_vertical=ReportVertical.ARS,
                     report_frequency="Monthly",
                     aggregate_intervals=AggregateInterval.MTD,
-                    # output_dir="cleansed/investmentsreporting/printedexcels/",
-                    # report_output_source=DaoSource.DataLake,
+                    output_dir="cleansed/investmentsreporting/printedexcels/",
+                    report_output_source=DaoSource.DataLake,
                 )
 
     def run(self,
@@ -143,10 +139,12 @@ if __name__ == "__main__":
                 'SINGULAR', 'SMART', 'SOLAR', 'SPECTRUM', 'STAR', 'TEKTON', 'TITANIUM',
                 'WILMORE', 'WINDANDSEA']
 
-    acronyms = ['CORKTOWN']
+    # acronyms = ['Liquid Low Beta Model']
+    acronyms = ['GIP']
 
     for portfolio_acronym in acronyms:
         as_of_date = dt.date(2023, 7, 1)
+        # scenario_name = "Capacity Unconstrained"
         scenario_name = "Default"
         print(portfolio_acronym)
         with Scenario(dao=dao_runner, as_of_date=as_of_date).context():

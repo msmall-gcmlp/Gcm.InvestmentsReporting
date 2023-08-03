@@ -1,87 +1,27 @@
 import datetime as dt
-import os
-
 import numpy as np
 import pandas as pd
-from gcm.inv.models.portfolio_construction.optimization.optimization_inputs import (
-    LongTermInputs,
-)
-from gcm.inv.models.portfolio_construction.optimization.get_post_optim_inputs import download_optimization_inputs
-from gcm.data import DataAccess, DataSource
-from gcm.data.sql._sql_odbc_client import SqlOdbcClient
-from gcm.inv.models.portfolio_construction.portfolio_metrics.portfolio_metrics import collect_portfolio_metrics
-from gcm.data.storage import StorageQueryParams, DataLakeZone
+from gcm.inv.models.portfolio_construction.portfolio_metrics.portfolio_metrics import collect_portfolio_metrics, \
+    _process_optimization_inputs
+from _legacy.Reports.reports.portfolio_construction.portfolio_construction_report_data import _RawData
 
 
-def get_optimal_weights(
-    portfolio_acronym: str,
-    scenario_name: str,
-    as_of_date: dt.date,
-    client: SqlOdbcClient,
-) -> pd.DataFrame:
-    query = (
-        f"""
-        WITH WeightsTbl
-        AS (
-        SELECT
-            igm.EntityName as InvestmentGroupName,
-            igm.EntityId as InvestmentGroupId,
-            ow.LongTermWeight AS LongTermOptimal,
-            ow.ShortTermWeight as ShortTermOptimal
-        FROM PortfolioConstruction.OptimalWeights ow
-        LEFT JOIN entitymaster.InvestmentGroupMaster igm
-        ON ow.InvestmentGroupId = igm.EntityId
-        INNER JOIN PortfolioConstruction.InputLocations il
-        ON ow.InputLocationId = il.Id
-        WHERE PortfolioAcronym='{portfolio_acronym}'
-        AND ScenarioName='{scenario_name}'
-        AND AsOfDate='{as_of_date.isoformat()}'
-        )
-        SELECT * FROM WeightsTbl
-        """
-    )
-    return client.read_raw_sql(query)
-
-
-def get_portfolio_attributes(
-    portfolio_acronym: str,
-    client: SqlOdbcClient,
-) -> pd.DataFrame:
-    query = (
-        f"""
-        WITH AttributesTbl
-        AS (
-        SELECT
-            Field, Value, FieldGroup, FieldDescription, ValueType
-        FROM PortfolioConstruction.PortfolioAttributesLong
-        WHERE PortfolioAcronym='{portfolio_acronym}'
-        )
-        SELECT * FROM AttributesTbl
-        """
-    )
-    result = client.read_raw_sql(query)
-    is_bit = result['ValueType'] == 'bit'
-    result.loc[is_bit, 'Value'] = result[is_bit]['Value'].astype(int).astype(bool).astype(str)
-    result.loc[result['Value'] == 'True', 'Value'] = "Yes"
-    result.loc[result['Value'] == 'False', 'Value'] = "No"
-
-    is_float = result['ValueType'] == 'float'
-    result.loc[is_float, 'Value'] = result[is_float]['Value'].astype(float)
-
-    return result
-
-
-def _format_weights(allocations, strategies, capacity_status, conditional_returns):
-    def _create_strategy_block(weights, strategy):
+def _format_weights(allocations, strategies, capacity_status, conditional_returns, stress_names):
+    def _create_strategy_block(weights, strategy, stress_names):
         wts_g = weights[weights['Strategy'] == strategy]
         wts_g.drop(columns={'Strategy'}, inplace=True)
 
         summable_fields = ['Fund', 'Current', 'ShortTermOptimal', 'LongTermOptimal',
                            'Current - %Risk', 'ShortTermOptimal - %Risk',
-                           'LongTermOptimal - %Risk']
+                           'LongTermOptimal - %Risk'] + stress_names
 
         allocations = wts_g[summable_fields].sum().to_frame().T
-        condl_current = wts_g['Current'] @ wts_g[['Down_Current', 'Base_Current', 'Up_Current']] / sum(wts_g['Current'])
+
+        condl_current = wts_g['Current'] @ wts_g[['Down_Current', 'Base_Current', 'Up_Current']]
+
+        if sum(wts_g['Current']) > 0:
+            condl_current = condl_current / sum(wts_g['Current'])
+
         condl_current = condl_current.to_frame().T.reset_index(drop=True)
         condl_current = condl_current.fillna(0)
         condl_lt = wts_g['LongTermOptimal'] @ wts_g[['Down_LT', 'Base_LT', 'Up_LT']] / sum(wts_g['LongTermOptimal'])
@@ -105,25 +45,32 @@ def _format_weights(allocations, strategies, capacity_status, conditional_return
 
     for g in groups:
         wts_formatted = pd.concat([wts_formatted, _create_strategy_block(weights=wts,
-                                                                         strategy=g)], axis=0)
+                                                                         strategy=g,
+                                                                         stress_names=stress_names)], axis=0)
 
     wts.drop(columns={'Strategy'}, inplace=True)
 
     totals = wts.sum()
-    unallocated_current_rtn = wts['Current'] @ wts[['Down_Current', 'Base_Current', 'Up_Current']] / sum(wts['Current'])
+
+    unallocated_current_rtn = wts['Current'] @ wts[['Down_Current', 'Base_Current', 'Up_Current']]
+
+    if sum(wts['Current']) > 0:
+        unallocated_current_rtn = unallocated_current_rtn / sum(wts['Current'])
+
     totals.loc[unallocated_current_rtn.index] = unallocated_current_rtn
     unallocated_lt_rtn = wts['LongTermOptimal'] @ wts[['Down_LT', 'Base_LT', 'Up_LT']] / sum(wts['LongTermOptimal'])
     totals.loc[unallocated_lt_rtn.index] = unallocated_lt_rtn
 
     unallocated_row = totals.copy()
     unallocated_row['Fund'] = 'Cash & Other'
-    unallocated_row[1:7] = (100 - totals[1:7])
-    unallocated_row[7:] = 0
+    weight_columns = ['Current', 'ShortTermOptimal', 'LongTermOptimal']
+    unallocated_row[weight_columns] = (100 - totals[weight_columns])
+    unallocated_row[list(set(unallocated_row.index) - set(['Fund'] + weight_columns))] = 0
     unallocated_row = unallocated_row.to_frame().T
 
     total_row = totals.copy()
     total_row['Fund'] = 'Total'
-    total_row.iloc[1:7] = 100
+    total_row[weight_columns] = 100
     total_row = total_row.to_frame().T
 
     wts_formatted = pd.concat([wts_formatted, unallocated_row, total_row], axis=0)
@@ -148,13 +95,14 @@ def _format_weights(allocations, strategies, capacity_status, conditional_return
                        'LongTermOptimal',
                        'Delta_LT']
     wt_column_order = ['Fund'] + wt_column_order + [x + ' - %Risk' for x in wt_column_order]
-    column_order = wt_column_order + conditional_returns.columns.tolist()
+    column_order = wt_column_order + conditional_returns.columns.tolist() + stress_names
     wts_formatted = wts_formatted[column_order]
 
     return wts_formatted
 
 
-def _format_allocations_summary(weights, metrics):
+def _format_allocations_summary(weights, metrics, stress_contribs):
+    weights = pd.concat([weights, stress_contribs], axis=1)
     weights = weights.sort_index()
     strategies = metrics['fund_strategies']
     strategies['Strategy'] = strategies['Current'].combine_first(strategies['LongTermOptimal'])
@@ -176,10 +124,12 @@ def _format_allocations_summary(weights, metrics):
     condl_lt.columns = condl_lt.columns + '_LT'
     conditional_returns = pd.concat([condl_current, condl_lt], axis=1)
 
+    stress_names = stress_contribs.columns.tolist()
     formatted_weights = _format_weights(allocations=combined_weights,
                                         strategies=strategies,
                                         capacity_status=capacity,
-                                        conditional_returns=conditional_returns)
+                                        conditional_returns=conditional_returns,
+                                        stress_names=stress_names)
 
     dollar_weights = formatted_weights[['Fund',
                                         'Current',
@@ -188,8 +138,18 @@ def _format_allocations_summary(weights, metrics):
                                         'LongTermOptimal',
                                         'Delta_LT',
                                         ]]
-    risk_weights = formatted_weights[['Fund'] + [x + ' - %Risk' for x in dollar_weights.columns[1:6]]]
-    risk_weights.columns = dollar_weights.columns[0:6]
+
+    risk_columns = ['Fund', 'Current - %Risk', 'ShortTermOptimal - %Risk', 'LongTermOptimal - %Risk',
+                    'Current_LongRunSelloff', 'ShortTermOptimal_LongRunSelloff', 'LongTermOptimal_LongRunSelloff',
+                    'Current_CreditLiquidityTechnicals', 'ShortTermOptimal_CreditLiquidityTechnicals', 'LongTermOptimal_CreditLiquidityTechnicals',
+                    'Current_GrowthSelloff', 'ShortTermOptimal_GrowthSelloff', 'LongTermOptimal_GrowthSelloff',
+                    'Current_HFDelever', 'ShortTermOptimal_HFDelever', 'LongTermOptimal_HFDelever',
+                    'Current_GrossExp', 'ShortTermOptimal_GrossExp', 'LongTermOptimal_GrossExp']
+
+    risk_weights = formatted_weights[risk_columns]
+    is_empty = risk_weights.iloc[:, 1:].apply(lambda x: x.abs().max() == 0)
+    is_empty = [False] + is_empty.values.tolist()
+    risk_weights.loc[:, is_empty] = np.nan
 
     conditional_returns_summary = formatted_weights[['Fund',
                                                      'Current',
@@ -202,6 +162,10 @@ def _format_allocations_summary(weights, metrics):
                                                      'Base_LT',
                                                      'Up_LT'
                                                      ]]
+
+    is_empty = conditional_returns_summary.iloc[:, 1:].apply(lambda x: x.abs().max() == 0)
+    is_empty = [False] + is_empty.values.tolist()
+    conditional_returns_summary.loc[:, is_empty] = np.nan
 
     weights = {"dollar_allocation_summary": dollar_weights,
                "risk_allocation_summary": risk_weights,
@@ -266,6 +230,8 @@ def _summarize_liquidity_cons(obs_cons):
     liq_class = obs_cons.liquidityConstraints
     liq_freq = list(obs_cons.liquidityConstraints.__annotations__.keys())
     liquidity = {x: liq_class.__getattribute__(x) for x in liq_freq if liq_class.__getattribute__(x) is not None}
+    liquidity.pop('illiquid', None)
+    liquidity.pop('other', None)
     liq_display_names = {'daily': 'D',
                          'monthly': 'M',
                          'quarterly': 'Q',
@@ -376,75 +342,6 @@ def _format_non_config_attributes(reference_attributes):
     return formal_attribute_subset
 
 
-def get_multi_strat_lookthrough_allocations(dl_client):
-    prefix = "investmentsmodels/inputs/portfolio_construction/"
-    query = StorageQueryParams(
-        file_system=DataLakeZone.raw,
-        path=f"{prefix}multi_strat_lookthrough.csv"
-    )
-    from io import StringIO
-    df = pd.read_csv(StringIO(dl_client.get_blob(query).content.decode()))
-    return df
-
-
-def get_report_data(portfolio_acronym, scenario_name, as_of_date):
-    env = os.environ.get("Environment", "dev").replace("local", "dev")
-    sub = os.environ.get("Subscription", "nonprd").replace("local", "nonprd")
-    env = 'prd'
-    sub = 'prd'
-
-    sql_client = DataAccess().get(
-        DataSource.Sql,
-        target_name=f"gcm-elasticpoolinvestments-{sub}",
-        database_name=f"investmentsdwh-{env}"
-    )
-
-    dl_client = DataAccess().get(
-        DataSource.DataLake,
-        target_name=f"gcmdatalake{sub}",
-    )
-    optim_inputs = download_optimization_inputs(
-        portfolio_acronym=portfolio_acronym,
-        scenario_name=scenario_name,
-        as_of_date=as_of_date,
-        client=dl_client
-    )
-    weights = get_optimal_weights(
-        portfolio_acronym=portfolio_acronym,
-        scenario_name=scenario_name,
-        as_of_date=as_of_date,
-        client=sql_client
-    )
-
-    inv_group_id_map = optim_inputs.fundInputs.fundData.investment_group_ids
-    inv_group_id_map.InvestmentGroupId = inv_group_id_map.InvestmentGroupId.astype(int)
-    weights["InvestmentGroupName"] = weights[["InvestmentGroupId"]].merge(inv_group_id_map)["Fund"]
-
-    current_balances = optim_inputs.config.portfolioAttributes.currentBalances
-    current_weights = pd.DataFrame.from_dict(current_balances, orient="index", columns=["Current"]).reset_index(
-        names="Fund"
-    )
-    weights = current_weights.merge(inv_group_id_map, on="Fund", how="inner").merge(
-        weights, on="InvestmentGroupId", how="outer"
-    )
-
-    weights.InvestmentGroupName = weights.InvestmentGroupName.combine_first(weights.Fund)
-    weights = weights[["InvestmentGroupName", "InvestmentGroupId", "Current", "ShortTermOptimal", "LongTermOptimal"]]
-    weights = weights.fillna(0)
-    weights = weights[weights.iloc[:, 2:].max(axis=1) > 0]
-
-    # these are formal attributes for reference only. they don't flow through to optimizer so are not
-    # in the config
-    reference_attributes = get_portfolio_attributes(
-        portfolio_acronym=portfolio_acronym,
-        client=sql_client
-    )
-
-    multi_strat_lookthrough = get_multi_strat_lookthrough_allocations(dl_client=dl_client)
-
-    return weights, optim_inputs, reference_attributes, multi_strat_lookthrough
-
-
 def _nullify_data_for_zero_weights(weights, metrics):
     cash = weights['dollar_allocation_summary'].loc[weights['dollar_allocation_summary']['Fund'] == 'Cash & Other']
     zero_out = cash[['Current', 'ShortTermOptimal', 'Delta_ST', 'LongTermOptimal', 'Delta_LT']].abs() == 100
@@ -488,34 +385,210 @@ def _get_strategy_weights_with_lookthrough(optim_inputs, multi_strat_lookthrough
     strat_wts_lookthru = strat_wts_lookthru.reset_index()
     column_order = ['Strategy', 'Current', 'ShortTermOptimal', 'Delta_ST', 'LongTermOptimal', 'Delta_LT']
     strat_wts_lookthru = strat_wts_lookthru[column_order].sort_values('Current', ascending=False)
-    strat_wts_lookthru = {'strategy_weights_with_lookthrough': strat_wts_lookthru}
     return strat_wts_lookthru
+
+
+def _get_stress_contributions(weights, stresses):
+    stresses = stresses.set_index('InvestmentGroupName').loc[weights.index]
+    stresses['GrossExp'] = stresses['GrossExp'] / 100
+    contribs = pd.DataFrame(index=weights.index)
+    for s in stresses.columns:
+        contrib_s = 100 * (weights.T * stresses[s]).T
+        contrib_s.columns = contrib_s.columns + '_' + s
+        contribs = pd.concat([contribs, contrib_s], axis=1)
+    return contribs
+
+
+def _get_fund_expectations(optim_inputs):
+    expectations = pd.DataFrame({
+        "Return": optim_inputs.fundInputs.fundData.correlatedSimulations.mean(),
+        "Vol": optim_inputs.fundInputs.fundData.expectedVols
+    })
+    rf = optim_inputs.config.expRf
+    expectations['Sharpe'] = (expectations['Return'] - rf) / expectations['Vol']
+
+    eq_beta = optim_inputs.fundInputs.fundData.fundStresses['LongRunSelloff'] / -0.15
+    eq_return = 0.055 + rf
+    arb_return = (eq_beta * eq_return) + (1 - eq_beta) * rf
+    expectations['ExcessReturn'] = expectations['Return'] - arb_return
+    expectations = expectations[['Return', 'ExcessReturn', 'Vol', 'Sharpe']]
+    return expectations
+
+
+def _get_fund_expected_outcomes(optim_inputs):
+    outcomes = optim_inputs.fundInputs.fundData.correlatedSimulations.apply(np.percentile, q=[25, 50, 75], axis=0)
+    outcomes = outcomes.T
+    outcomes.columns = ['25th', '50th', '75th']
+    return outcomes
+
+
+def _get_fund_risk_and_exposure(optim_inputs, stresses):
+    # fund_stresses = optim_inputs.fundInputs.fundData.fundStresses[['LongRunSelloff', 'CreditLiquidityTechnicals']]
+    fund_stresses = stresses.copy()
+    fund_stresses = fund_stresses.set_index('InvestmentGroupName')
+    fund_stresses = fund_stresses.reindex(optim_inputs.fundInputs.fundData.fundIdios.index)
+    return fund_stresses
+
+
+def _get_fund_other_attributes(optim_inputs, fund_attributes):
+    annual_liq = optim_inputs.fundInputs.fundData.liquidityTerms['annual']
+    annual_liq.name = 'PctAnnualLiquidity'
+    attributes = pd.concat([fund_attributes, annual_liq], axis=1)
+    attributes = attributes.reindex(annual_liq.index)
+    attributes = attributes[['BenchmarkStrategy',
+                             'BenchmarkSubStrategy',
+                             'ExcessRtnPeerPtile',
+                             'InputsAccuracy',
+                             'PctActiveRisk',
+                             'PctAnnualLiquidity',
+                             'AvailableCapacity']]
+    return attributes
+
+
+def _get_all_fund_roster_inputs(optim_inputs, stresses, fund_attributes):
+    fund_expectations = _get_fund_expectations(optim_inputs)
+    fund_exp_outcomes = _get_fund_expected_outcomes(optim_inputs)
+    fund_stresses = _get_fund_risk_and_exposure(optim_inputs, stresses)
+    fund_other_attributes = _get_fund_other_attributes(optim_inputs, fund_attributes)
+    fund_roster_inputs = pd.concat([fund_expectations, fund_exp_outcomes, fund_stresses,
+                                    fund_other_attributes], axis=1)
+    return fund_roster_inputs
+
+
+def _format_strategy_roster_inputs(optim_inputs, stresses, fund_attributes):
+    roster_inputs = _get_all_fund_roster_inputs(optim_inputs, stresses, fund_attributes)
+    roster_inputs = roster_inputs.reset_index().rename(columns={'index': 'InvestmentGroupName'})
+
+    front_columns = ['BenchmarkSubStrategy', 'InvestmentGroupName', 'Return', 'ExcessReturn', 'Vol', 'Sharpe',
+                     '25th', '50th', '75th']
+    back_columns = ['ExcessRtnPeerPtile', 'InputsAccuracy', 'PctActiveRisk',
+                    'PctAnnualLiquidity', 'AvailableCapacity']
+
+    credit = roster_inputs[roster_inputs['BenchmarkStrategy'] == 'Credit']
+    credit = credit[front_columns + ['LongRunSelloff', 'CreditLiquidityTechnicals'] + back_columns]
+
+    equity = roster_inputs[roster_inputs['BenchmarkStrategy'] == 'Long/Short Equity']
+    equity = equity[front_columns + ['LongRunSelloff', 'GrowthSelloff'] + back_columns]
+
+    ds = roster_inputs[~roster_inputs['BenchmarkStrategy'].isin(['Credit', 'Long/Short Equity'])]
+    ds = ds[front_columns + ['LongRunSelloff', 'HFDelever'] + back_columns]
+
+    strategy_roster_inputs = {'credit_roster_inputs': credit,
+                              'equity_roster_inputs': equity,
+                              'ds_roster_inputs': ds}
+
+    for s in strategy_roster_inputs.keys():
+        strategy = strategy_roster_inputs.get(s)
+        strategy['Priority'] = 1
+        headings = pd.DataFrame({'BenchmarkSubStrategy': strategy['BenchmarkSubStrategy'].unique(),
+                                 'InvestmentGroupName': strategy['BenchmarkSubStrategy'].unique(),
+                                 'Priority': 0})
+        strategy = pd.concat([strategy, headings], axis=0)
+        strategy = strategy.sort_values(['BenchmarkSubStrategy', 'Priority',
+                                         'ExcessReturn', 'InvestmentGroupName'],
+                                        ascending=[True, True, False, True])
+        strategy.drop(columns={'BenchmarkSubStrategy', 'Priority'}, inplace=True)
+        strategy_roster_inputs[s] = strategy
+
+    return strategy_roster_inputs
+
+
+def _combine_weights_and_strategy_lookthru_weights(weights, strat_weights):
+    weights_ex_total = weights[:-1]
+    strat_weights.rename(columns={'Strategy': 'Fund'}, inplace=True)
+    strat_weights['Fund'] = '   ' + strat_weights['Fund']
+    total = weights.tail(1)
+    spacer_row = total.copy()
+    spacer_row.iloc[0] = None
+    heading_row = pd.DataFrame({'Fund': ['With Lookthrough to Multi-Strats']})
+
+    strat_weights = strat_weights[weights_ex_total.columns].reset_index(drop=True)
+
+    summary = pd.concat([weights_ex_total, spacer_row, heading_row, strat_weights, total], axis=0)
+    return summary
 
 
 def generate_excel_report_data(
     acronym: str,
     scenario_name: str,
     as_of_date: dt.date,
-    weights: pd.DataFrame,
-    optim_inputs: LongTermInputs,
-    reference_attributes: pd.DataFrame,
-    multi_strat_lookthrough: pd.DataFrame,
+    report_data: _RawData,
 ):
+    weights = report_data.weights
+    optim_inputs = report_data.optim_inputs
+    portfolio_attributes = report_data.adhoc_portfolio_attributes
+    multi_strat_lookthrough = report_data.adhoc_fund_attributes.multi_strat_lookthrough
+    stresses = report_data.adhoc_fund_attributes.stresses
+    fund_attributes = report_data.adhoc_fund_attributes.fund_attributes
+
     # TODO map weights to ids
     weights = weights.rename(columns={'InvestmentGroupName': 'Fund'}).set_index('Fund')
     weights.drop(columns={"InvestmentGroupId"}, inplace=True)
 
     header_info = _format_header_info(acronym=acronym, scenario_name=scenario_name, as_of_date=as_of_date)
-    non_config_attributes = _format_non_config_attributes(reference_attributes=reference_attributes)
-    config_attributes = _format_config_attributes(weights=weights, optim_inputs=optim_inputs,
+    non_config_attributes = _format_non_config_attributes(reference_attributes=portfolio_attributes)
+
+    # TODO - need to do this upfront because bug in config processing overwrites
+    #  optim_inputs to only allocated-to subset
+    full_optim_inputs = _process_optimization_inputs(inputs=optim_inputs, fund_order=optim_inputs.config.fundSubset)
+    roster_inputs = _format_strategy_roster_inputs(optim_inputs=full_optim_inputs,
+                                                   stresses=stresses,
+                                                   fund_attributes=fund_attributes)
+
+    config_attributes = _format_config_attributes(weights=weights,
+                                                  optim_inputs=optim_inputs,
                                                   rf=optim_inputs.config.expRf)
-    metrics = _combine_metrics_across_weights(weights=weights, optim_inputs=optim_inputs,
+    metrics = _combine_metrics_across_weights(weights=weights,
+                                              optim_inputs=optim_inputs,
                                               rf=optim_inputs.config.expRf)
-    formatted_weights = _format_allocations_summary(weights=weights, metrics=metrics)
+
+    stress_contribs = _get_stress_contributions(weights=weights, stresses=stresses)
+
+    formatted_weights = _format_allocations_summary(weights=weights, metrics=metrics, stress_contribs=stress_contribs)
 
     strat_weights_lookthru = _get_strategy_weights_with_lookthrough(optim_inputs=optim_inputs,
                                                                     multi_strat_lookthrough=multi_strat_lookthrough,
                                                                     weights=weights)
+
+    formatted_weights['dollar_allocation_summary'] = _combine_weights_and_strategy_lookthru_weights(
+        weights=formatted_weights['dollar_allocation_summary'],
+        strat_weights=strat_weights_lookthru
+    )
+
+    risk_weights = metrics['risk_allocations'].loc[weights.index]
+    risk_weights.columns = weights.columns
+    strat_risk_weights_lookthru = _get_strategy_weights_with_lookthrough(optim_inputs=optim_inputs,
+                                                                         multi_strat_lookthrough=multi_strat_lookthrough,
+                                                                         weights = risk_weights.fillna(0))
+    strat_risk_weights_lookthru.columns = ['Fund'] + (strat_risk_weights_lookthru.columns[1:] + ' - %Risk').tolist()
+
+    # TODO refactor with _get_strategy_weights_with_lookthrough
+    lookthru_strats = _get_fund_lookthrough_strategy_allocations(optim_inputs=optim_inputs,
+                                                                 multi_strat_lookthrough=multi_strat_lookthrough)
+
+    weights = stress_contribs * 100
+    weights = weights.merge(lookthru_strats, left_index=True, right_on='InvestmentGroupName')
+    lookthru_contribs = weights[stress_contribs.columns].multiply(
+        weights["LookthruWeight"],
+        axis="index")
+    lookthru_contribs['Strategy'] = weights['Strategy']
+    lookthru_contribs.loc[lookthru_contribs['Strategy'] == 'Multi-Strategy', 'Strategy'] = 'Other'
+    strat_wts_lookthru = lookthru_contribs.groupby('Strategy').sum()
+    strat_wts_lookthru = strat_wts_lookthru.reset_index()
+    # column_order = ['Strategy', 'Current', 'ShortTermOptimal', 'Delta_ST', 'LongTermOptimal', 'Delta_LT']
+
+    strat_risk_weights_lookthru.drop(columns={'Delta_LT - %Risk', 'Delta_ST - %Risk'}, inplace=True)
+    strat_risk_weights_lookthru = pd.concat([strat_risk_weights_lookthru, strat_wts_lookthru], axis=1)
+    strat_risk_weights_lookthru.rename(columns={'Fund': "Strategy"}, inplace=True)
+
+    strat_risk_weights_lookthru = strat_risk_weights_lookthru.iloc[:,~strat_risk_weights_lookthru.columns.duplicated()]
+
+    tmp = _combine_weights_and_strategy_lookthru_weights(
+        weights=formatted_weights['risk_allocation_summary'],
+        strat_weights=strat_risk_weights_lookthru
+    )
+
+    formatted_weights['risk_allocation_summary'] = tmp
 
     metric_subset = ("distribution_of_returns",
                      "exp_risk_adj_performance",
@@ -533,5 +606,6 @@ def generate_excel_report_data(
 
     excel_data.update(metrics)
     excel_data.update(formatted_weights)
-    excel_data.update(strat_weights_lookthru)
+    excel_data.update(roster_inputs)
+
     return excel_data
