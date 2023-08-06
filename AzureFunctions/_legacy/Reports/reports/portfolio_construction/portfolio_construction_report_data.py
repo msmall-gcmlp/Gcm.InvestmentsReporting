@@ -1,36 +1,43 @@
 import datetime as dt
 import os
+from typing import Optional
+
 import pandas as pd
+from gcm.inv.models.portfolio_construction.optimization.config.constraint import Constraints
+from gcm.inv.models.portfolio_construction.optimization.config.objective import Objectives
+from gcm.inv.models.portfolio_construction.optimization.config.portfolio_attribute import PortfolioAttributes
+from gcm.inv.models.portfolio_construction.optimization.get_post_optim_inputs import download_optimization_inputs
 from gcm.inv.models.portfolio_construction.optimization.optimization_inputs import (
     LongTermInputs,
 )
-from gcm.inv.models.portfolio_construction.optimization.get_post_optim_inputs import _get_optimization_inputs
 from gcm.data import DataAccess, DataSource
 from gcm.data.sql._sql_odbc_client import SqlOdbcClient
 from gcm.data.storage import StorageQueryParams, DataLakeZone
-from attr import define
+from attr import define, field
+from gcm.inv.models.portfolio_construction.portfolio_metrics.portfolio_metrics import _process_optim_fund_inputs, \
+    ProcessedFundInputs
 
 
 @define
-class _PortfolioInputs:
-    portfolio_acronym: str
-    scenario_name: str
+class PortfolioInputs:
+    acronym: str
+    scenario: str
     as_of_date: dt.date
 
 
 @define
-class _AdhocFundAttributes:
+class AdhocFundAttributes:
     multi_strat_lookthrough: pd.DataFrame
     stresses: pd.DataFrame
     fund_attributes: pd.DataFrame
 
 
 @define
-class _RawData:
+class RawData:
     weights: pd.DataFrame
     optim_inputs: LongTermInputs
     adhoc_portfolio_attributes: pd.DataFrame
-    adhoc_fund_attributes: _AdhocFundAttributes
+    adhoc_fund_attributes: AdhocFundAttributes
 
 
 def _get_sql_client(sub, env):
@@ -225,14 +232,14 @@ def _combine_current_and_optimal_weights(current, optimal, id_map):
 
 
 def _get_allocations(
-        portfolio: _PortfolioInputs,
+        portfolio: PortfolioInputs,
         sql_client: SqlOdbcClient,
         lt_inputs: LongTermInputs,
 ) -> pd.DataFrame:
     inv_group_id_map = _get_inv_group_id_map(lt_inputs)
     optimal_weights = _get_optimal_weights(
-        portfolio_acronym=portfolio.portfolio_acronym,
-        scenario_name=portfolio.scenario_name,
+        portfolio_acronym=portfolio.acronym,
+        scenario_name=portfolio.scenario,
         as_of_date=portfolio.as_of_date,
         client=sql_client,
         inv_group_id_map=inv_group_id_map,
@@ -243,29 +250,24 @@ def _get_allocations(
     weights = _combine_current_and_optimal_weights(current=current_weights,
                                                    optimal=optimal_weights,
                                                    id_map=inv_group_id_map)
+
+    weights = weights.rename(columns={'InvestmentGroupName': 'Fund'}).set_index('Fund')
+    weights.drop(columns={"InvestmentGroupId"}, inplace=True)
     return weights
 
 
 def _get_adhoc_fund_attributes(dl_client, sql_client):
-    return _AdhocFundAttributes(multi_strat_lookthrough=_download_multi_strat_lookthrough_allocations(dl_client),
-                                stresses=_download_standalone_stresses(dl_client=dl_client),
-                                fund_attributes=_query_fund_attributes(sql_client=sql_client))
+    return AdhocFundAttributes(multi_strat_lookthrough=_download_multi_strat_lookthrough_allocations(dl_client),
+                               stresses=_download_standalone_stresses(dl_client=dl_client),
+                               fund_attributes=_query_fund_attributes(sql_client=sql_client))
 
 
-def get_report_data(portfolio_acronym, scenario_name, as_of_date):
-    env = os.environ.get("Environment", "dev").replace("local", "dev")
-    sub = os.environ.get("Subscription", "nonprd").replace("local", "nonprd")
-    env = 'prd'
-    sub = 'prd'
-
+def _get_raw_report_data(portfolio: PortfolioInputs, sub, env):
     sql_client, dl_client = _get_clients(sub=sub, env=env)
 
-    portfolio = _PortfolioInputs(portfolio_acronym=portfolio_acronym,
-                                 scenario_name=scenario_name, as_of_date=as_of_date)
-
-    lt_optim_inputs = _get_optimization_inputs(
-        portfolio_acronym=portfolio.portfolio_acronym,
-        scenario_name=portfolio.scenario_name,
+    lt_optim_inputs = download_optimization_inputs(
+        portfolio_acronym=portfolio.acronym,
+        scenario_name=portfolio.scenario,
         as_of_date=portfolio.as_of_date,
         client=dl_client,
         is_short_term=False,
@@ -276,14 +278,72 @@ def get_report_data(portfolio_acronym, scenario_name, as_of_date):
                                lt_inputs=lt_optim_inputs)
 
     adhoc_portfolio_attributes = _query_portfolio_attributes(
-        portfolio_acronym=portfolio.portfolio_acronym,
+        portfolio_acronym=portfolio.acronym,
         client=sql_client
     )
 
     adhoc_fund_attributes = _get_adhoc_fund_attributes(dl_client=dl_client, sql_client=sql_client)
 
-    report_data = _RawData(weights=weights,
-                           optim_inputs=lt_optim_inputs,
-                           adhoc_portfolio_attributes=adhoc_portfolio_attributes,
-                           adhoc_fund_attributes=adhoc_fund_attributes)
+    report_data = RawData(weights=weights,
+                          optim_inputs=lt_optim_inputs,
+                          adhoc_portfolio_attributes=adhoc_portfolio_attributes,
+                          adhoc_fund_attributes=adhoc_fund_attributes)
     return report_data
+
+
+@define
+class PortfolioData:
+    optim_attributes: PortfolioAttributes
+    objectives: Objectives
+    constraints: Constraints
+    eligible_roster: list[str]
+    adhoc_attributes: pd.DataFrame
+
+
+@define
+class FundData:
+    allocated_optim_inputs: ProcessedFundInputs
+    eligible_optim_inputs: ProcessedFundInputs
+    multi_strat_lookthrough: pd.DataFrame
+    adhoc_stresses: pd.DataFrame
+    adhoc_attributes: pd.DataFrame
+
+
+@define
+class ReportData:
+    portfolio: PortfolioInputs
+    allocations: pd.DataFrame
+    portfolio_data: PortfolioData
+    fund_data: FundData
+    rf: float
+
+
+def get_report_data(portfolio_acronym, scenario_name, as_of_date):
+    env = os.environ.get("Environment", "dev").replace("local", "dev")
+    sub = os.environ.get("Subscription", "nonprd").replace("local", "nonprd")
+    env = 'prd'
+    sub = 'prd'
+
+    portfolio = PortfolioInputs(acronym=portfolio_acronym, scenario=scenario_name, as_of_date=as_of_date)
+    raw_data = _get_raw_report_data(portfolio=portfolio, sub=sub, env=env)
+    return ReportData(
+        portfolio=portfolio,
+        allocations=raw_data.weights,
+        portfolio_data=PortfolioData(
+            optim_attributes=raw_data.optim_inputs.config.portfolioAttributes,
+            objectives=raw_data.optim_inputs.config.objectives,
+            constraints=raw_data.optim_inputs.config.constraints,
+            eligible_roster=raw_data.optim_inputs.config.fundSubset,
+            adhoc_attributes=raw_data.adhoc_portfolio_attributes
+        ),
+        fund_data=FundData(
+            allocated_optim_inputs=_process_optim_fund_inputs(inputs=raw_data.optim_inputs,
+                                                              fund_order=raw_data.weights.index),
+            eligible_optim_inputs=_process_optim_fund_inputs(inputs=raw_data.optim_inputs,
+                                                             fund_order=raw_data.optim_inputs.config.fundSubset),
+            multi_strat_lookthrough=raw_data.adhoc_fund_attributes.multi_strat_lookthrough,
+            adhoc_stresses=raw_data.adhoc_fund_attributes.stresses,
+            adhoc_attributes=raw_data.adhoc_fund_attributes.fund_attributes
+        ),
+        rf=raw_data.optim_inputs.config.expRf
+    )

@@ -25,10 +25,7 @@ class PortfolioConstructionReport(ReportingRunnerBase):
 
     def generate_excel_report(self, acronym, scenario_name, as_of_date):
         report_data = get_report_data(portfolio_acronym=acronym, scenario_name=scenario_name, as_of_date=as_of_date)
-        excel_data = generate_excel_report_data(acronym=acronym,
-                                                scenario_name=scenario_name,
-                                                as_of_date=as_of_date,
-                                                report_data=report_data)
+        excel_data = generate_excel_report_data(inputs=report_data)
 
         portfolio_dimn = Portfolio(acronyms=[acronym]).get_dimensions()
         #
