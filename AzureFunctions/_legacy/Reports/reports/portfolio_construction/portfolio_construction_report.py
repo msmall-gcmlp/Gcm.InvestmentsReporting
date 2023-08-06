@@ -94,7 +94,8 @@ def _add_cash_and_other_risk_contribution(risk_contributions):
     return risk_contributions
 
 
-def _create_optimized_allocations_sheet_data(weights, strategy_lookthrough_weights, strategies, capacities):
+def _create_optimized_allocations_sheet_data(weights, strategy_lookthrough_weights, strategies, capacities,
+                                             na_weight_columns):
     weights = _add_cash_and_other_weight(raw_fund_weights=weights)
     wts = _sort_weights_alphabetically(raw_fund_weights=weights)
     wts = _add_allocation_delta_columns(summary=wts)
@@ -105,8 +106,13 @@ def _create_optimized_allocations_sheet_data(weights, strategy_lookthrough_weigh
     wts = _add_final_total_row(summary=wts, pre_subtotal_weights=pre_subtotal_weights)
     wts = _convert_weights_to_int(summary=wts)
     wts = _denote_fund_capacity_status(summary=wts, capacity_status=capacities)
-
     weights = {"dollar_allocation_summary": wts}
+
+    na_fields_with_deltas = _get_missing_allocation_and_delta_columns(na_allocation_fields=na_weight_columns)
+
+    weights = _nullify_dictionary_elements_column_wise(
+        dictionary=weights,
+        fields_to_nullify=na_fields_with_deltas)
 
     return weights
 
@@ -121,7 +127,7 @@ def _order_risk_utilization_columns(summary):
 
 
 def _create_optimized_risk_utilizations_sheet_data(
-    risk_contributions, strategy_lookthrough_risk_contributions, strategies, capacities
+    risk_contributions, strategy_lookthrough_risk_contributions, strategies, capacities, na_weight_columns
 ):
     risk_contributions = _add_cash_and_other_risk_contribution(risk_contributions=risk_contributions)
     wts = _sort_weights_alphabetically(raw_fund_weights=risk_contributions)
@@ -135,6 +141,13 @@ def _create_optimized_risk_utilizations_sheet_data(
     wts = _order_risk_utilization_columns(summary=wts)
 
     weights = {"risk_allocation_summary": wts}
+
+    na_fields_risk_allocations = _get_missing_risk_allocation_columns(na_allocation_fields=na_weight_columns,
+                                                                      risk_allocation_columns=wts.columns)
+
+    weights = _nullify_dictionary_elements_column_wise(
+        dictionary=weights,
+        fields_to_nullify=na_fields_risk_allocations)
 
     return weights
 
@@ -154,7 +167,7 @@ def _add_conditional_return_contributions(conditional_returns, raw_fund_weights)
 
 
 def _create_conditional_returns_sheet_data(
-    weights, strategies, capacities, conditional_fund_returns
+    weights, strategies, capacities, conditional_fund_returns, na_weight_columns
 ):
     weights = _add_cash_and_other_weight(raw_fund_weights=weights)
     wts = _sort_weights_alphabetically(raw_fund_weights=weights)
@@ -168,6 +181,13 @@ def _create_conditional_returns_sheet_data(
     wts = _denote_fund_capacity_status(summary=wts, capacity_status=capacities)
 
     weights = {"conditional_return_summary": wts}
+
+    na_fields_conditional_returns = _get_missing_conditional_return_columns(
+        na_allocation_fields=na_weight_columns,
+        conditional_return_columns=wts.columns)
+
+    weights = _nullify_dictionary_elements_column_wise(dictionary=weights,
+                                                       fields_to_nullify=na_fields_conditional_returns)
 
     return weights
 
@@ -357,19 +377,6 @@ def _format_adhoc_portfolio_attributes(portfolio_attributes):
     return formal_attribute_subset
 
 
-def _nullify_data_for_zero_weights(weights, metrics):
-    cash = weights['dollar_allocation_summary'].loc[weights['dollar_allocation_summary']['Fund'] == 'Cash & Other']
-    zero_out = cash[['Current', 'ShortTermOptimal', 'Delta_ST', 'LongTermOptimal', 'Delta_LT']].abs() == 100
-    zero_out_fields = zero_out.T.loc[zero_out.T.values].index
-
-    for field in zero_out_fields.tolist():
-        for m in metrics.keys():
-            metrics[m].loc[:, field] = np.nan
-        for w in weights.keys():
-            weights[w].loc[:, field] = np.nan
-    return weights, metrics
-
-
 def _get_fund_lookthrough_strategy_allocations(fund_strategies, multi_strat_lookthrough):
     multi_strat_lookthrough = multi_strat_lookthrough.melt(id_vars='InvestmentGroupName',
                                                            value_name='LookthruWeight',
@@ -518,7 +525,7 @@ def _summarize_portfolio_obs_cons(portfolio_data: PortfolioData, rf):
     return obs_cons
 
 
-def _create_obs_cons_sheet_data(portfolio_data, metrics, rf):
+def _create_obs_cons_sheet_data(portfolio_data, metrics, rf, na_weight_columns):
     sheet_data = {}
     obs_cons = _summarize_portfolio_obs_cons(portfolio_data=portfolio_data, rf=rf)
 
@@ -531,7 +538,42 @@ def _create_obs_cons_sheet_data(portfolio_data, metrics, rf):
 
     sheet_data.update(obs_cons)
     sheet_data.update(summarized_metrics)
+
+    sheet_data = _nullify_dictionary_elements_column_wise(dictionary=sheet_data,
+                                                          fields_to_nullify=na_weight_columns)
     return sheet_data
+
+
+def _nullify_dictionary_elements_column_wise(dictionary, fields_to_nullify):
+    for field in fields_to_nullify:
+        for m in dictionary.keys():
+            if field in dictionary[m].columns:
+                dictionary[m].loc[:, field] = np.nan
+    return dictionary
+
+
+def _get_missing_allocation_columns(allocations):
+    weight_is_na = allocations.sum() == 0
+    na_fields = weight_is_na[weight_is_na].index.tolist()
+    return na_fields
+
+
+def _get_missing_allocation_and_delta_columns(na_allocation_fields):
+    if ('Current' in na_allocation_fields) or ('ShortTermOptimal' in na_allocation_fields):
+        na_allocation_fields = na_allocation_fields + ['Delta_ST']
+    if ('Current' in na_allocation_fields) or ('LongTermOptimal' in na_allocation_fields):
+        na_allocation_fields = na_allocation_fields + ['Delta_LT']
+    return na_allocation_fields
+
+
+def _get_missing_risk_allocation_columns(na_allocation_fields, risk_allocation_columns):
+    na_fields = [f for w in na_allocation_fields for f in risk_allocation_columns if f.startswith(w)]
+    return na_fields
+
+
+def _get_missing_conditional_return_columns(na_allocation_fields, conditional_return_columns):
+    na_fields = [f for w in na_allocation_fields for f in conditional_return_columns if f.endswith(w)]
+    return na_fields
 
 
 def generate_excel_report_data(inputs: ReportData):
@@ -541,23 +583,28 @@ def generate_excel_report_data(inputs: ReportData):
                                               portfolio_target_return=inputs.portfolio_data.objectives.maxThresholdLikelihood.targetReturn,
                                               rf=inputs.rf)
 
+    missing_allocation_columns = _get_missing_allocation_columns(allocations=inputs.allocations)
+
     header_info = _format_header_info(portfolio=inputs.portfolio)
     obs_cons_sheet_data = _create_obs_cons_sheet_data(portfolio_data=inputs.portfolio_data,
                                                       metrics=metrics,
-                                                      rf=inputs.rf)
+                                                      rf=inputs.rf,
+                                                      na_weight_columns=missing_allocation_columns)
 
     optimized_allocations_sheet_data = _create_optimized_allocations_sheet_data(
         weights=inputs.allocations,
         strategy_lookthrough_weights=metrics["strategy_dollar_weights_with_lt"],
         strategies=inputs.fund_data.allocated_optim_inputs.strategies,
-        capacities=inputs.fund_data.allocated_optim_inputs.fundCapacityLimits
+        capacities=inputs.fund_data.allocated_optim_inputs.fundCapacityLimits,
+        na_weight_columns=missing_allocation_columns
     )
 
     optimized_risk_utilizations_sheet_data = _create_optimized_risk_utilizations_sheet_data(
         risk_contributions=metrics['risk_allocations'],
         strategy_lookthrough_risk_contributions=metrics["strategy_risk_weights_with_lt"],
         strategies=inputs.fund_data.allocated_optim_inputs.strategies,
-        capacities=inputs.fund_data.allocated_optim_inputs.fundCapacityLimits
+        capacities=inputs.fund_data.allocated_optim_inputs.fundCapacityLimits,
+        na_weight_columns=missing_allocation_columns
     )
 
     roster_inputs = _format_strategy_roster_inputs(eligible_fund_inputs=inputs.fund_data.eligible_optim_inputs,
@@ -574,14 +621,8 @@ def generate_excel_report_data(inputs: ReportData):
         weights=inputs.allocations,
         strategies=inputs.fund_data.allocated_optim_inputs.strategies,
         capacities=inputs.fund_data.allocated_optim_inputs.fundCapacityLimits,
-        conditional_fund_returns=conditional_returns
-    )
-
-    # TODO !!! BROKEN
-
-    optimized_allocations_sheet_data, obs_cons_sheet_data = _nullify_data_for_zero_weights(
-        weights=optimized_allocations_sheet_data,
-        metrics=obs_cons_sheet_data
+        conditional_fund_returns=conditional_returns,
+        na_weight_columns=missing_allocation_columns
     )
 
     excel_data = {}

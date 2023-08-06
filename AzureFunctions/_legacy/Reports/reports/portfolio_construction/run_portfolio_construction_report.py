@@ -136,7 +136,7 @@ if __name__ == "__main__":
                 'SINGULAR', 'SMART', 'SOLAR', 'SPECTRUM', 'STAR', 'TEKTON', 'TITANIUM',
                 'WILMORE', 'WINDANDSEA']
 
-    # acronyms = ['Liquid Low Beta Model']
+    # acronyms = ['Broad Mandate Model']
     acronyms = ['GIP']
 
     for portfolio_acronym in acronyms:

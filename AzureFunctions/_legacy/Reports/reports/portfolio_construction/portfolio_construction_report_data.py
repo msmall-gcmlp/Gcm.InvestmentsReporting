@@ -1,6 +1,5 @@
 import datetime as dt
 import os
-from typing import Optional
 
 import pandas as pd
 from gcm.inv.models.portfolio_construction.optimization.config.constraint import Constraints
@@ -13,7 +12,7 @@ from gcm.inv.models.portfolio_construction.optimization.optimization_inputs impo
 from gcm.data import DataAccess, DataSource
 from gcm.data.sql._sql_odbc_client import SqlOdbcClient
 from gcm.data.storage import StorageQueryParams, DataLakeZone
-from attr import define, field
+from attr import define
 from gcm.inv.models.portfolio_construction.portfolio_metrics.portfolio_metrics import _process_optim_fund_inputs, \
     ProcessedFundInputs
 
@@ -121,7 +120,7 @@ def _query_portfolio_attributes(
 
 def _query_fund_attributes(sql_client: SqlOdbcClient) -> pd.DataFrame:
     query = (
-        f"""
+        """
         WITH AttributesTbl
         AS (
         SELECT distinct
