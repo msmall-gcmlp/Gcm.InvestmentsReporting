@@ -18,8 +18,9 @@ def _clean_firmwide_xpfund_data(df):
     df = df.dropna(subset=['FirmwideAllocation'])
     return df
 
+
 def _clean_ticker_names(df):
-    ar_bmrk_clean_summary=df
+    ar_bmrk_clean_summary = df
     rep = {"SPXT": "US Eq", 
            "I00078US": "Risk Free",
            "XNDX": "Tech Eq", 
@@ -30,18 +31,18 @@ def _clean_ticker_names(df):
            "\nName: 0, dtype: object": "", 
            "nan": "", 
            "IWM": "Small Cap Eq",
-           " * ": "*"} # define desired replacements here
-    
+           " * ": "*"}  # define desired replacements here
+
     rep = dict((re.escape(k), v) for k, v in rep.items()) 
     pattern = re.compile("|".join(rep.keys()))
-    
+
     def func(text):
-        text=str(text)
+        text = str(text)
         return pattern.sub(lambda m: rep[re.escape(m.group(0))], text)
-    
-    cleaned_list=[]
+
+    cleaned_list = []
     for item in ar_bmrk_clean_summary['absolute_return_benchmark']:
-        cleaned_str=func(str(item))
+        cleaned_str = func(str(item))
         cleaned_list.append(cleaned_str)
     cleaned_df = pd.DataFrame(cleaned_list, columns=['absolute_return_benchmark']) 
     return cleaned_df
@@ -202,7 +203,6 @@ def _status_wl():
         include_filters=include_filters,
         exclude_filters=exclude_filters,
     )
-
     wl = fund_dimn[['InvestmentGroupName', 'IsWatchList']]
     return wl
 
@@ -249,9 +249,12 @@ def _status_options(df, as_of_date):
     return wl, status_alloc, close_end
 
 
-def _summarize_data(df, as_of_date):
+def _summarize_data(df, as_of_date, portfolio_acronym):
     status_hierarchy = _status_options(df=df, as_of_date=as_of_date)
-    inv_group_basics = df[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation']]
+    if (portfolio_acronym is None):
+        inv_group_basics = df[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation']]
+    else:
+        inv_group_basics = df[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 'PctNav', 'Pnl']]
     shortfall_sum = _shortfall_pass_fail_summary(df=df, wl=status_hierarchy[0], alloc_status=status_hierarchy[1], close_end=status_hierarchy[2])
     arb_definition = _arb_definition(df=df)
     xs_return_sum = _ar_xs_ret_summary(df=df)
@@ -270,7 +273,36 @@ def _summarize_data(df, as_of_date):
     return summary
 
 
-def _get_high_performing_summary(df):
+# def _get_high_performing_summary(df):
+#     high_perf = df
+#     high_perf = high_perf.loc[(df['3Y_ptiles'] >= 75) | (df['5Y_ptiles'] >= 75)]
+#     high_perf = high_perf.iloc[::-1]
+#     high_perf['Pass/Fail'] = ""
+#     high_perf_sum = high_perf[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
+#                              'Pass/Fail', 'status', 'absolute_return_benchmark']]
+#     high_perf_data = high_perf.drop(['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
+#                                      'Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
+
+#     high_perf_sum = high_perf_sum.reset_index()
+#     high_perf_sum['index'] = np.arange(len(high_perf_sum)) + 1
+#     high_perf_sum.at[' ', 'FirmwideAllocation'] = high_perf_sum['FirmwideAllocation'].sum()
+#     high_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Sustained High PQ Capital'
+#     return high_perf_sum, high_perf_data
+
+
+# def _get_low_performing_summary(df):
+#     low_perf = df.loc[(df['3Y_ptiles'] <= 25) | (df['5Y_ptiles'] <= 25) | (df['Pass/Fail'] == 'Fail')]
+#     low_perf_sum = low_perf[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
+#                              'Pass/Fail', 'status', 'absolute_return_benchmark']]
+#     low_perf_data = low_perf.drop(['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
+#                                    'Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
+#     low_perf_sum = low_perf_sum.reset_index()
+#     low_perf_sum['index'] = np.arange(len(low_perf_sum)) + 1
+#     low_perf_sum.at[' ', 'FirmwideAllocation'] = low_perf_sum['FirmwideAllocation'].sum()
+#     low_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Low PQ Capital'
+#     return low_perf_sum, low_perf_data
+
+def _get_firmwide_high_performing_summary(df):
     high_perf = df
     high_perf = high_perf.loc[(df['3Y_ptiles'] >= 75) | (df['5Y_ptiles'] >= 75)]
     high_perf = high_perf.iloc[::-1]
@@ -283,11 +315,11 @@ def _get_high_performing_summary(df):
     high_perf_sum = high_perf_sum.reset_index()
     high_perf_sum['index'] = np.arange(len(high_perf_sum)) + 1
     high_perf_sum.at[' ', 'FirmwideAllocation'] = high_perf_sum['FirmwideAllocation'].sum()
-    high_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Sustained High PQ Capital'
+    high_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total High PQ Capital'
     return high_perf_sum, high_perf_data
 
 
-def _get_low_performing_summary(df):
+def _get_firmwide_low_performing_summary(df):
     low_perf = df.loc[(df['3Y_ptiles'] <= 25) | (df['5Y_ptiles'] <= 25) | (df['Pass/Fail'] == 'Fail')]
     low_perf_sum = low_perf[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
                              'Pass/Fail', 'status', 'absolute_return_benchmark']]
@@ -300,10 +332,44 @@ def _get_low_performing_summary(df):
     return low_perf_sum, low_perf_data
 
 
+def _get_portfolio_high_performing_summary(df):
+    high_perf = df
+    high_perf = high_perf.loc[(df['3Y_ptiles'] >= 75) | (df['5Y_ptiles'] >= 75)]
+    high_perf = high_perf.iloc[::-1]
+    high_perf['Pass/Fail'] = ""
+    high_perf_sum = high_perf[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
+                             'Pass/Fail', 'status', 'PctNav', 'Pnl', 'absolute_return_benchmark']]
+    high_perf_data = high_perf.drop(['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
+                                     'Pass/Fail', 'status', 'PctNav', 'Pnl', 'absolute_return_benchmark'], axis=1)
+
+    high_perf_sum = high_perf_sum.reset_index()
+    high_perf_sum['index'] = np.arange(len(high_perf_sum)) + 1
+    high_perf_sum.at[' ', 'FirmwideAllocation'] = high_perf_sum['FirmwideAllocation'].sum()
+    high_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total High PQ Capital'
+    return high_perf_sum, high_perf_data
+
+
+def _get_portfolio_low_performing_summary(df):
+    low_perf = df.loc[(df['3Y_ptiles'] <= 25) | (df['5Y_ptiles'] <= 25) | (df['Pass/Fail'] == 'Fail')]
+    low_perf_sum = low_perf[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
+                             'Pass/Fail', 'status', 'PctNav', 'Pnl', 'absolute_return_benchmark']]
+    low_perf_data = low_perf.drop(['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
+                                   'Pass/Fail', 'status', 'PctNav', 'Pnl', 'absolute_return_benchmark'], axis=1)
+    low_perf_sum = low_perf_sum.reset_index()
+    low_perf_sum['index'] = np.arange(len(low_perf_sum)) + 1
+    low_perf_sum.at[' ', 'FirmwideAllocation'] = low_perf_sum['FirmwideAllocation'].sum()
+    low_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Low PQ Capital'
+    return low_perf_sum, low_perf_data
+
+
 def _xpfund_data_to_highlow_df(df: pd.DataFrame,
                                as_of_date,
-                               periods: List[str] = ['TTM', '5Y', '10Y']):
+                               periods: List[str] = ['TTM', '5Y', '10Y'],
+                               portfolio_acronym=None):
     df_fw_cleaned = _clean_firmwide_xpfund_data(df=df)
+
+    if (portfolio_acronym is not None):
+        df_fw_cleaned = _get_portfolio_allocations(df=df_fw_cleaned, as_of_date=as_of_date, portfolio_acronym=portfolio_acronym)
 
     df_xs = _3y_arb_xs_analysis(df=df_fw_cleaned)
     df_xs.rename(columns={
@@ -325,7 +391,22 @@ def _xpfund_data_to_highlow_df(df: pd.DataFrame,
 
     df_pctiles_with_exposures = _net_exposure_clean(df=df_pctiles_q_lag)
 
-    df = _summarize_data(df=df_pctiles_with_exposures, as_of_date=as_of_date)
-    high_perf = _get_high_performing_summary(df=df)
-    low_perf = _get_low_performing_summary(df=df)    
+    df = _summarize_data(df=df_pctiles_with_exposures, as_of_date=as_of_date, portfolio_acronym=portfolio_acronym)
+    if (portfolio_acronym is None):  
+        high_perf = _get_firmwide_high_performing_summary(df=df)
+        low_perf = _get_firmwide_low_performing_summary(df=df) 
+    else:
+        high_perf = _get_portfolio_high_performing_summary(df=df)
+        low_perf = _get_portfolio_low_performing_summary(df=df)    
     return high_perf[0], high_perf[1], low_perf[0], low_perf[1]
+
+
+def _get_portfolio_allocations(df, portfolio_acronym, as_of_date):
+    start_date = as_of_date.replace(day=1)
+
+    portfolio = Portfolio(acronyms=[portfolio_acronym])
+    holdings = portfolio.get_holdings(start_date=start_date, end_date=as_of_date)
+    holding_allocations = holdings[['InvestmentGroupName', 'PctNav', 'Pnl']]
+
+    portfolio_allocations = df.merge(holding_allocations, on='InvestmentGroupName', how='right')
+    return portfolio_allocations
