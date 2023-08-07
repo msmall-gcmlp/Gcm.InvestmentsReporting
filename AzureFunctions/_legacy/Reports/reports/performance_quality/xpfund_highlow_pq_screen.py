@@ -23,10 +23,11 @@ from _legacy.core.Runners.investmentsreporting import (
 
 
 class XPfundHighLowPQScreen(ReportingRunnerBase):
-    def __init__(self, runner, as_of_date):
+    def __init__(self, runner, as_of_date, portfolio_acronym=None):
         #super().__init__(runner=Scenario.get_attribute("runner"))
         super().__init__(runner=runner)
         self._as_of_date = as_of_date
+        self._portfolio_acronym = portfolio_acronym
 
     def _download_inputs(self, runner, dl_location, file_path) -> dict:
         try:
@@ -61,23 +62,24 @@ class XPfundHighLowPQScreen(ReportingRunnerBase):
         return xpfund_inputs
 
     def generate_xpfund_high_pq_screen_data(self):
-        with Scenario(dao=self._runner, as_of_date=self._as_of_date).context():
+        with Scenario(dao=self._runner, as_of_date=self._as_of_date, portfolio_acronym=self._portfolio_acronym).context():
             date_q_minus_1 = pd.to_datetime(self._as_of_date - pd.tseries.offsets.QuarterEnd(1)).date()
             firm_xpfund_report_data = self._get_xpfund_pq_report(runner=self._runner, as_of_date=date_q_minus_1)
             firm_xpfund_highlow_df = firm_xpfund_report_data.copy()
-            firm_xpfund_highlow_df = _xpfund_data_to_highlow_df(firm_xpfund_highlow_df, self._as_of_date)
+            firm_xpfund_highlow_df = _xpfund_data_to_highlow_df(firm_xpfund_highlow_df, self._as_of_date, portfolio_acronym=portfolio_acronym)
 
-        report_name = "ARS Performance Quality - Firmwide High Performance Screen"
-        high_rep_data = {
-            'as_of_date1': pd.DataFrame({'date': [self._as_of_date]}),
-            'as_of_date2': pd.DataFrame({'date': [self._as_of_date]}),
-            "high_perf_summary": firm_xpfund_highlow_df[0],
-            "high_perf_data": firm_xpfund_highlow_df[1],
-            "low_perf_summary": firm_xpfund_highlow_df[2],
-            "low_perf_data": firm_xpfund_highlow_df[3],
-        }
-        with Scenario(as_of_date=self._as_of_date).context():
-            InvestmentsReportRunner().execute(
+        if (portfolio_acronym is None):
+            report_name = "ARS Performance Quality - Firmwide High Low Performance Screen"
+            high_rep_data = {
+                'as_of_date1': pd.DataFrame({'date': [self._as_of_date]}),
+                'as_of_date2': pd.DataFrame({'date': [self._as_of_date]}),
+                "high_perf_summary": firm_xpfund_highlow_df[0],
+                "high_perf_data": firm_xpfund_highlow_df[1],
+                "low_perf_summary": firm_xpfund_highlow_df[2],
+                "low_perf_data": firm_xpfund_highlow_df[3],
+            }
+            with Scenario(as_of_date=self._as_of_date).context():
+                InvestmentsReportRunner().execute(
                     data=high_rep_data,
                     template="highlow_pq_1.xlsx",
                     save=True,
@@ -90,7 +92,35 @@ class XPfundHighLowPQScreen(ReportingRunnerBase):
                     report_vertical=ReportVertical.ARS,
                     report_frequency="Monthly",
                     aggregate_intervals=AggregateInterval.MTD,
-            )
+                )
+
+        else:
+            report_name = "ARS Performance Quality - Portfolio High Low Performance Screen"
+            high_rep_data = {
+                'as_of_date1': pd.DataFrame({'date': [self._as_of_date]}),
+                'as_of_date2': pd.DataFrame({'date': [self._as_of_date]}),
+                'portfolio_name1': pd.DataFrame({'acronym': [self._portfolio_acronym]}),
+                'portfolio_name2': pd.DataFrame({'acronym': [self._portfolio_acronym]}),
+                "high_perf_summary": firm_xpfund_highlow_df[0],
+                "high_perf_data": firm_xpfund_highlow_df[1],
+                "low_perf_summary": firm_xpfund_highlow_df[2],
+                "low_perf_data": firm_xpfund_highlow_df[3],
+            }
+            with Scenario(as_of_date=self._as_of_date).context():
+                InvestmentsReportRunner().execute(
+                    data=high_rep_data,
+                    template="portfolio_highlow_pq.xlsx",
+                    save=True,
+                    runner=self._runner,
+                    entity_type=ReportingEntityTypes.cross_entity,
+                    entity_name='Portfolio',
+                    entity_display_name=self._portfolio_acronym,
+                    report_name=report_name,
+                    report_type=ReportType.Performance,
+                    report_vertical=ReportVertical.ARS,
+                    report_frequency="Monthly",
+                    aggregate_intervals=AggregateInterval.MTD,
+                )
 
         return firm_xpfund_highlow_df
 
@@ -127,7 +157,8 @@ if __name__ == "__main__":
         },
     )
     date = dt.date(2023, 6, 30)
+    portfolio_acronym = 'GIP'
     inv_group_ids = None
     with Scenario(as_of_date=date).context():
-        report = XPfundHighLowPQScreen(runner=dao_runner, as_of_date=date)
+        report = XPfundHighLowPQScreen(runner=dao_runner, as_of_date=date, portfolio_acronym=portfolio_acronym)
         report.execute()
