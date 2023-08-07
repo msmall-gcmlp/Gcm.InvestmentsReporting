@@ -90,7 +90,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             wide=True,
             priority_waterfall=None,
         )
-        #fund_monthly_returns=fund_monthly_returns.sort_index()
         return fund_monthly_returns
 
     @cached_property
@@ -137,9 +136,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
     @cached_property
     def _peer_constituent_returns(self):
-        # y=self._peers.get_constituent_returns(
-        #     start_date=dt.date(2000, 1, 1), end_date=self._end_date, peer_groups=self._peer_groups
-        # )
         return self._peers.get_constituent_returns(
             start_date=dt.date(2000, 1, 1), end_date=self._end_date, peer_groups=self._peer_groups
         )
@@ -154,7 +150,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
     @cached_property
     def _get_net_exposures(self):
         fund_monthly_exposures = self._inv_group.get_monthly_pub_exposure(
-            start_date=dt.date(1970, 1, 1),
+            start_date=dt.date(2000, 1, 1),
             end_date=self._end_date
         )
         fund_exp_net_df = fund_monthly_exposures[[
@@ -165,7 +161,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             'InvestmentGroupName', 'Date']).agg({'NetNotional': 'sum'}).reset_index()
         fund_exp_net_timeseries = fund_exp_net_df.sort_values(by=[
             'InvestmentGroupName', 'Date'])
-        i = pd.date_range(dt.date(1970, 1, 1), self._end_date, freq='M', name='Date')
+        i = pd.date_range(dt.date(2000, 1, 1), self._end_date, freq='M', name='Date')
         fund_exp_net_timeseries = fund_exp_net_timeseries.set_index(
             'Date').groupby('InvestmentGroupName', group_keys=False)\
             .apply(lambda s: s.reindex(i).ffill()).reset_index()
@@ -179,7 +175,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
     @cached_property
     def _get_gross_exposures(self):
         fund_monthly_exposures = self._inv_group.get_monthly_pub_exposure(
-            start_date=dt.date(1970, 1, 1),
+            start_date=dt.date(2000, 1, 1),
             end_date=self._end_date
         )
         fund_monthly_exposures = fund_monthly_exposures[[
@@ -188,7 +184,7 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             ['InvestmentGroupName', 'Date']).agg({'GrossNotional': 'sum'}).reset_index()
         fund_monthly_gross_exposures = fund_monthly_exposures.sort_values(
             by=['InvestmentGroupName', 'Date'])
-        i = pd.date_range(dt.date(1970, 1, 1), self._end_date, freq='M', name='Date')
+        i = pd.date_range(dt.date(2000, 1, 1), self._end_date, freq='M', name='Date')
         fund_monthly_gross_exposures = fund_monthly_gross_exposures.set_index('Date').groupby(
             'InvestmentGroupName', group_keys=False)\
             .apply(lambda s: s.reindex(i).ffill()).reset_index()
@@ -355,7 +351,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
 
     def get_performance_quality_report_inputs(self):
         exposure_latest, exposure_3y, exposure_5y, exposure_10y = self._get_exposures()
-        #fund_exp_net_timeseries, fund_monthly_exposures_timeseries = self._get_timeseries_exposures
         market_factor_returns = self._get_rf_and_spx()
         peer_benchmark_returns = self._get_peer_benchmark_returns()
 
@@ -372,12 +367,6 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             dimn = self._fund_dimn[self._fund_dimn["InvestmentGroupId"] == fund_id]
             fund_inputs["fund_dimn"] = dimn.to_json(orient="index")
             name = dimn["InvestmentGroupName"].squeeze()
-
-            # expectations = self._fund_expectations[self._fund_expectations["InvestmentGroupId"] == fund_id]
-            # fund_inputs["expectations"] = expectations.to_json(orient="index")
-
-            # fl_expected_returns=self._fund_fl_expected_returns[self._fund_fl_expected_returns["InvestmentGroupId"] == fund_id]
-            # fund_inputs["fl_expected_returns"] = fl_expected_returns.to_json(orient="index")
 
             returns = self._report_fund_returns.loc[:, self._report_fund_returns.columns.isin([name])].dropna()
             fund_inputs["fund_returns"] = returns.to_json(orient="index")
@@ -558,7 +547,7 @@ if __name__ == "__main__":
         },
     )
 
-    as_of_date = dt.date(2022, 9, 30)
+    as_of_date = dt.date(2022, 10, 31)
     with Scenario(dao=runner, as_of_date=as_of_date).context():
         ids = [20016, 23441, 75614, 28015]  # prd
         # ids = [19224, 23319, 74984]  # dev
