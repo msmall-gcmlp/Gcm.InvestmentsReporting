@@ -65,7 +65,7 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
             {'HEALTH CARE': 'Health Care', 'FINANCIALS': 'Financials', 'INFORMATION TECHNOLOGY': 'Info Tech',
              'CONSUMER DISCRETIONARY': 'Cons Discr', 'BROAD MARKET INDICES': 'Index', 'UTILITIES': 'Utilities',
              'OTHER': 'Other', 'INDUSTRIALS': 'Industrials', 'COMMUNICATION SERVICES': 'Comm Svcs', 'ENERGY': 'Energy',
-             'REAL ESTATE': 'Real Estate', 'UTILITIES AND TELECOMMUNICATIONS': 'Util & Telecomm',
+             'REAL ESTATE': 'Real Estate', 'UTILITIES AND TELECOMMUNICATIONS': 'Utilities',
              'MATERIALS': 'Materials', 'CONSUMER STAPLES': 'Cons Staples', 'CONGLOMERATES': 'Conglom',
              'COMMUNICATIONS': 'Comm Svcs'})
 
@@ -146,7 +146,7 @@ if __name__ == "__main__":
         }
     )
 
-    end_date = dt.date(2023, 2, 28)
+    end_date = dt.date(2022, 12, 31)
 
     with Scenario(dao=runner, as_of_date=end_date).context():
         SingleNameEquityExposureInvestmentsGroupPersist().execute()
