@@ -1,5 +1,8 @@
 from gcm.inv.scenario import Scenario
-from gcm.inv.utils.date.AggregateInterval import AggregateInterval
+from gcm.inv.utils.date.AggregateInterval import (
+    AggregateInterval,
+    AggregateIntervalReportHandler,
+)
 import datetime as dt
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain.entity_domain_types import (
     EntityDomainTypes,
@@ -33,21 +36,22 @@ class TestPvmManagerTrReport(object):
         return entity_info
 
     def test_run_local(self):
-        aggs = [AggregateInterval.FullLife]
+        aggs = [
+            AggregateIntervalReportHandler([AggregateInterval.FullLife])
+        ]
         for a in aggs:
             with Scenario(
                 as_of_date=dt.date(2022, 12, 31),
-                aggregate_interval=a,
+                aggregate_interval=a.aggregate_intervals[0],
                 save=True,
             ).context():
-
                 d = EntityDomainTypes.InvestmentManager
                 entity_info = TestPvmManagerTrReport.get_entity(
                     d, "Brasa Capital Management"
                 )
                 this_meta = ReportMeta(
                     type=ReportType.Performance,
-                    interval=Scenario.get_attribute("aggregate_interval"),
+                    intervals=a,
                     consumer=ReportConsumer(
                         horizontal=[ReportConsumer.Horizontal.IC],
                         vertical=ReportConsumer.Vertical.Real_Estate,

@@ -83,7 +83,6 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
 
     # next check format conditions
     if bool(sheet.render_params.trim_region):
-
         trim_rows = _generate_ws_level_trim_rows(wb, sheet)
         if len(trim_rows) > 0:
             wb = _trim_and_resize_rows(

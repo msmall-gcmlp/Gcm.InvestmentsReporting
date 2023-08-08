@@ -3,7 +3,10 @@ from .....core.report_structure import (
     ReportMeta,
     AvailableMetas,
 )
-from gcm.inv.utils.date.AggregateInterval import AggregateInterval
+from gcm.inv.utils.date.AggregateInterval import (
+    AggregateInterval,
+    AggregateIntervalReportHandler,
+)
 from .....core.report_structure import (
     ReportType,
     ReportConsumer,
@@ -126,7 +129,9 @@ class BasePvmTrackRecordReport(ReportStructure):
             frequencies=[
                 Frequency(FrequencyType.Once),
             ],
-            aggregate_intervals=[AggregateInterval.ITD],
+            aggregate_intervals=[
+                AggregateIntervalReportHandler([AggregateInterval.ITD])
+            ],
             consumer=ReportConsumer(
                 horizontal=[ReportConsumer.Horizontal.IC],
                 vertical=ReportConsumer.Vertical.PE,

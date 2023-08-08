@@ -14,7 +14,10 @@ from .entity_handler import EntityReportingMetadata
 from openpyxl import Workbook
 from typing import List, Optional, Callable
 from gcm.inv.utils.misc.extended_enum import ExtendedEnum
-from gcm.inv.utils.date.AggregateInterval import AggregateInterval
+from gcm.inv.utils.date.AggregateInterval import (
+    AggregateInterval,
+    AggregateIntervalReportHandler,
+)
 from gcm.inv.utils.date.Frequency import Frequency, FrequencyType, Calendar
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain.entity_domain_types import (
     EntityDomainTypes,
@@ -103,14 +106,14 @@ class ReportMeta(SerializableBase):
     def __init__(
         self,
         type: ReportType,
-        interval: AggregateInterval,
+        intervals: AggregateIntervalReportHandler,
         frequency: Frequency,
         consumer: ReportConsumer,
         entity_domain: EntityDomainTypes = None,
         entity_info: pd.DataFrame = None,
     ):
         self.type = type
-        self.interval = interval
+        self.intervals = intervals
         self.frequency = frequency
         self.consumer = consumer
         self.entity_domain = entity_domain
@@ -119,7 +122,9 @@ class ReportMeta(SerializableBase):
     @classmethod
     def from_dict(cls, d: dict) -> "ReportMeta":
         report_type = ReportType[d["report_type"]]
-        interval = AggregateInterval[d["interval"]]
+        intervals = AggregateIntervalReportHandler(
+            [AggregateInterval[x] for x in d["intervals"]]
+        )
         frequency = Frequency(FrequencyType[d["frequency"]])
         consumer: ReportConsumer = ReportConsumer.from_dict(d["consumer"])
         e_domain = None
@@ -129,13 +134,15 @@ class ReportMeta(SerializableBase):
         if "entity_info" in d:
             e_info = pd.read_json(d["entity_info"])
         return ReportMeta(
-            report_type, interval, frequency, consumer, e_domain, e_info
+            report_type, intervals, frequency, consumer, e_domain, e_info
         )
 
     def to_dict(self):
         d = {
             "report_type": self.type.name,
-            "interval": self.interval.name,
+            "intervals": [
+                x.name for x in self.intervals.aggregate_intervals
+            ],
             "frequency": self.frequency.type.name,
             "consumer": self.consumer.to_dict(),
         }
@@ -150,7 +157,7 @@ class AvailableMetas(object):
     def __init__(
         self,
         report_type: ReportType,
-        aggregate_intervals: List[AggregateInterval],
+        aggregate_intervals: List[AggregateIntervalReportHandler],
         consumer: ReportConsumer,
         frequencies: List[Frequency] = [
             Frequency(FrequencyType.Once, Calendar.AllDays)
@@ -184,7 +191,6 @@ class ReportStructure(SerializableBase):
             and self.report_meta.entity_info is not None
             and type(self.report_meta.entity_info) == pd.DataFrame
         ):
-
             df: pd.DataFrame = self.report_meta.entity_info
             entity_names = list(df[Standards.EntityName].dropna().unique())
             if len(entity_names) == 1:
@@ -208,7 +214,10 @@ class ReportStructure(SerializableBase):
     @cached_property
     def base_file_name(self):
         report_name = self.report_name.name
-        entity_type_display, entity_name_display = self._get_entity_file_display_name()
+        (
+            entity_type_display,
+            entity_name_display,
+        ) = self._get_entity_file_display_name()
         # no need to add "Other" to string
         report_type = (
             self.report_meta.type.name
@@ -217,20 +226,7 @@ class ReportStructure(SerializableBase):
         )
         date: dt.date = Scenario.get_attribute("as_of_date")
         date_str = date.strftime("%Y-%m-%d")
-        aggregate_interval: AggregateInterval = Scenario.get_attribute(
-            "aggregate_interval"
-        )
-        if len(self.available_metas().aggregate_intervals) > 1:
-            aggregate_interval = (
-                AggregateInterval.Multi
-                if (
-                    aggregate_interval is None
-                    or type(aggregate_interval) != AggregateInterval
-                )
-                else aggregate_interval
-            ).name
-        else:
-            aggregate_interval = None
+        aggregate_intervals = self.report_meta.intervals.to_reporting_tag()
         frequency_id = (
             self.report_meta.frequency.type.name
             if len(self.available_metas().frequencies) > 1
@@ -243,7 +239,7 @@ class ReportStructure(SerializableBase):
                 entity_name_display,
                 entity_type_display,
                 report_type,
-                aggregate_interval,
+                aggregate_intervals,
                 frequency_id,
                 date_str,
             ]
@@ -403,7 +399,7 @@ class ReportStructure(SerializableBase):
             ).strftime("%Y-%m-%d"),
             class_type.gcm_business_group: self.report_meta.consumer.vertical.value,
             class_type.gcm_report_frequency: self.report_meta.frequency.type.name,
-            class_type.gcm_report_period: self.report_meta.interval.name,
+            class_type.gcm_report_period: self.report_meta.intervals.to_reporting_tag(),
             class_type.gcm_report_type: self.report_meta.type.value,
             class_type.gcm_target_audience: json.dumps(
                 list(

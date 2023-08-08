@@ -77,7 +77,6 @@ class OneThreeFiveRenderer(object):
         def _apply_and_gen(
             _item: OneThreeFiveResult,
         ) -> PerformanceConcentrationResultCluster:
-
             inputs = {
                 "this_result": _item,
                 "top_line_node": top_line,

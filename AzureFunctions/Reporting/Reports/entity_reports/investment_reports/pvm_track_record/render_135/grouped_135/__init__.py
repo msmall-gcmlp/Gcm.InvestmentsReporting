@@ -8,7 +8,6 @@ class OneThreeFive_Bucketed_And_Total(BaseRenderer):
         Breakout_1_3_5_Bucketed_And_Other: pd.DataFrame,
         Breakout_1_3_5_Total: pd.DataFrame,
     ):
-
         self.Breakout_1_3_5_Bucketed_And_Other = (
             Breakout_1_3_5_Bucketed_And_Other
         )

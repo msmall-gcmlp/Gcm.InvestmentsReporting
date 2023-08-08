@@ -39,7 +39,6 @@ from gcm.inv.dataprovider.entity_provider.entity_domains.synthesis_unit.type_con
 
 
 class PvmPerformanceBreakoutReport(ReportStructure):
-
     # TODO: DT note: move report_name_enum into report_meta. It belongs under the report_meta scope
     #  report_name_enum is currently being used to:
     #       1. determine report file name
