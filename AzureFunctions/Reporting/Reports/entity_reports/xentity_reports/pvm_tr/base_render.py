@@ -13,9 +13,11 @@ from gcm.inv.models.pvm.node_evaluation.evaluation_provider.df_utils import (
     generate_percent_column,
     atomic_node_count,
 )
+from .....core.components.report_worksheet import ReportWorksheet
 from gcm.inv.utils.pvm.node import PvmNodeBase
 from typing import List, Tuple
 from .utils import enhanced_display_name
+from abc import ABC, abstractmethod
 
 
 class BaseRenderer:
@@ -163,3 +165,12 @@ class BaseRenderer:
         total_df = cls.generate_updated_diplay_name(total_df)
         total_df = cls.render_with_final_columns(total_df)
         return cls(breakout, total_df)
+
+
+class RenderTablesRenderer(ABC):
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def render(self) -> ReportWorksheet:
+        raise NotImplementedError()

@@ -62,7 +62,5 @@ class TestPvmManagerTrReport(object):
             )
             this_report = PvmManagerTrackRecordReport(this_meta)
             assert this_report is not None
-            output = print(
-                report_structure=this_report, print_pdf=False
-            )
+            output = print(report_structure=this_report, print_pdf=False)
             assert output is not None

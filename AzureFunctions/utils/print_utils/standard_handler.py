@@ -13,7 +13,7 @@ from Reporting.core.components.report_workbook_handler import (
     ReportWorkBookHandler,
 )
 from ..conversion_tools.combine_excel import copy_sheet
-from typing import List
+from typing import List, NamedTuple
 from ..conversion_tools.convert_excel_to_pdf import convert
 import io
 import re
@@ -165,15 +165,20 @@ def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
     return wb
 
 
-def merge_files(wb_list: List[Workbook]):
-    merged = wb_list[0]
+class mergable_workbook(NamedTuple):
+    SHORT_NAME: str
+    WB: Workbook
+
+
+def merge_files(wb_list: List[mergable_workbook]):
+    merged = wb_list[0].WB
     wb_count = 0
     for k in wb_list:
         if wb_count > 0:
             ws_count = 0
-            for s in k.sheetnames:
-                source_sheet: Worksheet = k[s]
-                target_sheet_name = f"{s}_{wb_count}_{ws_count}"
+            for s in k.WB.sheetnames:
+                source_sheet: Worksheet = k.WB[s]
+                target_sheet_name = f"{k.SHORT_NAME}_{s}"
                 merged.create_sheet(target_sheet_name)
                 ws2: Worksheet = merged[target_sheet_name]
                 copy_sheet(source_sheet, ws2)

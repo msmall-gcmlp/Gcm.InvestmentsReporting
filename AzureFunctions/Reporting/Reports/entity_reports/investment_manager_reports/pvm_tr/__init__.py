@@ -27,6 +27,11 @@ from gcm.inv.models.pvm.node_evaluation.evaluation_provider import (
 from gcm.inv.models.pvm.underwriting_analytics.perf_1_3_5 import (
     generate_realized_unrealized_all_performance_breakout,
 )
+from ...xentity_reports.pvm_tr.render_attribution import (
+    RenderAttribution,
+    TEMPLATE as Template_Attribution,
+)
+import re
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
@@ -73,15 +78,12 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         return children
 
     def generate_135_tables(self) -> ReportWorksheet:
-        positions: PvmEvaluationProvider = (
-            self.node_provider.position_tr_node_provider
-        )
         realization_status_breakout = (
             generate_realized_unrealized_all_performance_breakout(
-                positions
+                self.positions
             )
         )
-        dimns = positions.atomic_dimensions
+        dimns = self.positions.atomic_dimensions
         position_map = self.position_to_investment_breakout
         item = OneThreeFiveRenderer(
             breakout=realization_status_breakout,
@@ -91,16 +93,62 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         return item.render()
 
     @property
-    def attribution_items(self):
-        return ['InvestmentName']
-
-    def generate_attribution_items(self) -> List[ReportWorksheet]:
+    def positions(self):
         positions: PvmEvaluationProvider = (
             self.node_provider.position_tr_node_provider
         )
+        return positions
+
+    @cached_property
+    def attribution_items(self):
+        # TODO: make this dynamic based on whats available
+        explict_excludes = ["INVESTMENTID"]
+
+        def evaluate_if_to_be_used(column_name: str) -> bool:
+            values = list(
+                set(list(self.positions.atomic_dimensions[column_name]))
+            )
+            has_right_types = any([type(x) in [int, str] for x in values])
+            is_id = column_name not in self.positions.atomic_df_identifier
+            is_not_bad = column_name.upper() not in explict_excludes
+            return has_right_types and is_id and is_not_bad
+
+        items = [
+            x
+            for x in self.positions.atomic_dimensions.columns
+            if evaluate_if_to_be_used(x)
+        ]
+        return items
+
+    def generate_attribution_items(self) -> List[ReportWorkBookHandler]:
+        positions: PvmEvaluationProvider = (
+            self.node_provider.position_tr_node_provider
+        )
+        wbs: List[ReportWorkBookHandler] = []
+        match_set = []
+        # reason for this: can only have 31 characters in a tab name
+        final_len = len(RenderAttribution.GROSS_ATTRIBUTION_TAB)
+        max_length = 31
+        final_len = max_length - (final_len + len("_"))
+        regex = re.compile("[^A-Za-z0-9 ]+")
         for i in self.attribution_items:
-            evaluated = positions.generate_evaluatable_node_hierarchy([i])
-            assert evaluated is not None
+            short_name = regex.sub("", i)
+            short_name = short_name.replace(" ", "")[:final_len]
+            if short_name.upper() not in match_set:
+                evaluated = positions.generate_evaluatable_node_hierarchy(
+                    [i]
+                )
+                rendered = RenderAttribution(evaluated).render()
+
+                wb = ReportWorkBookHandler(
+                    i,
+                    Template_Attribution,
+                    report_sheets=[rendered],
+                    short_name=short_name,
+                )
+                wbs.append(wb)
+                match_set.append(short_name.upper())
+        return wbs
 
     @cached_property
     def investments(self) -> List[str]:
@@ -110,12 +158,16 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             c[EntityStandardNames.EntityName].dropna().drop_duplicates()
         )
 
+    def investment_reports(self) -> List[ReportWorkBookHandler]:
+        pass
+
     def assign_components(self) -> List[ReportWorkBookHandler]:
         attribution = self.generate_attribution_items()
-        return [
+        final = [
             ReportWorkBookHandler(
                 self.manager_name,
                 Template_135,
                 [self.generate_135_tables()],
             )
-        ]
+        ] + attribution
+        return final

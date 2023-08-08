@@ -5,6 +5,7 @@ from gcm.inv.models.pvm.underwriting_analytics.perf_1_3_5 import (
     RealizedUnrealized_135_Breakout,
 )
 from .renderers.top_deals import TopDeals_And_Total
+from ..base_render import RenderTablesRenderer
 from .renderers.grouped_135 import OneThreeFive_Bucketed_And_Total
 from .renderers.return_distribution import ReturnDistributions
 from ......core.components.report_worksheet import (
@@ -58,7 +59,7 @@ class PerformanceConcentration_Results(NamedTuple):
         return final
 
 
-class OneThreeFiveRenderer(object):
+class OneThreeFiveRenderer(RenderTablesRenderer):
     def __init__(
         self,
         breakout: RealizedUnrealized_135_Breakout,
@@ -71,7 +72,7 @@ class OneThreeFiveRenderer(object):
         )
         self.position_dimn = position_dimn
 
-    def _generate_clean_dfs(self):
+    def _generate_clean_dfs(self) -> PerformanceConcentration_Results:
         top_line = self.breakout.All.base_item
 
         def _apply_and_gen(
