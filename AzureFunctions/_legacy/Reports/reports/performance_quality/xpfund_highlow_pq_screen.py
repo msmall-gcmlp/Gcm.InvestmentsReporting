@@ -62,13 +62,13 @@ class XPfundHighLowPQScreen(ReportingRunnerBase):
         return xpfund_inputs
 
     def generate_xpfund_high_pq_screen_data(self):
-        with Scenario(dao=self._runner, as_of_date=self._as_of_date, portfolio_acronym=self._portfolio_acronym).context():
+        with Scenario(dao=self._runner, as_of_date=self._as_of_date).context():
             date_q_minus_1 = pd.to_datetime(self._as_of_date - pd.tseries.offsets.QuarterEnd(1)).date()
             firm_xpfund_report_data = self._get_xpfund_pq_report(runner=self._runner, as_of_date=date_q_minus_1)
             firm_xpfund_highlow_df = firm_xpfund_report_data.copy()
-            firm_xpfund_highlow_df = _xpfund_data_to_highlow_df(firm_xpfund_highlow_df, self._as_of_date, portfolio_acronym=portfolio_acronym)
+            firm_xpfund_highlow_df = _xpfund_data_to_highlow_df(firm_xpfund_highlow_df, self._as_of_date, portfolio_acronym=self._portfolio_acronym)
 
-        if (portfolio_acronym is None):
+        if (self._portfolio_acronym is None):
             report_name = "ARS Performance Quality - Firmwide High Low Performance Screen"
             high_rep_data = {
                 'as_of_date1': pd.DataFrame({'date': [self._as_of_date]}),
@@ -157,8 +157,9 @@ if __name__ == "__main__":
         },
     )
     date = dt.date(2023, 6, 30)
-    portfolio_acronym = 'GIP'
+    #portfolio_acronym = 'GIP'
     inv_group_ids = None
     with Scenario(as_of_date=date).context():
-        report = XPfundHighLowPQScreen(runner=dao_runner, as_of_date=date, portfolio_acronym=portfolio_acronym)
+        report = XPfundHighLowPQScreen(runner=dao_runner, as_of_date=date, portfolio_acronym='GIP')
+        #report = XPfundHighLowPQScreen(runner=dao_runner, as_of_date=date)
         report.execute()
