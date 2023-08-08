@@ -3,7 +3,9 @@ from gcm.inv.entityhierarchy.EntityDomain.entity_domain import (
     pd,
     Standards as EntityStandardNames,
 )
+from Reporting.Reports.report_names import ReportNames
 from .analytics import get_performance_report_dict
+from .analytics.standards import TransactionTypes
 from .helpers import (
     convert_amt_to_usd,
     get_ilevel_cfs,
@@ -52,10 +54,14 @@ class PvmPerfomanceHelperSingleton(metaclass=Singleton):
 
 class PvmPerformanceHelper(object):
     def __init__(
-        self, entity_domain: EntityDomainTypes, entity_info: pd.DataFrame
+        self,
+        entity_domain: EntityDomainTypes,
+        entity_info: pd.DataFrame,
+        report_name_enum: Enum,
     ):
         self.entity_domain = entity_domain
         self.entity_info = entity_info
+        self.report_name_enum = report_name_enum
 
     class Cf_Filter_Type(Enum):
         AllCashflows = auto()
@@ -66,6 +72,52 @@ class PvmPerformanceHelper(object):
     class ReportedCfType(Enum):
         AMV = auto()
         RMV = auto()
+
+    @property
+    def group_cols(self) -> List[str]:
+        __name = "__report_group_cols"
+        if getattr(self, __name, None) is None:
+            # makeshift report config for summary tables and calcs
+            report_group_cols = None
+            if (
+                self.report_name_enum
+                == ReportNames.PE_Portfolio_Performance_x_Vintage_Realization_Status
+            ):
+                report_group_cols = [
+                    "Portfolio",
+                    "VintageYear",
+                    "PredominantRealizationTypeCategory",
+                    "DealName",
+                ]
+            elif (
+                self.report_name_enum
+                == ReportNames.PE_Portfolio_Performance_x_Investment_Manager
+            ):
+                report_group_cols = [
+                    "Portfolio",
+                    "InvestmentManagerName",
+                    "DealName",
+                ]
+            elif (
+                self.report_name_enum
+                == ReportNames.PE_Portfolio_Performance_x_Sector
+            ):
+                report_group_cols = [
+                    "Portfolio",
+                    "PredominantSector",
+                    "DealName",
+                ]
+            elif (
+                self.report_name_enum
+                == ReportNames.PE_Portfolio_Performance_x_Region
+            ):
+                report_group_cols = [
+                    "Portfolio",
+                    "PredominantAssetRegion",
+                    "DealName",
+                ]
+            setattr(self, __name, report_group_cols)
+        return getattr(self, __name, None)
 
     def get_cfs_of_type(
         self,
@@ -82,9 +134,23 @@ class PvmPerformanceHelper(object):
                     self.related_mgr_holdings.HoldingName
                 )
             ]
+        if self.entity_domain == EntityDomainTypes.Vertical:
+            # adhoc - PE primary and co's only example below
+            raw_df = raw_df[
+                raw_df.PredominantInvestmentType.isin(
+                    [
+                        "Co-investment/Direct",
+                        "Primary Fund",
+                        # 'Secondary'
+                    ]
+                )
+            ]
+            raw_df = raw_df[
+                raw_df.PredominantAssetClass.isin(["Private Equity"])
+            ]
 
         max_nav_date = (
-            raw_df[raw_df.TransactionType == "Net Asset Value"]
+            raw_df[(raw_df.TransactionType.isin(TransactionTypes.R.value))]
             .groupby(["OwnerName", "InvestmentName"])
             .TransactionDate.max()
             .reset_index()
@@ -118,18 +184,18 @@ class PvmPerformanceHelper(object):
             ]
             irr_cf["TransactionType"] = np.where(
                 irr_cf.TransactionType.str.contains("Contributions -"),
-                "Contributions",
+                "T",
                 irr_cf.TransactionType,
             )
             irr_cf["TransactionType"] = np.where(
                 irr_cf.TransactionType.str.contains("Distributions -"),
-                "Distributions",
+                "D",
                 irr_cf.TransactionType,
             )
             irr_cf.BaseAmount = irr_cf.BaseAmount * -1
             latest_reported_nav = raw_df[
                 (raw_df.TransactionDate == raw_df.MaxNavDate)
-                & (raw_df.TransactionType == "Net Asset Value")
+                & (raw_df.TransactionType.isin(TransactionTypes.R.value))
             ]
             irr_cf_rslt = (
                 pd.concat([irr_cf, latest_reported_nav])
@@ -139,7 +205,9 @@ class PvmPerformanceHelper(object):
             return irr_cf_rslt
         if cf_type == PvmPerformanceHelper.Cf_Filter_Type.NavTimeSeries:
             nav_df = (
-                raw_df[raw_df.TransactionType == "Net Asset Value"]
+                raw_df[
+                    raw_df.TransactionType.isin(TransactionTypes.R.value)
+                ]
                 .sort_values("TransactionDate")
                 .reset_index(drop=True)
             )
@@ -165,8 +233,14 @@ class PvmPerformanceHelper(object):
                 & (commitment_df.TransactionDate == as_of_date)
             ]
             funded = commitment_df[
-                commitment_df.TransactionType
-                != "Unfunded Commitment Without Modification"
+                (
+                    commitment_df.TransactionType
+                    != "Unfunded Commitment Without Modification"
+                )
+                & (
+                    commitment_df.TransactionDate
+                    <= commitment_df.MaxNavDate
+                )
             ]
             funded = (
                 funded[["OwnerName", "InvestmentName", "Commitment"]]
@@ -224,7 +298,10 @@ class PvmPerformanceHelper(object):
                         ].to_list()
                     )
                 ]
+            elif self.entity_domain == EntityDomainTypes.Vertical:
+                df = all_os
             setattr(self, __name, df)
+
         return getattr(self, __name, None)
 
     @property
@@ -292,40 +369,40 @@ class PvmPerformanceHelper(object):
             df = PvmPerfomanceHelperSingleton().all_deal_attributes
             filtered = df[df["OsTicker"].isin(self.os_tickers)]
             filtered["Portfolio"] = self.top_line_owner
+            filtered["Name"] = filtered.apply(
+                lambda x: "_".join(
+                    [
+                        str(x[i])
+                        for i in self.recursion_iterate_controller[-1]
+                    ]
+                ),
+                axis=1,
+            )
             setattr(self, __name, filtered)
         return getattr(self, __name, None)
 
     @property
     def recursion_iterate_controller(self) -> List[List[str]]:
+        # TODO: DT note - code currently requires 'Portfolio' to be in the group columns
+        #  revisit logic and concept
         __name = "recursion_iterate"
         if getattr(self, __name, None) is None:
-            list_of_items = None
-            if self.entity_domain == EntityDomainTypes.InvestmentManager:
-                list_of_items = [
-                    ["Portfolio"],
-                    ["PredominantInvestmentType"],
-                    ["PredominantInvestmentType", "PredominantSector"],
-                    [
-                        "PredominantInvestmentType",
-                        "PredominantSector",
-                        "PredominantRealizationTypeCategory",
-                    ],
-                    ["Name"],
+            list_of_group_cols = [self.group_cols]
+            list_of_group_cols.extend(
+                [
+                    list_of_group_cols[-1][
+                        0 : len(self.group_cols) - 1 - i
+                    ]
+                    for i in range(len(self.group_cols) - 1)
                 ]
-            elif self.entity_domain == EntityDomainTypes.Portfolio:
-                list_of_items = [
-                    ["Portfolio"],
-                    ["PredominantInvestmentType"],
-                    ["PredominantInvestmentType", "PredominantSector"],
-                    ["Name"],
-                ]
-            setattr(self, __name, list_of_items)
+            )
+            recursion_iterate = [i for i in reversed(list_of_group_cols)]
+            setattr(self, __name, recursion_iterate)
         return getattr(self, __name, None)
 
     @property
     def trailing_periods(self, as_of_date) -> dict:
-        # TODO: make this work so not using tmp_trailing_periods
-        # TODO: also probably should use standard trailing_period enums
+        # TODO: make this standard
         return {
             "QTD": 1,
             "YTD": int(as_of_date.month / 3),
@@ -337,19 +414,12 @@ class PvmPerformanceHelper(object):
 
     @property
     def attributes_needed(self) -> List[str]:
-        if self.entity_domain == EntityDomainTypes.Portfolio:
-            return [
-                "Name",
-                "PredominantInvestmentType",
-                "PredominantSector",
-            ]
-        elif self.entity_domain == EntityDomainTypes.InvestmentManager:
-            return [
-                "Name",
-                "PredominantInvestmentType",
-                "PredominantSector",
-                "PredominantRealizationTypeCategory",
-            ]
+        # TODO: DT note - 'Name' here is a contatenation of group_cols with "_" delim... revisit logic and concept
+        attributes_needed = [
+            "Name" if i == 0 else self.group_cols[i]
+            for i in range(len(self.group_cols))
+        ]
+        return attributes_needed
 
     @property
     def top_line_owner(self) -> str:
@@ -371,6 +441,11 @@ class PvmPerformanceHelper(object):
                 )
                 assert len(tickers) == 1
                 setattr(self, __name, tickers[0])
+            elif self.entity_domain == EntityDomainTypes.Vertical:
+                # ad hoc/temporary
+                tickers = ["GCM PE"]
+                assert len(tickers) == 1
+                setattr(self, __name, tickers[0])
         return getattr(self, __name, None)
 
     def generate_components_for_this_entity(
@@ -388,14 +463,19 @@ class PvmPerformanceHelper(object):
             reporting_type,
         )
         full_cfs = pd.concat(
-            [irr_cfs[irr_cfs.TransactionType != "Net Asset Value"], nav_df]
+            [
+                irr_cfs[
+                    ~irr_cfs.TransactionType.isin(TransactionTypes.R.value)
+                ],
+                nav_df,
+            ]
         )
         commitment_df = self.get_cfs_of_type(
             as_of_date,
             PvmPerformanceHelper.Cf_Filter_Type.CommitmentSeries,
             reporting_type,
         )
-        # was having issue getting trailing_periods property to work, temp solution
+        # TODO: move to argument/scenario/standard config
         tmp_trailing_period = {
             "QTD": 1,
             "YTD": int(as_of_date.month / 3),
@@ -404,6 +484,7 @@ class PvmPerformanceHelper(object):
             "5Y": 20,
             "ITD": "ITD",
         }
+
         report_json = get_performance_report_dict(
             owner=self.top_line_owner,
             list_to_iterate=self.recursion_iterate_controller,
@@ -420,6 +501,9 @@ class PvmPerformanceHelper(object):
         report_json.update(
             {
                 "Date": pd.DataFrame({"Date": [as_of_date]}),
+                "report_display_name": pd.DataFrame(
+                    {"ReportDisplayName": [self.report_name_enum.value]}
+                ),
                 "PortfolioName": pd.DataFrame(
                     {"PortfolioName": [self.top_line_owner]},
                 ),
