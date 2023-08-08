@@ -11,7 +11,7 @@ from ....core.report_structure import (
 )
 from ....core.components.report_workbook_handler import (
     ReportWorkBookHandler,
-    ReportWorksheet
+    ReportWorksheet,
 )
 import pandas as pd
 from ...report_names import ReportNames
@@ -19,6 +19,7 @@ from functools import cached_property
 from typing import List
 from ..investment_reports.pvm_track_record.render_135 import (
     OneThreeFiveRenderer,
+    TEMPLATE as Template_135,
 )
 from gcm.inv.models.pvm.node_evaluation.evaluation_provider import (
     PvmEvaluationProvider,
@@ -87,8 +88,7 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             position_to_investment_mapping=position_map,
             position_dimn=dimns,
         )
-        rendered = item.render()
-        assert rendered is not None
+        return item.render()
 
     @property
     def investments(self) -> List[str]:
@@ -99,5 +99,10 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         )
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
-        results_135 = self.generate_135_tables()
-        ReportWorkBookHandler(self.manager_name, )
+        return [
+            ReportWorkBookHandler(
+                self.manager_name,
+                Template_135,
+                [self.generate_135_tables()],
+            )
+        ]

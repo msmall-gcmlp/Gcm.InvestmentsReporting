@@ -3,6 +3,7 @@ from gcm.inv.models.pvm.node_evaluation.evaluation_provider.df_utils import (
     ATOMIC_COUNT,
 )
 from gcm.inv.utils.pvm.node import PvmNodeBase
+import numbers
 
 
 def enhanced_display_name(inputted_frame: pd.DataFrame) -> pd.DataFrame:
@@ -11,8 +12,8 @@ def enhanced_display_name(inputted_frame: pd.DataFrame) -> pd.DataFrame:
         def _merge_investment_name(item):
             existing_display_name = item[PvmNodeBase._DISPLAY_NAME]
             cnt = item[ATOMIC_COUNT]
-            if type(cnt) == int and cnt > 0:
-                return f"{existing_display_name} [{cnt}]"
+            if isinstance(cnt, numbers.Number) and cnt > 0:
+                return f"{existing_display_name} [{int(cnt)}]"
             return existing_display_name
 
         inputted_frame[PvmNodeBase._DISPLAY_NAME] = inputted_frame.apply(

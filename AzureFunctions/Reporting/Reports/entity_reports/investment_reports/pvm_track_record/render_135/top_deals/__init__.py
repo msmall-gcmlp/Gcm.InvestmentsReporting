@@ -29,7 +29,7 @@ class TopDeals_And_Total(BaseRenderer):
         )
         self.Deal_Summary_Total = Deal_Summary_Total
 
-    TopDeals_And_Total_Evaluated_Columns = [
+    Evaluated_Columns = [
         PvmNodeEvaluatable.PvmEvaluationType.cost,
         PvmNodeEvaluatable.PvmEvaluationType.unrealized_value,
         PvmNodeEvaluatable.PvmEvaluationType.total_value,
@@ -37,9 +37,10 @@ class TopDeals_And_Total(BaseRenderer):
         PvmNodeEvaluatable.PvmEvaluationType.moic,
         PvmNodeEvaluatable.PvmEvaluationType.irr,
     ]
+    _PERCENT_OF_TOTAL = PvmNodeEvaluatable.PvmEvaluationType.pnl
+
     _POSTION_DIMN = "PositionDimn"
     _INVESTMENT_DIMN = "InvestmentDimn"
-
     _investment_name = "InvestmentName"
 
     _REQUIRED_DEAL_REFERENCE_DATA = [
@@ -47,6 +48,10 @@ class TopDeals_And_Total(BaseRenderer):
         ("ExitDate", _POSTION_DIMN),
         (_investment_name, _INVESTMENT_DIMN),
     ]
+
+    @classmethod
+    def _evaluated_columns_to_show_in_df(cls):
+        return [x.name for x in cls.Evaluated_Columns]
 
     @staticmethod
     def _get_deal_reference_data_table(
@@ -90,8 +95,6 @@ class TopDeals_And_Total(BaseRenderer):
 
         return top_deals_df
 
-    _PERCENT_OF_TOTAL = PvmNodeEvaluatable.PvmEvaluationType.pnl
-
     @classmethod
     def generate_updated_diplay_name(
         cls, df: pd.DataFrame
@@ -99,9 +102,14 @@ class TopDeals_And_Total(BaseRenderer):
         if TopDeals_And_Total._investment_name in df.columns:
 
             def _merge_investment_name(item):
-                existing_display_name = item[PvmNodeBase._DISPLAY_NAME]
+                existing_display_name = str(
+                    item[PvmNodeBase._DISPLAY_NAME]
+                )
                 inv_name = item[TopDeals_And_Total._investment_name]
-                return f"{existing_display_name} [{inv_name}]"
+                if existing_display_name.lower() != "other":
+                    return f"{existing_display_name} [{inv_name}]"
+                else:
+                    return existing_display_name
 
             df[PvmNodeBase._DISPLAY_NAME] = df.apply(
                 lambda x: _merge_investment_name(x), axis=1
@@ -112,7 +120,9 @@ class TopDeals_And_Total(BaseRenderer):
     @classmethod
     def _reference_columns(cls):
         return super()._reference_columns() + [
-            x[0] for x in cls._REQUIRED_DEAL_REFERENCE_DATA
+            x[0]
+            for x in cls._REQUIRED_DEAL_REFERENCE_DATA
+            if x[0] != cls._investment_name
         ]
 
     @classmethod
@@ -122,7 +132,7 @@ class TopDeals_And_Total(BaseRenderer):
         top_deals_df = simple_display_df_from_list(top_deals, measures)
         other = this_result.other_minus_top_5_atoms
         other_df = df_evaluate(other, measures)
-        other_df[ATOMIC_COUNT] = atomic_node_count(other)
+        other_df[ATOMIC_COUNT] = int(atomic_node_count(other))
         top_deals_df = pd.concat([top_deals_df, other_df])
         return top_deals_df
 

@@ -25,8 +25,8 @@ class BaseRenderer:
     _PERCENT_OF_TOTAL = PvmNodeEvaluatable.PvmEvaluationType.pnl
 
     Evaluated_Columns = [
-        PvmNodeEvaluatable.PvmEvaluationType.moic,
         PvmNodeEvaluatable.PvmEvaluationType.irr,
+        PvmNodeEvaluatable.PvmEvaluationType.moic,
         _PERCENT_OF_TOTAL,
     ]
 
@@ -35,13 +35,17 @@ class BaseRenderer:
         return [PvmNodeBase._DISPLAY_NAME]
 
     @classmethod
-    def _final_column_list(cls):
-        reference_columns = cls._reference_columns()
-        evaluated_columns = [
+    def _evaluated_columns_to_show_in_df(cls):
+        return [
             x.name
             for x in cls.Evaluated_Columns
             if x != cls._PERCENT_OF_TOTAL
         ]
+
+    @classmethod
+    def _final_column_list(cls):
+        reference_columns = cls._reference_columns()
+        evaluated_columns = cls._evaluated_columns_to_show_in_df()
         percentage_columns = [
             OnTheFlyComputedColumnType.InGroup,
             OnTheFlyComputedColumnType.OnTopLine,
@@ -78,7 +82,7 @@ class BaseRenderer:
             df = df_evaluate(v, measures)
             if k < 0:
                 # is 'other'
-                df[ATOMIC_COUNT] = atomic_node_count(v)
+                df[ATOMIC_COUNT] = int(atomic_node_count(v))
             one_three_five_other.append(df)
         one_three_five_other = pd.concat(one_three_five_other)
         one_three_five_other.reset_index(inplace=True, drop=True)
@@ -89,7 +93,9 @@ class BaseRenderer:
         total_df = df_evaluate(
             this_result.base_item, cls.Evaluated_Columns
         )
-        total_df[ATOMIC_COUNT] = atomic_node_count(this_result.base_item)
+        total_df[ATOMIC_COUNT] = int(
+            atomic_node_count(this_result.base_item)
+        )
         return total_df
 
     @classmethod
@@ -152,7 +158,7 @@ class BaseRenderer:
             breakout=breakout,
             total_df=total_df,
         )
-        breakout = enhanced_display_name(breakout)
+        breakout = cls.generate_updated_diplay_name(breakout)
         breakout = cls.render_with_final_columns(breakout)
         total_df = cls.generate_updated_diplay_name(total_df)
         total_df = cls.render_with_final_columns(total_df)
