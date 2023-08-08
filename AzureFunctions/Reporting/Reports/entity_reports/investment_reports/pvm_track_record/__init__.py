@@ -130,7 +130,10 @@ class BasePvmTrackRecordReport(ReportStructure):
                 Frequency(FrequencyType.Once),
             ],
             aggregate_intervals=[
-                AggregateIntervalReportHandler([AggregateInterval.ITD])
+                AggregateIntervalReportHandler([AggregateInterval.ITD]),
+                AggregateIntervalReportHandler(
+                    [AggregateInterval.FullLife]
+                ),
             ],
             consumer=ReportConsumer(
                 horizontal=[ReportConsumer.Horizontal.IC],

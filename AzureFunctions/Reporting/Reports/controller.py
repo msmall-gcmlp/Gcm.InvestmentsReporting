@@ -56,7 +56,15 @@ def validate_meta(
 ):
     available_metas: AvailableMetas = report_structure.available_metas()
     assert available_metas is not None
-    assert report_meta.interval in available_metas.aggregate_intervals
+    passed_intervals = [
+        x for x in report_meta.intervals.aggregate_intervals
+    ]
+    check_interval = []
+    for i in available_metas.aggregate_intervals:
+        check_interval.append(
+            all([x in i.aggregate_intervals for x in passed_intervals])
+        )
+    assert any(check_interval)
     as_of_date = Scenario.get_attribute("as_of_date")
     frequency_type: FrequencyType = report_meta.frequency.type
     if strict:
