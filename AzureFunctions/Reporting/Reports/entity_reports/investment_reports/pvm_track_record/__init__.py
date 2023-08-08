@@ -24,7 +24,7 @@ from gcm.inv.dataprovider.entity_data.investment_manager.pvm.tr import (
     TrackRecordManagerProvider,
     TrackRecordHandler,
 )
-from typing import List
+from typing import List, Callable
 from gcm.Dao.DaoRunner import AzureDataLakeDao
 from gcm.inv.models.pvm.node_evaluation.evaluation_provider.from_.pvm_track_record import (
     PvmTrackRecordNodeProvider,
@@ -41,9 +41,12 @@ from gcm.inv.models.pvm.node_evaluation.evaluation_provider.custom_buckets.by_re
 )
 from gcm.inv.scenario import gcm_cell
 import pandas as pd
+from gcm.inv.dataprovider.entity_provider.controller import (
+    EntityDomainProvider,
+)
+from gcm.inv.utils.parsed_args.parsed_args import ParsedArgs
 
-
-# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-09-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
+# http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-12-31&ReportName=PvmManagerTrackRecordReport&test=True&frequency=Once&save=True&aggregate_interval=FullLife&EntityDomainTypes=InvestmentManager&EntityNames=[%22Brasa%20Capital%20Management%22]
 
 
 class BasePvmTrackRecordReport(ReportStructure):
@@ -69,6 +72,12 @@ class BasePvmTrackRecordReport(ReportStructure):
             self.manager_name
         )
         return manager_handler
+
+    @classmethod
+    def standard_entity_get_callable(
+        cls, domain: EntityDomainProvider, pargs: ParsedArgs
+    ) -> Callable[..., pd.DataFrame]:
+        return domain.get_pvm_underwriting_entities
 
     def evaluated_by_realization_status(
         self,
