@@ -190,3 +190,7 @@ class BasePvmTrackRecordReport(ReportStructure):
             entity="exceltemplates",
             path=["AttributionResults.xlsx"],
         )
+
+    @abstractproperty
+    def attribution_items(self) -> List[str]:
+        raise NotImplementedError()

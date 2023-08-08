@@ -1,23 +1,23 @@
-from ..investment_reports.pvm_track_record import (
+from ...xentity_reports.pvm_tr import (
     BasePvmTrackRecordReport,
 )
-from ....core.report_structure import (
+from .....core.report_structure import (
     ReportMeta,
     EntityStandardNames,
 )
 from gcm.Dao.DaoRunner import AzureDataLakeDao
-from ....core.report_structure import (
+from .....core.report_structure import (
     EntityDomainTypes,
 )
-from ....core.components.report_workbook_handler import (
+from .....core.components.report_workbook_handler import (
     ReportWorkBookHandler,
     ReportWorksheet,
 )
 import pandas as pd
-from ...report_names import ReportNames
+from ....report_names import ReportNames
 from functools import cached_property
 from typing import List
-from ..investment_reports.pvm_track_record.render_135 import (
+from ...xentity_reports.pvm_tr.render_135 import (
     OneThreeFiveRenderer,
     TEMPLATE as Template_135,
 )
@@ -76,21 +76,33 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         positions: PvmEvaluationProvider = (
             self.node_provider.position_tr_node_provider
         )
-        realized_breakout = (
+        realization_status_breakout = (
             generate_realized_unrealized_all_performance_breakout(
-                self.node_provider.position_tr_node_provider
+                positions
             )
         )
         dimns = positions.atomic_dimensions
         position_map = self.position_to_investment_breakout
         item = OneThreeFiveRenderer(
-            breakout=realized_breakout,
+            breakout=realization_status_breakout,
             position_to_investment_mapping=position_map,
             position_dimn=dimns,
         )
         return item.render()
 
     @property
+    def attribution_items(self):
+        return ['InvestmentName']
+
+    def generate_attribution_items(self) -> List[ReportWorksheet]:
+        positions: PvmEvaluationProvider = (
+            self.node_provider.position_tr_node_provider
+        )
+        for i in self.attribution_items:
+            evaluated = positions.generate_evaluatable_node_hierarchy([i])
+            assert evaluated is not None
+
+    @cached_property
     def investments(self) -> List[str]:
         c = self.children
         assert c is not None
@@ -99,6 +111,7 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         )
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
+        attribution = self.generate_attribution_items()
         return [
             ReportWorkBookHandler(
                 self.manager_name,

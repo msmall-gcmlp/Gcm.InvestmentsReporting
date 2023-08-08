@@ -1,5 +1,5 @@
 import pandas as pd
-from ..base_render import BaseRenderer
+from ....base_render import BaseRenderer
 
 
 class OneThreeFive_Bucketed_And_Total(BaseRenderer):

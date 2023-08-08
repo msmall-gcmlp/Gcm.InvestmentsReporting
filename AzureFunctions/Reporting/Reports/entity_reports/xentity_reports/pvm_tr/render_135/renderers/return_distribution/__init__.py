@@ -13,7 +13,7 @@ from gcm.inv.models.pvm.node_evaluation.evaluation_provider.df_utils import (
 from gcm.inv.models.pvm.node_evaluation.evaluation_provider.custom_buckets.by_perf_type import (
     PerformanceBucketType,
 )
-from ..base_render import BaseRenderer
+from ....base_render import BaseRenderer
 
 
 class ReturnDistributions(BaseRenderer):

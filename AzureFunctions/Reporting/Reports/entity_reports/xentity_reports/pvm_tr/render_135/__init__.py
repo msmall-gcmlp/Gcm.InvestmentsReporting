@@ -4,9 +4,9 @@ from gcm.inv.models.pvm.underwriting_analytics.perf_1_3_5 import (
     OneThreeFiveResult,
     RealizedUnrealized_135_Breakout,
 )
-from .top_deals import TopDeals_And_Total
-from .grouped_135 import OneThreeFive_Bucketed_And_Total
-from .return_distribution import ReturnDistributions
+from .renderers.top_deals import TopDeals_And_Total
+from .renderers.grouped_135 import OneThreeFive_Bucketed_And_Total
+from .renderers.return_distribution import ReturnDistributions
 from ......core.components.report_worksheet import (
     ReportWorksheet,
     ReportTable,

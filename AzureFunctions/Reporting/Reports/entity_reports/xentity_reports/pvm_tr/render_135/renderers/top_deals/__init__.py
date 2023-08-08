@@ -14,8 +14,8 @@ from gcm.inv.models.pvm.node_evaluation.evaluation_provider.df_utils import (
 )
 from gcm.inv.utils.pvm.node import PvmNodeBase
 from typing import List
-from ...utils import enhanced_display_name
-from ..base_render import BaseRenderer
+from ....utils import enhanced_display_name
+from ....base_render import BaseRenderer
 
 
 class TopDeals_And_Total(BaseRenderer):
