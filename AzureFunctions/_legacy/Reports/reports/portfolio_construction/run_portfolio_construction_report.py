@@ -24,16 +24,32 @@ class PortfolioConstructionReport(ReportingRunnerBase):
         self._as_of_date = Scenario.get_attribute("as_of_date")
 
     def generate_excel_report(self, acronym, scenario_name, as_of_date):
-        weights, optim_inputs, reference_attributes = get_report_data(portfolio_acronym=acronym,
-                                                                      scenario_name=scenario_name,
-                                                                      as_of_date=as_of_date)
+        weights, optim_inputs, reference_attributes, ms_lt = get_report_data(portfolio_acronym=acronym,
+                                                                             scenario_name=scenario_name,
+                                                                             as_of_date=as_of_date)
         excel_data = generate_excel_report_data(acronym=acronym,
                                                 scenario_name=scenario_name,
                                                 as_of_date=as_of_date,
                                                 weights=weights,
                                                 optim_inputs=optim_inputs,
-                                                reference_attributes=reference_attributes)
+                                                reference_attributes=reference_attributes,
+                                                multi_strat_lookthrough=ms_lt)
         portfolio_dimn = Portfolio(acronyms=[acronym]).get_dimensions()
+        #
+        # import json
+        # from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
+        # data_to_write = json.dumps({k: excel_data.get(k).to_json(orient="index") for k in excel_data.keys()})
+        # as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+        # write_params = AzureDataLakeDao.create_get_data_params(
+        #     "raw/investmentsreporting/summarydata/portfolioconstruction",
+        #     acronym.replace("/", "") + "_" + scenario_name + "_" + as_of_date + ".json",
+        #     retry=False,
+        # )
+        # self._runner.execute(
+        #     params=write_params,
+        #     source=DaoSource.DataLake,
+        #     operation=lambda dao, params: dao.post_data(params, data_to_write),
+        # )
 
         as_of_date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
         if scenario_name == 'Default':
@@ -117,41 +133,22 @@ if __name__ == "__main__":
             }
         })
 
-    acronyms = [
-        'ALPHAOPP',
-        'ANCHOR4',
-        'ASUTY',
-        'BALCERA',
-        'BH2',
-        'BUCKEYE',
-        'BUTTER',
-        'BUTTERB',
-        'CARMEL',
-        'CASCADE',
-        'CHARLES2',
-        'CHARTEROAK',
-        'CICFOREST',
-        'CLOVER2',
-        'CORKTOWN',
-        'CPA',
-        'CPAT',
-        'CTOM',
-        'ELAR',
-        'FALCON',
-        'FARIA',
-        'FATHUNTER',
-        'FOB',
-        'FTPAT',
-        'GAIC',
-        'GIP',
-        'RAVEN1',
-        'WILMORE'
-    ]
+    acronyms = ['AAH', 'AIF1', 'ALPHAOPP', 'ANCHOR4', 'ANCHOR4C', 'AOF', 'ASUTY', 'BALCERA', 'BH2', 'BUCKEYE',
+                'BUTTER', 'BUTTERB', 'CARMEL', 'CASCADE', 'CHARLES2', 'CHARTEROAK', 'CICFOREST', 'CLOVER2', 'CMFL',
+                'CORKTOWN', 'CPA', 'CPAT', 'CTOM', 'ELAR', 'FALCON', 'FARIA', 'FATHUNTER', 'FOB', 'FTPAT', 'GAIC',
+                'GARS-A', 'GBMF', 'GCM SELECT', 'GIP', 'GJFF', 'GJFF-B', 'GMMUT', 'GMSF', 'GMSUT3YD', 'GMSUTVY',
+                'GMSUTVYC', 'GOATMF', 'GOLDEN', 'GOMCFLP', 'GOMSF', 'GRMSMF', 'GROVE', 'HFGPS', 'HFGPSOFF',
+                'IF', 'IFC', 'IFCC', 'IFCH', 'IFH', 'JDPTCONS', 'JJP', 'JJP-B', 'JPASA', 'LOTUSC', 'LUPINEB', 'MACRO',
+                'MAY14', 'MFIA', 'MMUT', 'MPAC', 'OCFV', 'PSUTY', 'RAVEN1', 'RAVEN6', 'ROGUE', 'SCARFD', 'SF',
+                'SINGULAR', 'SMART', 'SOLAR', 'SPECTRUM', 'STAR', 'TEKTON', 'TITANIUM',
+                'WILMORE', 'WINDANDSEA']
+
+    acronyms = ['CORKTOWN']
 
     for portfolio_acronym in acronyms:
-        as_of_date = dt.date(2023, 5, 1)
-        scenario_name = "default_test"
-
+        as_of_date = dt.date(2023, 7, 1)
+        scenario_name = "Default"
+        print(portfolio_acronym)
         with Scenario(dao=dao_runner, as_of_date=as_of_date).context():
             PortfolioConstructionReport().run(
                 portfolio_acronym=portfolio_acronym,

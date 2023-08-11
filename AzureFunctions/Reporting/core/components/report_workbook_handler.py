@@ -9,7 +9,7 @@ class ReportWorkBookHandler(ReportComponentBase):
         self,
         component_name: str,
         template_location: AzureDataLakeDao.BlobFileStructure,
-        report_sheets: List[ReportWorksheet] = [],
+        report_sheets: List[ReportWorksheet] = None,
     ):
         super().__init__(component_name)
         self.template_location = template_location

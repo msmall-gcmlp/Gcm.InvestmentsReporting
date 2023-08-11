@@ -437,7 +437,11 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
         )
 
     def run(self, **kwargs):
-        self.generate_peer_level_summaries()
+        try:
+            self.generate_peer_level_summaries()
+            # TODO andrew
+        except Exception:
+            return f"Failed for {self._peer_group}"
         return self._peer_group + " Complete"
 
     def extract_peer_data(self):
