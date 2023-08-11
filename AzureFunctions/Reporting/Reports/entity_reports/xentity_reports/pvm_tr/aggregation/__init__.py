@@ -1,5 +1,5 @@
 from typing import List
-from AzureFunctions.Reporting.core.components.report_workbook_handler import (
+from ......core.components.report_workbook_handler import (
     ReportWorkBookHandler,
 )
 from ......Reports.report_names import ReportNames
@@ -9,7 +9,6 @@ from ....investment_manager_reports.pvm_tr import (
 )
 import copy
 from ....investment_reports.pvm_tr import PvmInvestmentTrackRecordReport
-from functools import cached_property
 from gcm.inv.dataprovider.entity_provider.controller import (
     get_entity_domain_provider,
 )
@@ -49,7 +48,7 @@ class PvmManagerTrackRecordReportAggregation(PvmManagerTrackRecordReport):
         return wbs
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
-        investment_reports = self.investment_report_wbs()
+        # investment_reports = self.investment_report_wbs()
         base_items = super().assign_components()
 
-        return base_items + investment_reports
+        return base_items

@@ -173,8 +173,9 @@ class mergable_workbook(NamedTuple):
 def merge_files(wb_list: List[mergable_workbook]):
     merged = wb_list[0].WB
     wb_count = 0
-    max_length = 31
+    max_length = 30
     regex = re.compile("[^A-Za-z0-9 ]+")
+    cache = []
     for k in wb_list:
         if wb_count > 0:
             ws_count = 0
@@ -184,9 +185,11 @@ def merge_files(wb_list: List[mergable_workbook]):
                 short_name = short_name.replace(" ", "")[:final_len]
                 source_sheet: Worksheet = k.WB[s]
                 target_sheet_name = f"{short_name}_{s}"
-                merged.create_sheet(target_sheet_name)
-                ws2: Worksheet = merged[target_sheet_name]
-                copy_sheet(source_sheet, ws2)
+                if target_sheet_name.upper() not in cache:
+                    merged.create_sheet(target_sheet_name)
+                    ws2: Worksheet = merged[target_sheet_name]
+                    copy_sheet(source_sheet, ws2)
+                    cache.append(target_sheet_name.upper())
                 ws_count = ws_count + 1
         wb_count = wb_count + 1
     return merged

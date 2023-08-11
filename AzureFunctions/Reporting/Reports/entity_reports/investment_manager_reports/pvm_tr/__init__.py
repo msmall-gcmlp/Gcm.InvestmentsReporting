@@ -130,7 +130,8 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             for x in self.position_node_provider.atomic_dimensions.columns
             if evaluate_if_to_be_used(x)
         ]
-        return items
+        items.append("AssetName")
+        return list(set(items))
 
     def generate_attribution_items(self) -> List[ReportWorkBookHandler]:
         wbs: List[ReportWorkBookHandler] = []

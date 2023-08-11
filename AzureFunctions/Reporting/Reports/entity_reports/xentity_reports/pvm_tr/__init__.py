@@ -106,9 +106,10 @@ class BasePvmTrackRecordReport(ReportStructure):
         handler = GetPvmInvestmentTrackRecord(investment_names=inputs)
         as_of_date = Scenario.get_attribute("as_of_date")
         aggregate_interval = Scenario.get_attribute("aggregate_interval")
-        return handler.get_scenario_investment_objects(
+        item = handler.get_scenario_investment_objects(
             as_of_date=as_of_date, aggregate_interval=aggregate_interval
         )
+        return item
 
     @cached_property
     def idw_pvm_tr_id(self) -> int:
