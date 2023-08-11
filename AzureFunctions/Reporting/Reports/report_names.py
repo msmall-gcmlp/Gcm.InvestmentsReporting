@@ -15,6 +15,7 @@ class ReportNames(ExtendedEnum):
 
     PvmManagerTrackRecordReport = auto()
     PvmInvestmentTrackRecordReport = auto()
+    PvmManagerTrackRecordReportAggregation = auto()
 
     PvmPerformanceBreakoutReport = auto()
     PE_Portfolio_Performance_x_Vintage_Realization_Status = (

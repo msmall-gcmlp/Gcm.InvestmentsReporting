@@ -97,7 +97,8 @@ class BasePvmTrackRecordReport(ReportStructure):
     def scenario_evaluated_investments(
         self,
     ) -> List[PvmTrackRecordInvestmentDataContainer]:
-        # use data provider to get all scenario objects. nice thing is thiat this gets released
+        # use data provider to get all scenario objects.
+        # nice thing is thiat this gets released
         inputs = [
             Investment_To_ManagerMapping(x, self.manager_name)
             for x in self.investments
@@ -181,6 +182,18 @@ class BasePvmTrackRecordReport(ReportStructure):
         )
         merged.drop_duplicates(inplace=True)
         return merged
+
+    
+    @property
+    def investment_node_provider(self) -> PvmEvaluationProvider:
+        node_provider: PvmTrackRecordNodeProvider = self.node_provider
+        return node_provider.investment_tr_node_provider
+    
+    @property
+    def position_node_provider(self) -> PvmEvaluationProvider:
+        node_provider: PvmTrackRecordNodeProvider = self.node_provider
+        return node_provider.position_tr_node_provider
+
 
     @property
     def attribution_template(self):

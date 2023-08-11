@@ -16,6 +16,9 @@ from .entity_reports.investment_manager_reports.pvm_tr import (
 from .entity_reports.xentity_reports.pvm_portfolio_performance_report import (
     PvmPerformanceBreakoutReport,
 )
+from .entity_reports.xentity_reports.pvm_tr.aggregation import (
+    PvmManagerTrackRecordReportAggregation,
+)
 from .report_names import ReportNames
 from ..core.report_structure import (
     ReportStructure,
@@ -43,6 +46,8 @@ def get_report_class_by_name(name: ReportNames):
         return AggregatedPortolioFundAttributeReport
     if name == ReportNames.PvmManagerTrackRecordReport:
         return PvmManagerTrackRecordReport
+    if name == ReportNames.PvmManagerTrackRecordReportAggregation:
+        return PvmManagerTrackRecordReportAggregation
     if name == ReportNames.PvmPerformanceBreakoutReport:
         return PvmPerformanceBreakoutReport
     else:

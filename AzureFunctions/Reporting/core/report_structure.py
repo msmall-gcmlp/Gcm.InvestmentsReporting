@@ -211,9 +211,12 @@ class ReportStructure(SerializableBase):
                 )
             return entity_type_display, entity_name
 
+    def get_report_name_for_file(self):
+        return self.report_name.name
+
     @cached_property
     def base_file_name(self):
-        report_name = self.report_name.name
+        report_name = self.get_report_name_for_file()
         (
             entity_type_display,
             entity_name_display,

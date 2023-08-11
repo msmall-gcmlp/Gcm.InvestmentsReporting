@@ -17,8 +17,8 @@ from Reporting.core.report_structure import (
     ReportType,
     ReportConsumer,
 )
-from Reporting.Reports.entity_reports.investment_manager_reports.pvm_tr import (
-    PvmManagerTrackRecordReport,
+from Reporting.Reports.entity_reports.xentity_reports.pvm_tr.aggregation import (
+    PvmManagerTrackRecordReportAggregation,
 )
 from utils.print_utils import print
 
@@ -36,15 +36,15 @@ class TestPvmManagerTrReport(object):
         return entity_info
 
     def test_run_local(self):
-        a = AggregateInterval.FullLife
+        a = AggregateInterval.ITD
         with Scenario(
-            as_of_date=dt.date(2022, 12, 31),
+            as_of_date=dt.date(2023, 3, 31),
             aggregate_interval=a,
             save=True,
         ).context():
             d = EntityDomainTypes.InvestmentManager
             entity_info = TestPvmManagerTrReport.get_entity(
-                d, "Brasa Capital Management"
+                d, "MiddleGround"
             )
             this_meta = ReportMeta(
                 type=ReportType.Performance,
@@ -60,7 +60,7 @@ class TestPvmManagerTrReport(object):
                 entity_domain=d,
                 entity_info=entity_info,
             )
-            this_report = PvmManagerTrackRecordReport(this_meta)
+            this_report = PvmManagerTrackRecordReportAggregation(this_meta)
             assert this_report is not None
             output = print(report_structure=this_report, print_pdf=False)
             assert output is not None
