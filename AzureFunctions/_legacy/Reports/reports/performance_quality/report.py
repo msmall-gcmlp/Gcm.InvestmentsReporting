@@ -695,11 +695,18 @@ class PerformanceQualityReport(ReportingRunnerBase):
             trailing_10y_return,
             itd_return
         ]
-        stats = [x.squeeze() for x in stats]
-        summary = pd.DataFrame(
-            {return_type: [round(x, 2) if isinstance(x, float) else " " for x in stats]},
-            index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y", "ITD"],
-        )
+
+        if mtd_return.shape[0] > 1:
+            stats = pd.concat(stats, axis=1).T
+            stats.index = ["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y", "ITD"]
+            summary = stats.round(2)
+        else:
+            stats = [x.squeeze() for x in stats]
+
+            summary = pd.DataFrame(
+                {return_type: [round(x, 2) if isinstance(x, float) else " " for x in stats]},
+                index=["MTD", "QTD", "YTD", "TTM", "3Y", "5Y", "10Y", "ITD"],
+            )
         return summary
 
     def _get_excess_return_summary(self, fund_returns, benchmark_returns, benchmark_name):
@@ -867,22 +874,15 @@ class PerformanceQualityReport(ReportingRunnerBase):
             for fund in peer_bmrk_ror.columns[:-1]:
                 peer_beta_adj_index[fund] = risk_free
 
-        peer_xs_ret_summary = pd.DataFrame()
         peer_rors = peer_rors.dropna(axis=0, how='all')
-        for col in peer_rors.columns:
-            peer_fund_summary = self._get_return_summary(returns=peer_rors[col], return_type="Fund")
-            peer_fund_xs = self._get_excess_return_summary(
-                fund_returns=peer_fund_summary,
-                benchmark_returns=peer_beta_adj_index[col],
-                benchmark_name="AbsoluteReturnBenchmark",
-            )
-            peer_fund_xs['AbsoluteReturnBenchmarkExcess'].replace('', np.nan, inplace=True)
-            curr_peer_xs = pd.DataFrame(peer_fund_xs["AbsoluteReturnBenchmarkExcess"])
-            curr_peer_xs = curr_peer_xs.rename(columns={'AbsoluteReturnBenchmarkExcess': col})
-            curr_peer_xs = curr_peer_xs.transpose()
-            peer_xs_ret_summary = pd.concat([peer_xs_ret_summary, curr_peer_xs])
-        peer_xs_ret_summary.dropna(how='all', inplace=True)
-        peer_excess_df = peer_xs_ret_summary.iloc[:, :-1]
+
+        fund_return_summary = self._get_return_summary(returns=peer_rors, return_type="Fund")
+        bmrk_return_summary = self._get_return_summary(returns=peer_beta_adj_index, return_type="Fund")
+        excess_return_summary = fund_return_summary - bmrk_return_summary
+
+        excess_return_summary = excess_return_summary.T
+        excess_return_summary.dropna(how='all', inplace=True)
+        peer_excess_df = excess_return_summary.iloc[:, :-1]
 
         peer_excess_df.rename(columns={'MTD': 'M', 'QTD': 'Q', 'YTD': 'Y', 'TTM': 'T12', '3Y': 'T36', '5Y': 'T60', '10Y': 'T120'
                                        }, inplace=True)
