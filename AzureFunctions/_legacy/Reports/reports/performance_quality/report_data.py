@@ -153,9 +153,13 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             start_date=dt.date(2000, 1, 1),
             end_date=self._end_date
         )
+
+        if fund_monthly_exposures.shape[0] == 0:
+            return pd.DataFrame()
+
         fund_exp_net_df = fund_monthly_exposures[[
             'InvestmentGroupName', 'Date', 'ExposureStrategy', 'NetNotional']]
-        fund_exp_net_df = fund_monthly_exposures[fund_monthly_exposures[
+        fund_exp_net_df = fund_exp_net_df[fund_monthly_exposures[
             'ExposureStrategy'].isin(['Credit', 'Equities'])]
         fund_exp_net_df = fund_exp_net_df.groupby([
             'InvestmentGroupName', 'Date']).agg({'NetNotional': 'sum'}).reset_index()
@@ -178,6 +182,9 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             start_date=dt.date(2000, 1, 1),
             end_date=self._end_date
         )
+        if fund_monthly_exposures.shape[0] == 0:
+            return pd.DataFrame()
+
         fund_monthly_exposures = fund_monthly_exposures[[
             'InvestmentGroupName', 'Date', 'GrossNotional']]
         fund_monthly_exposures = fund_monthly_exposures.groupby(
