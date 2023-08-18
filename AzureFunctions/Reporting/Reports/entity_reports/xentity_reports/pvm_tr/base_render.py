@@ -45,17 +45,21 @@ class BaseRenderer:
         ]
 
     @classmethod
-    def _final_column_list(cls):
-        reference_columns = cls._reference_columns()
-        evaluated_columns = cls._evaluated_columns_to_show_in_df()
+    def _percentage_columns(cls):
         percentage_columns = [
             OnTheFlyComputedColumnType.InGroup,
             OnTheFlyComputedColumnType.OnTopLine,
         ]
-        percentage_columns = [
+        return [
             generate_percent_column(x, cls._PERCENT_OF_TOTAL)
             for x in percentage_columns
         ]
+
+    @classmethod
+    def _final_column_list(cls):
+        reference_columns = cls._reference_columns()
+        evaluated_columns = cls._evaluated_columns_to_show_in_df()
+        percentage_columns = cls._percentage_columns()
         return reference_columns + evaluated_columns + percentage_columns
 
     @classmethod

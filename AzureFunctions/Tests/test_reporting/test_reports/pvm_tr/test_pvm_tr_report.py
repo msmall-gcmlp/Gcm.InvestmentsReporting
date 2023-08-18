@@ -43,9 +43,7 @@ class TestPvmManagerTrReport(object):
             save=True,
         ).context():
             d = EntityDomainTypes.InvestmentManager
-            entity_info = TestPvmManagerTrReport.get_entity(
-                d, "MiddleGround"
-            )
+            entity_info = TestPvmManagerTrReport.get_entity(d, "Altaris")
             this_meta = ReportMeta(
                 type=ReportType.Performance,
                 intervals=AggregateIntervalReportHandler([a]),

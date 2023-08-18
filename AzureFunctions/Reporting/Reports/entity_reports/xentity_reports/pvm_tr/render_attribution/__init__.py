@@ -18,6 +18,7 @@ from gcm.inv.models.pvm.node_evaluation.evaluation_provider.df_utils import (
     ATOMIC_COUNT,
     atomic_node_count,
 )
+from gcm.inv.utils.pvm.node.utils import PvmNodeBase
 from gcm.Dao.DaoRunner import AzureDataLakeDao
 
 TEMPLATE = AzureDataLakeDao.BlobFileStructure(
@@ -40,6 +41,10 @@ class AttributionTables(BaseRenderer):
     _PERCENT_OF_TOTAL = PvmNodeEvaluatable.PvmEvaluationType.pnl
 
     @classmethod
+    def _reference_columns(cls) -> List[str]:
+        return super()._reference_columns() + [ATOMIC_COUNT]
+
+    @classmethod
     def _evaluated_columns_to_show_in_df(cls):
         return [x.name for x in cls.Evaluated_Columns]
 
@@ -52,9 +57,23 @@ class AttributionTables(BaseRenderer):
             df.append(this_df)
         df = pd.concat(df)
         df.reset_index(inplace=True, drop=True)
-        df = cls.generate_updated_diplay_name(df)
+        # NO need to do this because
+        # Gavin wants the count as a seperate column
+        # df = cls.generate_updated_diplay_name(df)
         df = cls.render_with_final_columns(df)
         df.dropna(axis=1, how="all", inplace=True)
+        other = df[df[PvmNodeBase._DISPLAY_NAME].str.upper() == "OTHER"]
+        non_other = df[
+            df[PvmNodeBase._DISPLAY_NAME].str.upper() != "OTHER"
+        ]
+        non_other.sort_values(
+            by=PvmNodeEvaluatable.PvmEvaluationType.cost.name,
+            inplace=True,
+            axis=0,
+            ascending=True,
+        )
+        df = pd.concat([non_other, other])
+        df.reset_index(inplace=True, drop=True)
         return df
 
 

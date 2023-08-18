@@ -184,17 +184,15 @@ class BasePvmTrackRecordReport(ReportStructure):
         merged.drop_duplicates(inplace=True)
         return merged
 
-    
     @property
     def investment_node_provider(self) -> PvmEvaluationProvider:
         node_provider: PvmTrackRecordNodeProvider = self.node_provider
         return node_provider.investment_tr_node_provider
-    
+
     @property
     def position_node_provider(self) -> PvmEvaluationProvider:
         node_provider: PvmTrackRecordNodeProvider = self.node_provider
         return node_provider.position_tr_node_provider
-
 
     @property
     def attribution_template(self):

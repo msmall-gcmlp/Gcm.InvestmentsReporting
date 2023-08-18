@@ -12,10 +12,6 @@ from functools import cached_property
 from .....core.components.report_workbook_handler import (
     ReportWorkBookHandler,
 )
-from gcm.inv.models.pvm.node_evaluation.evaluation_provider.from_.pvm_track_record import (
-    PvmTrackRecordNodeProvider,
-    PvmEvaluationProvider,
-)
 from gcm.Dao.DaoRunner import AzureDataLakeDao
 
 
@@ -74,5 +70,7 @@ class PvmInvestmentTrackRecordReport(BasePvmTrackRecordReport):
         return EntityDomainTypes.Investment
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
-        items= self.investment_node_provider.generate_evaluatable_node_hierarchy(["InvestmentName"])
+        items = self.investment_node_provider.generate_evaluatable_node_hierarchy(
+            ["InvestmentName"]
+        )
         assert items is not None

@@ -21,9 +21,6 @@ from ...xentity_reports.pvm_tr.render_135 import (
     OneThreeFiveRenderer,
     TEMPLATE as Template_135,
 )
-from gcm.inv.models.pvm.node_evaluation.evaluation_provider import (
-    PvmEvaluationProvider,
-)
 from gcm.inv.models.pvm.underwriting_analytics.perf_1_3_5 import (
     generate_realized_unrealized_all_performance_breakout,
 )
@@ -31,7 +28,12 @@ from ...xentity_reports.pvm_tr.render_attribution import (
     RenderAttribution,
     TEMPLATE as Template_Attribution,
 )
-import re
+from gcm.inv.utils.pvm.standard_mappings import (
+    ReportedRealizationStatus,
+)
+from .render_manager_report import (
+    RenderRealizationStatusFundBreakout_Gross,
+)
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
 
@@ -102,36 +104,10 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         )
         return item.render()
 
+    # override
     @cached_property
-    def attribution_items(self):
-        # TODO: make this dynamic based on whats available
-        explict_excludes = ["INVESTMENTID"]
-
-        def evaluate_if_to_be_used(column_name: str) -> bool:
-            values = list(
-                set(
-                    list(
-                        self.position_node_provider.atomic_dimensions[
-                            column_name
-                        ]
-                    )
-                )
-            )
-            has_right_types = any([type(x) in [int, str] for x in values])
-            is_id = (
-                column_name
-                not in self.position_node_provider.atomic_df_identifier
-            )
-            is_not_bad = column_name.upper() not in explict_excludes
-            return has_right_types and is_id and is_not_bad
-
-        items = [
-            x
-            for x in self.position_node_provider.atomic_dimensions.columns
-            if evaluate_if_to_be_used(x)
-        ]
-        items.append("AssetName")
-        return list(set(items))
+    def attribution_items(self) -> List[str]:
+        return self.position_node_provider.base_evaluation_items
 
     def generate_attribution_items(self) -> List[ReportWorkBookHandler]:
         wbs: List[ReportWorkBookHandler] = []
@@ -149,8 +125,26 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             wbs.append(wb)
         return wbs
 
+    def generate_fund_breakout(self) -> ReportWorkBookHandler:
+        # gross
+        gross_realized_status_breakout = self.position_node_provider.generate_evaluatable_node_hierarchy(
+            [ReportedRealizationStatus, "InvestmentName"]
+        )
+        net = self.position_node_provider.generate_evaluatable_node_hierarchy(
+            ["InvestmentName"]
+        )
+        i = RenderRealizationStatusFundBreakout_Gross(
+            gross_realization_status_breakout=gross_realized_status_breakout,
+            net_breakout=net,
+        ).render()
+        # now get net returns, merge against "ALL"
+
+        return i
+
     def assign_components(self) -> List[ReportWorkBookHandler]:
+        self.generate_fund_breakout()
         attribution = self.generate_attribution_items()
+
         final = [
             ReportWorkBookHandler(
                 self.manager_name,
