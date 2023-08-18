@@ -40,10 +40,10 @@ class GrossBreakoutTables(BaseRenderer):
         PvmNodeEvaluatable.PvmEvaluationType.cost,
         PvmNodeEvaluatable.PvmEvaluationType.realized_value,
         PvmNodeEvaluatable.PvmEvaluationType.unrealized_value,
-        PvmNodeEvaluatable.PvmEvaluationType.pnl,
-        PvmNodeEvaluatable.PvmEvaluationType.loss_ratio,
+        PvmNodeEvaluatable.PvmEvaluationType.total_value,
         PvmNodeEvaluatable.PvmEvaluationType.moic,
         PvmNodeEvaluatable.PvmEvaluationType.irr,
+        PvmNodeEvaluatable.PvmEvaluationType.loss_ratio,
     ]
     _PERCENT_OF_TOTAL = PvmNodeEvaluatable.PvmEvaluationType.pnl
 
@@ -95,9 +95,9 @@ class GrossBreakoutTables(BaseRenderer):
 
 class NetBreakoutTables(GrossBreakoutTables):
     Evaluated_Columns = [
-        PvmNodeEvaluatable.PvmEvaluationType.nav,
         PvmNodeEvaluatable.PvmEvaluationType.moic,
         PvmNodeEvaluatable.PvmEvaluationType.irr,
+        PvmNodeEvaluatable.PvmEvaluationType.dpi,
     ]
 
     @classmethod
