@@ -27,13 +27,16 @@ from typing import NamedTuple, Union
 from gcm.inv.dataprovider.entity_provider.controller import (
     EntityDomainTypes,
 )
+from functools import cached_property
+import copy
 
 TEMPLATE = AzureDataLakeDao.BlobFileStructure(
-        zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
-        sources="investmentsreporting",
-        entity="exceltemplates",
-        path=["PvmManagerTrackRecordTemplate.xlsx"]
-    )
+    zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+    sources="investmentsreporting",
+    entity="exceltemplates",
+    path=["PvmManagerTrackRecordTemplate.xlsx"],
+)
+
 
 class InvBreakout(NamedTuple):
     Investment: pd.DataFrame
@@ -123,11 +126,13 @@ class RenderRealizationStatusFundBreakout_NetGross(RenderTablesRenderer):
         self,
         gross_realization_status_breakout: List[PvmNodeEvaluatable],
         net_breakout: List[PvmNodeEvaluatable],
+        dimn: pd.DataFrame,
     ):
         self.gross_realization_status_breakout = (
             gross_realization_status_breakout
         )
         self.net_breakout = net_breakout
+        self.dimn = dimn
 
     def _generate_gross_dfs(
         self, items=List[PvmNodeEvaluatable]
@@ -202,15 +207,44 @@ class RenderRealizationStatusFundBreakout_NetGross(RenderTablesRenderer):
         total_df = self._generate_net_dfs([total])
         return InvBreakout(df, total_df)
 
+    @cached_property
+    def fake_dimns(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        fake_dimns = copy.deepcopy(self.dimn)
+        columns_in_dimn_ex_display_name = [
+            x for x in self.dimn.columns if x != PvmNodeBase._DISPLAY_NAME
+        ]
+        holder = {PvmNodeBase._DISPLAY_NAME: [self.__class__._TOTAL]}
+        for i in columns_in_dimn_ex_display_name:
+            fake_dimns[i] = ""
+            holder[i] = [""]
+        total = pd.DataFrame(holder)
+        return (fake_dimns, total)
+
     def render(self) -> ReportWorksheet:
         gross_broken_out = self.get_gross_breakout()
         all_net = self.get_net_breakout()
         to_render: List[ReportTable] = []
         trim = []
+        fake_inv_dimn, fake_total_dimn = self.fake_dimns
         for k, v in gross_broken_out.items():
+            is_total = k == self.__class__._TOTAL
             inv_df = v.Investment
             total_df = v.Total
-            if k == self.__class__._TOTAL:
+            merge_df_inv = self.dimn if is_total else fake_inv_dimn
+            inv_df = pd.merge(
+                merge_df_inv,
+                inv_df,
+                on=PvmNodeBase._DISPLAY_NAME,
+                how="left",
+            )
+            total_df = pd.merge(
+                fake_total_dimn,
+                total_df,
+                on=PvmNodeBase._DISPLAY_NAME,
+                how="left",
+            )
+
+            if is_total:
                 inv_df = pd.merge(
                     inv_df,
                     all_net.Investment,
@@ -223,6 +257,7 @@ class RenderRealizationStatusFundBreakout_NetGross(RenderTablesRenderer):
                     on=PvmNodeBase._DISPLAY_NAME,
                     how="left",
                 )
+
             render_name = k if type(k) == str else k.name
             fund_named_range = f"{render_name}_inv"
             total_named_range = f"{render_name}_total"

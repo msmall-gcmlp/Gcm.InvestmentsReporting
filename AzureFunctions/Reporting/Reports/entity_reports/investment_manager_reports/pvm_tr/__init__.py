@@ -21,6 +21,7 @@ from ...xentity_reports.pvm_tr.render_135 import (
     OneThreeFiveRenderer,
     TEMPLATE as Template_135,
 )
+from gcm.inv.utils.pvm.node import PvmNodeBase
 from gcm.inv.models.pvm.underwriting_analytics.perf_1_3_5 import (
     generate_realized_unrealized_all_performance_breakout,
 )
@@ -33,7 +34,7 @@ from gcm.inv.utils.pvm.standard_mappings import (
 )
 from .render_manager_report import (
     RenderRealizationStatusFundBreakout_NetGross,
-    TEMPLATE as SummaryTemplate
+    TEMPLATE as SummaryTemplate,
 )
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
@@ -128,15 +129,27 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
 
     def generate_fund_breakout(self) -> ReportWorkBookHandler:
         # gross
+        i_name = "InvestmentName"
         gross_realized_status_breakout = self.position_node_provider.generate_evaluatable_node_hierarchy(
-            [ReportedRealizationStatus, "InvestmentName"]
+            [ReportedRealizationStatus, i_name]
         )
         net = self.investment_node_provider.generate_evaluatable_node_hierarchy(
-            ["InvestmentName"]
+            [i_name]
+        )
+        ref_items = self.investment_node_provider.atomic_dimensions[
+            [i_name, "Vintage", "Committed Capital"]
+        ]
+        # because reported in mm
+        ref_items["Committed Capital"] = (
+            ref_items["Committed Capital"] * 1_000_000.0
+        )
+        ref_items = ref_items.rename(
+            columns={i_name: PvmNodeBase._DISPLAY_NAME}
         )
         i = RenderRealizationStatusFundBreakout_NetGross(
             gross_realization_status_breakout=gross_realized_status_breakout,
             net_breakout=net,
+            dimn=ref_items,
         ).render()
         wb = ReportWorkBookHandler(
             "Summary",
@@ -145,20 +158,21 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
             short_name="Summary",
         )
         return wb
-        
-
-        return i
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
         base = [self.generate_fund_breakout()]
         attribution = self.generate_attribution_items()
 
-        final = base + [
-            ReportWorkBookHandler(
-                self.manager_name,
-                Template_135,
-                [self.generate_135_tables()],
-            )
-        ] + attribution
+        final = (
+            base
+            + [
+                ReportWorkBookHandler(
+                    self.manager_name,
+                    Template_135,
+                    [self.generate_135_tables()],
+                )
+            ]
+            + attribution
+        )
 
         return final
