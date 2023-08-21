@@ -27,7 +27,6 @@ from typing import NamedTuple, Union
 from gcm.inv.dataprovider.entity_provider.controller import (
     EntityDomainTypes,
 )
-from functools import cached_property
 import copy
 
 TEMPLATE = AzureDataLakeDao.BlobFileStructure(
@@ -207,13 +206,12 @@ class RenderRealizationStatusFundBreakout_NetGross(RenderTablesRenderer):
         total_df = self._generate_net_dfs([total])
         return InvBreakout(df, total_df)
 
-    @cached_property
-    def fake_dimns(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def fake_dimns(self, name) -> tuple[pd.DataFrame, pd.DataFrame]:
         fake_dimns = copy.deepcopy(self.dimn)
         columns_in_dimn_ex_display_name = [
             x for x in self.dimn.columns if x != PvmNodeBase._DISPLAY_NAME
         ]
-        holder = {PvmNodeBase._DISPLAY_NAME: [self.__class__._TOTAL]}
+        holder = {PvmNodeBase._DISPLAY_NAME: [name]}
         for i in columns_in_dimn_ex_display_name:
             fake_dimns[i] = ""
             holder[i] = [""]
@@ -225,8 +223,10 @@ class RenderRealizationStatusFundBreakout_NetGross(RenderTablesRenderer):
         all_net = self.get_net_breakout()
         to_render: List[ReportTable] = []
         trim = []
-        fake_inv_dimn, fake_total_dimn = self.fake_dimns
+
         for k, v in gross_broken_out.items():
+            render_name = k if type(k) == str else k.name
+            fake_inv_dimn, fake_total_dimn = self.fake_dimns(render_name)
             is_total = k == self.__class__._TOTAL
             inv_df = v.Investment
             total_df = v.Total
@@ -258,7 +258,6 @@ class RenderRealizationStatusFundBreakout_NetGross(RenderTablesRenderer):
                     how="left",
                 )
 
-            render_name = k if type(k) == str else k.name
             fund_named_range = f"{render_name}_inv"
             total_named_range = f"{render_name}_total"
             to_render.append(ReportTable(fund_named_range, inv_df))
