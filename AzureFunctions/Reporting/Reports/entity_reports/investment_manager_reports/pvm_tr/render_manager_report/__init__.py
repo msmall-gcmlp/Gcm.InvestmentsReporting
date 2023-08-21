@@ -23,16 +23,21 @@ from gcm.Dao.DaoRunner import AzureDataLakeDao
 from gcm.inv.utils.pvm.standard_mappings import (
     KnownRealizationStatus,
 )
+from typing import NamedTuple, Union
 from gcm.inv.dataprovider.entity_provider.controller import (
     EntityDomainTypes,
 )
 
 TEMPLATE = AzureDataLakeDao.BlobFileStructure(
-    zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
-    sources="investmentsreporting",
-    entity="exceltemplates",
-    path=["AttributionResultsNew.xlsx"],
-)
+        zone=AzureDataLakeDao.BlobFileStructure.Zone.raw,
+        sources="investmentsreporting",
+        entity="exceltemplates",
+        path=["PvmManagerTrackRecordTemplate.xlsx"]
+    )
+
+class InvBreakout(NamedTuple):
+    Investment: pd.DataFrame
+    Total: pd.DataFrame
 
 
 class GrossBreakoutTables(BaseRenderer):
@@ -113,7 +118,7 @@ class NetBreakoutTables(GrossBreakoutTables):
         return False
 
 
-class RenderRealizationStatusFundBreakout_Gross(RenderTablesRenderer):
+class RenderRealizationStatusFundBreakout_NetGross(RenderTablesRenderer):
     def __init__(
         self,
         gross_realization_status_breakout: List[PvmNodeEvaluatable],
@@ -138,16 +143,18 @@ class RenderRealizationStatusFundBreakout_Gross(RenderTablesRenderer):
 
     _TOTAL = "Total"
 
-    def get_gross_breakout(self) -> dict[ReportTable]:
+    def get_gross_breakout(
+        self,
+    ) -> dict[Union[KnownRealizationStatus, str], InvBreakout]:
         cls = self.__class__
-        realization_status_dict = {}
+        realization_status_dict: dict[
+            Union[KnownRealizationStatus, str], InvBreakout
+        ] = {}
         dict_of_funds: dict[str, List[PvmNodeEvaluatable]] = {}
         for r in self.gross_realization_status_breakout:
             fund_breakout = self._generate_gross_dfs(r.children)
             total_for_realization_bucket = self._generate_gross_dfs([r])
-            concatted = pd.concat(
-                [fund_breakout, total_for_realization_bucket]
-            )
+
             for fund in r.children:
                 # assumption is that naming convention is the same
                 # can do more explicit comparison if this fs up
@@ -157,11 +164,13 @@ class RenderRealizationStatusFundBreakout_Gross(RenderTablesRenderer):
                     dict_of_funds[fund.display_name] = base_item
                 else:
                     dict_of_funds[fund.display_name] = [fund]
-            concatted.reset_index(inplace=True, drop=True)
-            realization_status_dict[
-                KnownRealizationStatus[r.display_name].name
-            ] = concatted
-        assert realization_status_dict is not None
+
+                realization_status_dict[
+                    KnownRealizationStatus[r.display_name]
+                ] = InvBreakout(
+                    fund_breakout, total_for_realization_bucket
+                )
+
         all_gross = []
         fund_cache: List[PvmNodeEvaluatable] = []
         for f, v in dict_of_funds.items():
@@ -177,13 +186,13 @@ class RenderRealizationStatusFundBreakout_Gross(RenderTablesRenderer):
             children=all_gross,
         )
         f_manager_all = self._generate_gross_dfs([all])
-        final_all = pd.concat([f_fund_gross, f_manager_all])
-        final_all.reset_index(inplace=True, drop=True)
 
-        realization_status_dict[cls._TOTAL] = final_all
+        realization_status_dict[cls._TOTAL] = InvBreakout(
+            f_fund_gross, f_manager_all
+        )
         return realization_status_dict
 
-    def get_net_breakout(self) -> pd.DataFrame:
+    def get_net_breakout(self) -> InvBreakout:
         df = self._generate_net_dfs(self.net_breakout)
         total = PvmNodeEvaluatable(
             self.__class__._TOTAL,
@@ -191,19 +200,39 @@ class RenderRealizationStatusFundBreakout_Gross(RenderTablesRenderer):
             children=self.net_breakout,
         )
         total_df = self._generate_net_dfs([total])
-        final = pd.concat([df, total_df])
-        final.reset_index(inplace=True, drop=True)
-        return final
+        return InvBreakout(df, total_df)
 
     def render(self) -> ReportWorksheet:
         gross_broken_out = self.get_gross_breakout()
         all_net = self.get_net_breakout()
-        final = {}
+        to_render: List[ReportTable] = []
+        trim = []
         for k, v in gross_broken_out.items():
-            final_df: pd.DataFrame = v
+            inv_df = v.Investment
+            total_df = v.Total
             if k == self.__class__._TOTAL:
-                final_df = pd.merge(
-                    v, all_net, on=PvmNodeBase._DISPLAY_NAME, how="left"
+                inv_df = pd.merge(
+                    inv_df,
+                    all_net.Investment,
+                    on=PvmNodeBase._DISPLAY_NAME,
+                    how="left",
                 )
-            final[k] = final_df
-        assert True
+                total_df = pd.merge(
+                    total_df,
+                    all_net.Total,
+                    on=PvmNodeBase._DISPLAY_NAME,
+                    how="left",
+                )
+            render_name = k if type(k) == str else k.name
+            fund_named_range = f"{render_name}_inv"
+            total_named_range = f"{render_name}_total"
+            to_render.append(ReportTable(fund_named_range, inv_df))
+            to_render.append(ReportTable(total_named_range, total_df))
+            trim.append(fund_named_range)
+
+        ws = ReportWorksheet(
+            "Manager TR",
+            ReportWorksheet.ReportWorkSheetRenderer(trim_region=trim),
+            to_render,
+        )
+        return ws

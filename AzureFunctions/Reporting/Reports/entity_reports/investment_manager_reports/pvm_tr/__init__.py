@@ -32,7 +32,8 @@ from gcm.inv.utils.pvm.standard_mappings import (
     ReportedRealizationStatus,
 )
 from .render_manager_report import (
-    RenderRealizationStatusFundBreakout_Gross,
+    RenderRealizationStatusFundBreakout_NetGross,
+    TEMPLATE as SummaryTemplate
 )
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
@@ -130,22 +131,29 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         gross_realized_status_breakout = self.position_node_provider.generate_evaluatable_node_hierarchy(
             [ReportedRealizationStatus, "InvestmentName"]
         )
-        net = self.position_node_provider.generate_evaluatable_node_hierarchy(
+        net = self.investment_node_provider.generate_evaluatable_node_hierarchy(
             ["InvestmentName"]
         )
-        i = RenderRealizationStatusFundBreakout_Gross(
+        i = RenderRealizationStatusFundBreakout_NetGross(
             gross_realization_status_breakout=gross_realized_status_breakout,
             net_breakout=net,
         ).render()
-        # now get net returns, merge against "ALL"
+        wb = ReportWorkBookHandler(
+            "Summary",
+            SummaryTemplate,
+            report_sheets=[i],
+            short_name="Summary",
+        )
+        return wb
+        
 
         return i
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
-        self.generate_fund_breakout()
+        base = [self.generate_fund_breakout()]
         attribution = self.generate_attribution_items()
 
-        final = [
+        final = base + [
             ReportWorkBookHandler(
                 self.manager_name,
                 Template_135,
