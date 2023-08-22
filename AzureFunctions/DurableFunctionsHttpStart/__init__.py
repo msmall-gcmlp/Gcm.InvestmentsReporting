@@ -37,22 +37,17 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
     legacy_names_no_parsed_args = [
         LegacyOrchestrationNoParsedArgs(x).name for x in LegacyOrchestrationNoParsedArgs.list()
     ]
-    if function_name in legacy_names_no_parsed_args:
-        instance_id = await client.start_new(
-            function_name,
-            client_input=client_input,
-        )
-    else:
+    if function_name not in legacy_names_no_parsed_args:
         if function_name in legacy_orchestrator_names:
             function_name = "legacy_azure_orchestrator"
             pargs = LegacyReportingOrchParsedArgs.from_http(req)
         else:
             pargs = ReportingParsedArgs.from_http(req)
-
-        instance_id = await client.start_new(
-            function_name,
-            client_input=serialize_pargs(pargs, client_input),
-        )
+        client_input = serialize_pargs(pargs, client_input)
+    instance_id = await client.start_new(
+        function_name,
+        client_input=client_input,
+    )
     logging.info(
         f"Started orchestration. ID: '{instance_id}'. "
         + f"Function: '{function_name}'"
