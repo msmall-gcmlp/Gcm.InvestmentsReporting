@@ -51,10 +51,10 @@ class PvmManagerTrackRecordReportAggregation(PvmManagerTrackRecordReport):
     def assign_components(self) -> List[ReportWorkBookHandler]:
         #
         base_items = super().assign_components()
-        # investment_reports = self.investment_report_wbs()
+        investment_reports = self.investment_report_wbs()
         attribution_components = PvmTrAttributionReport(
             report_meta=self.report_meta,
             manager_name=self.manager_name,
             investments=self.investments,
         ).components
-        return base_items + attribution_components
+        return base_items + investment_reports + attribution_components

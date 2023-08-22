@@ -9,7 +9,6 @@ from .render_attribution import (
     TEMPLATE as Template_Attribution,
 )
 from typing import List
-from functools import cached_property
 from .....core.components.report_workbook_handler import (
     ReportWorkBookHandler,
 )
@@ -39,13 +38,6 @@ class PvmTrAttributionReport(BasePvmTrackRecordReport):
         return EntityDomainTypes.Asset
 
     # override
-    @cached_property
-    def attribution_items(self) -> List[str]:
-        base_items = self.position_node_provider.base_evaluation_items
-        base_items.append("AssetName")
-        items = list(set(base_items))
-        items.sort()
-        return items
 
     def generate_attribution_items(self) -> List[ReportWorkBookHandler]:
         wbs: List[ReportWorkBookHandler] = []

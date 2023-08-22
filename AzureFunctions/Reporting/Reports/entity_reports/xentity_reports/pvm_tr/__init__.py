@@ -203,6 +203,15 @@ class BasePvmTrackRecordReport(ReportStructure):
             path=["AttributionResults.xlsx"],
         )
 
-    @abstractproperty
+    @property
     def attribution_items(self) -> List[str]:
-        raise NotImplementedError()
+        asset_name = "AssetName"
+        base_items = self.position_node_provider.base_evaluation_items
+        base_items = [
+            x for x in base_items if x.upper() != asset_name.upper()
+        ]
+        items = list(set(base_items))
+        items.sort()
+        # add asset name last, always
+        items.append(asset_name)
+        return items

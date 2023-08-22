@@ -126,31 +126,38 @@ def _get_sheet_new_row_heights(sheet, trim_rows, default_height=14.5):
 def return_trim_rows(k: ReportTable, wb: Workbook) -> List[int]:
     # the the range in question must be a rectangle
     # (i.e. someone can't just ctrl-clicked a bunch of random cells)
-    address = list(wb.defined_names[k.component_name].destinations)
-    excel_row_range = []
-    rows_to_delete = []
-    for sheetname, cell_address in address:
-        for row_number in re.split("(\d+)", cell_address.replace("$", "")):
-            try:
-                excel_row_range.append(int(row_number))
-            except ValueError:
-                pass
-    # can't trim if excel_row_range is not 2 integers
-    rectangle_check = list(dict.fromkeys(excel_row_range))
-    if len(rectangle_check) == 2:
-        named_range_range = range(excel_row_range[0], excel_row_range[1])
+    if k.component_name in wb.defined_names:
+        address = list(wb.defined_names[k.component_name].destinations)
+        excel_row_range = []
+        rows_to_delete = []
+        for sheetname, cell_address in address:
+            for row_number in re.split(
+                "(\d+)", cell_address.replace("$", "")
+            ):
+                try:
+                    excel_row_range.append(int(row_number))
+                except ValueError:
+                    pass
+        # can't trim if excel_row_range is not 2 integers
+        rectangle_check = list(dict.fromkeys(excel_row_range))
+        if len(rectangle_check) == 2:
+            named_range_range = range(
+                excel_row_range[0], excel_row_range[1]
+            )
 
-        # no trimming to be done if length of dataframe is the same size as region
-        if len(named_range_range) != len(k.df):
-            rows_to_delete.extend(
-                list(
-                    range(
-                        excel_row_range[0] + len(k.df),
-                        excel_row_range[1] + 1,
+            # no trimming to be done if length of dataframe is the same size as region
+            if len(named_range_range) != len(k.df):
+                rows_to_delete.extend(
+                    list(
+                        range(
+                            excel_row_range[0] + len(k.df),
+                            excel_row_range[1] + 1,
+                        )
                     )
                 )
-            )
-    return rows_to_delete
+        return rows_to_delete
+    else:
+        return []
 
 
 def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:

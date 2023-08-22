@@ -29,8 +29,10 @@ from gcm.inv.utils.pvm.standard_mappings import (
     ReportedRealizationStatus,
 )
 from .render_manager_report import (
-    RenderRealizationStatusFundBreakout_NetGross,
     TEMPLATE as SummaryTemplate,
+)
+from ...xentity_reports.pvm_tr.render_breakout import (
+    RenderRealizationStatusFundBreakout_NetGross,
 )
 
 # http://localhost:7071/orchestrators/ReportOrchestrator?as_of_date=2022-06-30&ReportName=PvmManagerTrackRecordReport&frequency=Once&save=True&aggregate_interval=ITD&EntityDomainTypes=InvestmentManager&EntityNames=[%22ExampleManagerName%22]
@@ -102,11 +104,6 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         )
         return item.render()
 
-    # override
-    @cached_property
-    def attribution_items(self) -> List[str]:
-        return self.position_node_provider.base_evaluation_items
-
     def generate_fund_breakout(self) -> ReportWorkBookHandler:
         # gross
         i_name = "InvestmentName"
@@ -130,7 +127,10 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         i = RenderRealizationStatusFundBreakout_NetGross(
             gross_realization_status_breakout=gross_realized_status_breakout,
             net_breakout=net,
+            name="Manager TR",
             dimn=ref_items,
+            exclude_nulls=False,
+            append_net_to_gross=True,
         ).render()
         wb = ReportWorkBookHandler(
             "Summary",
