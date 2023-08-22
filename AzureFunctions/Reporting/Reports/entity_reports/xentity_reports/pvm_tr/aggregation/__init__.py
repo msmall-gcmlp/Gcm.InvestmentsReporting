@@ -13,6 +13,7 @@ from gcm.inv.dataprovider.entity_provider.controller import (
     get_entity_domain_provider,
 )
 import pandas as pd
+from ..tr_attribution_report import PvmTrAttributionReport
 
 
 class PvmManagerTrackRecordReportAggregation(PvmManagerTrackRecordReport):
@@ -48,7 +49,12 @@ class PvmManagerTrackRecordReportAggregation(PvmManagerTrackRecordReport):
         return wbs
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
-        # investment_reports = self.investment_report_wbs()
+        #
         base_items = super().assign_components()
-
-        return base_items
+        # investment_reports = self.investment_report_wbs()
+        attribution_components = PvmTrAttributionReport(
+            report_meta=self.report_meta,
+            manager_name=self.manager_name,
+            investments=self.investments,
+        ).components
+        return base_items + attribution_components

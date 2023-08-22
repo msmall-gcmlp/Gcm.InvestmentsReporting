@@ -25,10 +25,6 @@ from gcm.inv.utils.pvm.node import PvmNodeBase
 from gcm.inv.models.pvm.underwriting_analytics.perf_1_3_5 import (
     generate_realized_unrealized_all_performance_breakout,
 )
-from ...xentity_reports.pvm_tr.render_attribution import (
-    RenderAttribution,
-    TEMPLATE as Template_Attribution,
-)
 from gcm.inv.utils.pvm.standard_mappings import (
     ReportedRealizationStatus,
 )
@@ -111,22 +107,6 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
     def attribution_items(self) -> List[str]:
         return self.position_node_provider.base_evaluation_items
 
-    def generate_attribution_items(self) -> List[ReportWorkBookHandler]:
-        wbs: List[ReportWorkBookHandler] = []
-        for i in self.attribution_items:
-            evaluated = self.position_node_provider.generate_evaluatable_node_hierarchy(
-                [i]
-            )
-            rendered = RenderAttribution(evaluated).render()
-            wb = ReportWorkBookHandler(
-                i,
-                Template_Attribution,
-                report_sheets=[rendered],
-                short_name=i,
-            )
-            wbs.append(wb)
-        return wbs
-
     def generate_fund_breakout(self) -> ReportWorkBookHandler:
         # gross
         i_name = "InvestmentName"
@@ -161,8 +141,6 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         return wb
 
     def assign_components(self) -> List[ReportWorkBookHandler]:
-        base = [self.generate_fund_breakout()]
-        attribution = self.generate_attribution_items()
         one_three_five = [
             ReportWorkBookHandler(
                 self.manager_name,
@@ -170,5 +148,6 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
                 [self.generate_135_tables()],
             )
         ]
-        final = one_three_five + base + attribution
+        base = [self.generate_fund_breakout()]
+        final = one_three_five + base
         return final
