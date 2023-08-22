@@ -10,6 +10,7 @@ from gcm.inv.utils.azure.durable_functions.parg_serialization import (
 )
 from ..legacy_azure_orchestrator.legacy_orchestrations import (
     LegacyOrchestrations,
+    LegacyOrchestrationNoParsedArgs,
 )
 from ..legacy_azure_orchestrator.legacy_report_orch_parsed_args import (
     LegacyReportingOrchParsedArgs,
@@ -29,18 +30,23 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
     for k in params.keys():
         d[k] = params[k]
     client_input = {"params": d, "data": requestBody}
-    if function_name in [
+
+    legacy_orchestrator_names = [
         LegacyOrchestrations(x).name for x in LegacyOrchestrations.list()
-    ]:
-        function_name = "legacy_azure_orchestrator"
-        pargs = LegacyReportingOrchParsedArgs.from_http(req)
-
-    else:
-        pargs = ReportingParsedArgs.from_http(req)
-
+    ]
+    legacy_names_no_parsed_args = [
+        LegacyOrchestrationNoParsedArgs(x).name for x in LegacyOrchestrationNoParsedArgs.list()
+    ]
+    if function_name not in legacy_names_no_parsed_args:
+        if function_name in legacy_orchestrator_names:
+            function_name = "legacy_azure_orchestrator"
+            pargs = LegacyReportingOrchParsedArgs.from_http(req)
+        else:
+            pargs = ReportingParsedArgs.from_http(req)
+        client_input = serialize_pargs(pargs, client_input)
     instance_id = await client.start_new(
         function_name,
-        client_input=serialize_pargs(pargs, client_input),
+        client_input=client_input,
     )
     logging.info(
         f"Started orchestration. ID: '{instance_id}'. "

@@ -21,3 +21,7 @@ class LegacyOrchestrations(ExtendedEnum):
     # Excluding below because too complicated to port over
     # TODO: refactor appropriately to make Scenario compliant
     # PerformanceQualityReportOrchestrator = auto()
+
+
+class LegacyOrchestrationNoParsedArgs(ExtendedEnum):
+    PerformanceQualityReportOrchestrator = auto()
