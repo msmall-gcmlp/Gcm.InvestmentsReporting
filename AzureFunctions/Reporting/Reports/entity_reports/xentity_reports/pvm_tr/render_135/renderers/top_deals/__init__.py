@@ -30,6 +30,7 @@ class TopDeals_And_Total(BaseRenderer):
         self.Deal_Summary_Total = Deal_Summary_Total
 
     Evaluated_Columns = [
+        PvmNodeEvaluatable.PvmEvaluationType.cf_implied_duration,
         PvmNodeEvaluatable.PvmEvaluationType.cost,
         PvmNodeEvaluatable.PvmEvaluationType.unrealized_value,
         PvmNodeEvaluatable.PvmEvaluationType.total_value,

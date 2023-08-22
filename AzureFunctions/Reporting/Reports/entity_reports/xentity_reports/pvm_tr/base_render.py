@@ -27,8 +27,8 @@ class BaseRenderer:
     _PERCENT_OF_TOTAL = PvmNodeEvaluatable.PvmEvaluationType.pnl
 
     Evaluated_Columns = [
-        PvmNodeEvaluatable.PvmEvaluationType.irr,
         PvmNodeEvaluatable.PvmEvaluationType.moic,
+        PvmNodeEvaluatable.PvmEvaluationType.irr,
         _PERCENT_OF_TOTAL,
     ]
 

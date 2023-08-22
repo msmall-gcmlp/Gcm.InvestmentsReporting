@@ -29,6 +29,7 @@ class ReturnDistributions(BaseRenderer):
     _PERCENT_OF_TOTAL = PvmNodeEvaluatable.PvmEvaluationType.cost
 
     Evaluated_Columns = [
+        PvmNodeEvaluatable.PvmEvaluationType.cf_implied_duration,
         PvmNodeEvaluatable.PvmEvaluationType.moic,
         PvmNodeEvaluatable.PvmEvaluationType.irr,
         _PERCENT_OF_TOTAL,

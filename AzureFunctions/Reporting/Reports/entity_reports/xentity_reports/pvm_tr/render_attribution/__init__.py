@@ -31,6 +31,7 @@ TEMPLATE = AzureDataLakeDao.BlobFileStructure(
 
 class AttributionTables(BaseRenderer):
     Evaluated_Columns = [
+        PvmNodeEvaluatable.PvmEvaluationType.cf_implied_duration,
         PvmNodeEvaluatable.PvmEvaluationType.cost,
         PvmNodeEvaluatable.PvmEvaluationType.realized_value,
         PvmNodeEvaluatable.PvmEvaluationType.unrealized_value,

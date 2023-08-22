@@ -146,6 +146,7 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
         ref_items = ref_items.rename(
             columns={i_name: PvmNodeBase._DISPLAY_NAME}
         )
+        ref_items.sort_values(by="Vintage", inplace=True, ascending=True)
         i = RenderRealizationStatusFundBreakout_NetGross(
             gross_realization_status_breakout=gross_realized_status_breakout,
             net_breakout=net,
@@ -162,17 +163,12 @@ class PvmManagerTrackRecordReport(BasePvmTrackRecordReport):
     def assign_components(self) -> List[ReportWorkBookHandler]:
         base = [self.generate_fund_breakout()]
         attribution = self.generate_attribution_items()
-
-        final = (
-            base
-            + [
-                ReportWorkBookHandler(
-                    self.manager_name,
-                    Template_135,
-                    [self.generate_135_tables()],
-                )
-            ]
-            + attribution
-        )
-
+        one_three_five = [
+            ReportWorkBookHandler(
+                self.manager_name,
+                Template_135,
+                [self.generate_135_tables()],
+            )
+        ]
+        final = one_three_five + base + attribution
         return final
