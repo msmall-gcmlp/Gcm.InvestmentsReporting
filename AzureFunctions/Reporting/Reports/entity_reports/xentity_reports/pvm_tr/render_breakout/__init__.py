@@ -291,8 +291,6 @@ class RenderRealizationStatusFundBreakout_NetGross(RenderTablesRenderer):
                         how="left",
                     )
                 else:
-
-                    
                     render_cache[fund_net_name] = all_net.Investment
                     render_cache[total_net_name] = all_net.Total
 
@@ -315,7 +313,9 @@ class RenderRealizationStatusFundBreakout_NetGross(RenderTablesRenderer):
             # rendering
             final: pd.DataFrame = v
             if str(k).endswith("_net") and not self.append_net_to_gross:
-                start = final.columns.get_loc(PvmNodeBase._DISPLAY_NAME) + 1 
+                start = (
+                    final.columns.get_loc(PvmNodeBase._DISPLAY_NAME) + 1
+                )
                 for i in range(max_column_count - len(final.columns)):
                     final.insert(start, f"{i}_NULL", "")
             to_render.append(ReportTable(k, final))
