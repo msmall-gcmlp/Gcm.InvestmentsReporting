@@ -888,7 +888,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
                     peer_beta_adj_index = pd.concat([peer_beta_adj_index, beta_adj_index], axis=1)
         else:
             for fund in peer_bmrk_ror.columns[:-1]:
-                peer_beta_adj_index[fund] = risk_free
+                risk_free_fund = risk_free.copy()
+                risk_free_fund.name = fund
+                peer_beta_adj_index = pd.concat([peer_beta_adj_index, risk_free], axis=1)
 
         peer_beta_adj_index.index = pd.to_datetime(peer_beta_adj_index.index)
         peer_rors = peer_rors.dropna(axis=0, how='all')
