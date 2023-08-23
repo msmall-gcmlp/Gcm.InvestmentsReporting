@@ -8,6 +8,7 @@ from gcm.inv.scenario import Scenario
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.inv.dataprovider.factor import Factor
+from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
 from pandas._libs.tslibs.offsets import relativedelta
 from _legacy.core.reporting_runner_base import (
@@ -51,6 +52,13 @@ class PerformanceQualityReportData(ReportingRunnerBase):
             include_filters=include_filters,
             exclude_filters=exclude_filters,
         )
+
+        if self._inv_group_ids is None:
+            d1 = EntityMaster().get_investment_entities(investment_group_names=['D1 Liquid Class'])
+            d1_inv_group_id = int(d1['InvestmentGroupId'][0])
+            d1_fund_dimn = InvestmentGroup(investment_group_ids=[d1_inv_group_id]).get_dimensions()
+            fund_dimn = pd.concat([fund_dimn, d1_fund_dimn])
+
         return fund_dimn
 
     @staticmethod

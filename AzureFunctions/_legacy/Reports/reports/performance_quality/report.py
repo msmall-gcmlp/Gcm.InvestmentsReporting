@@ -27,7 +27,6 @@ from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario
 from gcm.inv.models.ars_peer_analysis.peer_conditional_excess_returns import _compute_rolling_excess_metrics
-from gcm.inv.models.ars_peer_analysis.peer_conditional_excess_returns import generate_peer_conditional_excess_returns
 
 
 class PerformanceQualityReport(ReportingRunnerBase):
@@ -48,9 +47,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _peer_inputs(self):
-        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
-        file = self._primary_peer_group.replace("/", "") + "_peer_inputs_" + as_of_date + ".json"
-        inputs = self._helper.download_inputs(location=self._helper.underlying_data_location, file_path=file)
+        if self._primary_peer_group is not None:
+            as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+            file = self._primary_peer_group.replace("/", "") + "_peer_inputs_" + as_of_date + ".json"
+            inputs = self._helper.download_inputs(location=self._helper.underlying_data_location, file_path=file)
+        else:
+            inputs = None
         return inputs
 
     @cached_property
@@ -184,6 +186,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
     @cached_property
     def _peer_arb_benchmark_returns(self):
+        if self._peer_inputs is None:
+            return pd.DataFrame()
+
         daily_returns = pd.read_json(self._peer_inputs["peer_group_abs_return_bmrk_returns"], orient="index")
         if daily_returns.columns[0] == 'MOVE Index':
             returns = AggregateFromDaily().transform(
@@ -239,14 +244,18 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _primary_peer_returns(self):
         if self._primary_peer_analytics is not None:
             # returns = pd.read_json(self._primary_peer_analytics["gcm_peer_returns"], orient="index")
-            returns = pd.read_json(self._peer_inputs["gcm_peer_returns"], orient="index")
-            return returns.squeeze()
+            if self._peer_inputs is not None:
+                returns = pd.read_json(self._peer_inputs["gcm_peer_returns"], orient="index")
+                return returns.squeeze()
         else:
             return pd.Series(name='PrimaryPeer')
 
     @cached_property
     def _primary_peer_constituent_returns(self):
         # pd.read_json(self._peer_inputs["gcm_peer_constituent_returns"], orient="index")
+        if self._peer_inputs is None:
+            return pd.DataFrame()
+
         returns = pd.read_json(self._peer_inputs["gcm_peer_constituent_returns"], orient="index")
         #return returns.squeeze()
         returns_columns = [ast.literal_eval(x) for x in returns.columns]
@@ -675,14 +684,17 @@ class PerformanceQualityReport(ReportingRunnerBase):
             annualize=True,
         )
 
-        itd_return = self._analytics.compute_trailing_return(
-            ror=returns,
-            window=self._itd_months,
-            as_of_date=self._as_of_date,
-            method="geometric",
-            periodicity=Periodicity.Monthly,
-            annualize=True if self._itd_months > 12 else False,
-        )
+        if (isinstance(returns, pd.Series)) or (self._itd_months > 0):
+            itd_return = self._analytics.compute_trailing_return(
+                ror=returns,
+                window=self._itd_months,
+                as_of_date=self._as_of_date,
+                method="geometric",
+                periodicity=Periodicity.Monthly,
+                annualize=True if self._itd_months > 12 else False,
+            )
+        else:
+            itd_return = pd.Series(index=trailing_10y_return.index)
 
         # rounding to 2 so that Excess Return matches optically
         stats = [
@@ -775,7 +787,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             if constituent_total_returns is None or len(constituent_total_returns) == 0:
                 return pd.DataFrame({group_name: [""] * len(index)}, index=index)
 
-        if fund_returns.loc["MTD"].squeeze() == ' ':
+        if fund_returns.loc["MTD"].squeeze() in [' ', '']:
             return pd.DataFrame({group_name: [""] * len(index)}, index=index)
 
         mtd_ptile = self._calculate_periodic_percentile(fund_periodic_return=fund_returns.loc["MTD"],
@@ -847,6 +859,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
         #peer_arb_bmrk = self._abs_bmrk_returns
         peer_arb_bmrk = self._peer_arb_benchmark_returns
 
+        if peer_rors.shape[0] == 0:
+            return pd.DataFrame()
+
         rf_ret = self._helper.rf_return
         rf_df = pd.DataFrame(rf_ret)
         peer_bmrk_ror = peer_rors.merge(peer_arb_bmrk, how='left', left_index=True, right_index=True)
@@ -869,11 +884,13 @@ class PerformanceQualityReport(ReportingRunnerBase):
                     betas.append(beta)
 
                     beta_adj_index = peer_bmrk_ror[passive_bmrk] * beta + (1 - beta) * risk_free
-                    peer_beta_adj_index[fund] = beta_adj_index
+                    beta_adj_index.name = fund
+                    peer_beta_adj_index = pd.concat([peer_beta_adj_index, beta_adj_index], axis=1)
         else:
             for fund in peer_bmrk_ror.columns[:-1]:
                 peer_beta_adj_index[fund] = risk_free
 
+        peer_beta_adj_index.index = pd.to_datetime(peer_beta_adj_index.index)
         peer_rors = peer_rors.dropna(axis=0, how='all')
 
         fund_return_summary = self._get_return_summary(returns=peer_rors, return_type="Fund")
@@ -882,10 +899,11 @@ class PerformanceQualityReport(ReportingRunnerBase):
 
         excess_return_summary = excess_return_summary.T
         excess_return_summary.dropna(how='all', inplace=True)
-        peer_excess_df = excess_return_summary.iloc[:, :-1]
+        peer_excess_df = excess_return_summary.copy()
+        peer_excess_df = peer_excess_df.iloc[:, :-1]
 
-        peer_excess_df.rename(columns={'MTD': 'M', 'QTD': 'Q', 'YTD': 'Y', 'TTM': 'T12', '3Y': 'T36', '5Y': 'T60', '10Y': 'T120'
-                                       }, inplace=True)
+        peer_excess_df.rename(columns={'MTD': 'M', 'QTD': 'Q', 'YTD': 'Y', 'TTM': 'T12', '3Y': 'T36', '5Y': 'T60',
+                                       '10Y': 'T120'}, inplace=True)
         peer_excess_df = {peer_excess_df[column].name: [y for y in peer_excess_df[column] if not pd.isna(y)] for column in peer_excess_df}
         return peer_excess_df
 
@@ -1436,9 +1454,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
     def _get_fund_rolling_return_summary(self):
         returns = self._fund_returns.copy()
         rolling_12m_returns = self._helper.get_rolling_return(returns=returns, trailing_months=12)
-        rolling_1y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=12)
-        rolling_3y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=36)
-        rolling_5y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_returns, trailing_months=60)
+        rolling_1y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_returns,
+                                                                 trailing_months=12)
+        rolling_3y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_returns,
+                                                                 trailing_months=36)
+        rolling_5y_summary = self._helper.summarize_rolling_data(rolling_data=rolling_12m_returns,
+                                                                 trailing_months=60)
 
         summary = pd.concat(
             [
@@ -1475,10 +1496,14 @@ class PerformanceQualityReport(ReportingRunnerBase):
         column_headings = ["Excess 25%", "Excess mean", "Excess 75%",
                            'Excess Ptile - 25%', 'Excess Ptile - Mean', 'Excess Ptile - 75%', "Excess count"]
 
-        if self._fund_returns.shape[0] < 36 or self._primary_peer_group is None:
-            return pd.DataFrame(columns=column_headings, index=market_percentiles)
+        if (self._market_scenarios_3y is None) or (self._fund_returns.shape[0] == 0):
+            return pd.DataFrame(columns=[x for x in range(13)],
+                                index=market_percentiles), \
+                   pd.DataFrame(columns=[x for x in range(13)],
+                                index=[0])
 
         bmrk = self._market_scenarios_3y.columns[0]
+
         rors = self._fund_returns.merge(self._market_returns_monthly, left_index=True, right_index=True)
 
         if bmrk == 'MOVE Index':
@@ -1504,6 +1529,10 @@ class PerformanceQualityReport(ReportingRunnerBase):
                                                                        annualize=True,
                                                                        include_history=True)
 
+        if rolling_fund_returns.shape[0] == 0:
+            rolling_fund_returns = pd.DataFrame(index=self._market_scenarios_3y.index,
+                                                columns=['Total', 'Excess'])
+
         rolling_rors = rolling_fund_returns.merge(self._market_scenarios_3y, left_index=True, right_index=True)
 
         prim_peer_ret = pd.DataFrame(self._primary_peer_returns)
@@ -1512,13 +1541,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         ptile_25, ptile_mean, ptile_75 = np.percentile(
             rolling_rors['Excess'], 25), np.mean(rolling_rors['Excess']), np.percentile(rolling_rors['Excess'], 75)
 
-        #const_ret = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._constituent_returns
-        #bmrk_ret = PerformanceQualityPeerLevelAnalytics(peer_group=self._primary_peer_group)._peer_arb_benchmark_returns
         const_ret = self._primary_peer_constituent_returns
         bmrk_ret = self._peer_arb_benchmark_returns
-        market_scenarios, conditional_ptile_summary = \
-            generate_peer_conditional_excess_returns(peer_returns=const_ret,
-                                                     benchmark_returns=bmrk_ret)
 
         rolling_excess, _ = _compute_rolling_excess_metrics(
             const_ret, bmrk_ret, percentiles=[10, 25, 50, 75, 90], window=36)
@@ -1546,6 +1570,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
         conditional_ptile_summary = conditional_ptile_summary.round(2)
         conditional_ptile_summary = conditional_ptile_summary.iloc[:1]
         condl_list = conditional_ptile_summary.loc['composite', :].values.flatten().tolist()
+        market_composite = condl_list[0:1]
         condl_list = condl_list[1:]
 
         ind = [10, 25, 50, 75, 90]
@@ -1563,27 +1588,30 @@ class PerformanceQualityReport(ReportingRunnerBase):
         fund_vals = df_fund['fund_excess'].values
         fund_peer_perc_vals = df_fund['fund_peer_perc'].values
 
-        fund_peer_perc_strs = ['' if str(x) == 'nan' else str(int(x)) + 'th' for x in fund_peer_perc_vals]
+        if not all(rolling_rors['Excess'].isna()):
+            summary_stats = rolling_rors.groupby('MarketScenario')[['Excess']].describe()
+            summary_stats.columns = [' '.join(col).strip() for col in summary_stats.columns.values]
+            summary_stats = summary_stats[["Excess 25%", "Excess mean", "Excess 75%", "Excess count"]]
+            summary_stats = summary_stats.reindex(market_percentiles)
+
+            fund_25 = self._condl_peer_excess_returns.sub(summary_stats['Excess 25%'], axis=0).abs().idxmin(axis=1)
+            fund_mean = self._condl_peer_excess_returns.sub(summary_stats['Excess mean'], axis=0).abs().idxmin(axis=1)
+            fund_75 = self._condl_peer_excess_returns.sub(summary_stats['Excess 75%'], axis=0).abs().idxmin(axis=1)
+
+            summary_stats['Excess Ptile - 25%'] = ['' if str(x) == 'nan' else str(int(x)) + 'th' for x in fund_25]
+            summary_stats['Excess Ptile - Mean'] = ['' if str(x) == 'nan' else str(int(x)) + 'th' for x in fund_mean]
+            summary_stats['Excess Ptile - 75%'] = ['' if str(x) == 'nan' else str(int(x)) + 'th' for x in fund_75]
+            summary_stats = summary_stats[column_headings]
+            fund_peer_perc_strs = ['' if str(x) == 'nan' else str(int(x)) + 'th' for x in fund_peer_perc_vals]
+        else:
+            fund_peer_perc_strs = [np.nan] * 3
+            summary_stats = pd.DataFrame(index=market_percentiles,
+                                         columns=column_headings)
 
         composite_condl = list(peer_vals) + list(fund_vals) + list(fund_peer_perc_strs)
-
-        summary_stats = rolling_rors.groupby('MarketScenario')[['Excess']].describe()
-        summary_stats.columns = [' '.join(col).strip() for col in summary_stats.columns.values]
-        summary_stats = summary_stats[["Excess 25%", "Excess mean", "Excess 75%", "Excess count"]]
-        summary_stats = summary_stats.reindex(market_percentiles)
-
-        fund_25 = self._condl_peer_excess_returns.sub(summary_stats['Excess 25%'], axis=0).abs().idxmin(axis=1)
-        fund_mean = self._condl_peer_excess_returns.sub(summary_stats['Excess mean'], axis=0).abs().idxmin(axis=1)
-        fund_75 = self._condl_peer_excess_returns.sub(summary_stats['Excess 75%'], axis=0).abs().idxmin(axis=1)
-
-        summary_stats['Excess Ptile - 25%'] = ['' if str(x) == 'nan' else str(int(x)) + 'th' for x in fund_25]
-        summary_stats['Excess Ptile - Mean'] = ['' if str(x) == 'nan' else str(int(x)) + 'th' for x in fund_mean]
-        summary_stats['Excess Ptile - 75%'] = ['' if str(x) == 'nan' else str(int(x)) + 'th' for x in fund_75]
-
-        summary_stats = summary_stats[column_headings]
-
         composite_obs = summary_stats.iloc[:, -1].sum()
-        composite_condl = composite_condl + [composite_obs]
+        composite_obs = np.nan if composite_obs == 0 else composite_obs
+        composite_condl = market_composite + composite_condl + [composite_obs]
         composite_df = pd.DataFrame([composite_condl])
 
         return summary_stats, composite_df
