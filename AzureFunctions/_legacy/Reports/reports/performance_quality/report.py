@@ -378,6 +378,9 @@ class PerformanceQualityReport(ReportingRunnerBase):
     @cached_property
     def _fund_rba_risk_decomp(self):
         decomp = pd.read_json(self._fund_inputs["rba_risk_decomp"], orient="index")
+        if decomp.shape[0] == 0:
+            return pd.DataFrame(index=['TTM', '3Y', '5Y'],
+                                columns=["SYSTEMATIC", "X_ASSET_CLASS", "PUBLIC_LS", "NON_FACTOR"])
         decomp = decomp[decomp["InvestmentGroupName"] == self._fund_name]
         decomp = decomp[["FactorGroup1", "1Y", "3Y", "5Y"]]
         decomp.rename(columns={"1Y": "TTM"}, inplace=True)
@@ -878,7 +881,7 @@ class PerformanceQualityReport(ReportingRunnerBase):
             for fund in peer_bmrk_ror.columns[:-1]:
                 fund_returns = peer_bmrk_ror[[passive_bmrk, fund]].dropna()
 
-                if fund_returns.shape[0] > 0:
+                if fund_returns.shape[0] > 1:
                     beta = scipy.stats.linregress(x=fund_returns[passive_bmrk], y=fund_returns[fund])[0]
                     beta = round(max(min(beta, 1.5), 0.1), 1)
                     betas.append(beta)
@@ -1573,6 +1576,8 @@ class PerformanceQualityReport(ReportingRunnerBase):
         conditional_ptile_summary = conditional_ptile_summary.iloc[:1]
         condl_list = conditional_ptile_summary.loc['composite', :].values.flatten().tolist()
         market_composite = condl_list[0:1]
+        if self._market_scenarios_3y.columns[0] == 'MOVE Index':
+            market_composite = [' ' + str(int(market_composite[0]))]
         condl_list = condl_list[1:]
 
         ind = [10, 25, 50, 75, 90]
