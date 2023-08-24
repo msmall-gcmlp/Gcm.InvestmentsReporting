@@ -40,7 +40,7 @@ from .orchestrators.PortfolioConstructionReportOrchestrator import (
     orchestrator_function as portfolio_construction_orchestrator_function,
 )
 
-from .orchestrators.EofRbaReportOrchestrator import(
+from .orchestrators.EofRbaReportOrchestrator import (
     orchestrator_function as eof_risk_report_orchestrator_function
 )
 

@@ -523,9 +523,9 @@ class EofExternalData(ReportingRunnerBase):
         init_mkt_val = barra_stress.iloc[0]['Initial Market Value']
         var = port_var / init_mkt_val
         plus_20 = barra_stress['20% Equity Correlated: $P&L'].iloc[0]
-        plus_20 = plus_20/init_mkt_val
+        plus_20 = plus_20 / init_mkt_val
         minus_20 = barra_stress['20% Equity Correlated: $P&L'].iloc[0]
-        minus_20 = minus_20/init_mkt_val
+        minus_20 = minus_20 / init_mkt_val
         stress = pd.DataFrame([var, plus_20, minus_20])
         return stress
 

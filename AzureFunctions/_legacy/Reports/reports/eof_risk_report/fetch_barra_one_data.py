@@ -24,15 +24,12 @@ def _extract_single_csv_from_zip(zip_bytes, csv_partial_name):
     found_file = next(
         (f for f in zipped_file_names if csv_partial_name in f), None
     )
-    
     raw_file_bytes = zip_file_obj.open(found_file).read()
     return StringIO(raw_file_bytes.decode("utf-8"))
-    #return StringIO(raw_file_bytes.decode("ISO-8859-1"))
 
 
 def _process_barra_dataframe(csv_bytes, header_rows_to_ignore=15):
     df = pd.read_csv(csv_bytes, skiprows=header_rows_to_ignore)
-    #if factor or stress
     if header_rows_to_ignore == 17 or 11:
         return df
     df.columns = df.columns.str.strip()
