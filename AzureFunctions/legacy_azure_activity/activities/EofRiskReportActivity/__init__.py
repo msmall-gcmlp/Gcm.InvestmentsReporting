@@ -18,3 +18,4 @@ def main(requestBody) -> str:
                 runner=Scenario.get_attribute("dao"),
                 as_of_date=as_of_date,
                 scenario=["EOF External"]).execute()
+        return input_data
