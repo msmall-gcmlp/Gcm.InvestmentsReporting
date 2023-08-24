@@ -73,10 +73,8 @@ class EofExternalData(ReportingRunnerBase):
             / ls[["L", "S"]].abs().sum(axis=1).sum()
         )
         gross_exp = pd.concat([net_exp, ls], axis=1)
-        # import pdb
-        # pdb.set_trace()
-        # gross_exp["tmp"] = [1, 2, 3, 4, 5, 6, 7, 9, 8]
-        # gross_exp.sort_values("tmp", inplace=True)
+        gross_exp["tmp"] = [1, 2, 3, 4, 5, 6, 7, 9, 8]
+        gross_exp.sort_values("tmp", inplace=True)
         total = pd.DataFrame(gross_exp.sum()).transpose()
         total.index = ["Total"]
         gross_exp = pd.concat([gross_exp, total])
@@ -964,8 +962,8 @@ class EofExternalData(ReportingRunnerBase):
         ).loc[gics_order]["%CR to Total Risk"]
         sec_risk = pd.concat([sec_risk, pd.Series(1 - sec_risk.sum(), index=["Other"])])
         sec_risk = pd.concat([sec_risk, pd.Series(1, index=["Total"])])
-        
-        gross_exp["% total risk"] = sec_risk
+        del gross_exp['tmp']
+        gross_exp["% total risk"] = np.asarray(sec_risk)
         gross_exp["L"] = gross_exp["L"] * 100
         gross_exp["S"] = gross_exp["S"] * 100
         gross_exp["% total"] = gross_exp["% total"]  # * 100
