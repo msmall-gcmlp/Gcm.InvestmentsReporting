@@ -19,3 +19,4 @@ def main(requestBody) -> str:
                 as_of_date=as_of_date,
                 scenario=["EOF External"]).execute()
         return input_data
+    return None

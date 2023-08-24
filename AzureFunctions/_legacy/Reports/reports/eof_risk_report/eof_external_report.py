@@ -100,7 +100,8 @@ class EofExternalData(ReportingRunnerBase):
             raw, dao.data_engine.session.bind, params=tuple([params[0]])
         )
 
-        reg_map = pd.read_csv(os.path.join(os.path.dirname(__file__), ".//regionmap.csv"))
+        reg_map = pd.read_csv(os.path.join(os.path.dirname(__file__),
+                                           ".//regionmap.csv"))
         reg = pd.merge(reg, reg_map, how="left", on="CountryOfExposure")
         reg["l/s"] = reg["net_delta"].apply(
             lambda x: "L" if x >= 0 else "S"
@@ -164,9 +165,9 @@ class EofExternalData(ReportingRunnerBase):
     def cap_exposures(self, dao, params):
         raw = """
         select case when MarketCapitalization <= 2000000000 then 'Small Cap'
-	        when MarketCapitalization <= 10000000000 then 'Mid Cap'
-		    when MarketCapitalization > 10000000000 then 'Large Cap'
-			else 'Other' end as market_cap,
+            when MarketCapitalization <= 10000000000 then 'Mid Cap'
+            when MarketCapitalization > 10000000000 then 'Large Cap'
+            else 'Other' end as market_cap,
         id.Id,sum(se.DeltaAdjExp)/avg(e.EndingNav) as net_delta
         from [Reporting].SecurityExposureDisaggIndices se
         left join AnalyticsData.IssuerDimn id
@@ -177,8 +178,8 @@ class EofExternalData(ReportingRunnerBase):
         ON se.PortfolioName = d.Name
         LEFT JOIN AnalyticsData.Portfolio e
         ON d.Id = e.PortfolioId and e.Date = se.Date
-        left join [AnalyticsData].[SecurityMarketData] sm 
-        on se.SecurityId = sm.SecurityId and se.Date = sm.HoldingDate 
+        left join [AnalyticsData].[SecurityMarketData] sm
+        on se.SecurityId = sm.SecurityId and se.Date = sm.HoldingDate
         where d.Id = 99999 and se.Date = ?
         group by MarketCapitalization, id.Id
         """
@@ -238,27 +239,27 @@ class EofExternalData(ReportingRunnerBase):
     def curr_top(self, dao, params):
         raw = """
         select top(10) id.Id,id.Name,
-           sum(se.DeltaAdjExp)/avg(gross.gross) as net_delta
+            sum(se.DeltaAdjExp)/avg(gross.gross) as net_delta
         from [Reporting].SecurityExposureDisaggIndices se
-	        left join AnalyticsData.IssuerDimn id
-	        on se.IssuerId = id.Id
-	        LEFT JOIN AnalyticsData.PortfolioDimn d
-	        ON se.PortfolioName = d.Name
-	        LEFT JOIN AnalyticsData.Portfolio e
-	        ON d.Id = e.PortfolioId and e.Date = se.Date
-	        left join (
-		        select Date, sum(abs(exposure)) gross
-		        from (
-			        select nds.Date, SecurityId, sum(DeltaAdjExp) exposure
-			        from [Reporting].SecurityExposureDisaggIndices nds
-				        LEFT JOIN AnalyticsData.Portfolio p
-				        ON nds.Date = p.Date
-			        where nds.PortfolioName = 'EOF'  --and nds.Date > '1/1/2022' 
-				        and p.PortfolioId = 99999 and nds.Date = p.Date
-				        group by nds.Date, SecurityId) nets
-		        group by Date
-	        ) gross
-	        on se.Date = gross.Date
+            left join AnalyticsData.IssuerDimn id
+            on se.IssuerId = id.Id
+            LEFT JOIN AnalyticsData.PortfolioDimn d
+            ON se.PortfolioName = d.Name
+            LEFT JOIN AnalyticsData.Portfolio e
+            ON d.Id = e.PortfolioId and e.Date = se.Date
+            left join (
+                select Date, sum(abs(exposure)) gross
+                from (
+                    select nds.Date, SecurityId, sum(DeltaAdjExp) exposure
+                    from [Reporting].SecurityExposureDisaggIndices nds
+                        LEFT JOIN AnalyticsData.Portfolio p
+                        ON nds.Date = p.Date
+                    where nds.PortfolioName = 'EOF'
+                    and p.PortfolioId = 99999 and nds.Date = p.Date
+                        group by nds.Date, SecurityId) nets
+                group by Date
+            ) gross
+            on se.Date = gross.Date
         where d.Id = 99999 and se.Date = ?
         group by id.Id, id.Name
         order by net_delta desc
@@ -270,25 +271,25 @@ class EofExternalData(ReportingRunnerBase):
         select top(10) id.Id,id.Name,
            sum(se.DeltaAdjExp)/avg(gross.gross) as net_delta
         from [Reporting].SecurityExposureDisaggIndices se
-	        left join AnalyticsData.IssuerDimn id
-	        on se.IssuerId = id.Id
-	        LEFT JOIN AnalyticsData.PortfolioDimn d
-	        ON se.PortfolioName = d.Name
-	        LEFT JOIN AnalyticsData.Portfolio e
-	        ON d.Id = e.PortfolioId and e.Date = se.Date
-	        left join (
-		        select Date, sum(abs(exposure)) gross
-		        from (
-			        select nds.Date, SecurityId, sum(DeltaAdjExp) exposure
-			        from [Reporting].SecurityExposureDisaggIndices nds
-				        LEFT JOIN AnalyticsData.Portfolio p
-				        ON nds.Date = p.Date
-			        where nds.PortfolioName = 'EOF'  --and nds.Date > '1/1/2022' 
-				        and p.PortfolioId = 99999 and nds.Date = p.Date
-				        group by nds.Date, SecurityId) nets
-		        group by Date
-	        ) gross
-	        on se.Date = gross.Date
+            left join AnalyticsData.IssuerDimn id
+            on se.IssuerId = id.Id
+            LEFT JOIN AnalyticsData.PortfolioDimn d
+            ON se.PortfolioName = d.Name
+            LEFT JOIN AnalyticsData.Portfolio e
+            ON d.Id = e.PortfolioId and e.Date = se.Date
+            left join (
+                select Date, sum(abs(exposure)) gross
+                from (
+                    select nds.Date, SecurityId, sum(DeltaAdjExp) exposure
+                    from [Reporting].SecurityExposureDisaggIndices nds
+                        LEFT JOIN AnalyticsData.Portfolio p
+                        ON nds.Date = p.Date
+                    where nds.PortfolioName = 'EOF'
+                        and p.PortfolioId = 99999 and nds.Date = p.Date
+                        group by nds.Date, SecurityId) nets
+                group by Date
+            ) gross
+            on se.Date = gross.Date
         where d.Id = 99999 and se.Date = ?
         group by id.Id, id.Name
         order by net_delta
@@ -308,12 +309,17 @@ class EofExternalData(ReportingRunnerBase):
         ON se.PortfolioName = d.Name
         LEFT JOIN AnalyticsData.Portfolio e
         ON d.Id = e.PortfolioId and e.Date = se.Date
-        where d.Id = 99999 and se.Date <= ? and InstrumentType in ('Contract For Differences','Equity Security','American Depositary Receipt (Equity)','Global Depositary Receipt (Equity)')			
+        where d.Id = 99999 and se.Date <= ? and InstrumentType in
+        ('Contract For Differences','Equity Security',
+        'American Depositary Receipt (Equity)',
+        'Global Depositary Receipt (Equity)')
         group by se.Date,id.Id, id.Name order by net_delta asc
         """
-        cnt = pd.read_sql(raw, dao.data_engine.session.bind, params=tuple([params]))
+        cnt = pd.read_sql(raw, dao.data_engine.session.bind,
+                          params=tuple([params]))
         cnt['Date'] = pd.to_datetime(cnt['Date'])
-        curr_cnt = cnt[cnt["Date"] == pd.to_datetime(params[0], format="%m-%d-%Y")]
+        curr_cnt = cnt[cnt["Date"] == pd.to_datetime(params[0],
+                                                     format="%m-%d-%Y")]
 
         raw = """
         select IssuerId, SpecificResidualRisk
@@ -398,12 +404,16 @@ class EofExternalData(ReportingRunnerBase):
         ON se.PortfolioName = d.Name
         LEFT JOIN AnalyticsData.Portfolio e
         ON d.Id = e.PortfolioId and e.Date = se.Date
-        where d.Id = 99999 and se.Date <= ? and InstrumentType in ('Contract For Differences','Equity Security','American Depositary Receipt (Equity)','Global Depositary Receipt (Equity)')			
+        where d.Id = 99999 and se.Date <= ? and InstrumentType in
+        ('Contract For Differences','Equity Security',
+        'American Depositary Receipt (Equity)',
+        'Global Depositary Receipt (Equity)')
         group by se.Date,id.Id, id.Name order by net_delta asc
         """
         # import pdb
         # pdb.set_trace()
-        cnt = pd.read_sql(raw, dao.data_engine.session.bind, params=tuple(params))
+        cnt = pd.read_sql(raw, dao.data_engine.session.bind,
+                          params=tuple(params))
         cnt['Date'] = pd.to_datetime(cnt['Date'])
         cnt = cnt[
             (cnt["Date"] <= curr_dt)
@@ -452,32 +462,31 @@ class EofExternalData(ReportingRunnerBase):
         select se.Date,id.Id,id.Name,
            sum(se.DeltaAdjExp)/avg(gross.gross) as net_delta
         from [Reporting].SecurityExposureDisaggIndices se
-	        left join AnalyticsData.IssuerDimn id
-	        on se.IssuerId = id.Id
-	        LEFT JOIN AnalyticsData.PortfolioDimn d
-	        ON se.PortfolioName = d.Name
-	        LEFT JOIN AnalyticsData.Portfolio e
-	        ON d.Id = e.PortfolioId and e.Date = se.Date
-	        left join (
-		        select Date, sum(abs(exposure)) gross
-			        from (
-				        select nds.Date, SecurityId, sum(DeltaAdjExp) exposure
-				        from [Reporting].SecurityExposureDisaggIndices nds
-					        LEFT JOIN AnalyticsData.Portfolio p
-					        ON nds.Date = p.Date
-				        where nds.PortfolioName = 'EOF'  --and nds.Date > '1/1/2022' 
-					          and p.PortfolioId = 99999 and nds.Date = p.Date
-					          group by nds.Date, SecurityId) nets
-		        group by Date 
-	        ) gross
-	        on se.Date = gross.Date
-        where d.Id = 99999 
+            left join AnalyticsData.IssuerDimn id
+            on se.IssuerId = id.Id
+            LEFT JOIN AnalyticsData.PortfolioDimn d
+            ON se.PortfolioName = d.Name
+            LEFT JOIN AnalyticsData.Portfolio e
+            ON d.Id = e.PortfolioId and e.Date = se.Date
+            left join (
+                select Date, sum(abs(exposure)) gross
+                    from (
+                        select nds.Date, SecurityId, sum(DeltaAdjExp) exposure
+                        from [Reporting].SecurityExposureDisaggIndices nds
+                            LEFT JOIN AnalyticsData.Portfolio p
+                            ON nds.Date = p.Date
+                        where nds.PortfolioName = 'EOF'
+                            and p.PortfolioId = 99999 and nds.Date = p.Date
+                            group by nds.Date, SecurityId) nets
+                group by Date
+            ) gross
+            on se.Date = gross.Date
+        where d.Id = 99999
         group by se.Date,id.Id, id.Name
         """
         df = pd.read_sql(raw, dao.data_engine.session.bind)
         df["Date"] = pd.to_datetime(df["Date"])
         curr_dt = pd.to_datetime(params[0])
-        # df = df[(df['Date'] <= '2022-12-30') & (df['Date'] > '2021-12-30')]
         df_ttm = df[
             (df["Date"] <= curr_dt)
             & (df["Date"] > curr_dt - pd.DateOffset(years=1))
@@ -492,26 +501,31 @@ class EofExternalData(ReportingRunnerBase):
         barra_fac = fbd.load_barra_one_data_from_datalake(
             folder_path=f"{zone}/barraone/position/eof_add_on_reports/",
             report_pkg="EOF Add-On Reports w LT",
-            as_of_date=datetime.date(self._as_of_date.year, self._as_of_date.month, self._as_of_date.day),
+            as_of_date=datetime.date(self._as_of_date.year,
+                                     self._as_of_date.month,
+                                     self._as_of_date.day),
             csv_partial_name='FactorGroup_ContribRisk',
             data_lake_client=dl_client,
             skip=17
         )
         port_var = barra_fac['Portfolio VaR'].iloc[0]
-         
         barra_stress = fbd.load_barra_one_data_from_datalake(
             folder_path=f"{zone}/barraone/position/eof_stress_test/",
             report_pkg="eof_stress_test",
-            as_of_date=datetime.date(self._as_of_date.year, self._as_of_date.month, self._as_of_date.day),
+            as_of_date=datetime.date(self._as_of_date.year,
+                                     self._as_of_date.month,
+                                     self._as_of_date.day),
             csv_partial_name='eof_stress_test',
             data_lake_client=dl_client,
-            skip = 11
+            skip=11
         )
         port_var = barra_fac['Portfolio VaR'].iloc[0]
         init_mkt_val = barra_stress.iloc[0]['Initial Market Value']
         var = port_var / init_mkt_val
-        plus_20 = barra_stress['20% Equity Correlated: $P&L'].iloc[0] / init_mkt_val
-        minus_20 = barra_stress['20% Equity Correlated: $P&L'].iloc[0] / init_mkt_val
+        plus_20 = barra_stress['20% Equity Correlated: $P&L'].iloc[0]
+        plus_20 = plus_20/init_mkt_val
+        minus_20 = barra_stress['20% Equity Correlated: $P&L'].iloc[0]
+        minus_20 = minus_20/init_mkt_val
         stress = pd.DataFrame([var, plus_20, minus_20])
         return stress
 
@@ -520,7 +534,8 @@ class EofExternalData(ReportingRunnerBase):
         select * from Reporting.SecurityExposureNoDisaggIndices
         where Date = ?
         """
-        eof = pd.read_sql(raw, dao.data_engine.session.bind, params=tuple([params]))
+        eof = pd.read_sql(raw, dao.data_engine.session.bind,
+                          params=tuple([params]))
         holding = eof.groupby("SecurityId")["Holding"].sum()
         deltaadjexp = eof.groupby("SecurityId")["DeltaAdjExp"].sum()
         holdings = pd.concat([holding, deltaadjexp], axis=1)
@@ -562,9 +577,12 @@ class EofExternalData(ReportingRunnerBase):
             "DeltaAdjExp"
         ].abs()
 
-        holdings_by_adtv["pct_of_gross_exp"] = np.asarray(holdings_by_adtv.groupby(
-            "Date"
-        )["gross_exp"].apply(lambda x: x / float(x.sum())))
+        holdings_by_adtv["pct_of_gross_exp"] = np.asarray(holdings_by_adtv.
+                                                          groupby("Date")
+                                                          ["gross_exp"].
+                                                          apply(lambda x: x /
+                                                                float(x.
+                                                                      sum())))
         holdings_by_adtv["day_category"] = holdings_by_adtv.days.apply(
             lambda x: "1"
             if x < 1
@@ -586,17 +604,18 @@ class EofExternalData(ReportingRunnerBase):
 
     def return_attribution(self, dao, params):
         raw = """
-          select Date, FactorGroup, sum(Attribution) Attribution
-          from 
-          (select 
-	      Date,
-	      CASE WHEN FactorGroup in ('Country', 'Currency Risk', 'Market') THEN 'Market' ELSE FactorGroup END as FactorGroup, 
-	      sum(TotalAttribPctFundNav) Attribution
-          from Reporting.PortfolioFactorAttribution
-          where PortfolioName = 'EOF' and RiskModel = 'GEMLTL'
-          group by Date, FactorGroup) attribRemapped
-          group by Date, FactorGroup
-          order by Date, FactorGroup
+        select Date, FactorGroup, sum(Attribution) Attribution
+        from
+        (select
+        Date,
+        CASE WHEN FactorGroup in ('Country', 'Currency Risk', 'Market')
+        THEN 'Market' ELSE FactorGroup END as FactorGroup,
+        sum(TotalAttribPctFundNav) Attribution
+        from Reporting.PortfolioFactorAttribution
+        where PortfolioName = 'EOF' and RiskModel = 'GEMLTL'
+        group by Date, FactorGroup) attribRemapped
+        group by Date, FactorGroup
+        order by Date, FactorGroup
         """
         df = pd.read_sql(raw, dao.data_engine.session.bind).pivot_table(
             "Attribution", "Date", "FactorGroup"
@@ -610,16 +629,17 @@ class EofExternalData(ReportingRunnerBase):
     def historic_exposure_vol(self, dao, params):
         dt = pd.to_datetime(params[0])
         raw = """
-        select YEAR, MONTH, avg(net) avg_net						
-        from (						
-	        select nds.Date, year(nds.Date) YEAR, month(nds.Date) MONTH, sum(DeltaAdjExp)/avg(p.EndingNav) net					
-	        from [Reporting].SecurityExposureNoDisaggIndices nds					
-		        LEFT JOIN AnalyticsData.Portfolio p				
-		        ON nds.Date = p.Date				
-	        where nds.PortfolioName = 'EOF'  and nds.Date >= '4/1/2022' 					
-		          and p.PortfolioId = 99999 and nds.Date = p.Date				
-	        group by nds.Date, year(nds.Date), month(nds.Date) ) net_hist					
-        group by YEAR, MONTH					
+        select YEAR, MONTH, avg(net) avg_net
+        from (
+            select nds.Date, year(nds.Date) YEAR, month(nds.Date) MONTH,
+            sum(DeltaAdjExp)/avg(p.EndingNav) net
+            from [Reporting].SecurityExposureNoDisaggIndices nds
+                LEFT JOIN AnalyticsData.Portfolio p
+                ON nds.Date = p.Date
+            where nds.PortfolioName = 'EOF'  and nds.Date >= '4/1/2022'
+                and p.PortfolioId = 99999 and nds.Date = p.Date
+            group by nds.Date, year(nds.Date), month(nds.Date) ) net_hist
+        group by YEAR, MONTH
         order by YEAR, MONTH
         """
         avg_net = pd.read_sql(raw, dao.data_engine.session.bind)
@@ -631,20 +651,21 @@ class EofExternalData(ReportingRunnerBase):
         ]
 
         raw = """
-        select year(Date) YEAR, month(Date) MONTH, avg(gross)						
-        from (						
-	        select Date, sum(abs(exposure)) gross					
-	        from (					
-		        select nds.Date, SecurityId, sum(DeltaAdjExp)/avg(p.EndingNav) exposure				
-		        from [Reporting].SecurityExposureNoDisaggIndices nds				
-			        LEFT JOIN AnalyticsData.Portfolio p			
-			        ON nds.Date = p.Date			
-		        where nds.PortfolioName = 'EOF'  and nds.Date >= '4/1/2022' 				
-			          and p.PortfolioId = 99999 and nds.Date = p.Date			
-			          group by nds.Date, SecurityId) nets			
-	        group by Date ) grss_hist					
-        group by year(Date), month(Date) 						
-        order by year(Date), month(Date) 
+        select year(Date) YEAR, month(Date) MONTH, avg(gross)
+        from (
+            select Date, sum(abs(exposure)) gross
+            from (
+                select nds.Date, SecurityId,
+                sum(DeltaAdjExp)/avg(p.EndingNav) exposure
+                from [Reporting].SecurityExposureNoDisaggIndices nds
+                    LEFT JOIN AnalyticsData.Portfolio p
+                    ON nds.Date = p.Date
+                where nds.PortfolioName = 'EOF'  and nds.Date >= '4/1/2022'
+                    and p.PortfolioId = 99999 and nds.Date = p.Date
+                    group by nds.Date, SecurityId) nets
+            group by Date ) grss_hist
+        group by year(Date), month(Date)
+        order by year(Date), month(Date)
         """
         avg_gross = pd.read_sql(raw, dao.data_engine.session.bind)
         avg_gross.columns = ["YEAR", "MONTH", "avg_gross"]
@@ -656,16 +677,17 @@ class EofExternalData(ReportingRunnerBase):
         ]
 
         raw = """
-        select year(HoldingDate) YEAR, month(HoldingDate) MONTH, avg(ExpVol)						
-        from (						
-	        select HoldingDate, sum(RiskContrib) 'ExpVol'					
-	        from AnalyticsData.PortfolioContribRisk prc 					
-		         left join (select distinct ExternalDescription, FactorGroup1 from Reporting.Factors) as f				
-	        on prc.Factor = f.ExternalDescription					
-	        where Factor != 'All'					
-	        group by HoldingDate) vol_hist					
-        group by  year(HoldingDate), month(HoldingDate)						
-        order by  year(HoldingDate), month(HoldingDate)	
+        select year(HoldingDate) YEAR, month(HoldingDate) MONTH, avg(ExpVol)
+        from (
+            select HoldingDate, sum(RiskContrib) 'ExpVol'
+            from AnalyticsData.PortfolioContribRisk prc
+                left join (select distinct ExternalDescription, FactorGroup1
+                from Reporting.Factors) as f
+            on prc.Factor = f.ExternalDescription
+            where Factor != 'All'
+            group by HoldingDate) vol_hist
+        group by  year(HoldingDate), month(HoldingDate)
+        order by  year(HoldingDate), month(HoldingDate)
         """
         avg_vol = pd.read_sql(raw, dao.data_engine.session.bind)
         avg_vol.columns = ["YEAR", "MONTH", "avg_vol"]
@@ -678,7 +700,7 @@ class EofExternalData(ReportingRunnerBase):
         ].set_index("Date")["avg_vol"]
         df = pd.concat(
             [avg_gross, avg_net, avg_vol], axis=1
-        ).reset_index()  # [['avg_gross','avg_net','Date','avg_vol']]
+        ).reset_index()
         df["Year"] = df["Date"].dt.year
         df["Month"] = df["Date"].dt.month
         df = df[
@@ -730,29 +752,28 @@ class EofExternalData(ReportingRunnerBase):
         from analyticsdata.Portfolio
         where Date = ?
         """
-        
         nav = pd.read_sql(
             raw, dao.data_engine.session.bind, params=tuple(params[0])
         )
         raw = """
-        select sum(abs(exposure)) gross	 
-        from (	 	 
- 	        select SecurityId, sum(DeltaAdjExp) exposure	 
- 	        from [Reporting].SecurityExposureNoDisaggIndices	 
- 	        where Date = ? 
- 	        group by SecurityId) nets
+        select sum(abs(exposure)) gross
+        from (
+        select SecurityId, sum(DeltaAdjExp) exposure
+        from [Reporting].SecurityExposureNoDisaggIndices
+        where Date = ?
+        group by SecurityId) nets
         """
         gross_exp = pd.read_sql(
             raw, dao.data_engine.session.bind, params=tuple(params[0])
         )
         gross_exp = float(gross_exp["gross"] / nav["EndingNav"])
         raw = """
-        select sum(exposure) net	 
-        from (	 	 
- 	        select SecurityId, sum(DeltaAdjExp) exposure	 
- 	        from [Reporting].SecurityExposureNoDisaggIndices	 
- 	        where Date = ?	 
- 	        group by SecurityId) nets
+        select sum(exposure) net
+        from (
+            select SecurityId, sum(DeltaAdjExp) exposure
+            from [Reporting].SecurityExposureNoDisaggIndices
+            where Date = ?
+            group by SecurityId) nets
         """
         net_exp = pd.read_sql(
             raw, dao.data_engine.session.bind, params=tuple(params[0])
@@ -772,11 +793,7 @@ class EofExternalData(ReportingRunnerBase):
         itd_ann_ret = (
             np.prod(1 + returns["ret"]) ** (12 / len(returns)) - 1
         )
-        itd_ann_vol = returns["ret"].std(ddof=0) * np.sqrt(12)
 
-        conn = pyodbc.connect(
-            "DSN=Athena;UID=RiskReadOnly;PWD=kQ!3Gy+rk9-KkN!N"
-        )
         raw = """
         select AsOfDate Date, ROR as MonthlyEofRtn_Net1_10
         from [dbo].[PortfolioFundCubeReturnStreamStat]
@@ -823,7 +840,8 @@ class EofExternalData(ReportingRunnerBase):
         SELECT [PeriodDate] Date
               ,[RateOfReturn] Ror
           FROM [analyticsdata].[FinancialIndexReturnFact]
-          where FinancialIndexMasterId = (select distinct MasterId from analyticsdata.FinancialIndexDimn where Name = '3M FTSE Tbill')
+          where FinancialIndexMasterId = (select distinct MasterId
+          from analyticsdata.FinancialIndexDimn where Name = '3M FTSE Tbill')
           order by PeriodDate
         """
         rfr = pd.read_sql(raw, dao.data_engine.session.bind)
@@ -858,7 +876,8 @@ class EofExternalData(ReportingRunnerBase):
         SELECT [PeriodDate] Date
               ,[RateOfReturn] Ror
           FROM [analyticsdata].[FinancialIndexReturnFact]
-          where FinancialIndexMasterId = (select distinct MasterId from analyticsdata.FinancialIndexDimn where Name = 'S&P 500')
+          where FinancialIndexMasterId = (select distinct MasterId
+          from analyticsdata.FinancialIndexDimn where Name = 'S&P 500')
           order by PeriodDate
         """
         spx = pd.read_sql(raw, dao.data_engine.session.bind)
@@ -875,7 +894,6 @@ class EofExternalData(ReportingRunnerBase):
             DataSource.DataLake,
             target_name=f"gcmdatalake{sub}",
         )
-        dt_str = pd.to_datetime(date).strftime("%Y%m%d")
 
         rets = self.net_returns(date)
         print("rfr")
@@ -960,7 +978,8 @@ class EofExternalData(ReportingRunnerBase):
         sec_risk = barra_sec.set_index(
             "Grouping: GICS Sector+GICS Sub-Industry"
         ).loc[gics_order]["%CR to Total Risk"]
-        sec_risk = pd.concat([sec_risk, pd.Series(1 - sec_risk.sum(), index=["Other"])])
+        sec_risk = pd.concat([sec_risk, pd.Series(1 - sec_risk.sum(),
+                                                  index=["Other"])])
         sec_risk = pd.concat([sec_risk, pd.Series(1, index=["Total"])])
         del gross_exp['tmp']
         gross_exp["% total risk"] = np.asarray(sec_risk)
@@ -1099,6 +1118,7 @@ class EofReport(ReportingRunnerBase):
 
     def generate_eof_report(self):
         header_info = self.get_header_info()
+        return header_info
 
 
 if __name__ == "__main__":
