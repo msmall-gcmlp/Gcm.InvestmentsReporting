@@ -418,6 +418,7 @@ class PerformanceQualityPeerLevelAnalytics(ReportingRunnerBase):
             "market_scenarios_3y": market_scenarios.to_json(orient="index"),
             "market_returns_monthly": self._peer_arb_benchmark_returns.to_json(orient="index"),
             "constituent_total_returns": constituent_total_returns,
+            #"constituent_excess_returns": constituent_excess_returns,
             "gcm_peer_returns": self._gcm_peer_returns.to_json(orient="index"),
             "peer_counts": peer_counts
         }
@@ -458,20 +459,20 @@ if __name__ == "__main__":
         config_params={
             DaoRunnerConfigArgs.dao_global_envs.name: {
                 DaoSource.DataLake.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 DaoSource.PubDwh.name: {
                     "Environment": "prd",
                     "Subscription": "prd",
                 },
                 DaoSource.InvestmentsDwh.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 DaoSource.DataLake_Blob.name: {
-                    "Environment": "prd",
-                    "Subscription": "prd",
+                    "Environment": "dev",
+                    "Subscription": "nonprd",
                 },
                 # DaoSource.ReportingStorage.name: {
                 #     "Environment": "uat",

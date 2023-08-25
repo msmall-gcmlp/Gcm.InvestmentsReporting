@@ -66,8 +66,8 @@ class SingleNameEquityExposureInvestmentsGroupPersist(ReportingRunnerBase):
              'CONSUMER DISCRETIONARY': 'Cons Discr', 'BROAD MARKET INDICES': 'Index', 'UTILITIES': 'Utilities',
              'OTHER': 'Other', 'INDUSTRIALS': 'Industrials', 'COMMUNICATION SERVICES': 'Comm Svcs', 'ENERGY': 'Energy',
              'REAL ESTATE': 'Real Estate', 'UTILITIES AND TELECOMMUNICATIONS': 'Utilities',
-             'MATERIALS': 'Materials', 'CONSUMER STAPLES': 'Cons Staples', 'CONGLOMERATES': 'Conglom',
-             'COMMUNICATIONS': 'Comm Svcs'})
+             'MATERIALS': 'Materials', 'CONSUMER STAPLES': 'Cons Staples', 'CONGLOMERATES': 'Other',
+             'BIOTECHNOLOGY': 'Biotechnology', 'COMMUNICATIONS': 'Comm Svcs'})
 
         single_name = self._investment_group.get_single_name_exposure_by_investment_group(
             as_of_date=self._end_date,

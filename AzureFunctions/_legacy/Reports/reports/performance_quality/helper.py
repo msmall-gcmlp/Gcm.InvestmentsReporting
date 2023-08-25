@@ -202,7 +202,9 @@ class PerformanceQualityHelper:
         )
 
     def summarize_rolling_data(self, rolling_data, trailing_months):
-        if rolling_data.index.max().date() < self._as_of_date.replace(day=1):
+        max_date = rolling_data.index.max().date()
+        max_date = dt.date(1900, 1, 1) if str(max_date) == 'NaT' else max_date
+        if max_date < self._as_of_date.replace(day=1):
             rolling_data = pd.DataFrame()
 
         rolling_data = rolling_data.iloc[-trailing_months:]
