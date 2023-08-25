@@ -1,5 +1,3 @@
-from AzureFunctions.Reporting.Reports.report_names import ReportNames
-from AzureFunctions.Reporting.core.report_structure import ReportMeta
 from .....core.report_structure import ReportMeta
 from ....report_names import ReportNames
 from .....core.report_structure import ReportMeta

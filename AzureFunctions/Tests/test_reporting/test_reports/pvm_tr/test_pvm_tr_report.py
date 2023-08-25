@@ -17,6 +17,7 @@ from Reporting.core.report_structure import (
     ReportType,
     ReportConsumer,
 )
+from gcm.inv.utils.pvm.perf_evaluation import PerformanceEvaluationType
 from Reporting.Reports.entity_reports.xentity_reports.pvm_tr.aggregation import (
     PvmManagerTrackRecordReportAggregation,
 )
@@ -36,15 +37,16 @@ class TestPvmManagerTrReport(object):
         return entity_info
 
     def test_run_local(self):
-        a = AggregateInterval.ITD
+        a = AggregateInterval.MTD
         with Scenario(
             as_of_date=dt.date(2023, 3, 31),
             aggregate_interval=a,
+            pvm_performance_type=PerformanceEvaluationType.RMV,
             save=True,
         ).context():
             d = EntityDomainTypes.InvestmentManager
             entity_info = TestPvmManagerTrReport.get_entity(
-                d, "MiddleGround"
+                d, "Mandrake Capital Partners"
             )
             this_meta = ReportMeta(
                 type=ReportType.Performance,
