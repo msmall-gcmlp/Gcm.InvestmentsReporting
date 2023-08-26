@@ -35,7 +35,8 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
         LegacyOrchestrations(x).name for x in LegacyOrchestrations.list()
     ]
     legacy_names_no_parsed_args = [
-        LegacyOrchestrationNoParsedArgs(x).name for x in LegacyOrchestrationNoParsedArgs.list()
+        LegacyOrchestrationNoParsedArgs(x).name
+        for x in LegacyOrchestrationNoParsedArgs.list()
     ]
     if function_name not in legacy_names_no_parsed_args:
         if function_name in legacy_orchestrator_names:
