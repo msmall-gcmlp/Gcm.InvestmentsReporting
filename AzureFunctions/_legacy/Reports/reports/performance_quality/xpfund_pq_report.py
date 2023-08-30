@@ -31,7 +31,7 @@ def _parse_json(fund_data, item):
 
 
 def _peer_file_path(peer_name, as_of_date):
-    return peer_name.replace("/", "") + as_of_date.strftime("%Y-%m-%d") + ".json"
+    return peer_name.replace("/", "") + "_peer_" + as_of_date.strftime("%Y-%m-%d") + ".json"
 
 
 def _filter_summary(json_data, named_range, fund_name):
