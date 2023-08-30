@@ -25,7 +25,7 @@ class TestPFundAttReport(object):
     def test_run_local(self):
         with Scenario(
             as_of_date=dt.date(2022, 9, 1),
-            aggregate_interval=AggregateInterval.Multi,
+            aggregate_interval=AggregateInterval.YTD,
             save=False,
             dao_config={
                 DaoRunnerConfigArgs.dao_global_envs.name: {
