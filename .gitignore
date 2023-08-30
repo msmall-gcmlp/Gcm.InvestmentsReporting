@@ -30,3 +30,4 @@ AzureFunctions/Gcm.ConfigurationLoader.dll
 AzureFunctions/local.settings.json
 AzureFunctions/settings.base.json
 PythonPackage/VERSION
+__*__.json
