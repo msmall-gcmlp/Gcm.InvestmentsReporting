@@ -141,12 +141,17 @@ def _format_benchmark_excess_1q_lag_summary(q_lag_stats):
 
 
 def _format_benchmark_ptile_summary(full_stats):
-    data = full_stats['benchmark_summary']
+    data = full_stats['benchmark_summary'].copy()
     # Excludes: AbsoluteReturnBenchmark, GcmPeer, EHI50, EHI200
-    cols = ['Peer1Ptile_raw',
-            'Peer1Ptile_excess',
-            'EH50Ptile',
-            'EHI200Ptile']
+    # maintain backwards compatability with the auto-suffixed Peer1Ptile columns
+    if "Peer1Ptile_x" in data.columns:
+        data = data.rename(columns={
+            "Peer1Ptile_x": "Peer1Ptile_raw",
+            "Peer1Ptile_y": "Peer1Ptile_excess",
+        })
+    peer_cols = ['Peer1Ptile_raw', 'Peer1Ptile_excess']
+    eh_cols = ['EH50Ptile', 'EHI200Ptile']
+    cols = peer_cols + eh_cols
     periods = ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y']
     formatted_summary = _pivot_and_reindex(data=data,
                                            level_1_cols=cols,
