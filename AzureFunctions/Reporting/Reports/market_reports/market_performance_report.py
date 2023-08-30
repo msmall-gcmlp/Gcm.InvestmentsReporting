@@ -4,7 +4,10 @@ from ...core.report_structure import (
     AvailableMetas,
 )
 from gcm.Dao.DaoRunner import DaoRunner, AzureDataLakeDao
-from gcm.inv.utils.date.AggregateInterval import AggregateInterval
+from gcm.inv.utils.date.AggregateInterval import (
+    AggregateInterval,
+    AggregateIntervalReportHandler,
+)
 from ...core.report_structure import (
     ReportType,
     ReportConsumer,
@@ -40,7 +43,15 @@ class MarketPerformanceReport(ReportStructure):
                 Frequency(FrequencyType.Monthly, Calendar.US_Business_GCM),
                 Frequency(FrequencyType.Daily, Calendar.US_Business_GCM),
             ],
-            aggregate_intervals=[AggregateInterval.Multi],
+            aggregate_intervals=[
+                AggregateIntervalReportHandler(
+                    [
+                        AggregateInterval.MTD,
+                        AggregateInterval.QTD,
+                        AggregateInterval.YTD,
+                    ]
+                )
+            ],
             consumer=ReportConsumer(
                 horizontal=[ReportConsumer.Horizontal.FIRM],
                 vertical=ReportConsumer.Vertical.FIRM,
