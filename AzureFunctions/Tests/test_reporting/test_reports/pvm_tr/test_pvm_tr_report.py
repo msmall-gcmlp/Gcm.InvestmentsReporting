@@ -37,7 +37,7 @@ class TestPvmManagerTrReport(object):
         return entity_info
 
     def test_run_local(self):
-        a = AggregateInterval.MTD
+        a = AggregateInterval.ITD
         with Scenario(
             as_of_date=dt.date(2023, 3, 31),
             aggregate_interval=a,
