@@ -8,6 +8,7 @@ from ..Reporting.Reports.controller import (
 )
 from ..Reporting.core.report_structure import (
     AggregateInterval,
+    AggregateIntervalReportHandler,
     AvailableMetas,
     Frequency,
     List,
@@ -53,7 +54,8 @@ class ReportConstructorActivity(BaseActivity):
         agg: AggregateInterval = Scenario.get_attribute(
             "aggregate_interval"
         )
-        agg = agg if (agg is not None) else AggregateInterval.Multi
+        agg = agg if (agg is not None) else AggregateInterval.ITD
+        agg = AggregateIntervalReportHandler([agg])
         as_of_date: dt.date = Scenario.get_attribute("as_of_date")
         # TODO: speed this up and make better
         frequency_type: FrequencyType = Scenario.get_attribute("frequency")

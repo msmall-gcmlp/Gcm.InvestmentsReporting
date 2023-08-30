@@ -16,3 +16,4 @@ gcm-investmentsutils>=0.16.0
 gcm-investmentsmodels>=0.16.0
 PyPDF2
 aspose-cells>=22.6.0
+pandas<2.1.0
