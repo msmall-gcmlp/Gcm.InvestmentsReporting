@@ -143,8 +143,8 @@ def _format_benchmark_excess_1q_lag_summary(q_lag_stats):
 def _format_benchmark_ptile_summary(full_stats):
     data = full_stats['benchmark_summary']
     # Excludes: AbsoluteReturnBenchmark, GcmPeer, EHI50, EHI200
-    cols = ['Peer1Ptile',
-            'Peer2Ptile',
+    cols = ['Peer1Ptile_raw',
+            'Peer1Ptile_excess',
             'EH50Ptile',
             'EHI200Ptile']
     periods = ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y']

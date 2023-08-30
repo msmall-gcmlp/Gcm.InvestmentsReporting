@@ -376,10 +376,10 @@ def _xpfund_data_to_highlow_df(df: pd.DataFrame,
 
     df_xs = _3y_arb_xs_analysis(df=df_fw_cleaned)
     df_xs.rename(columns={
-        "('Peer1Ptile', 'TTM')": 'TTM_peer_ptiles',
-        "('Peer1Ptile', '3Y')": '3Y_peer_ptiles',
-        "('Peer1Ptile', '5Y')": '5Y_peer_ptiles',
-        "('Peer1Ptile', '10Y')": '10Y_peer_ptiles'
+        "('Peer1Ptile_raw', 'TTM')": 'TTM_peer_ptiles',
+        "('Peer1Ptile_raw', '3Y')": '3Y_peer_ptiles',
+        "('Peer1Ptile_raw', '5Y')": '5Y_peer_ptiles',
+        "('Peer1Ptile_raw', '10Y')": '10Y_peer_ptiles'
     }, inplace=True)
 
     df_pctiles = reduce(
