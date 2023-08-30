@@ -1,7 +1,10 @@
 from gcm.Dao.DaoRunner import DaoRunnerConfigArgs
 from gcm.Dao.DaoSources import DaoSource
 from gcm.inv.scenario import Scenario
-from gcm.inv.utils.date.AggregateInterval import AggregateInterval
+from gcm.inv.utils.date.AggregateInterval import (
+    AggregateInterval,
+    AggregateIntervalReportHandler,
+)
 import datetime as dt
 from gcm.inv.entityhierarchy.EntityDomain.entity_domain.entity_domain_types import (
     EntityDomainTypes,
@@ -25,7 +28,7 @@ class TestPFundAttReport(object):
     def test_run_local(self):
         with Scenario(
             as_of_date=dt.date(2022, 9, 1),
-            aggregate_interval=AggregateInterval.Multi,
+            aggregate_interval=AggregateInterval.YTD,
             save=False,
             dao_config={
                 DaoRunnerConfigArgs.dao_global_envs.name: {
@@ -47,7 +50,9 @@ class TestPFundAttReport(object):
             this_report = AggregatedPortolioFundAttributeReport(
                 ReportMeta(
                     type=ReportType.Performance,
-                    interval=Scenario.get_attribute("aggregate_interval"),
+                    intervals=AggregateIntervalReportHandler(
+                        [AggregateInterval.MTD, AggregateInterval.YTD]
+                    ),
                     consumer=ReportConsumer(
                         horizontal=[ReportConsumer.Horizontal.PM],
                         vertical=ReportConsumer.Vertical.ARS,

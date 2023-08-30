@@ -4,7 +4,10 @@ from .....core.report_structure import (
     AvailableMetas,
 )
 from gcm.Dao.DaoRunner import AzureDataLakeDao
-from gcm.inv.utils.date.AggregateInterval import AggregateInterval
+from gcm.inv.utils.date.AggregateInterval import (
+    AggregateInterval,
+    AggregateIntervalReportHandler,
+)
 from .....core.report_structure import (
     ReportType,
     ReportConsumer,
@@ -41,7 +44,11 @@ class AggregatedPortolioFundAttributeReport(ReportStructure):
             frequencies=[
                 Frequency(FrequencyType.Monthly),
             ],
-            aggregate_intervals=[AggregateInterval.Multi],
+            aggregate_intervals=[
+                AggregateIntervalReportHandler(
+                    [AggregateInterval.MTD, AggregateInterval.YTD]
+                )
+            ],
             consumer=ReportConsumer(
                 horizontal=[ReportConsumer.Horizontal.PM],
                 vertical=ReportConsumer.Vertical.ARS,

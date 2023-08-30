@@ -11,6 +11,7 @@ from ....core.report_structure import (
     Frequency,
     FrequencyType,
     AggregateInterval,
+    AggregateIntervalReportHandler,
     ReportConsumer,
     Calendar,
     EntityDomainProvider,
@@ -39,7 +40,6 @@ from gcm.inv.dataprovider.entity_provider.entity_domains.synthesis_unit.type_con
 
 
 class PvmPerformanceBreakoutReport(ReportStructure):
-
     # TODO: DT note: move report_name_enum into report_meta. It belongs under the report_meta scope
     #  report_name_enum is currently being used to:
     #       1. determine report file name
@@ -69,7 +69,9 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             frequencies=[
                 Frequency(FrequencyType.Quarterly, Calendar.AllDays),
             ],
-            aggregate_intervals=[AggregateInterval.Multi],
+            aggregate_intervals=AggregateIntervalReportHandler(
+                [AggregateInterval.ITD]
+            ),
             consumer=ReportConsumer(
                 horizontal=[ReportConsumer.Horizontal.FIRM],
                 vertical=ReportConsumer.Vertical.PE,
@@ -129,7 +131,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             this_table = ReportTable(k, v)
             tables.append(this_table)
 
-        #TODO: Begin formatting and weird stuff ###############
+        # TODO: Begin formatting and weird stuff ###############
         # below is this-report specific logic to derive render params
 
         sheet_name = "Performance Breakout"
@@ -168,7 +170,7 @@ class PvmPerformanceBreakoutReport(ReportStructure):
                 ]
             )
 
-        #TODO: Done formatting and weird stuff ######################
+        # TODO: Done formatting and weird stuff ######################
 
         this_worksheet = ReportWorksheet(
             sheet_name,
