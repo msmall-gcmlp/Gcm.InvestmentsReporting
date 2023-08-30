@@ -11,6 +11,7 @@ from ....core.report_structure import (
     Frequency,
     FrequencyType,
     AggregateInterval,
+    AggregateIntervalReportHandler,
     ReportConsumer,
     Calendar,
     EntityDomainProvider,
@@ -68,7 +69,9 @@ class PvmPerformanceBreakoutReport(ReportStructure):
             frequencies=[
                 Frequency(FrequencyType.Quarterly, Calendar.AllDays),
             ],
-            aggregate_intervals=[AggregateInterval.Multi],
+            aggregate_intervals=AggregateIntervalReportHandler(
+                [AggregateInterval.ITD]
+            ),
             consumer=ReportConsumer(
                 horizontal=[ReportConsumer.Horizontal.FIRM],
                 vertical=ReportConsumer.Vertical.PE,
