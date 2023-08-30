@@ -164,7 +164,6 @@ class TestPerformanceBreakDown(object):
                 }
             },
         ).context():
-
             # set report name and dimension config
             reports_to_run = [
                 ReportNames.PE_Portfolio_Performance_x_Investment_Manager,

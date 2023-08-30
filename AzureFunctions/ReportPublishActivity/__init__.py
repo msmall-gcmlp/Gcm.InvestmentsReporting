@@ -58,7 +58,6 @@ class ReportPublishActivity(BaseActivity):
                 "json_location" in json_item
                 and "excel_location" not in json_item
             ):
-
                 output = print(
                     report_structure=report_structure, print_pdf=True
                 )
