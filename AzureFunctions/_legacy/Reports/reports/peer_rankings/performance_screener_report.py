@@ -10,7 +10,7 @@ from gcm.inv.dataprovider.strategy_benchmark import StrategyBenchmark
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.inv.dataprovider.entity_master import EntityMaster
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from pandas._libs.tslibs.offsets import relativedelta
+from dateutil.relativedelta import relativedelta
 from gcm.inv.quantlib.enum_source import Periodicity, PeriodicROR
 
 from _legacy.Reports.reports.peer_rankings.peer_rankings import PeerRankings
