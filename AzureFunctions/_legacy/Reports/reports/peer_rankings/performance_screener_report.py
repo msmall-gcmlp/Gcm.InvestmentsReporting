@@ -236,26 +236,11 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         return returns
 
     def _get_annualized_vol(self):
-        # vol = self._analytics.compute_trailing_vol(
-        #     ror=self._constituent_returns,
-        #     window=self._trailing_months,
-        #     as_of_date=self._as_of_date,
-        #     periodicity=Periodicity.Monthly,
-        #     annualize=True,
-        # )
         vol = self._updated_constituent_returns.std() * np.sqrt(12)
         vol = vol.to_frame('Vol')
         return vol
 
     def _get_sharpe_ratio(self):
-        # sharpe = self._analytics.compute_trailing_sharpe_ratio(
-        #     ror=self._updated_constituent_returns,
-        #     rf_ror=self._rf_returns,
-        #     window=self._trailing_months,
-        #     as_of_date=self._as_of_date,
-        #     periodicity=Periodicity.Monthly,
-        # )
-        #
         rf = (self._rf_returns.mean() * 12).squeeze()
         excess_return = (self._get_annualized_return() - rf)
         vol = self._get_annualized_vol()
@@ -323,7 +308,6 @@ class PerformanceScreenerReport(ReportingRunnerBase):
                                        labels=[x for x in range(1, 5)])
         rankings['Decile'] = pd.qcut(x=rankings['Rank'], q=[x / 100 for x in range(0, 110, 10)],
                                      labels=[x / 10 for x in range(10, 110, 10)])
-        # rankings['Rank'] = rankings['Points'].rank(pct=False, ascending=False)
         rankings = rankings.sort_values(['Rank', 'InvestmentGroupName'], ascending=[True, True])
         rankings = rankings[['Rank', 'Decile', 'Confidence', 'InvestmentGroupName', 'Quartile']]
 
@@ -377,15 +361,6 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
         bmrk_return = self._calculate_annualized_return(returns=benchmark_returns)
         bmrk_return.rename(columns={'Return': 'Bmrk'}, inplace=True)
-        # bmrk_return = self._analytics.compute_trailing_return(
-        #     ror=self._absolute_benchmark_returns,
-        #     window=self._trailing_months,
-        #     as_of_date=self._as_of_date,
-        #     method="geometric",
-        #     periodicity=Periodicity.Monthly,
-        #     annualize=True,
-        # )
-        # bmrk_return = bmrk_return.to_frame('Bmrk')
 
         fund_bmrk_return = fund_return.merge(bmrk_return, left_index=True, right_index=True)
         fund_bmrk_return['Excess'] = fund_bmrk_return['Fund'] - fund_bmrk_return['Bmrk']
@@ -410,8 +385,6 @@ class PerformanceScreenerReport(ReportingRunnerBase):
 
     def build_absolute_return_benchmark_summary(self):
         summary = self._get_arb_excess_return()
-        # r_squared = self._get_arb_r_squared()
-        # summary = excess_return.merge(r_squared, how='left', left_index=True, right_index=True)
 
         if summary.shape[1] == 0 or summary.isna().all().squeeze():
             return pd.DataFrame(columns=['Excess', 'ExcessDecile'], index=summary.index)
@@ -559,9 +532,6 @@ class PerformanceScreenerReport(ReportingRunnerBase):
         return persistence
 
     def generate_performance_screener_report(self):
-        # if not self._validate_inputs():
-        #     return 'Invalid inputs'
-
         logging.info("Generating report for: " + self._peer_group)
 
         header_info = self.get_header_info()
@@ -644,8 +614,6 @@ class PerformanceScreenerReport(ReportingRunnerBase):
                 report_frequency="Monthly",
                 aggregate_intervals=AggregateInterval.MTD,
                 print_areas=print_areas,
-                # output_dir="cleansed/investmentsreporting/printedexcels/",
-                # report_output_source=DaoSource.DataLake,
             )
 
         logging.info("Excel stored to DataLake for: " + self._peer_group)
@@ -730,8 +698,6 @@ if __name__ == "__main__":
                     },
                 }
             })
-
-    # runner = DaoRunner()
 
     as_of_dates = pd.date_range(dt.date(2019, 12, 31), dt.date(2022, 12, 31), freq='Q').tolist()
     as_of_dates = pd.to_datetime(as_of_dates).date.tolist()
