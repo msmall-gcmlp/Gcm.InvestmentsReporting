@@ -28,7 +28,6 @@ def get_performance_report_dict(
     _attributes_needed: List[str],
     _trailing_periods: dict,
 ) -> dict[str, pd.DataFrame]:
-
     direct_alpha, discount_df = get_direct_alpha_rpt(
         as_of_date=as_of_date,
         df=irr_cfs,

@@ -13,7 +13,7 @@ from Reporting.core.components.report_workbook_handler import (
     ReportWorkBookHandler,
 )
 from ..conversion_tools.combine_excel import copy_sheet
-from typing import List
+from typing import List, NamedTuple
 from ..conversion_tools.convert_excel_to_pdf import convert
 import io
 import re
@@ -83,7 +83,6 @@ def render_worksheet(wb: Workbook, sheet: ReportWorksheet):
 
     # next check format conditions
     if bool(sheet.render_params.trim_region):
-
         trim_rows = _generate_ws_level_trim_rows(wb, sheet)
         if len(trim_rows) > 0:
             wb = _trim_and_resize_rows(
@@ -127,31 +126,38 @@ def _get_sheet_new_row_heights(sheet, trim_rows, default_height=14.5):
 def return_trim_rows(k: ReportTable, wb: Workbook) -> List[int]:
     # the the range in question must be a rectangle
     # (i.e. someone can't just ctrl-clicked a bunch of random cells)
-    address = list(wb.defined_names[k.component_name].destinations)
-    excel_row_range = []
-    rows_to_delete = []
-    for sheetname, cell_address in address:
-        for row_number in re.split("(\d+)", cell_address.replace("$", "")):
-            try:
-                excel_row_range.append(int(row_number))
-            except ValueError:
-                pass
-    # can't trim if excel_row_range is not 2 integers
-    rectangle_check = list(dict.fromkeys(excel_row_range))
-    if len(rectangle_check) == 2:
-        named_range_range = range(excel_row_range[0], excel_row_range[1])
+    if k.component_name in wb.defined_names:
+        address = list(wb.defined_names[k.component_name].destinations)
+        excel_row_range = []
+        rows_to_delete = []
+        for sheetname, cell_address in address:
+            for row_number in re.split(
+                "(\d+)", cell_address.replace("$", "")
+            ):
+                try:
+                    excel_row_range.append(int(row_number))
+                except ValueError:
+                    pass
+        # can't trim if excel_row_range is not 2 integers
+        rectangle_check = list(dict.fromkeys(excel_row_range))
+        if len(rectangle_check) == 2:
+            named_range_range = range(
+                excel_row_range[0], excel_row_range[1]
+            )
 
-        # no trimming to be done if length of dataframe is the same size as region
-        if len(named_range_range) != len(k.df):
-            rows_to_delete.extend(
-                list(
-                    range(
-                        excel_row_range[0] + len(k.df),
-                        excel_row_range[1] + 1,
+            # no trimming to be done if length of dataframe is the same size as region
+            if len(named_range_range) != len(k.df):
+                rows_to_delete.extend(
+                    list(
+                        range(
+                            excel_row_range[0] + len(k.df),
+                            excel_row_range[1] + 1,
+                        )
                     )
                 )
-            )
-    return rows_to_delete
+        return rows_to_delete
+    else:
+        return []
 
 
 def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
@@ -166,18 +172,31 @@ def print_table_component(wb: Workbook, k: ReportTable) -> Workbook:
     return wb
 
 
-def merge_files(wb_list: List[Workbook]):
-    merged = wb_list[0]
+class mergable_workbook(NamedTuple):
+    SHORT_NAME: str
+    WB: Workbook
+
+
+def merge_files(wb_list: List[mergable_workbook]):
+    merged = wb_list[0].WB
     wb_count = 0
+    max_length = 30
+    regex = re.compile("[^A-Za-z0-9 ]+")
+    cache = []
     for k in wb_list:
         if wb_count > 0:
             ws_count = 0
-            for s in k.sheetnames:
-                source_sheet: Worksheet = k[s]
-                target_sheet_name = f"{s}_{wb_count}_{ws_count}"
-                merged.create_sheet(target_sheet_name)
-                ws2: Worksheet = merged[target_sheet_name]
-                copy_sheet(source_sheet, ws2)
+            for s in k.WB.sheetnames:
+                final_len = max_length - (len(s) + 1)
+                short_name = regex.sub("", k.SHORT_NAME)
+                short_name = short_name.replace(" ", "")[:final_len]
+                source_sheet: Worksheet = k.WB[s]
+                target_sheet_name = f"{short_name}_{s}"
+                if target_sheet_name.upper() not in cache:
+                    merged.create_sheet(target_sheet_name)
+                    ws2: Worksheet = merged[target_sheet_name]
+                    copy_sheet(source_sheet, ws2)
+                    cache.append(target_sheet_name.upper())
                 ws_count = ws_count + 1
         wb_count = wb_count + 1
     return merged

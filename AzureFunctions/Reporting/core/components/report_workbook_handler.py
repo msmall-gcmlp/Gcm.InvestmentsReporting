@@ -10,10 +10,14 @@ class ReportWorkBookHandler(ReportComponentBase):
         component_name: str,
         template_location: AzureDataLakeDao.BlobFileStructure,
         report_sheets: List[ReportWorksheet] = None,
+        short_name: str = None,
     ):
         super().__init__(component_name)
         self.template_location = template_location
         self.report_sheets = report_sheets
+        self.short_name = (
+            component_name if short_name is None else short_name
+        )
 
     @property
     def component_type(self) -> ReportComponentType:
@@ -24,6 +28,9 @@ class ReportWorkBookHandler(ReportComponentBase):
         name = d["component_name"]
         sheets = [ReportWorksheet.from_dict(x) for x in d["report_sheets"]]
         location = d["template_location"]
+        short_name: str = (
+            None if "short_name" not in d else d["short_name"]
+        )
         blob_loc = AzureDataLakeDao.BlobFileStructure(
             zone=AzureDataLakeDao.BlobFileStructure.Zone[location["zone"]],
             sources=location["sources"],
@@ -34,6 +41,7 @@ class ReportWorkBookHandler(ReportComponentBase):
             component_name=name,
             template_location=blob_loc,
             report_sheets=sheets,
+            short_name=short_name,
         )
         return workbook
 
@@ -42,6 +50,7 @@ class ReportWorkBookHandler(ReportComponentBase):
             "component_type": self.component_type.name,
             "component_name": self.component_name,
             "report_sheets": [x.to_dict() for x in self.report_sheets],
+            "short_name": self.short_name,
             "template_location": {
                 "zone": self.template_location.zone.name,
                 "sources": self.template_location.sources,

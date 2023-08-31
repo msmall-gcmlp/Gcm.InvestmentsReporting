@@ -1,7 +1,7 @@
 import datetime as dt
 import json
 from gcm.inv.scenario import Scenario
-from pandas._libs.tslibs.offsets import relativedelta
+from dateutil.relativedelta import relativedelta
 from _legacy.Reports.reports.performance_quality.peer_level_analytics import PerformanceQualityPeerLevelAnalytics
 from _legacy.Reports.reports.performance_quality.report_data import PerformanceQualityReportData
 from _legacy.Reports.reports.performance_quality.report import PerformanceQualityReport

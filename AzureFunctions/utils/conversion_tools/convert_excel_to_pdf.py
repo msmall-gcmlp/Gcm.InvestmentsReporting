@@ -42,7 +42,6 @@ def convert(file: io.BytesIO, base_params: dict, source: DaoSource):
 
     lic = License()
     try:
-
         license_content: AzureDataLakeFile = dao.execute(
             params=AzureDataLakeDao.create_get_data_params(
                 license__location,

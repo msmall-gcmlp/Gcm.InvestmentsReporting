@@ -15,6 +15,7 @@ from .standard_handler import (
     merge_files,
     print_excel_report,
     print_pdf_report,
+    mergable_workbook,
 )
 
 
@@ -83,11 +84,11 @@ def print(
     known_components: List[
         ReportWorkBookHandler
     ] = report_structure.components
-    wbs: List[Workbook] = []
+    wbs: List[mergable_workbook] = []
     for k in known_components:
         wb = generate_workbook(k)
-        wbs.append(wb)
-    final_wb: Workbook = merge_files(wbs) if len(wbs) > 1 else wbs[0]
+        wbs.append(mergable_workbook(k.short_name, wb))
+    final_wb: Workbook = merge_files(wbs) if len(wbs) > 1 else wbs[0].WB
     print_excel_report(
         final_wb,
         dao,

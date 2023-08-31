@@ -10,14 +10,14 @@ from .entity_reports.xentity_reports.ars_bba_report import (
 from .entity_reports.vertical_reports.ars_pfund_attributes.aggregated_pfund_attribute_report import (
     AggregatedPortolioFundAttributeReport,
 )
-from .entity_reports.investment_manager_reports.pvm_manager_trackrecord_report import (
+from .entity_reports.investment_manager_reports.pvm_tr import (
     PvmManagerTrackRecordReport,
-)
-from .entity_reports.investment_reports.pvm_investment_trackrecord_report import (
-    PvmInvestmentTrackRecordReport,
 )
 from .entity_reports.xentity_reports.pvm_portfolio_performance_report import (
     PvmPerformanceBreakoutReport,
+)
+from .entity_reports.xentity_reports.pvm_tr.aggregation import (
+    PvmManagerTrackRecordReportAggregation,
 )
 from .report_names import ReportNames
 from ..core.report_structure import (
@@ -46,8 +46,8 @@ def get_report_class_by_name(name: ReportNames):
         return AggregatedPortolioFundAttributeReport
     if name == ReportNames.PvmManagerTrackRecordReport:
         return PvmManagerTrackRecordReport
-    if name == ReportNames.PvmInvestmentTrackRecordReport:
-        return PvmInvestmentTrackRecordReport
+    if name == ReportNames.PvmManagerTrackRecordReportAggregation:
+        return PvmManagerTrackRecordReportAggregation
     if name == ReportNames.PvmPerformanceBreakoutReport:
         return PvmPerformanceBreakoutReport
     else:
@@ -61,7 +61,15 @@ def validate_meta(
 ):
     available_metas: AvailableMetas = report_structure.available_metas()
     assert available_metas is not None
-    assert report_meta.interval in available_metas.aggregate_intervals
+    passed_intervals = [
+        x for x in report_meta.intervals.aggregate_intervals
+    ]
+    check_interval = []
+    for i in available_metas.aggregate_intervals:
+        check_interval.append(
+            all([x in i.aggregate_intervals for x in passed_intervals])
+        )
+    assert any(check_interval)
     as_of_date = Scenario.get_attribute("as_of_date")
     frequency_type: FrequencyType = report_meta.frequency.type
     if strict:
