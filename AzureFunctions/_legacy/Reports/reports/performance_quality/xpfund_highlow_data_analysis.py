@@ -109,7 +109,6 @@ def _ar_xs_ret_summary(df):
                         "('AbsoluteReturnBenchmarkExcess', '5Y')",
                         "('AbsoluteReturnBenchmarkExcess', '10Y')",
                         "('AbsoluteReturnBenchmarkExcess', 'ITD')"]]
-    #ar_xs_ret_sum_df = ar_xs_ret_sum_df.mul(100)
     return ar_xs_ret_sum
 
 
@@ -273,35 +272,6 @@ def _summarize_data(df, as_of_date, portfolio_acronym):
     return summary
 
 
-# def _get_high_performing_summary(df):
-#     high_perf = df
-#     high_perf = high_perf.loc[(df['3Y_ptiles'] >= 75) | (df['5Y_ptiles'] >= 75)]
-#     high_perf = high_perf.iloc[::-1]
-#     high_perf['Pass/Fail'] = ""
-#     high_perf_sum = high_perf[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
-#                              'Pass/Fail', 'status', 'absolute_return_benchmark']]
-#     high_perf_data = high_perf.drop(['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
-#                                      'Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
-
-#     high_perf_sum = high_perf_sum.reset_index()
-#     high_perf_sum['index'] = np.arange(len(high_perf_sum)) + 1
-#     high_perf_sum.at[' ', 'FirmwideAllocation'] = high_perf_sum['FirmwideAllocation'].sum()
-#     high_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Sustained High PQ Capital'
-#     return high_perf_sum, high_perf_data
-
-
-# def _get_low_performing_summary(df):
-#     low_perf = df.loc[(df['3Y_ptiles'] <= 25) | (df['5Y_ptiles'] <= 25) | (df['Pass/Fail'] == 'Fail')]
-#     low_perf_sum = low_perf[['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
-#                              'Pass/Fail', 'status', 'absolute_return_benchmark']]
-#     low_perf_data = low_perf.drop(['InvestmentGroupName', 'ReportingPeerGroup', 'FirmwideAllocation', 
-#                                    'Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
-#     low_perf_sum = low_perf_sum.reset_index()
-#     low_perf_sum['index'] = np.arange(len(low_perf_sum)) + 1
-#     low_perf_sum.at[' ', 'FirmwideAllocation'] = low_perf_sum['FirmwideAllocation'].sum()
-#     low_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Low PQ Capital'
-#     return low_perf_sum, low_perf_data
-
 def _get_firmwide_high_performing_summary(df):
     high_perf = df
     high_perf = high_perf.loc[(df['3Y_ptiles'] >= 75) | (df['5Y_ptiles'] >= 75)]
@@ -314,8 +284,6 @@ def _get_firmwide_high_performing_summary(df):
 
     high_perf_sum = high_perf_sum.reset_index()
     high_perf_sum['index'] = np.arange(len(high_perf_sum)) + 1
-    # high_perf_sum.at[' ', 'FirmwideAllocation'] = high_perf_sum['FirmwideAllocation'].sum()
-    # high_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total High PQ Capital'
     high_perf_sum.at[' ', 'FirmwideAllocation'] = 'Total High PQ Capital: $' + str(high_perf_sum['FirmwideAllocation'].sum())
     return high_perf_sum, high_perf_data
 
@@ -328,8 +296,6 @@ def _get_firmwide_low_performing_summary(df):
                                    'Pass/Fail', 'status', 'absolute_return_benchmark'], axis=1)
     low_perf_sum = low_perf_sum.reset_index()
     low_perf_sum['index'] = np.arange(len(low_perf_sum)) + 1
-    # low_perf_sum.at[' ', 'FirmwideAllocation'] = low_perf_sum['FirmwideAllocation'].sum()
-    # low_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Low PQ Capital'
     low_perf_sum.at[' ', 'FirmwideAllocation'] = 'Total Low PQ Capital: $' + str(low_perf_sum['FirmwideAllocation'].sum())
     return low_perf_sum, low_perf_data
 
@@ -346,8 +312,6 @@ def _get_portfolio_high_performing_summary(df):
 
     high_perf_sum = high_perf_sum.reset_index()
     high_perf_sum['index'] = np.arange(len(high_perf_sum)) + 1
-    # high_perf_sum.at[' ', 'FirmwideAllocation'] = high_perf_sum['FirmwideAllocation'].sum()
-    # high_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total High PQ Capital'
     high_perf_sum.at[' ', 'PctNav'] = 'Total High PQ %NAV: ' + str(int((100 * high_perf_sum['PctNav'].sum()) + 0.5)) + '%'
     return high_perf_sum, high_perf_data
 
@@ -361,7 +325,6 @@ def _get_portfolio_low_performing_summary(df):
     low_perf_sum = low_perf_sum.reset_index()
     low_perf_sum['index'] = np.arange(len(low_perf_sum)) + 1
     low_perf_sum.at[' ', 'PctNav'] = 'Total Low PQ %NAV: ' + str(int((100 * low_perf_sum['PctNav'].sum()) + 0.5)) + '%'
-    # low_perf_sum.at[' ', 'ReportingPeerGroup'] = 'Total Low PQ %NAV'
     return low_perf_sum, low_perf_data
 
 

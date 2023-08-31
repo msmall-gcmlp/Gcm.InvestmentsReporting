@@ -135,8 +135,6 @@ def _format_benchmark_excess_1q_lag_summary(q_lag_stats):
     formatted_summary = _pivot_and_reindex(data=data,
                                            level_1_cols=cols,
                                            level_2_cols=periods)
-    #formatted_summary.rename({'AbsoluteReturnBenchmarkExcess','AbsoluteReturnBenchmarkExcessLag'}, axis=1, inplace=True)
-    #formatted_summary=pd.DataFrame(formatted_summary.columns.set_levels(['AbsoluteReturnBenchmarkExcessLag'],level=0))
     return formatted_summary
 
 
@@ -287,7 +285,6 @@ def _get_peer_rankings(runner, as_of_date, emm_dimn):
     peer_screen_location = "raw/investmentsreporting/summarydata/ars_performance_screener"
     peers = sorted([x for x in emm_dimn['ReportingPeerGroup'].unique().tolist() if str(x) != 'nan' and x is not None])
     peer_rankings = pd.DataFrame(columns=['InvestmentGroupNameRaw', 'Peer', 'Decile', 'Confidence', 'Persistence'])
-
     for peer in peers:
         print(peer)
         peer_ranks = _download_inputs(runner=runner,
@@ -323,20 +320,6 @@ def _get_emm_rankings(runner, as_of_date, emm_dimn):
                 else:
                     stats[named_range] = summary
     return stats
-    # data = stats['benchmark_summary']
-    # # Excludes: AbsoluteReturnBenchmark, GcmPeer, EHI50, EHI200
-    # cols = ['AbsoluteReturnBenchmarkExcess']
-    # periods = ['3Y','ITD']
-    # formatted_summary = _pivot_and_reindex(data=data,
-    #                                        level_1_cols=cols,
-    #                                        level_2_cols=periods)
-
-    # formatted_summary.columns.set_levels('[AbsoluteReturnBenchmarkExcessLag]',level=0,inplace=True)
-    #formatted_summary['AbsoluteReturnBenchmarkExcessLag']=formatted_summary['AbsoluteReturnBenchmarkExcess']
-    #formatted_summary=formatted_summary.drop('AbsoluteReturnBenchmarkExcess', axis=1)
-
-    #formatted_summary.rename({'AbsoluteReturnBenchmarkExcess','AbsoluteReturnBenchmarkExcessLag'}, axis=1, inplace=True)
-    #return stats
 
 
 def _get_performance_quality_metrics(runner, emm_dimn, as_of_date):
@@ -376,7 +359,6 @@ def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date, inv_group_i
                                                 peer_rankings=peer_rankings,
                                                 peer_rankings_lag=peer_rankings_lag,
                                                 q_lag_stats=emm_rankings)
-    #x=final_summary.to_csv(r"c:/Code/filex3.csv")
     return final_summary
 
 

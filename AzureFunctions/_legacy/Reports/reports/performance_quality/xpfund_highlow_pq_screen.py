@@ -24,7 +24,6 @@ from _legacy.core.Runners.investmentsreporting import (
 
 class XPfundHighLowPQScreen(ReportingRunnerBase):
     def __init__(self, runner, as_of_date, portfolio_acronym=None):
-        #super().__init__(runner=Scenario.get_attribute("runner"))
         super().__init__(runner=runner)
         self._as_of_date = as_of_date
         self._portfolio_acronym = portfolio_acronym
@@ -157,9 +156,7 @@ if __name__ == "__main__":
         },
     )
     date = dt.date(2023, 6, 30)
-    #portfolio_acronym = 'GIP'
     inv_group_ids = None
     with Scenario(as_of_date=date).context():
         report = XPfundHighLowPQScreen(runner=dao_runner, as_of_date=date, portfolio_acronym='GIP')
-        #report = XPfundHighLowPQScreen(runner=dao_runner, as_of_date=date)
         report.execute()

@@ -9,7 +9,6 @@ def main(requestBody) -> str:
     run = params["run"]
     as_of_date = params["as_of_date"]
     as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
-    #acronym = params.get("acronym", None)
     acronym = params["acronym"]
 
     if run == "XPFundPqReportActivity":

@@ -5,27 +5,6 @@ import ast
 import copy
 
 
-# def orchestrator_function(
-#     context: df.DurableOrchestrationContext,
-# ) -> LegacyTasks:
-#     client_input = LegacyReportingOrchParsedArgs.parse_client_inputs(
-#         context
-#     )
-#     params = client_input["params"]
-#     params = {
-#         "params": {
-#             "run": "XPFundPqReportActivity",
-#             "as_of_date": params["as_of_date"],
-#         },
-#     }
-#     return LegacyTasks(
-#         [
-#             ActivitySet(
-#                 [ActivityParams("XPFundPqReportActivity", params)]
-#             )
-#         ]
-#     )
-
 def orchestrator_function(
     context: df.DurableOrchestrationContext,
 ) -> LegacyTasks:
@@ -39,7 +18,6 @@ def orchestrator_function(
     if (acronyms != [None]):
         acronyms = ast.literal_eval(params.get("acronyms"))
 
-    #acronyms = ast.literal_eval(params.get("acronyms"))
     # TODO support scenario per acronym
     as_of_date = params.get("as_of_date")
 
