@@ -33,6 +33,7 @@ class RunPerformanceQualityReports:
 
 
 if __name__ == "__main__":
+    # runner = DaoRunner()
     runner = DaoRunner(
         container_lambda=lambda b, i: b.config.from_dict(i),
         config_params={
@@ -68,10 +69,13 @@ if __name__ == "__main__":
                        28015,
                        75614,
                        85905]
+            # dev_ids = [19224, 23319, 74984]
 
             funds_and_peers = report_runner.generate_report_data(investment_group_ids=prd_ids)
 
             funds_and_peers = json.loads(funds_and_peers)
+            # fund_names = funds_and_peers.get("fund_names")
             peer_groups = funds_and_peers.get("peer_groups")
 
             report_runner.generate_peer_summaries(peer_groups=peer_groups)
+            # report_runner.generate_fund_reports(fund_names=fund_names)

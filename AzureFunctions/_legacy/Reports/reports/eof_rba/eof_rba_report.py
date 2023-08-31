@@ -416,6 +416,7 @@ class EofReturnBasedAttributionReport(ReportingRunnerBase):
                 aggregate_intervals=AggregateInterval.MTD,
                 report_vertical=ReportVertical.ARS,
                 report_frequency="Monthly",
+                # output_dir="eof/",
                 output_dir="cleansed/investmentsreporting/printedexcels/",
                 report_output_source=DaoSource.DataLake,
                 print_areas=print_areas,
