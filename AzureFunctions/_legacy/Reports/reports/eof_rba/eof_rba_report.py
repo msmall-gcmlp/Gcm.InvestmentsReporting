@@ -6,7 +6,8 @@ import datetime as dt
 from gcm.inv.dataprovider.investment_group import InvestmentGroup
 from gcm.Dao.DaoSources import DaoSource
 from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
-from pandas._libs.tslibs.offsets import relativedelta, BDay
+from pandas.tseries.offsets import BDay
+from dateutil.relativedelta import relativedelta
 from openpyxl.utils.cell import get_column_letter
 from _legacy.core.ReportStructure.report_structure import (
     ReportingEntityTypes,
