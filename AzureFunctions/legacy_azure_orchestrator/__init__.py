@@ -40,6 +40,10 @@ from .orchestrators.PortfolioConstructionReportOrchestrator import (
     orchestrator_function as portfolio_construction_orchestrator_function,
 )
 
+from .orchestrators.EofRbaReportOrchestrator import (
+    orchestrator_function as eof_risk_report_orchestrator_function
+)
+
 
 class LegacyReportOrchestrator(LegacyOrchestrator):
     def __init__(self):
@@ -59,6 +63,7 @@ class LegacyReportOrchestrator(LegacyOrchestrator):
             LegacyOrchestrations.XPFundPqReportOrchestrator: x_pfund_pq_report_orchestrator_function,
             LegacyOrchestrations.EofCrowdingReportOrchestrator: eof_crowding_report_orchestrator_function,
             LegacyOrchestrations.PortfolioConstructionReportOrchestrator: portfolio_construction_orchestrator_function,
+            LegacyOrchestrations.EofRiskReportOrchestrator: eof_risk_report_orchestrator_function,
         }
 
     @property
