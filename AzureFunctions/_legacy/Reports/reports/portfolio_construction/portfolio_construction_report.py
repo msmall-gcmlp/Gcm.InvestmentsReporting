@@ -432,7 +432,7 @@ def _create_optimized_risk_utilizations_sheet_data(
     all_zeros = (weights['risk_allocation_summary'].iloc[:, 1:].fillna(0) == 0).all(axis=0)
     all_zero_columns = all_zeros[all_zeros].index
 
-    null_fields = list(set(all_zero_columns) | set(na_weight_columns))
+    null_fields = list(set(all_zero_columns) | set(na_fields_risk_allocations))
 
     weights = _nullify_dictionary_elements_column_wise(
         dictionary=weights,
