@@ -62,8 +62,8 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                     report_vertical=ReportVertical.ARS,
                     report_frequency="Monthly",
                     aggregate_intervals=AggregateInterval.MTD,
-                    output_dir="cleansed/investmentsreporting/printedexcels/",
-                    report_output_source=DaoSource.DataLake,
+                    # output_dir="cleansed/investmentsreporting/printedexcels/",
+                    # report_output_source=DaoSource.DataLake,
                 )
         else:
             with Scenario(as_of_date=as_of_date).context():
@@ -82,8 +82,8 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                     report_vertical=ReportVertical.ARS,
                     report_frequency="Monthly",
                     aggregate_intervals=AggregateInterval.MTD,
-                    output_dir="cleansed/investmentsreporting/printedexcels/",
-                    report_output_source=DaoSource.DataLake,
+                    # output_dir="cleansed/investmentsreporting/printedexcels/",
+                    # report_output_source=DaoSource.DataLake,
                 )
 
     def run(self,
