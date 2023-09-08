@@ -14,6 +14,7 @@ class LegacyOrchestrations(ExtendedEnum):
     XPFundPqReportOrchestrator = auto()
     EofCrowdingReportOrchestrator = auto()
     PortfolioConstructionReportOrchestrator = auto()
+    EofRiskReportOrchestrator = auto()
 
     # TODO: refactor below to be scenario compliant
     # ReportCopyOrchestrator = auto()
