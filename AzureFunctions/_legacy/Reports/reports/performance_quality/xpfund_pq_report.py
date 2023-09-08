@@ -287,9 +287,12 @@ def _get_peer_rankings(runner, as_of_date, emm_dimn):
     peer_rankings = pd.DataFrame(columns=['InvestmentGroupNameRaw', 'Peer', 'Decile', 'Confidence', 'Persistence'])
     for peer in peers:
         print(peer)
+        # performance screener peer_file_path is not same format as PQ report's peer file path
+        # but there are dependencies for _peer_file_path function in each, so reconciling here
+        peer_file_path = _peer_file_path('GCM ' + peer, as_of_date).replace("_peer_", "")
         peer_ranks = _download_inputs(runner=runner,
                                       dl_location=peer_screen_location,
-                                      file_path=_peer_file_path('GCM ' + peer, as_of_date))
+                                      file_path=peer_file_path)
         if peer_ranks is not None:
             peer_ranks = _parse_json(peer_ranks, "summary_table")
             peer_ranks = peer_ranks[['InvestmentGroupNameRaw', 'Decile', 'Confidence', 'Persistence']]
