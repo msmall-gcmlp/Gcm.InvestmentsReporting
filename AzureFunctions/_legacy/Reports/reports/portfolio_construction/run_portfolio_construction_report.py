@@ -77,7 +77,7 @@ class PortfolioConstructionReport(ReportingRunnerBase):
                     entity_display_name=acronym + ' ' + scenario_name,
                     entity_ids='',
                     entity_source=DaoSource.PubDwh,
-                    report_name="ARS Portfolio Construction - Adhoc",
+                    report_name="ARS Portfolio Construction",
                     report_type=ReportType.Risk,
                     report_vertical=ReportVertical.ARS,
                     report_frequency="Monthly",

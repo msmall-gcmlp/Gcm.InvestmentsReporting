@@ -42,7 +42,7 @@ class RunXPFundPqReport(ReportingRunnerBase):
         date = dt.datetime.combine(self._as_of_date, dt.datetime.min.time())
 
         if inv_group_ids is None:
-            report_name = "ARS Performance Quality - Firm x Portfolio Fund"
+            report_name = "ARS Performance Quality - Firm x Portfolio Fund - Excel Data Query"
         else:
             report_name = custom_report_name
 
