@@ -4,6 +4,7 @@
 
 azure-functions
 azure-functions-durable
+azure-identity
 gcm-dao
 datetime
 openpyxl

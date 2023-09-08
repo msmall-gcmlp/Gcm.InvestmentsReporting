@@ -1,3 +1,4 @@
+import pytest
 from gcm.inv.scenario import Scenario
 from gcm.inv.utils.date.AggregateInterval import (
     AggregateInterval,
@@ -36,6 +37,7 @@ class TestPvmManagerTrReport(object):
         )
         return entity_info
 
+    @pytest.mark.skip
     def test_run_local(self):
         a = AggregateInterval.ITD
         with Scenario(

@@ -938,12 +938,12 @@ class PerformanceQualityReport(ReportingRunnerBase):
         peer_excess_dict = self.build_ar_peer_excess()
 
         primary_peer_percentiles = self._get_percentile_summary(fund_returns=fund_returns,
-                                                                group_name="Peer1Ptile",
+                                                                group_name="Peer1Ptile_raw",
                                                                 constituent_total_returns=self._primary_peer_total_returns)
 
         primary_peer_excess_arb_percentiles = self._get_percentile_summary(
                                                                 fund_returns=fund_excess_returns,
-                                                                group_name="Peer1Ptile",
+                                                                group_name="Peer1Ptile_excess",
                                                                 constituent_total_returns=peer_excess_dict)
 
         eurekahedge_percentiles = self._get_percentile_summary(fund_returns=fund_returns,

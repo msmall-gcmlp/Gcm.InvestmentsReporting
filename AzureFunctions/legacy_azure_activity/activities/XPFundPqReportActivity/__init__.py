@@ -1,6 +1,7 @@
 from datetime import datetime
 from gcm.Dao.DaoRunner import DaoRunner
 from _legacy.Reports.reports.performance_quality.run_xpfund_pq_report import RunXPFundPqReport
+from _legacy.Reports.reports.performance_quality.xpfund_highlow_pq_screen import XPfundHighLowPQScreen
 
 
 def main(requestBody) -> str:
@@ -8,6 +9,9 @@ def main(requestBody) -> str:
     run = params["run"]
     as_of_date = params["as_of_date"]
     as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
+    acronym = params["acronym"]
 
     if run == "XPFundPqReportActivity":
-        return RunXPFundPqReport(runner=DaoRunner(), as_of_date=as_of_date).execute()
+        run_firmwide_xpfund = RunXPFundPqReport(runner=DaoRunner(), as_of_date=as_of_date).execute()
+        run_highlow = XPfundHighLowPQScreen(runner=DaoRunner(), as_of_date=as_of_date, portfolio_acronym=acronym).execute()
+        return run_firmwide_xpfund, run_highlow

@@ -1,3 +1,5 @@
+import json
+import logging
 import pandas as pd
 import datetime as dt
 
@@ -14,6 +16,7 @@ from _legacy.core.Runners.investmentsreporting import (
 from _legacy.core.reporting_runner_base import (
     ReportingRunnerBase,
 )
+from gcm.Dao.daos.azure_datalake.azure_datalake_dao import AzureDataLakeDao
 from gcm.Dao.DaoRunner import DaoRunner, DaoRunnerConfigArgs, DaoSource
 from gcm.inv.scenario import Scenario
 
@@ -22,6 +25,7 @@ class RunXPFundPqReport(ReportingRunnerBase):
     def __init__(self, runner, as_of_date):
         super().__init__(runner=runner)
         self._as_of_date = as_of_date
+        self._underlying_data_location = "raw/investmentsreporting/summarydata/xpfund_performance_quality"
 
     def generate_report(self, inv_group_ids=None, additional_ids=None,
                         custom_report_name=None, write_to_reporting_hub=True):
@@ -32,9 +36,17 @@ class RunXPFundPqReport(ReportingRunnerBase):
         report_data.loc[report_data['InvestmentGroupName'] == 'D1 Capital', 'InvestmentGroupName'] = 'D1 - GIP'
         report_data.loc[report_data['InvestmentGroupName'] == 'D1 Liquid Class', 'InvestmentGroupName'] \
             = 'D1 - Publics Only'
+        report_data_orig = report_data.drop('absolute_return_benchmark', axis=1)
+        report_data_orig = report_data_orig.drop(('AbsoluteReturnBenchmarkExcessLag', '3Y'), axis=1)
+        report_data_orig = report_data_orig.drop(('AbsoluteReturnBenchmarkExcessLag', 'ITD'), axis=1)
         input_data = {
             'as_of_date': pd.DataFrame({'date': [self._as_of_date]}),
-            'report_data': report_data
+            'report_data': report_data_orig
+        }
+
+        input_data_json = {
+            'as_of_date': pd.DataFrame({'date': [self._as_of_date]}).to_json(orient="index"),
+            'report_data': report_data.to_json(orient="index"),
         }
 
         print_areas = {'XPFUND_Performance_Quality': 'FL1:FU3'}
@@ -46,6 +58,20 @@ class RunXPFundPqReport(ReportingRunnerBase):
         else:
             report_name = custom_report_name
 
+        data_to_write = json.dumps(input_data_json)
+        as_of_date = self._as_of_date.strftime("%Y-%m-%d")
+        write_params = AzureDataLakeDao.create_get_data_params(
+            self._underlying_data_location,
+            "_firm_x_portfolio_fund" + as_of_date + ".json",
+            retry=False,
+        )
+        self._runner.execute(
+            params=write_params,
+            source=DaoSource.DataLake,
+            operation=lambda dao, params: dao.post_data(params, data_to_write),
+        )
+
+        logging.info("JSON stored to DataLake")
         if write_to_reporting_hub:
             with Scenario(as_of_date=date).context():
                 InvestmentsReportRunner().execute(
@@ -121,10 +147,10 @@ if __name__ == "__main__":
 
     date = dt.date(2023, 3, 31)
     with Scenario(as_of_date=date).context():
-        report = RunXPFundPqReport(runner=dao_runner, as_of_date=date)
+        report_runner = RunXPFundPqReport(runner=dao_runner, as_of_date=date)
 
         # firmwide report. # add in D1 Liquid Class which isn't an EMM
-        report.execute(additional_ids=[23447])
+        report_runner.execute(additional_ids=[23447])
 
         # esg report
         # custom_report_name = "ARS Performance Quality - ESG x Portfolio Fund"

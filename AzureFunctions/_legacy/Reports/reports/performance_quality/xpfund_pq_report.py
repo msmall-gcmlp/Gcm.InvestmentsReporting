@@ -31,7 +31,7 @@ def _parse_json(fund_data, item):
 
 
 def _peer_file_path(peer_name, as_of_date):
-    return peer_name.replace("/", "") + as_of_date.strftime("%Y-%m-%d") + ".json"
+    return peer_name.replace("/", "") + "_peer_" + as_of_date.strftime("%Y-%m-%d") + ".json"
 
 
 def _filter_summary(json_data, named_range, fund_name):
@@ -104,6 +104,13 @@ def _pivot_and_reindex(data, level_1_cols, level_2_cols):
     return data
 
 
+def _format_ar_benchmark_definition(full_stats):
+    data = full_stats['absolute_return_benchmark']
+    data = data.set_index('FundName')
+    formatted_summary = data
+    return formatted_summary
+
+
 def _format_benchmark_excess_summary(full_stats):
     data = full_stats['benchmark_summary']
     # Excludes: AbsoluteReturnBenchmark, GcmPeer, EHI50, EHI200
@@ -119,13 +126,30 @@ def _format_benchmark_excess_summary(full_stats):
     return formatted_summary
 
 
-def _format_benchmark_ptile_summary(full_stats):
-    data = full_stats['benchmark_summary']
+def _format_benchmark_excess_1q_lag_summary(q_lag_stats):
+    data = q_lag_stats['benchmark_summary']
+    data['AbsoluteReturnBenchmarkExcessLag'] = data[['AbsoluteReturnBenchmarkExcess']]
     # Excludes: AbsoluteReturnBenchmark, GcmPeer, EHI50, EHI200
-    cols = ['Peer1Ptile',
-            'Peer2Ptile',
-            'EH50Ptile',
-            'EHI200Ptile']
+    cols = ['AbsoluteReturnBenchmarkExcessLag']
+    periods = ['3Y', 'ITD']
+    formatted_summary = _pivot_and_reindex(data=data,
+                                           level_1_cols=cols,
+                                           level_2_cols=periods)
+    return formatted_summary
+
+
+def _format_benchmark_ptile_summary(full_stats):
+    data = full_stats['benchmark_summary'].copy()
+    # Excludes: AbsoluteReturnBenchmark, GcmPeer, EHI50, EHI200
+    # maintain backwards compatability with the auto-suffixed Peer1Ptile columns
+    if "Peer1Ptile_x" in data.columns:
+        data = data.rename(columns={
+            "Peer1Ptile_x": "Peer1Ptile_raw",
+            "Peer1Ptile_y": "Peer1Ptile_excess",
+        })
+    peer_cols = ['Peer1Ptile_raw', 'Peer1Ptile_excess']
+    eh_cols = ['EH50Ptile', 'EHI200Ptile']
+    cols = peer_cols + eh_cols
     periods = ['MTD', 'QTD', 'YTD', 'TTM', '3Y', '5Y', '10Y']
     formatted_summary = _pivot_and_reindex(data=data,
                                            level_1_cols=cols,
@@ -225,7 +249,9 @@ def _format_exposure_summary(full_stats):
     return formatted_summary
 
 
-def _generate_final_summary(emm_dimn, pq_stats, peer_rankings, peer_rankings_lag):
+def _generate_final_summary(emm_dimn, pq_stats, peer_rankings, peer_rankings_lag, q_lag_stats):
+    ar_benchmark_definition = _format_ar_benchmark_definition(full_stats=pq_stats)
+    q_lag_3y_xs = _format_benchmark_excess_1q_lag_summary(q_lag_stats=q_lag_stats)
     benchmark_excess = _format_benchmark_excess_summary(full_stats=pq_stats)
     benchmark_ptile = _format_benchmark_ptile_summary(full_stats=pq_stats)
     perf_stability = _format_perf_stability_summary(full_stats=pq_stats)
@@ -236,7 +262,9 @@ def _generate_final_summary(emm_dimn, pq_stats, peer_rankings, peer_rankings_lag
     expectations = _format_risk_model_expectations(full_stats=pq_stats)
     exposure = _format_exposure_summary(full_stats=pq_stats)
 
-    final_summary = pd.concat([benchmark_excess,
+    final_summary = pd.concat([ar_benchmark_definition,
+                               q_lag_3y_xs,
+                               benchmark_excess,
                                benchmark_ptile,
                                perf_stability,
                                rba_idios,
@@ -259,9 +287,12 @@ def _get_peer_rankings(runner, as_of_date, emm_dimn):
     peer_rankings = pd.DataFrame(columns=['InvestmentGroupNameRaw', 'Peer', 'Decile', 'Confidence', 'Persistence'])
     for peer in peers:
         print(peer)
+        # performance screener peer_file_path is not same format as PQ report's peer file path
+        # but there are dependencies for _peer_file_path function in each, so reconciling here
+        peer_file_path = _peer_file_path('GCM ' + peer, as_of_date).replace("_peer_", "")
         peer_ranks = _download_inputs(runner=runner,
                                       dl_location=peer_screen_location,
-                                      file_path=_peer_file_path('GCM ' + peer, as_of_date))
+                                      file_path=peer_file_path)
         if peer_ranks is not None:
             peer_ranks = _parse_json(peer_ranks, "summary_table")
             peer_ranks = peer_ranks[['InvestmentGroupNameRaw', 'Decile', 'Confidence', 'Persistence']]
@@ -277,6 +308,23 @@ def _get_peer_rankings(runner, as_of_date, emm_dimn):
     return rankings
 
 
+def _get_emm_rankings(runner, as_of_date, emm_dimn):
+    stats = {}
+    pq_location = "raw/investmentsreporting/summarydata/performancequality"
+    for fund_name in emm_dimn.index:
+        fund_data = _download_inputs(runner=runner,
+                                     dl_location=pq_location,
+                                     file_path=_fund_file_path(fund_name, as_of_date))
+        if fund_data is not None:
+            for named_range in ['benchmark_summary']:
+                summary = _filter_summary(json_data=fund_data, named_range=named_range, fund_name=fund_name)
+                if named_range in stats.keys():
+                    stats[named_range] = pd.concat([stats[named_range], summary])
+                else:
+                    stats[named_range] = summary
+    return stats
+
+
 def _get_performance_quality_metrics(runner, emm_dimn, as_of_date):
     stats = {}
     pq_location = "raw/investmentsreporting/summarydata/performancequality"
@@ -287,7 +335,7 @@ def _get_performance_quality_metrics(runner, emm_dimn, as_of_date):
         if fund_data is not None:
             for named_range in ['benchmark_summary', 'performance_stability_fund_summary',
                                 'rba_summary', 'pba_mtd', 'pba_qtd', 'pba_ytd', 'shortfall_summary',
-                                'risk_model_expectations', 'exposure_summary']:
+                                'risk_model_expectations', 'exposure_summary', 'absolute_return_benchmark']:
                 summary = _filter_summary(json_data=fund_data, named_range=named_range, fund_name=fund_name)
                 if named_range in stats.keys():
                     stats[named_range] = pd.concat([stats[named_range], summary])
@@ -302,14 +350,18 @@ def generate_xpfund_pq_report_data(runner: DaoRunner, date: dt.date, inv_group_i
                                    additional_ids=additional_ids)
 
         date_q_minus_1 = pd.to_datetime(date - pd.tseries.offsets.QuarterEnd(1)).date()
+        date_m_minus_1 = pd.to_datetime(date - pd.tseries.offsets.MonthEnd(1)).date()
         peer_rankings = _get_peer_rankings(runner=runner, as_of_date=date_q_minus_1, emm_dimn=fund_dimn)
+        emm_rankings = _get_emm_rankings(runner=runner, as_of_date=date_m_minus_1, emm_dimn=fund_dimn)
         date_q_minus_2 = pd.to_datetime(date - pd.tseries.offsets.QuarterEnd(2)).date()
         peer_rankings_lag = _get_peer_rankings(runner=runner, as_of_date=date_q_minus_2, emm_dimn=fund_dimn)
+
         pq_stats = _get_performance_quality_metrics(runner=runner, emm_dimn=fund_dimn, as_of_date=date)
         final_summary = _generate_final_summary(emm_dimn=fund_dimn,
                                                 pq_stats=pq_stats,
                                                 peer_rankings=peer_rankings,
-                                                peer_rankings_lag=peer_rankings_lag)
+                                                peer_rankings_lag=peer_rankings_lag,
+                                                q_lag_stats=emm_rankings)
     return final_summary
 
 
