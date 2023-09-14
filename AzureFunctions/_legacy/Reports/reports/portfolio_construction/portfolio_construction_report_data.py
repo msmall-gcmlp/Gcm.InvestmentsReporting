@@ -142,6 +142,7 @@ def _query_fund_attributes(sql_client: SqlOdbcClient) -> pd.DataFrame:
         ON b.InvestmentGroupName = c.InvestmentGroupName
         LEFT JOIN gcminputs.InvestmentReportingPeerBenchmark d
         ON a.InvestmentGroupId = d.InvestmentGroupId
+        WHERE b.InvestmentGroupName is not NULL
         )
         SELECT * FROM AttributesTbl
         """
@@ -320,8 +321,8 @@ class ReportData:
 def get_report_data(portfolio_acronym, scenario_name, as_of_date):
     env = os.environ.get("Environment", "dev").replace("local", "dev")
     sub = os.environ.get("Subscription", "nonprd").replace("local", "nonprd")
-    env = 'prd'
-    sub = 'prd'
+    # env = 'prd'
+    # sub = 'prd'
 
     portfolio = PortfolioInputs(acronym=portfolio_acronym, scenario=scenario_name, as_of_date=as_of_date)
     raw_data = _get_raw_report_data(portfolio=portfolio, sub=sub, env=env)
