@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <DefaultProjectTypeGuid>FAE04EC0-301F-11D3-BF4B-00C04F79EFBC</DefaultProjectTypeGuid>
+    <PythonRequirementsFileName>requirements.txt</PythonRequirementsFileName>
+    <PublishOutputPathContent>true</PublishOutputPathContent>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Gcm.AzureFunctions.Sdk" Version="7.*" />
+    <PackageReference Include="Gcm.AzureFunctions.Extensions.DurableFunctionsMonitor" Version="5.*" />
+    <None Update="host.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AzureFunctions\AzureFunctions.pytproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\Shared\*\**\*">
+      <Link>%(RecursiveDir)/%(FileName)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>    
+    </Content>
+  </ItemGroup>
+</Project>

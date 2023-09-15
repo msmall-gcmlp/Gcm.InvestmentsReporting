@@ -1,0 +1,19 @@
+# DO NOT include azure-functions-worker in this file
+# The Python Worker is managed by Azure Functions platform
+# Manually managing azure-functions-worker may cause unexpected issues
+
+azure-functions
+azure-functions-durable
+azure-identity
+gcm-dao
+datetime
+openpyxl
+pillow
+classes
+gcm-investmentsdataprovider
+gcm-investmentsquantlib>=0.8.0
+gcm-investmentsutils>=0.16.0
+gcm-investmentsmodels>=0.16.0
+PyPDF2
+aspose-cells>=22.6.0
+pandas<2.1.0
