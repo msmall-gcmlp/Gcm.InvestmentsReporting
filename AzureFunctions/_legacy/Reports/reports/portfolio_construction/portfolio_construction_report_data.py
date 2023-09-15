@@ -15,6 +15,8 @@ from gcm.data.storage import StorageQueryParams, DataLakeZone
 from attr import define
 from gcm.inv.models.portfolio_construction.portfolio_metrics.portfolio_metrics import _process_optim_fund_inputs, \
     ProcessedFundInputs
+from gcm.inv.dataprovider.portfolio import Portfolio
+from gcm.inv.scenario import Scenario
 
 
 @define
@@ -58,36 +60,6 @@ def _get_clients(sub, env):
     sql_client = _get_sql_client(sub=sub, env=env)
     dl_client = _get_dl_client(sub=sub)
     return sql_client, dl_client
-
-
-def _query_optimal_weights(
-    portfolio_acronym: str,
-    scenario_name: str,
-    as_of_date: dt.date,
-    client: SqlOdbcClient,
-) -> pd.DataFrame:
-    query = (
-        f"""
-        WITH WeightsTbl
-        AS (
-        SELECT
-            igm.EntityName as InvestmentGroupName,
-            igm.EntityId as InvestmentGroupId,
-            ow.LongTermWeight AS LongTermOptimal,
-            ow.ShortTermWeight as ShortTermOptimal
-        FROM PortfolioConstruction.OptimalWeights ow
-        LEFT JOIN entitymaster.InvestmentGroupMaster igm
-        ON ow.InvestmentGroupId = igm.EntityId
-        INNER JOIN PortfolioConstruction.InputLocations il
-        ON ow.InputLocationId = il.Id
-        WHERE PortfolioAcronym='{portfolio_acronym}'
-        AND ScenarioName='{scenario_name}'
-        AND AsOfDate='{as_of_date.isoformat()}'
-        )
-        SELECT * FROM WeightsTbl
-        """
-    )
-    return client.read_raw_sql(query)
 
 
 def _query_portfolio_attributes(
@@ -193,23 +165,6 @@ def _get_inv_group_id_map(inputs):
     return inv_group_id_map
 
 
-def _get_optimal_weights(
-        portfolio_acronym: str,
-        scenario_name: str,
-        as_of_date: dt.date,
-        client: SqlOdbcClient,
-        inv_group_id_map: pd.DataFrame,
-) -> pd.DataFrame:
-    wts = _query_optimal_weights(
-        portfolio_acronym=portfolio_acronym,
-        scenario_name=scenario_name,
-        as_of_date=as_of_date,
-        client=client,
-    )
-    wts["InvestmentGroupName"] = wts[["InvestmentGroupId"]].merge(inv_group_id_map)["Fund"]
-    return wts
-
-
 def _get_current_weights(inputs: LongTermInputs):
     current_balances = inputs.config.portfolioAttributes.currentBalances
     current_weights = pd.DataFrame.from_dict(current_balances, orient="index", columns=["Current"]).reset_index(
@@ -233,17 +188,18 @@ def _combine_current_and_optimal_weights(current, optimal, id_map):
 
 def _get_allocations(
         portfolio: PortfolioInputs,
-        sql_client: SqlOdbcClient,
         lt_inputs: LongTermInputs,
 ) -> pd.DataFrame:
     inv_group_id_map = _get_inv_group_id_map(lt_inputs)
-    optimal_weights = _get_optimal_weights(
-        portfolio_acronym=portfolio.acronym,
-        scenario_name=portfolio.scenario,
-        as_of_date=portfolio.as_of_date,
-        client=sql_client,
-        inv_group_id_map=inv_group_id_map,
-    )
+    with Scenario(as_of_date=dt.date.today()).context():
+        optimal_weights = Portfolio().get_optimized_allocations(
+            portfolio_acronym=portfolio.acronym,
+            scenario_name=portfolio.scenario,
+            as_of_date=portfolio.as_of_date,
+            apply_share_class_specific_remap=True
+        )
+
+    optimal_weights["InvestmentGroupName"] = optimal_weights[["InvestmentGroupId"]].merge(inv_group_id_map)["Fund"]
 
     current_weights = _get_current_weights(inputs=lt_inputs)
 
@@ -274,7 +230,6 @@ def _get_raw_report_data(portfolio: PortfolioInputs, sub, env):
     )
 
     weights = _get_allocations(portfolio=portfolio,
-                               sql_client=sql_client,
                                lt_inputs=lt_optim_inputs)
 
     adhoc_portfolio_attributes = _query_portfolio_attributes(
