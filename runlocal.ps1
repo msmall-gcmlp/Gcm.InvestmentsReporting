@@ -59,8 +59,8 @@ function Start-Azurite() {
 function Update-VSCodeSettingsJson() {
     $settingsFile = "$vsCodePath\\settings.json"
     $original = Get-Content -Raw -Path $settingsFile | ConvertFrom-Json
-    $original.'azureFunctions.projectSubpath' = "$functionName"
-    $original.'azureFunctions.deploySubpath' = "$functionName"
+    $original.'azureFunctions.projectSubpath' = "artifacts/$functionName"
+    $original.'azureFunctions.deploySubpath' = "artifacts/$functionName"
     [System.IO.File]::WriteAllLines($settingsFile, @($original | ConvertTo-Json -Depth 100))
 }
 
