@@ -6,9 +6,6 @@
     <PublishOutputPathContent>true</PublishOutputPathContent>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
-    <PythonTestCoverageTool>pytest-custom-exit-code</PythonTestCoverageTool>
-    <PythonCodeCoverageArgumentRun>--ignore-glob=* --suppress-no-test-exit-code</PythonCodeCoverageArgumentRun>
-    <PythonCodeCoverageArgumentOutput></PythonCodeCoverageArgumentOutput>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Gcm.AzureFunctions.Sdk" Version="7.*" />
@@ -16,6 +13,11 @@
     <None Update="host.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AzureFunctions\AzureFunctions.pytproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\Shared\*\**\*">

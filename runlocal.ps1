@@ -1,17 +1,19 @@
+param($AzureFunctionName=$null)
+
 $ErrorActionPreference = 'Stop'
 
 #region Solution-Wide
-function Create-Virtual-Environment() {
+function New-VirtualEnvironment() {
     $venvFolder = ".venv"
     if (-not (Test-Path $VenvFolder)) {
-        Check-Python-Installed
+        Test-PythonInstalled
         Write-Host "Creating Python Virtual Environment"
         python -m venv $VenvFolder
-        Activate-Virtual-Environment
+        Invoke-ActivateVirtualEnvironment
     }
 }
 
-function Activate-Virtual-Environment() {
+function Invoke-ActivateVirtualEnvironment() {
     Push-Location "$VenvFolder/Scripts"
     Write-Host "Activating Python Virtual Environment"
     .\activate
@@ -20,7 +22,7 @@ function Activate-Virtual-Environment() {
     Pop-Location
 }
 
-function Check-Python-Installed() {
+function Test-PythonInstalled() {
     $python = cmd /c where python 2> $null
     if (!$python) {
         throw "Python is not installed"
@@ -54,25 +56,46 @@ function Start-Azurite() {
     Pop-Location
 }
 
-function Update-VSCode-SettingsJson() {
+function Update-VSCodeSettingsJson() {
     $settingsFile = "$vsCodePath\\settings.json"
     $original = Get-Content -Raw -Path $settingsFile | ConvertFrom-Json
-    $original.'azureFunctions.projectSubpath' = "$functionName"
-    $original.'azureFunctions.deploySubpath' = "$functionName"
+    $original.'azureFunctions.projectSubpath' = "artifacts/$functionName"
+    $original.'azureFunctions.deploySubpath' = "artifacts/$functionName"
     [System.IO.File]::WriteAllLines($settingsFile, @($original | ConvertTo-Json -Depth 100))
 }
 
-function Get-Function-Name() {
-    gci $PSScriptRoot -Filter '*.pytproj' -Depth 1 | % {
-        $functionName = $_.BaseName
-        $functionProject = Get-Content -Raw -Path $_.FullName
-        if ($functionProject.ToLower().Contains("gcm.azurefunctions.sdk")) {
-            return $functionName;
+function Get-UserChoiceFromList($Title, $Choices, $ChoicesPrompt) {
+    $result = $null
+    while (!$result) {
+        Write-Host "`n$Title"
+        For ($i=0; $i -lt $Choices.Count; $i++)  {
+          Write-Host "$($i+1): $($Choices[$i])"
         }
+        
+        [int]$number = Read-Host $ChoicesPrompt
+        if ($number -gt 0 -and $number -le $Choices.Count) {
+            $result = $Choices[$number-1]
+        }
+        else {
+            Write-Host "`nInvalid choice!`n"
+        }            
     }
-    if (!$functionName) {
+    return $result
+}
+
+function Get-FunctionName() {
+    $functionNames = Get-ChildItem $PSScriptRoot -Filter '*.pytproj' -Depth 1 | ? {
+        $functionProject = Get-Content -Raw -Path $_.FullName
+        return $functionProject.ToLower().Contains("gcm.azurefunctions.sdk")
+    } | % { $_.BaseName }
+    if ($functionNames.Count -gt 1) {
+        $selectedFunction = Get-UserChoiceFromList 'Which of the following functions do you want to run?' $functionNames 'Enter the number of the function you want to run'
+        $functionNames = $functionNames | ? { $_ -eq $selectedFunction }
+    }
+    if (!$functionNames) {
         throw "No Azure Functions project was found"
     }
+    return $functionNames
 }
 #endregion Solution-Wide
 
@@ -82,7 +105,7 @@ function Update-Settings() {
     ./configure.ps1 | Out-Null
 }
 
-function Install-Pip-Requirements() {
+function Install-PipRequirements() {
     Write-Host "Installing from $RequirementsFile"
     & "$RootFolder\$VenvFolder\Scripts\python" -m pip install -r .\$RequirementsFile
 }
@@ -127,7 +150,7 @@ $HostFile = "host.json"
 $RequirementsFile = "requirements.txt"
 $artifacts = "artifacts"
 $artifactsPath = "$PSScriptRoot\\artifacts"
-$functionName = Get-Function-Name
+$functionName = if (!$AzureFunctionName) {Get-FunctionName} else {$AzureFunctionName}
 $functionPath = "$PSScriptRoot\\$functionName"
 $vsCode = ".vscode"
 $vsCodePath = "$PSScriptRoot\\$vsCode"
@@ -149,15 +172,15 @@ catch [System.UnauthorizedAccessException] {
     # in case Gcm.ConfigurationLoader.dll is being used by another process, happens if the user runs it twice
 }
 
-Update-VSCode-SettingsJson
-Create-Virtual-Environment
-Activate-Virtual-Environment
+Update-VSCodeSettingsJson
+New-VirtualEnvironment
+Invoke-ActivateVirtualEnvironment
 Start-Azurite
 
 Push-Location "$artifactsPath\$functionName"
 Update-Settings
 Add-ExtensionBundle
-Install-Pip-Requirements
+Install-PipRequirements
 @("host.json", "local.settings.json") | % { Copy-Files $_ }
 Pop-Location
 #endregion Run

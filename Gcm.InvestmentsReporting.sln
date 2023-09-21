@@ -5,6 +5,8 @@ VisualStudioVersion = 17.1.32328.378
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("FAE04EC0-301F-11D3-BF4B-00C04F79EFBC") = "AzureFunctions", "AzureFunctions\AzureFunctions.pytproj", "{1C84693D-9667-450F-86A5-09E956B58D59}"
 EndProject
+Project("FAE04EC0-301F-11D3-BF4B-00C04F79EFBC") = "AutoScaledAzureFunctions", "AutoScaledAzureFunctions\AutoScaledAzureFunctions.pytproj", "{A65DDD8A-5AAC-4BF2-BFE5-94A6D28AC343}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +21,10 @@ Global
 		{489BD5E3-4B83-4464-9996-AFA291FAD1F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{489BD5E3-4B83-4464-9996-AFA291FAD1F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{489BD5E3-4B83-4464-9996-AFA291FAD1F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A65DDD8A-5AAC-4BF2-BFE5-94A6D28AC343}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A65DDD8A-5AAC-4BF2-BFE5-94A6D28AC343}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A65DDD8A-5AAC-4BF2-BFE5-94A6D28AC343}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A65DDD8A-5AAC-4BF2-BFE5-94A6D28AC343}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -3,6 +3,6 @@
                 "version":  "6.0.101"
             },
     "msbuild-sdks":  {
-                         "Gcm.MSBuild.Sdk":  "6.7.0"
+                         "Gcm.MSBuild.Sdk":  "6.10.0"
                      }
 }
