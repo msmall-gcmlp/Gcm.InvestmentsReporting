@@ -18,6 +18,7 @@ def orchestrator_function(
     if params.get("peer_groups") is None:
         peer_groups = [
             "GCM Asia",
+            "GCM Australia",
             # "GCM Asia Credit",
             "GCM Asia Equity",
             # "GCM Asia Macro",
