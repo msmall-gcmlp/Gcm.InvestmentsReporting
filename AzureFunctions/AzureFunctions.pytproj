@@ -9,6 +9,7 @@
     <PythonTestCoverageTool>pytest-custom-exit-code</PythonTestCoverageTool>
     <PythonCodeCoverageArgumentRun>--ignore-glob=* --suppress-no-test-exit-code</PythonCodeCoverageArgumentRun>
     <PythonCodeCoverageArgumentOutput></PythonCodeCoverageArgumentOutput>
+    <PythonCodeInspectionToolOptionExclude>bin*,obj*,Tests</PythonCodeInspectionToolOptionExclude>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Gcm.AzureFunctions.Sdk" Version="7.*" />
