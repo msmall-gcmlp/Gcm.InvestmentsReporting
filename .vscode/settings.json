@@ -6,11 +6,9 @@
     "azureFunctions.projectLanguage":  "Python",
     "azureFunctions.projectRuntime":  "~4",
     "debug.internalConsoleOptions":  "neverOpen",
-    "python.testing.pytestArgs":  [
-                                      "AzureFunctions"
-                                  ],
     "python.testing.unittestEnabled":  false,
     "python.testing.pytestEnabled": true,
+    "python.testing.pytestPath": "pytest",
     "python.linting.flake8Enabled": true,
     "python.linting.enabled": true,
     "python.analysis.extraPaths": [
