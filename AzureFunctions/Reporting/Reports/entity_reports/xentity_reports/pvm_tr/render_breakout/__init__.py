@@ -115,7 +115,7 @@ class NetBreakoutTables(GrossBreakoutTables):
 
 class GrossBreakoutExtended(GrossBreakoutTables):
     Evaluated_Columns = [
-        PvmNodeEvaluatable.PvmEvaluationType.cf_implied_holding_period,
+        PvmNodeEvaluatable.PvmEvaluationType.cost_weighted_holding_period,
         PvmNodeEvaluatable.PvmEvaluationType.cost,
         PvmNodeEvaluatable.PvmEvaluationType.unrealized_value,
         PvmNodeEvaluatable.PvmEvaluationType.total_value,
