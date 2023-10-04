@@ -198,8 +198,14 @@ def _get_allocations(
             as_of_date=portfolio.as_of_date,
             apply_share_class_specific_remap=True
         )
+    optimal_weights_remap = optimal_weights.merge(inv_group_id_map, on='InvestmentGroupId', how='left')
+    optimal_weights_remap['InvestmentGroupName'] = optimal_weights_remap['Fund'].copy()
+    optimal_weights_remap.drop(columns={'Fund'}, inplace=True)
 
-    optimal_weights["InvestmentGroupName"] = optimal_weights[["InvestmentGroupId"]].merge(inv_group_id_map)["Fund"]
+    if any(optimal_weights_remap['InvestmentGroupName'].isna()):
+        raise ValueError('Investment Group Name Missing!')
+    else:
+        optimal_weights = optimal_weights_remap.copy()
 
     current_weights = _get_current_weights(inputs=lt_inputs)
 
